@@ -94,7 +94,11 @@ export default function Register() {
       const user = await register({ name: form.name, phone: form.phone, password: form.password, role })
       navigate(user.role === 'driver' ? '/driver' : '/book')
     } catch (err) {
-      setApiError(err.data?.message || 'Registration failed. Please try again.')
+      if (!err.status) {
+        setApiError('Cannot connect to server. Make sure the backend is running on port 4000.')
+      } else {
+        setApiError(err.data?.message || 'Registration failed. Please try again.')
+      }
     } finally {
       setLoading(false)
     }
@@ -310,10 +314,8 @@ export default function Register() {
       <style>{`
   @keyframes spin { to { transform: rotate(360deg); } }
   @keyframes fade-in { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
-  .register-form-panel { padding: 20px 40px 40px 100px; }
-  @media (max-width: 1023px) {
-    .register-form-panel { padding: 32px 24px 40px; margin-left: 0; }
-  }
+  .register-form-panel { padding: 20px 40px 4  .register-form-panel { padding: 20px 40px 48px; }
+  @media (max-width: 1023px) { .register-form-panel { padding: 40px 24px 48px; } }
 `}</style>
     </div>
   )

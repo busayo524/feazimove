@@ -7,15 +7,12 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  // On mount — check if we have a valid token
   useEffect(() => {
     const token = localStorage.getItem('fm_token')
     if (!token) { setLoading(false); return }
-
     api.get('/auth/me')
       .then(res => setUser(res.data.user))
       .catch(() => {
-        // Token invalid or expired — clean up
         localStorage.removeItem('fm_token')
         localStorage.removeItem('fm_user')
       })

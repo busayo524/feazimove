@@ -1,171 +1,135 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ToggleLeft, ToggleRight, MapPin, Users, Package, Clock, TrendingUp, Star, Navigation } from 'lucide-react'
+import { MapPin, Users, Package, Clock, TrendingUp, Star, CheckCircle } from 'lucide-react'
 import AppLayout from '../../components/AppLayout'
 import { useAuth } from '../../context/AuthContext'
 
-const MOCK_REQUESTS = [
-  { id: 'r1', type: 'pool', from: 'Ikeja GRA', to: 'Victoria Island', riders: 2, fare: 3600, dist: '28 km', eta: '32 min' },
-  { id: 'r2', type: 'send', from: 'Surulere',  to: 'Lekki Phase 1',  riders: 1, fare: 2800, dist: '18 km', eta: '22 min' },
+const NEON='#ccff00', NT='#0a0a0a', NL='#f9ffe0', NB='#e8ff80'
+const CARD='#ffffff', BORDER='#e8eaed', TEXT='#111827', MUTED='#6b7280', BG='#f5f7fa'
+
+const MOCK_REQUESTS=[
+  {id:'r1',type:'pool',from:'Ikeja GRA',to:'Victoria Island',riders:2,fare:3600,dist:'28 km',eta:'32 min'},
+  {id:'r2',type:'send',from:'Surulere',to:'Lekki Phase 1',riders:1,fare:2800,dist:'18 km',eta:'22 min'},
+]
+const MOCK_STATS={today:{trips:4,earned:12400,hours:6},week:{trips:22,earned:68000,hours:34},rating:4.9,acceptance:87}
+const MOCK_RECENT=[
+  {id:'t1',from:'Ikeja',to:'VI',fare:3200,time:'9:10 AM',status:'completed'},
+  {id:'t2',from:'Yaba',to:'Lekki',fare:2900,time:'11:45 AM',status:'completed'},
+  {id:'t3',from:'Ajah',to:'CMS',fare:4100,time:'2:00 PM',status:'completed'},
+  {id:'t4',from:'GRA',to:'Apapa',fare:3600,time:'4:30 PM',status:'cancelled'},
 ]
 
-const MOCK_STATS = {
-  today:    { trips: 4, earned: 12400, hours: 6 },
-  week:     { trips: 22, earned: 68000, hours: 34 },
-  rating:   4.9,
-  acceptance: 87,
-}
+export default function DriverDashboard(){
+  const {user}=useAuth()
+  const navigate=useNavigate()
+  const [online,setOnline]=useState(true)
+  const [accepted,setAccepted]=useState(null)
+  const [statPeriod,setStatPeriod]=useState('today')
 
-const MOCK_RECENT = [
-  { id: 't1', from: 'Ikeja', to: 'VI',     fare: 3200, time: '9:10 AM',  status: 'completed' },
-  { id: 't2', from: 'Yaba',  to: 'Lekki',  fare: 2900, time: '11:45 AM', status: 'completed' },
-  { id: 't3', from: 'Ajah',  to: 'CMS',    fare: 4100, time: '2:00 PM',  status: 'completed' },
-  { id: 't4', from: 'GRA',   to: 'Apapa',  fare: 3600, time: '4:30 PM',  status: 'cancelled' },
-]
+  const stats=MOCK_STATS[statPeriod]||MOCK_STATS.today
 
-function StatCard({ label, value, sub, accent }) {
-  return (
-    <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '20px 22px', flex: 1, minWidth: 130 }}>
-      <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>{label}</p>
-      <p style={{ color: accent || '#ffffff', fontWeight: 900, fontSize: 'clamp(1.4rem,3vw,2rem)', letterSpacing: '-0.02em', lineHeight: 1 }}>{value}</p>
-      {sub && <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12, marginTop: 6 }}>{sub}</p>}
-    </div>
-  )
-}
-
-function RideRequest({ req, onAccept }) {
-  return (
-    <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: req.type === 'pool' ? 'rgba(204,255,0,0.10)' : 'rgba(250,204,21,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {req.type === 'pool' ? <Users size={16} color="#ccff00" /> : <Package size={16} color="#facc15" />}
-          </div>
-          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{req.type === 'pool' ? 'FeaziPool' : 'FeaziSend'}</span>
-        </div>
-        <span style={{ color: '#ccff00', fontWeight: 900, fontSize: 20 }}>₦{req.fare.toLocaleString()}</span>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ccff00', flexShrink: 0 }} />
-          <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>{req.from}</span>
-        </div>
-        <div style={{ width: 1, height: 12, background: 'rgba(255,255,255,0.1)', marginLeft: 3.5 }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 8, height: 8, borderRadius: 2, border: '1.5px solid rgba(255,255,255,0.4)', flexShrink: 0 }} />
-          <span style={{ color: '#ffffff', fontSize: 14, fontWeight: 700 }}>{req.to}</span>
-        </div>
-      </div>
-      <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
-        <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13 }}><MapPin size={12} style={{ display: 'inline', marginRight: 4 }} />{req.dist}</span>
-        <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13 }}><Clock size={12} style={{ display: 'inline', marginRight: 4 }} />{req.eta}</span>
-        {req.type === 'pool' && <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13 }}><Users size={12} style={{ display: 'inline', marginRight: 4 }} />{req.riders} riders</span>}
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-        <button style={{ padding: '11px', borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer', background: 'rgba(248,113,113,0.10)', border: '1px solid rgba(248,113,113,0.20)', color: '#f87171' }}>Decline</button>
-        <button onClick={() => onAccept(req)} style={{ padding: '11px', borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer', background: '#ccff00', border: 'none', color: '#000000' }}>Accept</button>
-      </div>
-    </div>
-  )
-}
-
-export default function DriverDashboard() {
-  const { user } = useAuth()
-  const navigate = useNavigate()
-  const [online, setOnline] = useState(false)
-  const [view, setView] = useState('today')
-  const firstName = user?.name?.split(' ')[0] || 'Driver'
-
-  function handleAccept(req) {
-    navigate(`/driver/ride/${req.id}`)
-  }
-
-  const stats = MOCK_STATS[view === 'today' ? 'today' : 'week']
-
-  return (
+  return(
     <AppLayout title="Driver Dashboard">
-      <div style={{ maxWidth: 720, margin: '0 auto' }}>
-
-        {/* Greeting + online toggle */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 28, flexWrap: 'wrap' }}>
-          <div>
-            <h2 style={{ color: '#ffffff', fontWeight: 900, fontSize: 'clamp(1.4rem,3vw,1.9rem)', letterSpacing: '-0.02em', marginBottom: 4 }}>
-              Good day, {firstName} 👋
-            </h2>
-            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>
-              {online ? 'You are online — ride requests will come in.' : 'Go online to start receiving ride requests.'}
-            </p>
-          </div>
-          <button onClick={() => setOnline(o => !o)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 20px', borderRadius: 50, fontSize: 14, fontWeight: 700, cursor: 'pointer', border: 'none', transition: 'all 0.2s', background: online ? 'rgba(204,255,0,0.12)' : 'rgba(255,255,255,0.07)', color: online ? '#ccff00' : 'rgba(255,255,255,0.5)', flexShrink: 0 }}>
-            {online ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
-            {online ? 'Online' : 'Offline'}
-          </button>
+      {/* Online toggle */}
+      <div style={{background:online?NT:CARD,border:`2px solid ${online?NEON:BORDER}`,borderRadius:20,padding:'18px 20px',marginBottom:20,display:'flex',alignItems:'center',justifyContent:'space-between',transition:'all 0.3s',boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
+        <div>
+          <p style={{fontWeight:800,fontSize:16,color:online?NEON:TEXT}}>
+            {online?'🟢 You\'re Online':'⚫ You\'re Offline'}
+          </p>
+          <p style={{fontSize:13,color:online?'rgba(204,255,0,0.6)':MUTED,marginTop:2}}>
+            {online?'Accepting ride requests':'Go online to receive requests'}
+          </p>
         </div>
+        <button onClick={()=>setOnline(!online)} style={{position:'relative',width:52,height:28,borderRadius:20,background:online?NEON:'#d1d5db',border:'none',cursor:'pointer',transition:'background 0.3s',flexShrink:0}} aria-label="Toggle online status">
+          <span style={{position:'absolute',top:3,left:online?26:3,width:22,height:22,borderRadius:'50%',background:online?NT:CARD,transition:'left 0.3s',boxShadow:'0 1px 3px rgba(0,0,0,0.2)'}}/>
+        </button>
+      </div>
 
-        {/* Stats */}
-        <div style={{ display: 'flex', gap: 12, marginBottom: 28, flexWrap: 'wrap' }}>
-          <StatCard label="Trips" value={stats.trips} sub={view === 'today' ? 'today' : 'this week'} />
-          <StatCard label="Earned" value={`₦${(stats.earned/1000).toFixed(0)}k`} sub={view === 'today' ? 'today' : 'this week'} accent="#ccff00" />
-          <StatCard label="Rating" value={`${MOCK_STATS.rating}★`} sub="from riders" accent="#facc15" />
-          <StatCard label="Acceptance" value={`${MOCK_STATS.acceptance}%`} sub="rate" />
-        </div>
-
-        {/* Period toggle */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 28 }}>
-          {['today', 'week'].map(v => (
-            <button key={v} onClick={() => setView(v)} style={{ padding: '7px 18px', borderRadius: 99, fontSize: 13, fontWeight: 700, cursor: 'pointer', border: 'none', background: view === v ? '#ccff00' : 'rgba(255,255,255,0.06)', color: view === v ? '#000000' : 'rgba(255,255,255,0.5)' }}>
-              {v === 'today' ? 'Today' : 'This Week'}
+      {/* Stats */}
+      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,padding:20,marginBottom:16,boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
+        <div style={{display:'flex',gap:8,marginBottom:16,background:BG,borderRadius:10,padding:4}}>
+          {['today','week'].map(p=>(
+            <button key={p} onClick={()=>setStatPeriod(p)} style={{flex:1,padding:'8px',borderRadius:8,border:'none',background:statPeriod===p?NT:BG,color:statPeriod===p?NEON:MUTED,fontWeight:700,fontSize:13,cursor:'pointer',textTransform:'capitalize',transition:'all 0.2s'}}>
+              {p}
             </button>
           ))}
         </div>
-
-        {/* Ride requests */}
-        {online && (
-          <div style={{ marginBottom: 32 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-              <Navigation size={16} color="#ccff00" />
-              <h3 style={{ color: '#ffffff', fontWeight: 800, fontSize: 15 }}>Incoming Requests</h3>
-              <span style={{ background: '#ccff00', color: '#000', fontWeight: 800, fontSize: 11, padding: '2px 8px', borderRadius: 99 }}>{MOCK_REQUESTS.length}</span>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
+          {[['Trips',stats.trips],['Earned','₦'+stats.earned.toLocaleString()],['Hours',stats.hours+'h']].map(([l,v])=>(
+            <div key={l} style={{textAlign:'center',padding:'12px 8px',background:BG,borderRadius:12}}>
+              <p style={{fontWeight:900,fontSize:'clamp(1.1rem,3vw,1.5rem)',color:NT,letterSpacing:'-0.03em'}}>{v}</p>
+              <p style={{fontSize:11,color:MUTED,fontWeight:600,marginTop:2}}>{l}</p>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {MOCK_REQUESTS.map(r => <RideRequest key={r.id} req={r} onAccept={handleAccept} />)}
-            </div>
+          ))}
+        </div>
+        <div style={{display:'flex',gap:12,marginTop:12}}>
+          <div style={{flex:1,background:NL,border:`1px solid ${NB}`,borderRadius:12,padding:'10px 12px',display:'flex',alignItems:'center',gap:8}}>
+            <Star size={15} color='#f59e0b' fill='#f59e0b'/>
+            <span style={{fontWeight:800,fontSize:14,color:TEXT}}>{MOCK_STATS.rating}</span>
+            <span style={{fontSize:12,color:MUTED}}>Rating</span>
           </div>
-        )}
+          <div style={{flex:1,background:NL,border:`1px solid ${NB}`,borderRadius:12,padding:'10px 12px',display:'flex',alignItems:'center',gap:8}}>
+            <CheckCircle size={15} color={NT}/>
+            <span style={{fontWeight:800,fontSize:14,color:TEXT}}>{MOCK_STATS.acceptance}%</span>
+            <span style={{fontSize:12,color:MUTED}}>Acceptance</span>
+          </div>
+        </div>
+      </div>
 
-        {!online && (
-          <div style={{ textAlign: 'center', padding: '48px 24px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 20, marginBottom: 32 }}>
-            <ToggleLeft size={40} style={{ margin: '0 auto 12px', color: 'rgba(255,255,255,0.2)' }} />
-            <p style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 700, fontSize: 16 }}>You are offline</p>
-            <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 14, marginTop: 6 }}>Toggle online above to receive ride requests</p>
-          </div>
-        )}
-
-        {/* Recent trips */}
-        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 20, padding: '20px 22px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <Clock size={15} color="rgba(255,255,255,0.4)" />
-            <h3 style={{ color: '#ffffff', fontWeight: 800, fontSize: 15 }}>Recent Trips</h3>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {MOCK_RECENT.map(t => (
-              <div key={t.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+      {/* Ride requests */}
+      {online&&MOCK_REQUESTS.length>0&&(
+        <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,padding:20,marginBottom:16,boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
+          <p style={{fontWeight:700,fontSize:14,color:TEXT,marginBottom:14}}>Incoming Requests</p>
+          {MOCK_REQUESTS.map(req=>(
+            <div key={req.id} style={{background:BG,borderRadius:14,padding:'14px 16px',marginBottom:10,border:`1.5px solid ${accepted===req.id?NEON:BORDER}`,transition:'border-color 0.2s'}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:10}}>
                 <div>
-                  <p style={{ color: '#ffffff', fontWeight: 600, fontSize: 14 }}>{t.from} → {t.to}</p>
-                  <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12, marginTop: 2 }}>{t.time}</p>
+                  <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
+                    <span style={{fontSize:11,fontWeight:700,background:req.type==='pool'?NT:'#dbeafe',color:req.type==='pool'?NEON:'#1d4ed8',padding:'2px 8px',borderRadius:20,textTransform:'uppercase',letterSpacing:'0.05em'}}>
+                      {req.type==='pool'?'Pool':'Package'}
+                    </span>
+                    {req.type==='pool'&&<span style={{fontSize:12,color:MUTED}}><Users size={12} style={{display:'inline',verticalAlign:'middle'}}/> {req.riders} riders</span>}
+                  </div>
+                  <p style={{fontWeight:700,fontSize:14,color:TEXT}}>{req.from} → {req.to}</p>
+                  <p style={{fontSize:12,color:MUTED,marginTop:2}}>{req.dist} · {req.eta}</p>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <p style={{ color: t.status === 'completed' ? '#ccff00' : '#f87171', fontWeight: 800, fontSize: 14 }}>₦{t.fare.toLocaleString()}</p>
-                  <span style={{ fontSize: 11, color: t.status === 'completed' ? 'rgba(204,255,0,0.5)' : 'rgba(248,113,113,0.5)', textTransform: 'capitalize' }}>{t.status}</span>
+                <div style={{textAlign:'right'}}>
+                  <p style={{fontWeight:900,fontSize:18,color:NT}}>₦{req.fare.toLocaleString()}</p>
                 </div>
               </div>
-            ))}
-          </div>
-          <button onClick={() => navigate('/driver/earnings')} style={{ width: '100%', marginTop: 16, padding: '11px', borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-            <TrendingUp size={15} /> View Full Earnings
-          </button>
+              <div style={{display:'flex',gap:8}}>
+                <button onClick={()=>{setAccepted(req.id);setTimeout(()=>navigate('/driver/ride/'+req.id),400)}} style={{flex:2,padding:'11px',borderRadius:12,background:NT,color:NEON,fontWeight:700,fontSize:14,border:'none',cursor:'pointer'}}>
+                  Accept
+                </button>
+                <button style={{flex:1,padding:'11px',borderRadius:12,background:CARD,border:`1.5px solid ${BORDER}`,color:MUTED,fontWeight:600,fontSize:14,cursor:'pointer'}}>
+                  Decline
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
+      )}
 
+      {/* Recent trips */}
+      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,overflow:'hidden',boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
+        <div style={{padding:'14px 20px',borderBottom:`1px solid ${BORDER}`}}>
+          <p style={{fontWeight:700,fontSize:14,color:TEXT}}>Recent Trips</p>
+        </div>
+        {MOCK_RECENT.map((t,i)=>(
+          <div key={t.id} style={{display:'flex',alignItems:'center',gap:14,padding:'13px 20px',borderBottom:i<MOCK_RECENT.length-1?`1px solid ${BORDER}`:'none'}}>
+            <div style={{width:36,height:36,borderRadius:10,background:t.status==='cancelled'?'#fef2f2':NT,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+              <MapPin size={16} color={t.status==='cancelled'?'#ef4444':NEON}/>
+            </div>
+            <div style={{flex:1}}>
+              <p style={{color:TEXT,fontWeight:600,fontSize:14}}>{t.from} → {t.to}</p>
+              <p style={{color:MUTED,fontSize:12,marginTop:1}}>{t.time}</p>
+            </div>
+            <div style={{textAlign:'right'}}>
+              <p style={{fontWeight:800,fontSize:14,color:t.status==='cancelled'?'#ef4444':TEXT}}>₦{t.fare.toLocaleString()}</p>
+              <p style={{fontSize:11,fontWeight:600,color:t.status==='cancelled'?'#ef4444':NT,textTransform:'uppercase',marginTop:1}}>{t.status}</p>
+            </div>
+          </div>
+        ))}
       </div>
     </AppLayout>
   )

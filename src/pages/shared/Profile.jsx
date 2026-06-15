@@ -1,134 +1,114 @@
 import React, { useState } from 'react'
-import { User, Phone, Shield, LogOut, ChevronRight, Bell, HelpCircle } from 'lucide-react'
 import AppLayout from '../../components/AppLayout'
 import { useAuth } from '../../context/AuthContext'
-import { useNavigate } from 'react-router-dom'
-import { api } from '../../services/api'
+import { User, Phone, Mail, Shield, Bell, ChevronRight, LogOut, Camera, CheckCircle } from 'lucide-react'
 
-function sanitize(val) { return val.replace(/[<>"']/g, '').trim() }
+const NEON='#ccff00', NT='#0a0a0a', NL='#f9ffe0', NB='#e8ff80'
+const CARD='#ffffff', BORDER='#e8eaed', TEXT='#111827', MUTED='#6b7280', BG='#f5f7fa'
 
-export default function Profile() {
-  const { user, logout, updateUser } = useAuth()
-  const navigate = useNavigate()
-  const [editing, setEditing] = useState(false)
-  const [name, setName] = useState(user?.name || '')
-  const [saving, setSaving] = useState(false)
-  const [saveMsg, setSaveMsg] = useState('')
+function sanitize(v){return String(v).replace(/[<>"]/g,'').slice(0,100)}
 
-  async function handleSave(e) {
+export default function Profile(){
+  const {user,logout,updateUser}=useAuth()
+  const [editing,setEditing]=useState(false)
+  const [saved,setSaved]=useState(false)
+  const [form,setForm]=useState({firstName:user?.firstName||'',lastName:user?.lastName||''})
+  const [saving,setSaving]=useState(false)
+
+  function set(k,v){setForm(f=>({...f,[k]:sanitize(v)}))}
+
+  async function handleSave(e){
     e.preventDefault()
-    const clean = sanitize(name)
-    if (!clean || clean.length < 2) return
+    if(!form.firstName.trim())return
     setSaving(true)
-    try {
-      await api.patch('/auth/profile', { name: clean })
-      updateUser({ name: clean })
-      setEditing(false)
-      setSaveMsg('Profile updated.')
-      setTimeout(() => setSaveMsg(''), 3000)
-    } catch {
-      setSaveMsg('Could not save. Please try again.')
-    } finally {
-      setSaving(false)
-    }
+    try{await updateUser(form);setSaved(true);setEditing(false);setTimeout(()=>setSaved(false),2500)}
+    catch{}finally{setSaving(false)}
   }
 
-  function handleLogout() {
-    logout()
-    navigate('/')
-  }
-
-  const menuItems = [
-    { icon: Bell,       label: 'Notifications',    sub: 'Manage alerts and ride updates' },
-    { icon: Shield,     label: 'Privacy & Security', sub: 'Password, 2FA, data settings' },
-    { icon: HelpCircle, label: 'Help & Support',   sub: 'FAQs, contact us, report issue' },
+  const initials=`${user?.firstName?.[0]||''}${user?.lastName?.[0]||''}`.toUpperCase()||'U'
+  const fullName=`${user?.firstName||''} ${user?.lastName||''}`.trim()||'User'
+  const MENU=[
+    {icon:<Bell size={17}/>,label:'Notifications',desc:'Push & SMS preferences'},
+    {icon:<Shield size={17}/>,label:'Privacy & Security',desc:'Change password, 2FA'},
   ]
 
-  return (
-    <AppLayout title="My Profile">
-      <div className="max-w-lg mx-auto space-y-6">
-
-        {/* Avatar + name */}
-        <div className="card text-center py-8">
-          <div className="w-20 h-20 rounded-2xl bg-feazi-green/20 border-2 border-feazi-green/40 flex items-center justify-center font-black text-feazi-green text-4xl mx-auto mb-4">
-            {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+  return(
+    <AppLayout title="Profile">
+      {/* Avatar card */}
+      <div style={{background:NT,borderRadius:20,padding:24,marginBottom:16,display:'flex',alignItems:'center',gap:20}}>
+        <div style={{position:'relative',flexShrink:0}}>
+          <div style={{width:72,height:72,borderRadius:'50%',background:NEON,display:'flex',alignItems:'center',justifyContent:'center'}}>
+            <span style={{color:NT,fontWeight:900,fontSize:28,letterSpacing:'-0.03em'}}>{initials}</span>
           </div>
-
-          {editing ? (
-            <form onSubmit={handleSave} className="space-y-3 max-w-xs mx-auto">
-              <input
-                type="text"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                maxLength={60}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-center text-sm focus:outline-none focus:border-feazi-green/60 transition"
-                autoFocus
-              />
-              <div className="flex gap-2">
-                <button type="button" onClick={() => { setEditing(false); setName(user?.name || '') }} className="btn-outline flex-1 justify-center py-2 text-sm">Cancel</button>
-                <button type="submit" disabled={saving} className="btn-primary flex-1 justify-center py-2 text-sm disabled:opacity-50">
-                  {saving ? 'Saving...' : 'Save'}
-                </button>
-              </div>
-            </form>
-          ) : (
-            <>
-              <h2 className="font-display font-bold text-white text-2xl mb-1">{user?.name || 'User'}</h2>
-              <p className="text-white/50 text-sm capitalize mb-1">{user?.role || 'rider'}</p>
-              <p className="text-white/40 text-sm mb-4">{user?.phone || ''}</p>
-              <button onClick={() => setEditing(true)} className="text-feazi-green text-sm font-semibold hover:underline">
-                Edit name
-              </button>
-              {saveMsg && <p className="text-feazi-green text-xs mt-2">{saveMsg}</p>}
-            </>
-          )}
+          <button style={{position:'absolute',bottom:0,right:0,width:24,height:24,borderRadius:'50%',background:NT,border:`1.5px solid rgba(204,255,0,0.4)`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}} aria-label="Change photo">
+            <Camera size={12} color={NEON}/>
+          </button>
         </div>
-
-        {/* Info card */}
-        <div className="card space-y-4">
-          <h3 className="font-semibold text-white">Account Details</h3>
-          {[
-            { icon: User,  label: 'Full Name',    value: user?.name || '—' },
-            { icon: Phone, label: 'Phone Number', value: user?.phone || '—' },
-            { icon: Shield, label: 'Account Type', value: user?.role === 'driver' ? '🚗 Driver' : '👤 Rider' },
-          ].map(({ icon: Icon, label, value }) => (
-            <div key={label} className="flex items-center gap-4 py-2 border-b border-white/5 last:border-0">
-              <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center flex-shrink-0">
-                <Icon size={16} className="text-white/50" />
-              </div>
-              <div className="flex-1">
-                <p className="text-white/40 text-xs">{label}</p>
-                <p className="text-white text-sm font-medium">{value}</p>
-              </div>
-            </div>
-          ))}
+        <div style={{flex:1}}>
+          <p style={{fontWeight:800,fontSize:18,color:NEON,letterSpacing:'-0.02em'}}>{fullName}</p>
+          <p style={{fontSize:13,color:'rgba(255,255,255,0.5)',marginTop:2,textTransform:'capitalize'}}>{user?.role||'rider'}</p>
+          {saved&&<div style={{display:'flex',alignItems:'center',gap:6,marginTop:6}}><CheckCircle size={14} color={NEON}/><span style={{fontSize:13,color:NEON,fontWeight:600}}>Updated!</span></div>}
         </div>
-
-        {/* Menu */}
-        <div className="card space-y-1 p-2">
-          {menuItems.map(({ icon: Icon, label, sub }) => (
-            <button key={label} className="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 transition text-left group">
-              <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center flex-shrink-0 group-hover:bg-feazi-green/20 transition">
-                <Icon size={16} className="text-white/50 group-hover:text-feazi-green transition" />
-              </div>
-              <div className="flex-1">
-                <p className="text-white text-sm font-medium">{label}</p>
-                <p className="text-white/40 text-xs">{sub}</p>
-              </div>
-              <ChevronRight size={16} className="text-white/20 group-hover:text-white/40 transition" />
-            </button>
-          ))}
-        </div>
-
-        {/* Logout */}
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border border-red-500/20 text-red-400 hover:bg-red-500/10 transition font-semibold"
-        >
-          <LogOut size={18} />
-          Sign Out
+        <button onClick={()=>setEditing(!editing)} style={{padding:'9px 16px',borderRadius:10,background:editing?'rgba(255,255,255,0.08)':NEON,border:`1px solid ${editing?'rgba(255,255,255,0.1)':NEON}`,color:editing?'rgba(255,255,255,0.5)':NT,fontWeight:700,fontSize:13,cursor:'pointer'}}>
+          {editing?'Cancel':'Edit'}
         </button>
       </div>
+
+      {/* Edit form */}
+      {editing&&(
+        <form onSubmit={handleSave} style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,padding:20,marginBottom:16,boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
+          <p style={{fontWeight:700,fontSize:14,color:TEXT,marginBottom:14}}>Edit Profile</p>
+          <div style={{display:'flex',flexDirection:'column',gap:12}}>
+            {[['First Name','firstName'],['Last Name','lastName']].map(([label,key])=>(
+              <div key={key}>
+                <label style={{display:'block',fontSize:13,fontWeight:600,color:TEXT,marginBottom:6}}>{label}</label>
+                <input value={form[key]} onChange={e=>set(key,e.target.value)} style={{width:'100%',padding:'12px 14px',borderRadius:10,fontSize:15,border:`1.5px solid ${BORDER}`,outline:'none',color:TEXT,background:CARD,fontFamily:'inherit',boxSizing:'border-box'}} onFocus={e=>e.target.style.borderColor=NEON} onBlur={e=>e.target.style.borderColor=BORDER}/>
+              </div>
+            ))}
+          </div>
+          <button type="submit" disabled={saving} style={{marginTop:16,width:'100%',padding:'13px',borderRadius:50,background:saving?'#ccc':NT,color:saving?'#fff':NEON,fontWeight:700,fontSize:15,border:'none',cursor:saving?'not-allowed':'pointer'}}>
+            {saving?'Saving…':'Save Changes'}
+          </button>
+        </form>
+      )}
+
+      {/* Info */}
+      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,overflow:'hidden',marginBottom:16,boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
+        <div style={{padding:'14px 20px',borderBottom:`1px solid ${BORDER}`}}>
+          <p style={{fontWeight:700,fontSize:14,color:TEXT}}>Account Info</p>
+        </div>
+        {[{icon:<Phone size={16} color={NT}/>,label:'Phone',value:user?.phone||'—'},
+          {icon:<Mail size={16} color={NT}/>,label:'Email',value:user?.email||'Not set'},
+          {icon:<User size={16} color={NT}/>,label:'Role',value:user?.role||'rider',cap:true}].map((item,i)=>(
+          <div key={item.label} style={{display:'flex',alignItems:'center',gap:14,padding:'14px 20px',borderBottom:i<2?`1px solid ${BORDER}`:'none'}}>
+            <div style={{width:34,height:34,borderRadius:10,background:NEON,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{item.icon}</div>
+            <div style={{flex:1}}>
+              <p style={{fontSize:12,color:MUTED,fontWeight:500}}>{item.label}</p>
+              <p style={{fontSize:14,color:TEXT,fontWeight:600,marginTop:1,textTransform:item.cap?'capitalize':'none'}}>{item.value}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Settings */}
+      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,overflow:'hidden',marginBottom:16,boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
+        {MENU.map((item,i)=>(
+          <button key={item.label} style={{width:'100%',display:'flex',alignItems:'center',gap:14,padding:'15px 20px',borderBottom:i<MENU.length-1?`1px solid ${BORDER}`:'none',background:CARD,border:'none',cursor:'pointer',textAlign:'left',transition:'background 0.15s'}}
+            onMouseEnter={e=>e.currentTarget.style.background=NL} onMouseLeave={e=>e.currentTarget.style.background=CARD}>
+            <div style={{width:34,height:34,borderRadius:10,background:NT,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,color:NEON}}>{item.icon}</div>
+            <div style={{flex:1}}>
+              <p style={{fontSize:14,fontWeight:600,color:TEXT}}>{item.label}</p>
+              <p style={{fontSize:12,color:MUTED,marginTop:1}}>{item.desc}</p>
+            </div>
+            <ChevronRight size={16} color={MUTED}/>
+          </button>
+        ))}
+      </div>
+
+      {/* Logout */}
+      <button onClick={logout} style={{width:'100%',padding:'14px',borderRadius:14,background:'#fef2f2',border:'1.5px solid #fca5a5',color:'#ef4444',fontWeight:700,fontSize:15,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:10}}>
+        <LogOut size={18}/>Sign Out
+      </button>
     </AppLayout>
   )
 }

@@ -1,197 +1,108 @@
-import React, { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { Star } from 'lucide-react'
+import React, { useState } from 'react'
 import AppLayout from '../../components/AppLayout'
-import { api } from '../../services/api'
+import { Star, CheckCircle } from 'lucide-react'
 
-function sanitize(val) { return val.replace(/[<>"']/g, '').slice(0, 300) }
+const NEON='#ccff00', NT='#0a0a0a', NL='#f9ffe0', NB='#e8ff80'
+const CARD='#ffffff', BORDER='#e8eaed', TEXT='#111827', MUTED='#6b7280'
 
-const DRIVER_TAGS = ['Great driving', 'Very punctual', 'Clean vehicle', 'Friendly', 'Safe driver']
-const RIDER_TAGS  = ['Friendly', 'On time', 'Quiet ride', 'Respectful']
+const TAGS=['Great conversation','Safe driving','Clean vehicle','Punctual','Smooth ride','Professional']
 
-export default function RateRide() {
-  const { rideId } = useParams()
-  const navigate = useNavigate()
+export default function RateRide(){
+  const [stars,setStars]=useState(0)
+  const [hover,setHover]=useState(0)
+  const [tags,setTags]=useState([])
+  const [comment,setComment]=useState('')
+  const [submitted,setSubmitted]=useState(false)
+  const [submitting,setSubmitting]=useState(false)
 
-  const [ride, setRide] = useState(null)
-  const [driverRating, setDriverRating] = useState(0)
-  const [driverHover, setDriverHover] = useState(0)
-  const [driverTags, setDriverTags] = useState([])
-  const [riderRatings, setRiderRatings] = useState({})
-  const [comment, setComment] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
+  function toggleTag(t){setTags(ts=>ts.includes(t)?ts.filter(x=>x!==t):[...ts,t])}
+  function sanitize(v){return v.replace(/[<>"]/g,'').slice(0,300)}
 
-  useEffect(() => {
-    api.get(`/rides/${rideId}`)
-      .then(res => setRide(res.data.ride))
-      .catch(() => setRide(MOCK_RIDE))
-  }, [rideId])
-
-  function toggleTag(tag) {
-    setDriverTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
-  }
-
-  async function handleSubmit(e) {
+  function handleSubmit(e){
     e.preventDefault()
-    if (!driverRating) return
-    setLoading(true)
-    try {
-      await api.post(`/rides/${rideId}/rate`, {
-        driverRating,
-        driverTags,
-        riderRatings,
-        comment: sanitize(comment),
-      })
-      setSubmitted(true)
-      setTimeout(() => navigate('/book'), 2500)
-    } catch {
-      setLoading(false)
-    }
+    if(!stars)return
+    setSubmitting(true)
+    setTimeout(()=>{setSubmitting(false);setSubmitted(true)},1200)
   }
 
-  if (submitted) return (
-    <AppLayout title="Rating Submitted">
-      <div className="max-w-md mx-auto text-center py-16">
-        <div className="text-7xl mb-6">🎉</div>
-        <h2 className="font-display font-bold text-white text-2xl mb-3">Thank you!</h2>
-        <p className="text-white/60 mb-2">Your rating helps keep FeaziMove safe and great.</p>
-        <p className="text-white/40 text-sm">Redirecting to home...</p>
+  if(submitted){
+    return(
+      <AppLayout title="Rate Ride">
+        <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',minHeight:400,textAlign:'center',padding:24}}>
+          <div style={{width:80,height:80,borderRadius:'50%',background:NT,display:'flex',alignItems:'center',justifyContent:'center',marginBottom:20}}>
+            <CheckCircle size={40} color={NEON}/>
+          </div>
+          <h2 style={{fontSize:24,fontWeight:900,color:TEXT,letterSpacing:'-0.02em',marginBottom:8}}>Thanks for your feedback!</h2>
+          <p style={{color:MUTED,fontSize:15,marginBottom:10}}>You rated your trip</p>
+          <div style={{display:'flex',gap:4,justifyContent:'center',marginBottom:32}}>
+            {[1,2,3,4,5].map(s=><Star key={s} size={28} fill={s<=stars?'#f59e0b':'none'} color={s<=stars?'#f59e0b':BORDER}/>)}
+          </div>
+          <button onClick={()=>{setSubmitted(false);setStars(0);setTags([]);setComment('')}} style={{padding:'13px 32px',borderRadius:50,background:NT,color:NEON,fontWeight:700,fontSize:15,border:'none',cursor:'pointer'}}>
+            Done
+          </button>
+        </div>
+      </AppLayout>
+    )
+  }
+
+  const driver={name:'Adewale Okafor',from:'Ikeja GRA',to:'Victoria Island',amount:2800,date:'Today, 9:14 AM'}
+
+  return(
+    <AppLayout title="Rate Ride">
+      {/* Trip summary */}
+      <div style={{background:NT,borderRadius:16,padding:20,marginBottom:16}}>
+        <div style={{display:'flex',alignItems:'center',gap:14}}>
+          <div style={{width:52,height:52,borderRadius:14,background:NEON,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+            <span style={{color:NT,fontWeight:800,fontSize:22}}>{driver.name[0]}</span>
+          </div>
+          <div style={{flex:1}}>
+            <p style={{fontWeight:700,fontSize:15,color:'#fff'}}>{driver.name}</p>
+            <p style={{fontSize:13,color:'rgba(255,255,255,0.5)',marginTop:2}}>{driver.from} → {driver.to}</p>
+            <p style={{fontSize:12,color:'rgba(255,255,255,0.35)',marginTop:1}}>{driver.date}</p>
+          </div>
+          <p style={{fontWeight:900,fontSize:18,color:NT,background:NEON,padding:'4px 12px',borderRadius:10}}>₦{driver.amount.toLocaleString()}</p>
+        </div>
       </div>
-    </AppLayout>
-  )
 
-  return (
-    <AppLayout title="Rate Your Ride">
-      <div className="max-w-lg mx-auto">
-        <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit}>
+        {/* Stars */}
+        <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,padding:24,marginBottom:16,boxShadow:'0 1px 3px rgba(0,0,0,0.04)',textAlign:'center'}}>
+          <p style={{fontWeight:700,fontSize:15,color:TEXT,marginBottom:6}}>How was your ride?</p>
+          <p style={{fontSize:13,color:MUTED,marginBottom:20}}>Tap a star to rate</p>
+          <div style={{display:'flex',justifyContent:'center',gap:10,marginBottom:12}}>
+            {[1,2,3,4,5].map(s=>(
+              <button key={s} type="button" onMouseEnter={()=>setHover(s)} onMouseLeave={()=>setHover(0)} onClick={()=>setStars(s)} style={{background:'none',border:'none',cursor:'pointer',padding:4,transition:'transform 0.1s',transform:(hover||stars)>=s?'scale(1.15)':'scale(1)'}}>
+                <Star size={40} fill={(hover||stars)>=s?'#f59e0b':'none'} color={(hover||stars)>=s?'#f59e0b':BORDER} strokeWidth={1.5}/>
+              </button>
+            ))}
+          </div>
+          {stars>0&&<p style={{fontWeight:700,fontSize:15,color:NT,background:NEON,display:'inline-block',padding:'4px 16px',borderRadius:20}}>{['','Poor','Fair','Good','Great','Excellent!'][stars]}</p>}
+        </div>
 
-          {/* Rate driver */}
-          <div className="card text-center">
-            <div className="w-20 h-20 rounded-2xl bg-feazi-green/20 border border-feazi-green/30 flex items-center justify-center font-bold text-feazi-green text-3xl mx-auto mb-4">
-              {ride?.driver?.name?.charAt(0) || 'D'}
-            </div>
-            <h3 className="font-display font-bold text-white text-xl mb-1">{ride?.driver?.name || 'Your Driver'}</h3>
-            <p className="text-white/50 text-sm mb-6">{ride?.driver?.vehicle || 'FeaziPool Driver'}</p>
-
-            <p className="text-white/70 text-sm font-medium mb-3">How was your driver?</p>
-            <div className="flex justify-center gap-3 mb-4">
-              {[1, 2, 3, 4, 5].map(star => (
-                <button
-                  key={star}
-                  type="button"
-                  onMouseEnter={() => setDriverHover(star)}
-                  onMouseLeave={() => setDriverHover(0)}
-                  onClick={() => setDriverRating(star)}
-                  className="transition-transform hover:scale-110 active:scale-95"
-                  aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
-                >
-                  <Star
-                    size={36}
-                    className={`transition-colors ${(driverHover || driverRating) >= star ? 'text-feazi-accent fill-feazi-accent' : 'text-white/20'}`}
-                  />
+        {/* Tags */}
+        {stars>=4&&(
+          <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,padding:20,marginBottom:16,boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
+            <p style={{fontWeight:700,fontSize:14,color:TEXT,marginBottom:14}}>What stood out?</p>
+            <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
+              {TAGS.map(t=>(
+                <button key={t} type="button" onClick={()=>toggleTag(t)} style={{padding:'8px 14px',borderRadius:50,fontSize:13,fontWeight:600,border:`1.5px solid ${tags.includes(t)?NEON:BORDER}`,background:tags.includes(t)?NT:CARD,color:tags.includes(t)?NEON:MUTED,cursor:'pointer',transition:'all 0.15s'}}>
+                  {tags.includes(t)?'✓ ':''}{t}
                 </button>
               ))}
             </div>
-
-            {/* Tags */}
-            {driverRating >= 4 && (
-              <div className="flex flex-wrap justify-center gap-2 mt-2">
-                {DRIVER_TAGS.map(tag => (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => toggleTag(tag)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${
-                      driverTags.includes(tag)
-                        ? 'bg-feazi-green border-feazi-green text-white'
-                        : 'border-white/10 text-white/50 hover:border-white/30'
-                    }`}
-                  >
-                    {tag}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
+        )}
 
-          {/* Rate co-riders */}
-          {ride?.coRiders?.length > 0 && (
-            <div className="card">
-              <h3 className="font-display font-bold text-white text-lg mb-4">Rate your co-riders</h3>
-              <div className="space-y-5">
-                {ride.coRiders.map(rider => (
-                  <div key={rider.id} className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center font-bold text-white text-sm flex-shrink-0">
-                      {rider.name.charAt(0)}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-white text-sm font-medium mb-1">{rider.name}</p>
-                      <div className="flex gap-2">
-                        {[1, 2, 3, 4, 5].map(star => (
-                          <button
-                            key={star}
-                            type="button"
-                            onClick={() => setRiderRatings(prev => ({ ...prev, [rider.id]: star }))}
-                            aria-label={`Rate ${rider.name} ${star} stars`}
-                          >
-                            <Star
-                              size={18}
-                              className={`transition-colors ${(riderRatings[rider.id] || 0) >= star ? 'text-feazi-accent fill-feazi-accent' : 'text-white/20'}`}
-                            />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+        {/* Comment */}
+        <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,padding:20,marginBottom:20,boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
+          <label style={{display:'block',fontWeight:700,fontSize:14,color:TEXT,marginBottom:10}}>Additional comments (optional)</label>
+          <textarea value={comment} onChange={e=>setComment(sanitize(e.target.value))} placeholder="Share more about your experience…" rows={4} style={{width:'100%',padding:'12px 14px',borderRadius:12,fontSize:14,border:`1.5px solid ${BORDER}`,outline:'none',color:TEXT,background:CARD,fontFamily:'inherit',resize:'vertical',boxSizing:'border-box'}} onFocus={e=>e.target.style.borderColor=NEON} onBlur={e=>e.target.style.borderColor=BORDER}/>
+        </div>
 
-          {/* Optional comment */}
-          <div className="card">
-            <label htmlFor="rate-comment" className="block text-white/70 text-sm font-medium mb-3">
-              Leave a comment (optional)
-            </label>
-            <textarea
-              id="rate-comment"
-              value={comment}
-              onChange={e => setComment(sanitize(e.target.value))}
-              placeholder="Tell us about your experience..."
-              rows={3}
-              maxLength={300}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 text-sm focus:outline-none focus:border-feazi-green/60 transition resize-none"
-            />
-            <p className="text-white/30 text-xs mt-1 text-right">{comment.length}/300</p>
-          </div>
-
-          <button
-            type="submit"
-            disabled={!driverRating || loading}
-            className="btn-primary w-full justify-center py-4 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {loading ? (
-              <span className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Submitting...
-              </span>
-            ) : 'Submit Rating'}
-          </button>
-
-          <button type="button" onClick={() => navigate('/book')} className="w-full text-center text-white/30 text-sm hover:text-white/50 transition">
-            Skip for now
-          </button>
-        </form>
-      </div>
+        <button type="submit" disabled={!stars||submitting} style={{width:'100%',padding:'15px',borderRadius:50,background:!stars?'#e5e7eb':submitting?'#ccc':NT,color:!stars?MUTED:NEON,fontWeight:700,fontSize:15,border:'none',cursor:!stars||submitting?'not-allowed':'pointer',transition:'background 0.2s'}}>
+          {submitting?'Submitting…':'Submit Rating'}
+        </button>
+      </form>
     </AppLayout>
   )
-}
-
-const MOCK_RIDE = {
-  driver: { name: 'Chidi Okafor', vehicle: 'Toyota Corolla · LND 432 GH' },
-  coRiders: [
-    { id: 'r1', name: 'Emeka N.' },
-    { id: 'r2', name: 'Fatima S.' },
-  ],
 }

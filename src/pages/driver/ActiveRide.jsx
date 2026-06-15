@@ -1,150 +1,94 @@
-import React, { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { Phone, CheckCircle, Navigation } from 'lucide-react'
+import React, { useState } from 'react'
 import AppLayout from '../../components/AppLayout'
-import { api } from '../../services/api'
+import { MapPin, Phone, MessageSquare, CheckCircle, Navigation } from 'lucide-react'
 
-const STEPS = [
-  { key: 'heading_to_pickup', label: 'Heading to pickup', action: 'Arrived at Pickup' },
-  { key: 'arrived_pickup',    label: 'At pickup location', action: 'Start Ride' },
-  { key: 'in_transit',        label: 'Ride in progress', action: 'Complete Ride' },
-  { key: 'completed',         label: 'Ride completed', action: null },
-]
+const NEON='#ccff00', NT='#0a0a0a', NL='#f9ffe0', NB='#e8ff80'
+const CARD='#ffffff', BORDER='#e8eaed', TEXT='#111827', MUTED='#6b7280', BG='#f5f7fa'
 
-export default function ActiveRide() {
-  const { rideId } = useParams()
-  const navigate = useNavigate()
-  const [ride, setRide] = useState(null)
-  const [stepIdx, setStepIdx] = useState(0)
-  const [loading, setLoading] = useState(false)
+const STAGES=['Heading to pickup','Arrived at pickup','Trip in progress','Trip completed']
 
-  useEffect(() => {
-    api.get(`/rides/${rideId}`)
-      .then(res => setRide(res.data.ride))
-      .catch(() => setRide(MOCK_RIDE))
-  }, [rideId])
+export default function ActiveRide(){
+  const [stage,setStage]=useState(0)
+  const [done,setDone]=useState(false)
+  const rider={name:'Funmi Adeyemi',phone:'+234 803 456 7890',from:'Ikeja GRA',to:'Victoria Island',fare:2800}
 
-  async function advanceStep() {
-    if (stepIdx >= STEPS.length - 1) return
-    setLoading(true)
-    try {
-      await api.patch(`/rides/${rideId}/status`, { status: STEPS[stepIdx + 1].key })
-      setStepIdx(i => i + 1)
-      if (stepIdx + 1 === STEPS.length - 1) {
-        setTimeout(() => navigate('/driver'), 3000)
-      }
-    } catch {
-      // stay on step
-    } finally {
-      setLoading(false)
-    }
+  function advance(){
+    if(stage<STAGES.length-1)setStage(s=>s+1)
+    else setDone(true)
   }
 
-  const currentStep = STEPS[stepIdx]
-
-  return (
-    <AppLayout title="Active Ride">
-      <div className="max-w-lg mx-auto space-y-6">
-
-        {/* Status */}
-        <div className={`card text-center py-8 transition-all ${stepIdx === STEPS.length - 1 ? 'border-feazi-green/50 bg-feazi-green/10' : ''}`}>
-          {stepIdx === STEPS.length - 1 ? (
-            <>
-              <CheckCircle size={52} className="text-feazi-green mx-auto mb-3" />
-              <h2 className="font-display font-bold text-white text-2xl mb-1">Ride Complete!</h2>
-              <p className="text-white/50 text-sm">Fare has been added to your wallet. Returning to dashboard...</p>
-            </>
-          ) : (
-            <>
-              <div className="w-16 h-16 rounded-2xl bg-feazi-green/20 border border-feazi-green/30 flex items-center justify-center mx-auto mb-4">
-                <Navigation size={28} className="text-feazi-green" />
-              </div>
-              <h2 className="font-display font-bold text-white text-xl mb-1">{currentStep.label}</h2>
-              <div className="flex justify-center gap-2 mt-3">
-                {STEPS.map((s, i) => (
-                  <div key={s.key} className={`h-1.5 rounded-full transition-all ${i <= stepIdx ? 'bg-feazi-green w-8' : 'bg-white/10 w-4'}`} />
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Map */}
-        <div className="relative bg-feazi-green/5 border border-white/10 rounded-3xl overflow-hidden h-52">
-          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 500 200">
-            <path d="M0 100 Q125 50 250 100 T500 100" stroke="#0D7A3E" strokeWidth="3" fill="none" opacity="0.5"/>
-            <circle cx="80" cy="95" r="8" fill="#FFB800"/>
-            <circle cx="420" cy="100" r="8" fill="#0D7A3E"/>
-            <circle cx={80 + stepIdx * 90} cy={95 + Math.sin(stepIdx) * 10} r="10" fill="#0D7A3E">
-              <animate attributeName="r" values="10;14;10" dur="2s" repeatCount="indefinite"/>
-            </circle>
-          </svg>
-          <div className="absolute top-3 left-3 bg-feazi-dark/90 rounded-xl px-3 py-1.5 text-xs text-white/70">
-            📍 Live Route
+  if(done){
+    return(
+      <AppLayout title="Active Ride">
+        <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',minHeight:400,textAlign:'center',padding:24}}>
+          <div style={{width:80,height:80,borderRadius:'50%',background:NT,display:'flex',alignItems:'center',justifyContent:'center',marginBottom:20}}>
+            <CheckCircle size={40} color={NEON}/>
           </div>
-        </div>
-
-        {/* Riders */}
-        {ride?.riders && (
-          <div className="card">
-            <h3 className="font-semibold text-white mb-4">Passengers ({ride.riders.length})</h3>
-            <div className="space-y-3">
-              {ride.riders.map((r, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-feazi-green/20 border border-feazi-green/30 flex items-center justify-center text-feazi-green font-bold text-sm">
-                    {r.name.charAt(0)}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-white text-sm font-medium">{r.name}</p>
-                    <p className="text-white/40 text-xs">{r.dropoff}</p>
-                  </div>
-                  <a href={`tel:${r.phone}`} className="w-8 h-8 rounded-xl bg-feazi-green/15 flex items-center justify-center text-feazi-green hover:bg-feazi-green/25 transition" aria-label={`Call ${r.name}`}>
-                    <Phone size={14} />
-                  </a>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Fare */}
-        <div className="card flex items-center justify-between">
-          <div>
-            <p className="text-white/50 text-sm">Trip Fare</p>
-            <p className="font-display font-bold text-feazi-green text-3xl">₦{(ride?.fare || 0).toLocaleString()}</p>
-            <p className="text-white/30 text-xs mt-0.5">Auto-deducted from rider wallet</p>
-          </div>
-          <div className="text-right">
-            <p className="text-white/50 text-sm">Distance</p>
-            <p className="text-white font-bold text-xl">{ride?.distance || '14 km'}</p>
-          </div>
-        </div>
-
-        {/* Advance step button */}
-        {currentStep.action && (
-          <button
-            onClick={advanceStep}
-            disabled={loading}
-            className="btn-primary w-full justify-center py-4 text-base disabled:opacity-50"
-          >
-            {loading ? (
-              <span className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Updating...
-              </span>
-            ) : currentStep.action}
+          <h2 style={{fontSize:24,fontWeight:900,color:TEXT,marginBottom:8,letterSpacing:'-0.02em'}}>Trip Completed!</h2>
+          <p style={{color:MUTED,fontSize:15,marginBottom:8}}>Fare collected</p>
+          <p style={{fontSize:36,fontWeight:900,color:NT,letterSpacing:'-0.03em',marginBottom:32,background:NEON,display:'inline-block',padding:'4px 24px',borderRadius:14}}>₦{rider.fare.toLocaleString()}</p>
+          <button onClick={()=>{setStage(0);setDone(false)}} style={{padding:'13px 32px',borderRadius:50,background:NT,color:NEON,fontWeight:700,fontSize:15,border:'none',cursor:'pointer'}}>
+            Ready for Next Ride
           </button>
-        )}
+        </div>
+      </AppLayout>
+    )
+  }
+
+  return(
+    <AppLayout title="Active Ride">
+      {/* Map */}
+      <div style={{background:NT,borderRadius:20,height:200,marginBottom:20,display:'flex',alignItems:'center',justifyContent:'center',position:'relative',overflow:'hidden'}}>
+        <div style={{position:'absolute',inset:0,opacity:0.06,backgroundImage:`linear-gradient(${NEON} 1px,transparent 1px),linear-gradient(90deg,${NEON} 1px,transparent 1px)`,backgroundSize:'36px 36px'}}/>
+        <div style={{position:'absolute',top:14,left:14,background:'rgba(204,255,0,0.12)',border:`1px solid rgba(204,255,0,0.3)`,backdropFilter:'blur(8px)',borderRadius:10,padding:'8px 14px',display:'flex',alignItems:'center',gap:6}}>
+          <Navigation size={13} color={NEON}/>
+          <span style={{fontSize:13,fontWeight:700,color:NEON}}>Live Navigation</span>
+        </div>
+        <div style={{width:40,height:40,borderRadius:'50%',background:NEON,display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <MapPin size={20} color={NT}/>
+        </div>
+        <div style={{position:'absolute',bottom:12,left:'50%',transform:'translateX(-50%)',background:'rgba(204,255,0,0.1)',border:`1px solid rgba(204,255,0,0.25)`,color:NEON,borderRadius:20,padding:'5px 14px',fontSize:12,fontWeight:600,whiteSpace:'nowrap'}}>
+          GPS integration coming soon
+        </div>
       </div>
+
+      {/* Stage indicator */}
+      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,padding:'16px 20px',marginBottom:16,boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
+        <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}>
+          <p style={{fontWeight:700,fontSize:14,color:TEXT}}>Current Stage</p>
+          <p style={{fontSize:13,fontWeight:700,color:NT,background:NEON,padding:'2px 10px',borderRadius:20}}>{stage+1} / {STAGES.length}</p>
+        </div>
+        <div style={{height:6,borderRadius:6,background:BORDER,overflow:'hidden',marginBottom:12}}>
+          <div style={{height:'100%',background:NEON,borderRadius:6,width:`${((stage+1)/STAGES.length)*100}%`,transition:'width 0.4s ease'}}/>
+        </div>
+        <p style={{color:TEXT,fontWeight:700,fontSize:15}}>{STAGES[stage]}</p>
+      </div>
+
+      {/* Rider card */}
+      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,padding:20,marginBottom:16,boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
+        <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:16}}>
+          <div style={{width:48,height:48,borderRadius:12,background:NT,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+            <span style={{color:NEON,fontWeight:800,fontSize:20}}>{rider.name[0]}</span>
+          </div>
+          <div style={{flex:1}}>
+            <p style={{color:TEXT,fontWeight:700,fontSize:15}}>{rider.name}</p>
+            <p style={{fontSize:13,color:MUTED,marginTop:2}}>{rider.from} → {rider.to}</p>
+          </div>
+          <p style={{fontWeight:900,fontSize:18,color:NT,background:NEON,padding:'4px 12px',borderRadius:10}}>₦{rider.fare.toLocaleString()}</p>
+        </div>
+        <div style={{display:'flex',gap:10}}>
+          <a href={`tel:${rider.phone}`} style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:'11px',borderRadius:12,background:NT,color:NEON,fontWeight:700,fontSize:14,textDecoration:'none'}}>
+            <Phone size={15}/> Call
+          </a>
+          <button style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:'11px',borderRadius:12,background:CARD,border:`1.5px solid ${BORDER}`,color:TEXT,fontWeight:700,fontSize:14,cursor:'pointer'}}>
+            <MessageSquare size={15}/> Chat
+          </button>
+        </div>
+      </div>
+
+      <button onClick={advance} style={{width:'100%',padding:'15px',borderRadius:50,background:NT,color:NEON,fontWeight:700,fontSize:15,border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:10}}>
+        {stage<STAGES.length-1?`✓ ${STAGES[stage+1]}`:'Complete Trip & Collect Fare'}
+      </button>
     </AppLayout>
   )
-}
-
-const MOCK_RIDE = {
-  fare: 900,
-  distance: '14 km',
-  riders: [
-    { name: 'Adaeze O.', dropoff: 'CMS Bus Stop', phone: '+2348012345678' },
-    { name: 'Emeka N.',  dropoff: 'Marina, Lagos', phone: '+2348023456789' },
-  ],
 }

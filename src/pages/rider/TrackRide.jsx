@@ -1,177 +1,93 @@
-import React, { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { Phone, MessageSquare, X, ChevronRight, Star } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
 import AppLayout from '../../components/AppLayout'
-import { api } from '../../services/api'
+import { Phone, MessageSquare, Star, MapPin, Navigation } from 'lucide-react'
 
-const STATUSES = ['Driver assigned', 'Driver en route', 'Driver arrived', 'In transit', 'Completed']
+const NEON='#ccff00', NT='#0a0a0a', NL='#f9ffe0', NB='#e8ff80'
+const CARD='#ffffff', BORDER='#e8eaed', TEXT='#111827', MUTED='#6b7280', BG='#f5f7fa'
 
-export default function TrackRide() {
-  const { rideId } = useParams()
-  const navigate = useNavigate()
+const STEPS=['Driver assigned','Driver en route','Driver arrived','Trip in progress','Trip completed']
 
-  const [ride, setRide] = useState(null)
-  const [statusIdx, setStatusIdx] = useState(1)
-  const [loading, setLoading] = useState(true)
-  const [cancelling, setCancelling] = useState(false)
+export default function TrackRide(){
+  const [step,setStep]=useState(1)
+  const [eta,setEta]=useState(7)
 
-  useEffect(() => {
-    api.get(`/rides/${rideId}`)
-      .then(res => { setRide(res.data.ride); setLoading(false) })
-      .catch(() => { navigate('/book'); })
+  useEffect(()=>{
+    if(step>=4)return
+    const t=setTimeout(()=>{setStep(s=>Math.min(s+1,4));setEta(e=>Math.max(0,e-2))},4000)
+    return()=>clearTimeout(t)
+  },[step])
 
-    // Poll status every 10s (replace with WebSocket in production)
-    const poll = setInterval(() => {
-      api.get(`/rides/${rideId}/status`)
-        .then(res => {
-          const idx = STATUSES.indexOf(res.data.status)
-          if (idx !== -1) setStatusIdx(idx)
-          if (res.data.status === 'Completed') {
-            clearInterval(poll)
-            setTimeout(() => navigate(`/rate/${rideId}`), 2000)
-          }
-        })
-        .catch(() => {})
-    }, 10000)
+  const driver={name:'Adewale Okafor',phone:'+234 812 345 6789',rating:4.8,trips:1240,plate:'ABC 123 XY',car:'Toyota Camry (White)'}
 
-    return () => clearInterval(poll)
-  }, [rideId, navigate])
-
-  async function handleCancel() {
-    if (!window.confirm('Cancel this ride?')) return
-    setCancelling(true)
-    try {
-      await api.patch(`/rides/${rideId}/cancel`)
-      navigate('/book')
-    } catch {
-      setCancelling(false)
-    }
-  }
-
-  if (loading) return (
-    <AppLayout title="Tracking Ride">
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-2 border-feazi-green border-t-transparent rounded-full animate-spin" />
-      </div>
-    </AppLayout>
-  )
-
-  return (
-    <AppLayout title="Live Tracking">
-      <div className="max-w-2xl mx-auto space-y-6">
-
-        {/* Map placeholder — replace with Google Maps or Mapbox */}
-        <div className="relative bg-feazi-green/5 border border-white/10 rounded-3xl overflow-hidden h-72">
-          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 600 300" xmlns="http://www.w3.org/2000/svg">
-            {/* Road network */}
-            <path d="M0 150 Q150 80 300 150 T600 150" stroke="#0D7A3E" strokeWidth="3" fill="none" opacity="0.4"/>
-            <path d="M0 200 Q200 120 400 180 T600 160" stroke="#0D7A3E" strokeWidth="1.5" fill="none" opacity="0.2"/>
-            <path d="M100 0 Q130 100 100 300" stroke="#0D7A3E" strokeWidth="1.5" fill="none" opacity="0.2"/>
-            <path d="M400 0 Q370 150 400 300" stroke="#0D7A3E" strokeWidth="1.5" fill="none" opacity="0.2"/>
-            {/* Driver dot (animated) */}
-            <circle cx="180" cy="130" r="10" fill="#0D7A3E" opacity="0.9">
-              <animate attributeName="cx" values="120;180;240" dur="4s" repeatCount="indefinite"/>
-            </circle>
-            <circle cx="180" cy="130" r="20" fill="#0D7A3E" opacity="0.2">
-              <animate attributeName="cx" values="120;180;240" dur="4s" repeatCount="indefinite"/>
-              <animate attributeName="r" values="15;25;15" dur="2s" repeatCount="indefinite"/>
-            </circle>
-            {/* Destination pin */}
-            <circle cx="480" cy="148" r="8" fill="#FFB800"/>
-            <path d="M480 140 L480 115" stroke="#FFB800" strokeWidth="2"/>
-          </svg>
-
-          {/* ETA chip */}
-          <div className="absolute top-4 left-4 bg-feazi-dark/90 backdrop-blur-sm border border-white/10 rounded-2xl px-4 py-2.5">
-            <p className="text-white/50 text-xs">Estimated arrival</p>
-            <p className="text-white font-bold text-lg">~8 min</p>
-          </div>
-
-          <div className="absolute bottom-4 right-4 bg-feazi-green text-white text-xs font-bold px-3 py-1.5 rounded-xl">
-            LIVE
+  return(
+    <AppLayout title="Track Ride">
+      {/* Map placeholder */}
+      <div style={{background:NT,borderRadius:20,height:220,marginBottom:20,display:'flex',alignItems:'center',justifyContent:'center',position:'relative',overflow:'hidden'}}>
+        {/* Neon grid lines */}
+        <div style={{position:'absolute',inset:0,opacity:0.07,backgroundImage:`linear-gradient(${NEON} 1px,transparent 1px),linear-gradient(90deg,${NEON} 1px,transparent 1px)`,backgroundSize:'40px 40px'}}/>
+        <div style={{position:'absolute',top:14,left:14,background:'rgba(255,255,255,0.08)',backdropFilter:'blur(8px)',borderRadius:12,padding:'10px 14px',display:'flex',alignItems:'center',gap:6,border:`1px solid rgba(204,255,0,0.3)`}}>
+          <Navigation size={14} color={NEON}/>
+          <span style={{fontSize:13,fontWeight:700,color:NEON}}>ETA: {eta} min</span>
+        </div>
+        <div style={{position:'relative',display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <div style={{width:60,height:60,borderRadius:'50%',background:`${NEON}20`,animation:'ping 1.5s ease-in-out infinite',position:'absolute'}}/>
+          <div style={{width:38,height:38,borderRadius:'50%',background:NEON,display:'flex',alignItems:'center',justifyContent:'center',position:'relative',zIndex:1}}>
+            <MapPin size={18} color={NT}/>
           </div>
         </div>
+        <div style={{position:'absolute',bottom:14,left:'50%',transform:'translateX(-50%)',background:'rgba(204,255,0,0.15)',border:`1px solid rgba(204,255,0,0.3)`,color:NEON,borderRadius:20,padding:'6px 14px',fontSize:12,fontWeight:600,whiteSpace:'nowrap'}}>
+          Live map — real GPS coming soon
+        </div>
+      </div>
 
-        {/* Status steps */}
-        <div className="card">
-          <h3 className="font-display font-bold text-white mb-5">Ride Status</h3>
-          <div className="space-y-3">
-            {STATUSES.map((status, i) => (
-              <div key={status} className="flex items-center gap-4">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold transition-all duration-500 ${
-                  i < statusIdx ? 'bg-feazi-green text-white' :
-                  i === statusIdx ? 'bg-feazi-green/20 border-2 border-feazi-green text-feazi-green animate-pulse' :
-                  'bg-white/5 text-white/20'
-                }`}>
-                  {i < statusIdx ? '✓' : i + 1}
+      {/* Progress */}
+      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,padding:20,marginBottom:16,boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
+        <p style={{fontWeight:700,color:TEXT,fontSize:14,marginBottom:16}}>Ride Progress</p>
+        {STEPS.map((s,i)=>{
+          const done=i<step,active=i===step
+          return(
+            <div key={s} style={{display:'flex',alignItems:'flex-start',gap:14,marginBottom:i<STEPS.length-1?4:0}}>
+              <div style={{display:'flex',flexDirection:'column',alignItems:'center'}}>
+                <div style={{width:22,height:22,borderRadius:'50%',background:done?NT:active?NEON:BORDER,border:`2px solid ${done?NT:active?NEON:BORDER}`,flexShrink:0,transition:'all 0.3s',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                  {done&&<span style={{color:NEON,fontSize:11,fontWeight:800}}>✓</span>}
+                  {active&&<div style={{width:8,height:8,borderRadius:'50%',background:NT}}/>}
                 </div>
-                <span className={`text-sm font-medium transition-colors ${
-                  i <= statusIdx ? 'text-white' : 'text-white/30'
-                }`}>{status}</span>
-                {i === statusIdx && <span className="ml-auto text-feazi-green text-xs font-semibold animate-pulse">Now</span>}
+                {i<STEPS.length-1&&<div style={{width:2,height:22,background:done?NT:BORDER,marginTop:2}}/>}
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Driver card */}
-        {ride?.driver && (
-          <div className="card flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-feazi-green/20 border border-feazi-green/30 flex items-center justify-center font-bold text-feazi-green text-xl flex-shrink-0">
-              {ride.driver.name?.charAt(0) || 'D'}
+              <p style={{fontSize:14,fontWeight:active?700:done?600:400,color:active?NT:done?TEXT:MUTED,paddingTop:2,transition:'color 0.3s'}}>{s}</p>
             </div>
-            <div className="flex-1">
-              <p className="text-white font-semibold">{ride.driver.name}</p>
-              <div className="flex items-center gap-1 text-feazi-accent text-sm">
-                <Star size={12} className="fill-feazi-accent" />
-                <span>{ride.driver.rating || '4.9'}</span>
-                <span className="text-white/30 mx-1">·</span>
-                <span className="text-white/50 text-xs">{ride.driver.vehicle || 'Toyota Corolla'} · {ride.driver.plate || 'LND 123 GH'}</span>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <a href={`tel:${ride.driver.phone}`} className="w-10 h-10 rounded-xl bg-feazi-green/20 border border-feazi-green/30 flex items-center justify-center text-feazi-green hover:bg-feazi-green/30 transition" aria-label="Call driver">
-                <Phone size={16} />
-              </a>
-              <button className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:bg-white/10 transition" aria-label="Message driver">
-                <MessageSquare size={16} />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Co-riders */}
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-white">Co-riders on this route</h3>
-            <span className="text-feazi-green text-sm font-semibold">2 others</span>
-          </div>
-          {['Emeka N.', 'Fatima S.'].map((name, i) => (
-            <div key={i} className="flex items-center gap-3 py-2">
-              <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white text-xs font-bold">
-                {name.charAt(0)}
-              </div>
-              <span className="text-white/70 text-sm">{name}</span>
-              <div className="ml-auto flex items-center gap-1 text-feazi-accent text-xs">
-                <Star size={10} className="fill-feazi-accent" />
-                <span>4.{8 + i}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Cancel */}
-        {statusIdx < 3 && (
-          <button
-            onClick={handleCancel}
-            disabled={cancelling}
-            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border border-red-500/30 text-red-400 hover:bg-red-500/10 transition text-sm font-semibold disabled:opacity-50"
-          >
-            <X size={16} />
-            {cancelling ? 'Cancelling...' : 'Cancel Ride'}
-          </button>
-        )}
+          )
+        })}
       </div>
+
+      {/* Driver card */}
+      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,padding:20,boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
+        <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:16}}>
+          <div style={{width:52,height:52,borderRadius:14,background:NT,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+            <span style={{color:NEON,fontWeight:800,fontSize:20}}>{driver.name[0]}</span>
+          </div>
+          <div style={{flex:1}}>
+            <p style={{color:TEXT,fontWeight:700,fontSize:15}}>{driver.name}</p>
+            <div style={{display:'flex',alignItems:'center',gap:6,marginTop:2}}>
+              <Star size={13} color='#f59e0b' fill='#f59e0b'/>
+              <span style={{fontSize:13,color:MUTED}}>{driver.rating} · {driver.trips.toLocaleString()} trips</span>
+            </div>
+          </div>
+          <div style={{textAlign:'right'}}>
+            <p style={{fontSize:12,color:MUTED}}>{driver.car}</p>
+            <p style={{fontSize:13,fontWeight:700,color:TEXT,marginTop:2}}>{driver.plate}</p>
+          </div>
+        </div>
+        <div style={{display:'flex',gap:10}}>
+          <a href={`tel:${driver.phone}`} style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:'12px',borderRadius:12,background:NT,color:NEON,fontWeight:700,fontSize:14,textDecoration:'none'}}>
+            <Phone size={16}/> Call
+          </a>
+          <button style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:'12px',borderRadius:12,background:CARD,border:`1.5px solid ${BORDER}`,color:TEXT,fontWeight:700,fontSize:14,cursor:'pointer'}}>
+            <MessageSquare size={16}/> Chat
+          </button>
+        </div>
+      </div>
+      <style>{`@keyframes ping{0%,100%{transform:scale(1);opacity:0.6}50%{transform:scale(1.5);opacity:0.1}}`}</style>
     </AppLayout>
   )
 }

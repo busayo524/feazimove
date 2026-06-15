@@ -6,7 +6,9 @@
  * - Never exposes raw fetch — keeps security consistent
  */
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
+// In dev, Vite proxies /api → localhost:4000 so no CORS issues.
+// In production, set VITE_API_URL to your deployed backend URL.
+const BASE_URL = import.meta.env.VITE_API_URL || '/api'
 
 // Input sanitization for all outgoing string values
 function sanitizeValue(val) {

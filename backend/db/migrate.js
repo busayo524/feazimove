@@ -2,7 +2,7 @@
  * Database migration — run once: node db/migrate.js
  * Creates all tables if they don't exist
  */
-require('dotenv').config({ path: '../.env' })
+require('dotenv').config({ path: require('path').join(__dirname, '../.env') })
 const { pool } = require('./index')
 
 const SQL = `

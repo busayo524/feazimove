@@ -1,125 +1,106 @@
-import React, { useEffect, useState } from 'react'
-import { TrendingUp, ArrowDownLeft } from 'lucide-react'
+import React, { useState } from 'react'
 import AppLayout from '../../components/AppLayout'
-import { api } from '../../services/api'
+import { ArrowDownLeft, Wallet } from 'lucide-react'
 
-const PERIODS = ['This Week', 'This Month', 'All Time']
+const NEON='#ccff00', NT='#0a0a0a', NL='#f9ffe0', NB='#e8ff80'
+const CARD='#ffffff', BORDER='#e8eaed', TEXT='#111827', MUTED='#6b7280', BG='#f5f7fa'
 
-export default function Earnings() {
-  const [period, setPeriod] = useState('This Week')
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(true)
+const WEEKLY=[
+  {day:'Mon',amount:8400},{day:'Tue',amount:12200},{day:'Wed',amount:9600},
+  {day:'Thu',amount:15800},{day:'Fri',amount:18400},{day:'Sat',amount:21000},{day:'Sun',amount:6200},
+]
+const max=Math.max(...WEEKLY.map(d=>d.amount))
 
-  useEffect(() => {
-    api.get(`/driver/earnings?period=${encodeURIComponent(period)}`)
-      .then(res => setData(res.data))
-      .catch(() => setData(MOCK_DATA[period] || MOCK_DATA['This Week']))
-      .finally(() => setLoading(false))
-  }, [period])
+const TXNS=[
+  {id:'e1',label:'Trip: Ikeja → VI',amount:2800,time:'Today 9:14 AM'},
+  {id:'e2',label:'Trip: Gbagada → CMS',amount:1900,time:'Today 7:30 AM'},
+  {id:'e3',label:'Trip: Ojodu → Ikeja GRA',amount:1200,time:'Yesterday 5:00 PM'},
+  {id:'e4',label:'Package delivery',amount:2400,time:'Yesterday 2:30 PM'},
+  {id:'e5',label:'Trip: Magodo → VI',amount:3200,time:'Jun 8, 8:00 AM'},
+]
 
-  return (
+export default function Earnings(){
+  const [period,setPeriod]=useState('week')
+  const todayEarnings=TXNS.filter(t=>t.time.startsWith('Today')).reduce((s,t)=>s+t.amount,0)
+  const weekEarnings=WEEKLY.reduce((s,d)=>s+d.amount,0)
+  const displayed=period==='today'?todayEarnings:period==='week'?weekEarnings:weekEarnings*4
+
+  return(
     <AppLayout title="Earnings">
-      <div className="max-w-2xl mx-auto space-y-6">
+      {/* Period tabs */}
+      <div style={{display:'flex',gap:8,marginBottom:20,background:CARD,border:`1px solid ${BORDER}`,borderRadius:12,padding:5}}>
+        {['today','week','month'].map(p=>(
+          <button key={p} onClick={()=>setPeriod(p)} style={{flex:1,padding:'9px',borderRadius:9,fontSize:13,fontWeight:700,border:'none',background:period===p?NT:CARD,color:period===p?NEON:MUTED,cursor:'pointer',textTransform:'capitalize',transition:'all 0.2s'}}>
+            {p.charAt(0).toUpperCase()+p.slice(1)}
+          </button>
+        ))}
+      </div>
 
-        {/* Period tabs */}
-        <div className="flex gap-2">
-          {PERIODS.map(p => (
-            <button
-              key={p}
-              onClick={() => { setPeriod(p); setLoading(true) }}
-              className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-                period === p ? 'bg-feazi-green text-white' : 'bg-white/5 text-white/50 hover:text-white hover:bg-white/10'
-              }`}
-            >
-              {p}
-            </button>
-          ))}
+      {/* Hero */}
+      <div style={{background:NT,borderRadius:20,padding:'24px 24px',marginBottom:20,position:'relative',overflow:'hidden'}}>
+        <div style={{position:'absolute',top:-20,right:-20,width:100,height:100,borderRadius:'50%',background:'rgba(204,255,0,0.06)'}}/>
+        <p style={{color:'rgba(204,255,0,0.6)',fontSize:13,fontWeight:600,marginBottom:4}}>
+          {period==='today'?'Today\'s Earnings':period==='week'?'This Week':'This Month'}
+        </p>
+        <p style={{color:NEON,fontWeight:900,fontSize:'clamp(2rem,5vw,2.8rem)',letterSpacing:'-0.03em',lineHeight:1}}>
+          ₦{displayed.toLocaleString()}
+        </p>
+        <div style={{display:'flex',gap:20,marginTop:14}}>
+          <div><p style={{color:'rgba(255,255,255,0.4)',fontSize:12}}>Trips</p><p style={{color:'#fff',fontWeight:700,fontSize:15}}>{period==='today'?TXNS.filter(t=>t.time.startsWith('Today')).length:period==='week'?TXNS.length:TXNS.length*4}</p></div>
+          <div><p style={{color:'rgba(255,255,255,0.4)',fontSize:12}}>Avg/trip</p><p style={{color:'#fff',fontWeight:700,fontSize:15}}>₦{Math.round(displayed/(TXNS.length||1)).toLocaleString()}</p></div>
+          <div><p style={{color:'rgba(255,255,255,0.4)',fontSize:12}}>Rating</p><p style={{color:'#fff',fontWeight:700,fontSize:15}}>⭐ 4.8</p></div>
         </div>
+      </div>
 
-        {/* Summary cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {[
-            { label: 'Total Earned',   value: `₦${(data?.totalEarned || 0).toLocaleString()}`, icon: '💰', color: 'text-feazi-green' },
-            { label: 'Total Trips',    value: data?.totalTrips || 0,   icon: '🚗', color: 'text-white' },
-            { label: 'Avg Per Trip',   value: `₦${(data?.avgPerTrip || 0).toLocaleString()}`, icon: '📊', color: 'text-white' },
-            { label: 'Rating',         value: `${data?.rating || '—'}★`, icon: '⭐', color: 'text-feazi-accent' },
-          ].map(({ label, value, icon, color }) => (
-            <div key={label} className="card text-center">
-              <div className="text-2xl mb-1">{icon}</div>
-              <div className={`font-display font-bold text-xl ${color}`}>{value}</div>
-              <div className="text-white/40 text-xs mt-0.5">{label}</div>
+      {/* Bar chart */}
+      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,padding:20,marginBottom:16,boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
+        <div style={{display:'flex',justifyContent:'space-between',marginBottom:16}}>
+          <p style={{fontWeight:700,fontSize:14,color:TEXT}}>Weekly Breakdown</p>
+          <p style={{fontSize:13,color:MUTED}}>₦{weekEarnings.toLocaleString()}</p>
+        </div>
+        <div style={{display:'flex',alignItems:'flex-end',gap:8,height:90}}>
+          {WEEKLY.map(d=>{
+            const h=Math.round((d.amount/max)*80)+10
+            const isToday=d.day==='Fri'
+            return(
+              <div key={d.day} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:6}}>
+                <div style={{width:'100%',height:h,borderRadius:'6px 6px 4px 4px',background:isToday?NEON:`${NEON}25`,transition:'height 0.4s ease'}}/>
+                <span style={{fontSize:11,color:isToday?NT:MUTED,fontWeight:isToday?700:500,background:isToday?NEON:'transparent',padding:isToday?'1px 5px':'0',borderRadius:4}}>{d.day}</span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Withdraw */}
+      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,padding:20,marginBottom:16,boxShadow:'0 1px 3px rgba(0,0,0,0.04)',display:'flex',alignItems:'center',gap:14}}>
+        <div style={{flex:1}}>
+          <p style={{fontWeight:700,fontSize:14,color:TEXT}}>Available for Withdrawal</p>
+          <p style={{fontSize:22,fontWeight:900,color:NT,letterSpacing:'-0.03em',marginTop:4}}>₦{weekEarnings.toLocaleString()}</p>
+        </div>
+        <button style={{padding:'12px 20px',borderRadius:12,background:NT,color:NEON,fontWeight:700,fontSize:14,border:'none',cursor:'pointer',display:'flex',alignItems:'center',gap:8}}>
+          <Wallet size={16}/>Withdraw
+        </button>
+      </div>
+
+      {/* Recent */}
+      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,overflow:'hidden',boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
+        <div style={{padding:'14px 20px',borderBottom:`1px solid ${BORDER}`}}>
+          <p style={{fontWeight:700,fontSize:14,color:TEXT}}>Recent Earnings</p>
+        </div>
+        {TXNS.map((t,i)=>(
+          <div key={t.id} style={{display:'flex',alignItems:'center',gap:14,padding:'13px 20px',borderBottom:i<TXNS.length-1?`1px solid ${BORDER}`:'none'}}>
+            <div style={{width:36,height:36,borderRadius:10,background:NT,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+              <ArrowDownLeft size={16} color={NEON}/>
             </div>
-          ))}
-        </div>
-
-        {/* Bar chart (CSS-only) */}
-        <div className="card">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="font-display font-bold text-white text-lg">Daily Earnings</h3>
-            <TrendingUp size={18} className="text-feazi-green" />
+            <div style={{flex:1}}>
+              <p style={{color:TEXT,fontWeight:600,fontSize:14}}>{t.label}</p>
+              <p style={{color:MUTED,fontSize:12,marginTop:2}}>{t.time}</p>
+            </div>
+            <p style={{fontWeight:800,fontSize:14,color:NT,background:NEON,padding:'3px 10px',borderRadius:20}}>+₦{t.amount.toLocaleString()}</p>
           </div>
-          {loading ? (
-            <div className="h-40 bg-white/5 rounded-xl animate-pulse" />
-          ) : (
-            <div className="flex items-end justify-between gap-2 h-40">
-              {(data?.daily || []).map(({ day, amount, max }) => {
-                const pct = max > 0 ? Math.round((amount / max) * 100) : 0
-                return (
-                  <div key={day} className="flex-1 flex flex-col items-center gap-2">
-                    <span className="text-white/40 text-xs">{pct > 0 ? `₦${(amount/1000).toFixed(1)}k` : ''}</span>
-                    <div className="w-full rounded-t-xl bg-white/5 relative overflow-hidden" style={{ height: '100px' }}>
-                      <div
-                        className="absolute bottom-0 left-0 right-0 bg-feazi-green rounded-t-xl transition-all duration-700"
-                        style={{ height: `${pct}%` }}
-                      />
-                    </div>
-                    <span className="text-white/40 text-xs">{day}</span>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Payout history */}
-        <div className="card">
-          <h3 className="font-display font-bold text-white text-lg mb-5">Payout History</h3>
-          {(data?.payouts || []).map(payout => (
-            <div key={payout.id} className="flex items-center gap-4 py-3 border-b border-white/5 last:border-0">
-              <div className="w-10 h-10 rounded-xl bg-feazi-green/15 flex items-center justify-center flex-shrink-0">
-                <ArrowDownLeft size={16} className="text-feazi-green" />
-              </div>
-              <div className="flex-1">
-                <p className="text-white text-sm font-medium">Payout to bank</p>
-                <p className="text-white/40 text-xs">{payout.date}</p>
-              </div>
-              <p className="text-feazi-green font-bold text-sm">+₦{payout.amount.toLocaleString()}</p>
-            </div>
-          ))}
-          {(!data?.payouts || data.payouts.length === 0) && (
-            <p className="text-white/40 text-sm text-center py-6">No payouts yet this period.</p>
-          )}
-        </div>
+        ))}
       </div>
     </AppLayout>
   )
-}
-
-const maxDay = 12000
-const MOCK_DATA = {
-  'This Week': {
-    totalEarned: 54200, totalTrips: 43, avgPerTrip: 1260, rating: 4.9,
-    daily: [
-      { day: 'Mon', amount: 8200,  max: maxDay },
-      { day: 'Tue', amount: 9500,  max: maxDay },
-      { day: 'Wed', amount: 7300,  max: maxDay },
-      { day: 'Thu', amount: 11000, max: maxDay },
-      { day: 'Fri', amount: 12000, max: maxDay },
-      { day: 'Sat', amount: 4200,  max: maxDay },
-      { day: 'Sun', amount: 2000,  max: maxDay },
-    ],
-    payouts: [
-      { id: 'p1', date: 'Fri, Jun 6 · 11:00 PM', amount: 42500 },
-    ],
-  },
 }
