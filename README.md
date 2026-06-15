@@ -122,62 +122,6 @@ npm run dev
 # → http://localhost:4000
 ```
 
----
-
-## Systematic Git Commits
-
-### Phase 1 — Landing Page
-```
-feat(init): scaffold Vite + React project with Tailwind CSS
-chore(security): add CSP and security meta headers to index.html
-feat(landing): add Navbar, Hero, Stats, HowItWorks components
-feat(landing): add Features, Services, About, Testimonials components
-feat(landing): add DownloadCTA and Footer components
-style(theme): configure FeaziMove brand colors in tailwind config
-```
-
-### Phase 2 — Routing & Auth
-```
-feat(routing): add React Router v6 with protected route wrapper
-feat(auth): add AuthContext with JWT login/register/logout
-feat(services): add centralised API service with auto JWT headers
-feat(auth): add Login page with sanitized inputs and error handling
-feat(auth): add Register page with role selection (rider/driver)
-feat(auth): add ForgotPassword with phone enumeration protection
-```
-
-### Phase 3 — App Pages
-```
-feat(layout): add AppLayout sidebar with role-based navigation
-feat(rider): add BookRide page with 2-step booking flow
-feat(rider): add TrackRide with live status polling and driver card
-feat(rider): add TripHistory with filters and summary stats
-feat(rider): add SendPackage with multi-step form and validation
-feat(rider): add Wallet with Flutterwave top-up and transaction history
-feat(shared): add RateRide with star ratings for driver and co-riders
-feat(shared): add Profile page with name editing and logout
-feat(driver): add DriverDashboard with online toggle and ride requests
-feat(driver): add ActiveRide with step-by-step ride progression
-feat(driver): add Earnings with daily chart and payout history
-```
-
-### Phase 4 — Backend
-```
-feat(backend): init Express server with helmet, CORS, rate limiting
-feat(db): add PostgreSQL pool with parameterized query helper
-feat(db): add migration script for users, rides, transactions, ratings
-feat(auth-api): add register and login routes with bcrypt + JWT
-feat(auth-api): add /me and profile update endpoints
-feat(rides-api): add booking, tracking, cancel, and rating routes
-feat(wallet-api): add balance, fund, and Flutterwave webhook routes
-feat(driver-api): add stats, requests, status toggle, earnings routes
-chore(security): add JWT middleware with requireAuth and requireRole
-chore(config): add .env.example files for frontend and backend
-docs: update README with full structure and setup instructions
-```
-
----
-
 ## Security Summary (OWASP Top 10)
 
 | Risk | What we did |
