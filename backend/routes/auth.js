@@ -14,6 +14,7 @@ const SALT_ROUNDS = 12  // bcrypt cost factor — NIST recommended minimum
 router.post('/register',
   [
     body('name').trim().isLength({ min: 2, max: 100 }).escape(),
+    body('email').optional({ checkFalsy: true }).isEmail().normalizeEmail(),
     body('phone').trim().matches(/^(\+?234|0)[789][01]\d{8}$/),
     body('password').isLength({ min: 8 }).matches(/[A-Z]/).matches(/[0-9]/),
     body('role').isIn(['rider', 'driver']),
@@ -21,7 +22,7 @@ router.post('/register',
   validate,
   async (req, res, next) => {
     try {
-      const { name, phone, password, role } = req.body
+      const { name, email, phone, password, role } = req.body
 
       // Check phone not already registered
       const existing = await query('SELECT id FROM users WHERE phone = $1', [phone])
@@ -32,8 +33,8 @@ router.post('/register',
 
       const password_hash = await bcrypt.hash(password, SALT_ROUNDS)
       const result = await query(
-        'INSERT INTO users (name, phone, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id, name, phone, role, wallet_balance',
-        [name, phone, password_hash, role]
+        'INSERT INTO users (name, email, phone, password_hash, role) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, phone, role, wallet_balance',
+        [name, email || null, phone, password_hash, role]
       )
 
       const user = result.rows[0]

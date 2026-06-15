@@ -10,6 +10,7 @@ const SQL = `
 CREATE TABLE IF NOT EXISTS users (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name            VARCHAR(100)        NOT NULL,
+  email           VARCHAR(254) UNIQUE,
   phone           VARCHAR(20) UNIQUE  NOT NULL,
   password_hash   TEXT                NOT NULL,
   role            VARCHAR(10)         NOT NULL CHECK (role IN ('rider', 'driver')),
