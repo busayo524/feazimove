@@ -36,7 +36,7 @@ export default function Logo({ size = 'md', linkTo = '/', forceVariant }) {
       <span style={{
         fontFamily: "'Inter','Helvetica Neue',Arial,sans-serif",
         fontSize: fs,
-        fontStyle: 'italic',
+        fontStyle: 'normal',
         letterSpacing: '-0.01em',
         lineHeight: 1,
         color: textColor,

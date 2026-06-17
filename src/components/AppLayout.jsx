@@ -43,7 +43,7 @@ export default function AppLayout({ children, title }){
       <div style={{ padding:'28px 20px 20px', borderBottom:`1px solid ${BORDER}` }}>
         <NavLink to="/" style={{ display:'flex', alignItems:'center', gap:10, textDecoration:'none' }}>
           <img src={faviconImg} alt="FeaziMove" style={{ width:38, height:38, objectFit:'contain', display:'block', flexShrink:0 }} />
-          <span style={{ fontStyle:'italic', fontSize:18, letterSpacing:'-0.01em', color:TEXT }}>
+          <span style={{ fontStyle:'normal', fontSize:18, letterSpacing:'-0.01em', color:TEXT }}>
             <span style={{ fontWeight:500 }}>Feazi</span><span style={{ fontWeight:900 }}>Move</span>
           </span>
         </NavLink>

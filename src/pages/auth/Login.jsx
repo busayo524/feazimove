@@ -64,7 +64,7 @@ export default function Login() {
 
         <Link to="/" style={{ display:'inline-flex', alignItems:'center', gap:10, marginBottom:48, textDecoration:'none' }}>
           <img src={faviconImg} alt="FeaziMove" style={{ width:38, height:38, objectFit:'contain', display:'block' }} />
-          <span style={{ fontStyle:'italic', fontSize:20, letterSpacing:'-0.01em', color:'#1a1200' }}>
+          <span style={{ fontStyle:'normal', fontSize:20, letterSpacing:'-0.01em', color:'#1a1a1a' }}>
             <span style={{ fontWeight:500 }}>Feazi</span>
             <span style={{ fontWeight:900 }}>Move</span>
           </span>

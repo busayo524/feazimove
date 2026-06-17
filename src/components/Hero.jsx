@@ -4,12 +4,6 @@ import { ArrowRight, MapPin, Users, Package } from 'lucide-react'
 export default function Hero() {
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden bg-feazi-dark bg-grid">
-      {/* Background orbs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-feazi-green/20 blur-3xl animate-pulse-slow" />
-        <div className="absolute top-1/2 -left-32 w-80 h-80 rounded-full bg-feazi-green/10 blur-3xl animate-pulse-slow" style={{ animationDelay: '2s' }} />
-        <div className="absolute bottom-20 right-1/3 w-64 h-64 rounded-full bg-feazi-accent/10 blur-3xl animate-pulse-slow" style={{ animationDelay: '4s' }} />
-      </div>
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16 md:pt-32">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">

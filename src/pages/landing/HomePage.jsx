@@ -2,15 +2,15 @@ import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, ArrowUpRight } from 'lucide-react'
 import LandingLayout from '../../components/LandingLayout'
-import heroBg from '../../assets/Landing page.jpg'
+import heroBg from '../../assets/car picture group.jpg'
 import { UrbanBoardingScene } from '../../components/illustrations/PeopleIllustration'
 import accessAccountSvg from '../../assets/access-account.svg'
 import messengerPana from '../../assets/messenger-pana.svg'
 import walletRafiki from '../../assets/wallet-rafiki.svg'
 import cityDriverCuate from '../../assets/city-driver-cuate.svg'
-import wpImg  from '../../assets/workingprofessionals.jpg'
-import drvImg from '../../assets/driverwithcar.jpg'
-import urbImg from '../../assets/urban.jpg'
+import wpImg  from '../../assets/Corporate commuters.jpg'
+import drvImg from '../../assets/Female Driver solo.jpg'
+import urbImg from '../../assets/urban residents.jpg'
 
 function HeroScene({ className = '' }) {
   return <img src={accessAccountSvg} alt="Access account illustration" className={className} style={{ width:'100%', display:'block' }} />
@@ -32,18 +32,21 @@ function WalletScene({ className = '' }) {
 const audience = [
   {
     img: wpImg,
+    imgPos: 'top center',
     tag: 'Commuters',
     title: 'Working professionals & daily commuters',
     body: 'Reliable, structured transport that fits your schedule — no waiting, no surge pricing, no stress.',
   },
   {
     img: drvImg,
+    imgPos: 'center center',
     tag: 'Drivers',
     title: 'Independent drivers',
     body: 'Earn consistently by picking up verified passengers already heading your way. More trips, less dead miles.',
   },
   {
     img: urbImg,
+    imgPos: 'center center',
     tag: 'City residents',
     title: 'Urban residents',
     body: 'Lower-cost, safer, and more predictable mobility options designed for the realities of African cities.',
@@ -62,14 +65,14 @@ function WhoItsFor() {
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">
-          {audience.map(({ img, tag, title, body }) => (
+          {audience.map(({ img, imgPos, tag, title, body }) => (
             <div key={tag} className="card overflow-hidden flex flex-col" style={{ padding: 0 }}>
               {/* Image */}
-              <div style={{ position: 'relative', height: 220, overflow: 'hidden' }}>
+              <div style={{ position: 'relative', height: 300, overflow: 'hidden' }}>
                 <img
                   src={img}
                   alt={title}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: imgPos || 'center center', display: 'block' }}
                 />
                 {/* Gradient overlay */}
                 <div style={{
@@ -78,22 +81,22 @@ function WhoItsFor() {
                 }} />
                 {/* Tag chip */}
                 <span style={{
-                  position: 'absolute', top: 14, left: 14,
+                  position: 'absolute', top: 16, left: 16,
                   background: '#ccff00', color: '#0a0a0a',
-                  fontSize: 11, fontWeight: 800,
+                  fontSize: 12, fontWeight: 800,
                   letterSpacing: '0.08em', textTransform: 'uppercase',
-                  padding: '4px 12px', borderRadius: 50,
+                  padding: '5px 14px', borderRadius: 50,
                 }}>
                   {tag}
                 </span>
               </div>
 
               {/* Text */}
-              <div style={{ padding: '24px 28px 28px', flex: 1 }}>
-                <h3 className="font-bold mb-3" style={{ fontSize: '1.05rem', letterSpacing: '-0.01em', color: 'var(--text)', lineHeight: 1.35 }}>
+              <div style={{ padding: '28px 32px 36px', flex: 1 }}>
+                <h3 className="font-bold mb-4" style={{ fontSize: '1.2rem', letterSpacing: '-0.02em', color: 'var(--text)', lineHeight: 1.35 }}>
                   {title}
                 </h3>
-                <p style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--text-muted)' }}>{body}</p>
+                <p style={{ fontSize: 16, lineHeight: 1.75, color: 'var(--text-muted)' }}>{body}</p>
               </div>
             </div>
           ))}
@@ -121,20 +124,9 @@ function HeroAnimationPanel() {
       style={{
         height: '100%',
         minHeight: 560,
-        background: 'linear-gradient(160deg,#e8f5ee 0%,#ffffff 55%,#eaf4ed 100%)',
+        background: 'linear-gradient(160deg,rgba(204,255,0,0.08) 0%,var(--bg-card) 55%,rgba(204,255,0,0.06) 100%)',
       }}
     >
-      {/* Green glow orbs */}
-      <div style={{
-        position:'absolute', top:-50, right:-50, width:260, height:260, borderRadius:'50%',
-        background:'radial-gradient(circle, rgba(45,106,79,0.14) 0%, transparent 70%)',
-        pointerEvents:'none',
-      }}/>
-      <div style={{
-        position:'absolute', bottom:-30, left:-30, width:200, height:200, borderRadius:'50%',
-        background:'radial-gradient(circle, rgba(45,106,79,0.09) 0%, transparent 70%)',
-        pointerEvents:'none',
-      }}/>
 
       {/* Route SVG — road path + pins */}
       <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', overflow:'visible' }}
@@ -263,6 +255,38 @@ function HeroAnimationPanel() {
   )
 }
 
+// Cycling word animation
+const CYCLING_WORDS = ['Everyday use.', 'Every commute.', 'Every journey.', 'Every city.', 'Every African.']
+
+function CyclingWord() {
+  const [index, setIndex] = useState(0)
+  const [visible, setVisible] = useState(true)
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setVisible(false)
+      setTimeout(() => {
+        setIndex(i => (i + 1) % CYCLING_WORDS.length)
+        setVisible(true)
+      }, 350)
+    }, 2200)
+    return () => clearInterval(interval)
+  }, [])
+
+  return (
+    <span style={{
+      color: '#ccff00',
+      textShadow: '0 0 60px rgba(204,255,0,0.35)',
+      display: 'inline-block',
+      transition: 'opacity 0.35s ease, transform 0.35s ease',
+      opacity: visible ? 1 : 0,
+      transform: visible ? 'translateY(0)' : 'translateY(12px)',
+    }}>
+      {CYCLING_WORDS[index]}
+    </span>
+  )
+}
+
 export default function HomePage() {
   return (
     <LandingLayout>
@@ -282,21 +306,7 @@ export default function HomePage() {
         {/* Multi-layer overlay: dark on left for text legibility, opens up on right */}
         <div style={{
           position: 'absolute', inset: 0, pointerEvents: 'none',
-          background: 'linear-gradient(105deg, rgba(0,0,0,0.88) 0%, rgba(5,12,2,0.78) 35%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.35) 100%)',
-        }}/>
-        {/* Lime accent glow — bottom left */}
-        <div style={{
-          position: 'absolute', bottom: '-8%', left: '-6%',
-          width: 520, height: 520, borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(204,255,0,0.18) 0%, transparent 70%)',
-          pointerEvents: 'none',
-        }}/>
-        {/* Lime accent glow — top right */}
-        <div style={{
-          position: 'absolute', top: '-6%', right: '-6%',
-          width: 400, height: 400, borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(204,255,0,0.10) 0%, transparent 70%)',
-          pointerEvents: 'none',
+          background: 'linear-gradient(105deg, rgba(0,0,0,0.62) 0%, rgba(5,12,2,0.52) 35%, rgba(0,0,0,0.32) 60%, rgba(0,0,0,0.15) 100%)',
         }}/>
 
         {/* Dot grid — top right */}
@@ -357,7 +367,7 @@ export default function HomePage() {
               color: '#ffffff',
             }}>
               Mobility for<br />
-              <span style={{ color: '#ccff00', textShadow: '0 0 60px rgba(204,255,0,0.35)' }}>Everyday</span> use.
+              <CyclingWord />
             </h1>
 
             {/* Tagline */}
@@ -369,7 +379,7 @@ export default function HomePage() {
               maxWidth: 480,
               marginBottom: 16,
             }}>
-              FeaziMove matches commuters with independent drivers going along shared routes, making movement feasible, affordable, and easy.{' '}
+              FeaziMove is a scheduled ride-sharing platform that matches commuters with independent car owners/drivers along shared routes, making movement feasible, affordable & easy.{' '}
               <span style={{ whiteSpace: 'nowrap' }}>The Feazi Way.</span>
             </p>
 
@@ -424,13 +434,13 @@ export default function HomePage() {
 
         {/* Bottom fade — to black so stats bar connects cleanly */}
         <div className="absolute bottom-0 left-0 right-0 h-36 pointer-events-none"
-          style={{ background: 'linear-gradient(to top, #0a0a0a 0%, transparent 100%)' }} />
+          style={{ background: 'linear-gradient(to top, #1e2a1e 0%, transparent 100%)' }} />
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════
           STATS BAR
       ═══════════════════════════════════════════════════════════════════ */}
-      <section style={{ background: '#0a0a0a', borderBottom: '1px solid rgba(255,255,255,0.07)', position:'relative', overflow:'hidden' }}>
+      <section style={{ background: 'rgba(15,30,15,0.72)', backdropFilter: 'blur(8px)', position:'relative', overflow:'hidden' }}>
         {/* Dot grid — right */}
         <div style={{
           position:'absolute', top:'50%', right:'2%', transform:'translateY(-50%)',
@@ -451,7 +461,7 @@ export default function HomePage() {
             <div key={i} style={{width:4,height:4,borderRadius:'50%',background:'#ccff00'}}/>
           ))}
         </div>
-        <div className="max-w-7xl mx-auto px-6 sm:px-10 py-12 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+        <div className="max-w-7xl mx-auto px-6 sm:px-10 grid grid-cols-2 md:grid-cols-4 gap-8 text-center" style={{ paddingTop: 48, paddingBottom: 56 }}>
           {stats.map(({ value, label }) => (
             <div key={label}>
               <p className="font-black text-4xl md:text-5xl mb-1"
@@ -473,21 +483,21 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════════════════════════════
           SPLIT PANEL — FeaziPool / FeaziSend (Rank Reserve/Flex style)
       ═══════════════════════════════════════════════════════════════════ */}
-      <section className="py-16" style={{ background: 'var(--bg-subtle)' }}>
+      <section className="py-24" style={{ background: 'var(--bg-subtle)' }}>
         <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-14">
-          <div className="mb-8">
+          <div className="mb-12">
             <p className="label mb-2">Our services</p>
-            <h2 className="font-black" style={{ fontSize:'clamp(1.8rem,3.5vw,2.8rem)', letterSpacing:'-0.04em', color:'var(--text)' }}>Pick your move.</h2>
+            <h2 className="font-black" style={{ fontSize:'clamp(2.2rem,4vw,3.4rem)', letterSpacing:'-0.04em', color:'var(--text)' }}>Pick your move.</h2>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-3 gap-6">
 
             {/* FeaziPool */}
-            <div className="rounded-2xl flex flex-col overflow-hidden" style={{ background:'var(--bg)', border:'1px solid var(--border)', minHeight:240 }}>
-              <div className="flex flex-col justify-between p-6 flex-1">
+            <div className="rounded-2xl flex flex-col overflow-hidden" style={{ background:'var(--bg)', border:'1px solid var(--border)', minHeight:380 }}>
+              <div className="flex flex-col justify-between p-8 flex-1">
                 <div>
                   <p className="label mb-3" style={{ color:'var(--lime-text)', letterSpacing:'0.16em' }}>POOL</p>
-                  <h3 className="font-black mb-2" style={{ fontSize:'clamp(1.4rem,2vw,1.9rem)', letterSpacing:'-0.04em', color:'var(--lime-text)', lineHeight:1 }}>FeaziPool</h3>
+                  <h3 className="font-black mb-2" style={{ fontSize:'clamp(1.8rem,2.5vw,2.4rem)', letterSpacing:'-0.04em', color:'var(--lime-text)', lineHeight:1 }}>FeaziPool</h3>
                   <p className="text-sm leading-relaxed mb-4" style={{ color:'var(--text-muted)' }}>
                     Share your route with commuters heading your way. Same trip, up to 20% cheaper — no surge, ever.
                   </p>
@@ -497,37 +507,37 @@ export default function HomePage() {
                   Explore FeaziPool <ArrowRight size={14} />
                 </Link>
               </div>
-              <div className="overflow-hidden" style={{ height:130, background:'var(--bg-subtle)' }}>
+              <div className="overflow-hidden" style={{ height:200, background:'var(--bg-subtle)' }}>
                 <RideSharingScene className="w-full h-full" />
               </div>
             </div>
 
             {/* FeaziSend */}
-            <div className="rounded-2xl flex flex-col overflow-hidden" style={{ background:'#000', border:'1px solid rgba(204,255,0,0.18)', minHeight:240 }}>
-              <div className="flex flex-col justify-between p-6 flex-1">
+            <div className="rounded-2xl flex flex-col overflow-hidden" style={{ background:'#e8e8e4', border:'1px solid rgba(0,0,0,0.08)', minHeight:380 }}>
+              <div className="flex flex-col justify-between p-8 flex-1">
                 <div>
-                  <p className="label mb-3" style={{ color:'#ccff00', letterSpacing:'0.16em' }}>SEND</p>
-                  <h3 className="font-black mb-2" style={{ fontSize:'clamp(1.4rem,2vw,1.9rem)', letterSpacing:'-0.04em', color:'#ccff00', lineHeight:1 }}>FeaziSend</h3>
-                  <p className="text-sm leading-relaxed mb-4" style={{ color:'rgba(255,255,255,0.5)' }}>
+                  <p className="label mb-3" style={{ color:'#555', letterSpacing:'0.16em' }}>SEND</p>
+                  <h3 className="font-black mb-2" style={{ fontSize:'clamp(1.8rem,2.5vw,2.4rem)', letterSpacing:'-0.04em', color:'#0f0f0f', lineHeight:1 }}>FeaziSend</h3>
+                  <p className="text-sm leading-relaxed mb-4" style={{ color:'#444' }}>
                     Ship packages with drivers already heading your way. Affordable, same-day, trackable end-to-end.
                   </p>
                 </div>
-                <Link to="/services#feazisend" className="inline-flex items-center gap-2 font-bold text-sm" style={{ color:'#ccff00' }}
+                <Link to="/services#feazisend" className="inline-flex items-center gap-2 font-bold text-sm" style={{ color:'#0f0f0f' }}
                   onMouseEnter={e => e.currentTarget.style.gap='10px'} onMouseLeave={e => e.currentTarget.style.gap='8px'}>
                   Explore FeaziSend <ArrowRight size={14} />
                 </Link>
               </div>
-              <div className="overflow-hidden" style={{ height:130, background:'rgba(255,255,255,0.04)' }}>
+              <div className="overflow-hidden" style={{ height:200, background:'rgba(255,255,255,0.04)' }}>
                 <DeliveryScene className="w-full h-full" />
               </div>
             </div>
 
             {/* FeaziBiz */}
-            <div className="rounded-2xl flex flex-col overflow-hidden" style={{ background:'var(--bg-subtle)', border:'1px solid var(--border)', minHeight:240 }}>
-              <div className="flex flex-col justify-between p-6 flex-1">
+            <div className="rounded-2xl flex flex-col overflow-hidden" style={{ background:'var(--bg-subtle)', border:'1px solid var(--border)', minHeight:380 }}>
+              <div className="flex flex-col justify-between p-8 flex-1">
                 <div>
                   <p className="label mb-3" style={{ color:'var(--lime-text)', letterSpacing:'0.16em' }}>BIZ</p>
-                  <h3 className="font-black mb-2" style={{ fontSize:'clamp(1.4rem,2vw,1.9rem)', letterSpacing:'-0.04em', color:'var(--text)', lineHeight:1 }}>FeaziBiz</h3>
+                  <h3 className="font-black mb-2" style={{ fontSize:'clamp(1.8rem,2.5vw,2.4rem)', letterSpacing:'-0.04em', color:'var(--text)', lineHeight:1 }}>FeaziBiz</h3>
                   <p className="text-sm leading-relaxed mb-4" style={{ color:'var(--text-muted)' }}>
                     Corporate transport for teams. Manage commutes, deliveries, and fleet costs from one dashboard.
                   </p>
@@ -537,7 +547,7 @@ export default function HomePage() {
                   Explore FeaziBiz <ArrowRight size={14} />
                 </Link>
               </div>
-              <div className="overflow-hidden" style={{ height:130, background:'var(--bg)' }}>
+              <div className="overflow-hidden" style={{ height:200, background:'var(--bg)' }}>
                 <WalletScene className="w-full h-full" />
               </div>
             </div>
@@ -614,9 +624,9 @@ export default function HomePage() {
       </section>
 
       {/* ── App Download CTA ─────────────────────────────────────────────── */}
-      <section style={{ background: 'var(--bg-subtle)', padding: '80px 0 80px' }}>
+      <section style={{ background: 'var(--bg-subtle)', padding: '80px 0', overflow: 'visible' }}>
         <div style={{ width: '100%' }}>
-          <div className="grid lg:grid-cols-2 gap-0" style={{ background: '#0a0a0a', minHeight: 520, overflow: 'visible', position: 'relative' }}>
+          <div className="grid lg:grid-cols-2 gap-0" style={{ background: '#2c4a2c', minHeight: 360, overflow: 'visible', position: 'relative' }}>
 
             {/* Left: text + buttons */}
             <div className="app-dl-left" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -662,14 +672,14 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Right: phone mockup — extends well above the dark card (desktop only) */}
-            <div className="hidden lg:flex" style={{ position: 'relative', alignItems: 'flex-end', justifyContent: 'center', overflow: 'visible', paddingBottom: 0 }}>
+            {/* Right: phone mockup — bleeds above & below the card */}
+            <div className="hidden lg:flex" style={{ position: 'relative', alignItems: 'center', justifyContent: 'center', overflow: 'visible', paddingBottom: 0 }}>
 
-              {/* Lime glow blob */}
+              {/* Lime glow blob — removed */}
               <div style={{
                 position: 'absolute', bottom: -40, right: 20,
                 width: 340, height: 340, borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(204,255,0,0.22) 0%, transparent 65%)',
+                background: 'transparent',
                 pointerEvents: 'none',
               }} />
 
@@ -682,8 +692,7 @@ export default function HomePage() {
                 boxShadow: '0 60px 120px rgba(0,0,0,0.8), 0 -12px 60px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.07)',
                 overflow: 'hidden',
                 position: 'relative', zIndex: 10,
-                transform: 'rotate(-5deg) translateY(-180px)',
-                marginBottom: -180,
+                transform: 'rotate(-5deg) translateY(-20px)',
               }}>
                 {/* Status bar */}
                 <div style={{ background: '#f7f7f7', padding: '8px 16px 4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -737,7 +746,7 @@ export default function HomePage() {
                   </div>
 
                   {/* Choose a service */}
-                  <p style={{ fontSize: 7.5, fontWeight: 800, color: '#999', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>Choose a service</p>
+                  <p style={{ fontSize: 7.5, fontWeight: 800, color: 'var(--text-faint)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>Choose a service</p>
                   <div style={{ display: 'flex', gap: 7, marginBottom: 12 }}>
                     {[
                       { icon: '🚌', name: 'FeaziPool', sub: 'Save 30%', active: true },
@@ -763,7 +772,7 @@ export default function HomePage() {
                     {[['🕐','History'],['📍','Saved'],['💳','Wallet']].map(([icon,label]) => (
                       <div key={label} style={{ flex:1, background:'white', borderRadius:10, padding:'7px 4px', textAlign:'center', boxShadow:'0 1px 4px rgba(0,0,0,0.05)', border:'1px solid #f0f0f0' }}>
                         <span style={{ fontSize: 11 }}>{icon}</span>
-                        <p style={{ fontSize: 7, color: '#666', marginTop: 2, fontWeight: 600 }}>{label}</p>
+                        <p style={{ fontSize: 7, color: 'var(--text-muted)', marginTop: 2, fontWeight: 600 }}>{label}</p>
                       </div>
                     ))}
                   </div>
@@ -799,6 +808,89 @@ export default function HomePage() {
         </div>
       </section>
 
+
+
+      {/* ── Connect with Us ──────────────────────────────────────────────── */}
+      <section style={{ background: '#f8f8f6', padding: '80px clamp(20px,6vw,80px)' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '64px', alignItems: 'start' }}>
+          {/* Left: heading */}
+          <div>
+            <p style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#15803d', marginBottom: 16 }}>Socials</p>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(1.8rem,3.5vw,2.6rem)', color: '#0f0f0f', lineHeight: 1.1, marginBottom: 16 }}>Connect with Us</h2>
+            <p style={{ fontSize: '1rem', color: '#666', lineHeight: 1.7 }}>Join our community and follow us on social media to stay updated about FeaziMove.</p>
+          </div>
+
+          {/* Right: 2×2 social grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+            {/* Facebook */}
+            <a href="https://facebook.com/feazimove" target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <div style={{ background: '#ffffff', borderRadius: 16, padding: '28px 24px', border: '1px solid #e8e8e8', transition: 'box-shadow 0.2s', cursor: 'pointer' }}
+                onMouseEnter={e => e.currentTarget.style.boxShadow='0 4px 24px rgba(0,0,0,0.08)'}
+                onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
+                <div style={{ width: 52, height: 52, borderRadius: 14, background: '#f0f4ff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073C24 5.404 18.627 0 12 0S0 5.404 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.491 0-1.956.93-1.956 1.886v2.267h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/></svg>
+                </div>
+                <h4 style={{ fontWeight: 800, fontSize: '1rem', color: '#0f0f0f', marginBottom: 6 }}>Follow us on Facebook</h4>
+                <p style={{ fontSize: '0.88rem', color: '#666', lineHeight: 1.6, marginBottom: 8 }}>Get FeaziMove news, updates, and community resources.</p>
+                <span style={{ fontSize: '0.88rem', color: '#15803d', fontWeight: 700 }}>@feazimove</span>
+              </div>
+            </a>
+
+            {/* X / Twitter */}
+            <a href="https://x.com/feazimove" target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <div style={{ background: '#ffffff', borderRadius: 16, padding: '28px 24px', border: '1px solid #e8e8e8', transition: 'box-shadow 0.2s', cursor: 'pointer' }}
+                onMouseEnter={e => e.currentTarget.style.boxShadow='0 4px 24px rgba(0,0,0,0.08)'}
+                onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
+                <div style={{ width: 52, height: 52, borderRadius: 14, background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="#0f0f0f"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.632 5.905-5.632zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                </div>
+                <h4 style={{ fontWeight: 800, fontSize: '1rem', color: '#0f0f0f', marginBottom: 6 }}>Follow us on X</h4>
+                <p style={{ fontSize: '0.88rem', color: '#666', lineHeight: 1.6, marginBottom: 8 }}>Get FeaziMove news, updates, and company information.</p>
+                <span style={{ fontSize: '0.88rem', color: '#15803d', fontWeight: 700 }}>@feazimove</span>
+              </div>
+            </a>
+
+            {/* Instagram */}
+            <a href="https://instagram.com/feazimove" target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <div style={{ background: '#ffffff', borderRadius: 16, padding: '28px 24px', border: '1px solid #e8e8e8', transition: 'box-shadow 0.2s', cursor: 'pointer' }}
+                onMouseEnter={e => e.currentTarget.style.boxShadow='0 4px 24px rgba(0,0,0,0.08)'}
+                onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
+                <div style={{ width: 52, height: 52, borderRadius: 14, background: '#fff0f7', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="url(#ig-grad)">
+                    <defs>
+                      <linearGradient id="ig-grad" x1="0%" y1="100%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#f09433"/>
+                        <stop offset="25%" stopColor="#e6683c"/>
+                        <stop offset="50%" stopColor="#dc2743"/>
+                        <stop offset="75%" stopColor="#cc2366"/>
+                        <stop offset="100%" stopColor="#bc1888"/>
+                      </linearGradient>
+                    </defs>
+                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
+                  </svg>
+                </div>
+                <h4 style={{ fontWeight: 800, fontSize: '1rem', color: '#0f0f0f', marginBottom: 6 }}>Follow us on Instagram</h4>
+                <p style={{ fontSize: '0.88rem', color: '#666', lineHeight: 1.6, marginBottom: 8 }}>Behind-the-scenes, community stories, and updates.</p>
+                <span style={{ fontSize: '0.88rem', color: '#15803d', fontWeight: 700 }}>@feazimove</span>
+              </div>
+            </a>
+
+            {/* WhatsApp / Contact */}
+            <a href="https://wa.me/2347000000000" target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <div style={{ background: '#ffffff', borderRadius: 16, padding: '28px 24px', border: '1px solid #e8e8e8', transition: 'box-shadow 0.2s', cursor: 'pointer' }}
+                onMouseEnter={e => e.currentTarget.style.boxShadow='0 4px 24px rgba(0,0,0,0.08)'}
+                onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
+                <div style={{ width: 52, height: 52, borderRadius: 14, background: '#f0fff4', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.118 1.532 5.845L.057 23.547a.75.75 0 00.921.921l5.702-1.475A11.952 11.952 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.014-1.376l-.36-.214-3.727.977.993-3.62-.235-.374A9.818 9.818 0 0112 2.182c5.427 0 9.818 4.39 9.818 9.818 0 5.427-4.39 9.818-9.818 9.818z"/></svg>
+                </div>
+                <h4 style={{ fontWeight: 800, fontSize: '1rem', color: '#0f0f0f', marginBottom: 6 }}>Chat with Us</h4>
+                <p style={{ fontSize: '0.88rem', color: '#666', lineHeight: 1.6, marginBottom: 8 }}>Reach our support team directly on WhatsApp.</p>
+                <span style={{ fontSize: '0.88rem', color: '#15803d', fontWeight: 700 }}>WhatsApp Support</span>
+              </div>
+            </a>
+          </div>
+        </div>
+      </section>
 
       <style>{`
         .app-dl-left { padding: 64px 80px; }

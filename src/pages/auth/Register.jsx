@@ -100,7 +100,7 @@ export default function Register() {
 
         <Link to="/" style={{ display:'inline-flex', alignItems:'center', gap:10, marginBottom:28, textDecoration:'none' }}>
           <img src={faviconImg} alt="FeaziMove" style={{ width:34, height:34, objectFit:'contain', display:'block' }} />
-          <span style={{ fontStyle:'italic', fontSize:19, letterSpacing:'-0.01em', color:'#1a1a1a' }}>
+          <span style={{ fontStyle:'normal', fontSize:19, letterSpacing:'-0.01em', color:'#1a1a1a' }}>
             <span style={{ fontWeight:500 }}>Feazi</span>
             <span style={{ fontWeight:900 }}>Move</span>
           </span>
