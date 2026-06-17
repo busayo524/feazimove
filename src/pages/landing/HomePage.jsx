@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, ArrowUpRight } from 'lucide-react'
 import LandingLayout from '../../components/LandingLayout'
+import { useTheme } from '../../context/ThemeContext'
 import heroBg from '../../assets/car picture group.jpg'
 import { UrbanBoardingScene } from '../../components/illustrations/PeopleIllustration'
 import accessAccountSvg from '../../assets/access-account.svg'
@@ -11,6 +12,9 @@ import cityDriverCuate from '../../assets/city-driver-cuate.svg'
 import wpImg  from '../../assets/Corporate commuters.jpg'
 import drvImg from '../../assets/Female Driver solo.jpg'
 import urbImg from '../../assets/urban residents.jpg'
+import feaziSendImg from '../../assets/feazisend.png'
+import feaziPoolImg from '../../assets/feazipool.png'
+import feaziBizImg  from '../../assets/feazibiz.png'
 
 function HeroScene({ className = '' }) {
   return <img src={accessAccountSvg} alt="Access account illustration" className={className} style={{ width:'100%', display:'block' }} />
@@ -288,6 +292,14 @@ function CyclingWord() {
 }
 
 export default function HomePage() {
+  const { isDark } = useTheme()
+  const C = {
+    text:      isDark ? '#ffffff'                : '#0f0f0f',
+    textSoft:  isDark ? 'rgba(255,255,255,0.55)' : '#666',
+    subtleBg:  isDark ? '#0a0a0a'               : '#f8f8f6',
+    cardBg:    isDark ? '#111111'               : '#ffffff',
+    cardBorder:isDark ? 'rgba(255,255,255,0.08)' : '#e8e8e8',
+  }
   return (
     <LandingLayout>
 
@@ -493,7 +505,7 @@ export default function HomePage() {
           <div className="grid md:grid-cols-3 gap-6">
 
             {/* FeaziPool */}
-            <div className="rounded-2xl flex flex-col overflow-hidden" style={{ background:'var(--bg)', border:'1px solid var(--border)', minHeight:380 }}>
+            <div className="rounded-2xl flex flex-col overflow-hidden" style={{ background:'var(--bg)', border:'1px solid var(--border)', minHeight:480 }}>
               <div className="flex flex-col justify-between p-8 flex-1">
                 <div>
                   <p className="label mb-3" style={{ color:'var(--lime-text)', letterSpacing:'0.16em' }}>POOL</p>
@@ -507,13 +519,13 @@ export default function HomePage() {
                   Explore FeaziPool <ArrowRight size={14} />
                 </Link>
               </div>
-              <div className="overflow-hidden" style={{ height:200, background:'var(--bg-subtle)' }}>
-                <RideSharingScene className="w-full h-full" />
+              <div style={{ height:280, background:'var(--bg-subtle)', overflow:'hidden' }}>
+                <img src={feaziPoolImg} alt="FeaziPool" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top', display:'block' }} />
               </div>
             </div>
 
             {/* FeaziSend */}
-            <div className="rounded-2xl flex flex-col overflow-hidden" style={{ background:'#e8e8e4', border:'1px solid rgba(0,0,0,0.08)', minHeight:380 }}>
+            <div className="rounded-2xl flex flex-col overflow-hidden" style={{ background:'#e8e8e4', border:'1px solid rgba(0,0,0,0.08)', minHeight:480 }}>
               <div className="flex flex-col justify-between p-8 flex-1">
                 <div>
                   <p className="label mb-3" style={{ color:'#555', letterSpacing:'0.16em' }}>SEND</p>
@@ -527,13 +539,13 @@ export default function HomePage() {
                   Explore FeaziSend <ArrowRight size={14} />
                 </Link>
               </div>
-              <div className="overflow-hidden" style={{ height:200, background:'rgba(255,255,255,0.04)' }}>
-                <DeliveryScene className="w-full h-full" />
+              <div style={{ height:280, background:'rgba(255,255,255,0.04)', overflow:'hidden' }}>
+                <img src={feaziSendImg} alt="FeaziSend" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top', display:'block' }} />
               </div>
             </div>
 
             {/* FeaziBiz */}
-            <div className="rounded-2xl flex flex-col overflow-hidden" style={{ background:'var(--bg-subtle)', border:'1px solid var(--border)', minHeight:380 }}>
+            <div className="rounded-2xl flex flex-col overflow-hidden" style={{ background:'var(--bg-subtle)', border:'1px solid var(--border)', minHeight:480 }}>
               <div className="flex flex-col justify-between p-8 flex-1">
                 <div>
                   <p className="label mb-3" style={{ color:'var(--lime-text)', letterSpacing:'0.16em' }}>BIZ</p>
@@ -547,8 +559,8 @@ export default function HomePage() {
                   Explore FeaziBiz <ArrowRight size={14} />
                 </Link>
               </div>
-              <div className="overflow-hidden" style={{ height:200, background:'var(--bg)' }}>
-                <WalletScene className="w-full h-full" />
+              <div style={{ height:280, background:'var(--bg)', overflow:'hidden' }}>
+                <img src={feaziBizImg} alt="FeaziBiz" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top', display:'block' }} />
               </div>
             </div>
 
@@ -811,48 +823,48 @@ export default function HomePage() {
 
 
       {/* ── Connect with Us ──────────────────────────────────────────────── */}
-      <section style={{ background: '#f8f8f6', padding: '80px clamp(20px,6vw,80px)' }}>
+      <section style={{ background: C.subtleBg, padding: '80px clamp(20px,6vw,80px)' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '64px', alignItems: 'start' }}>
           {/* Left: heading */}
           <div>
-            <p style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#15803d', marginBottom: 16 }}>Socials</p>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(1.8rem,3.5vw,2.6rem)', color: '#0f0f0f', lineHeight: 1.1, marginBottom: 16 }}>Connect with Us</h2>
-            <p style={{ fontSize: '1rem', color: '#666', lineHeight: 1.7 }}>Join our community and follow us on social media to stay updated about FeaziMove.</p>
+            <p style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#5a9e00', marginBottom: 16 }}>Socials</p>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(1.8rem,3.5vw,2.6rem)', color: C.text, lineHeight: 1.1, marginBottom: 16 }}>Connect with Us</h2>
+            <p style={{ fontSize: '1rem', color: C.textSoft, lineHeight: 1.7 }}>Join our community and follow us on social media to stay updated about FeaziMove.</p>
           </div>
 
           {/* Right: 2×2 social grid */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
             {/* Facebook */}
             <a href="https://facebook.com/feazimove" target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
-              <div style={{ background: '#ffffff', borderRadius: 16, padding: '28px 24px', border: '1px solid #e8e8e8', transition: 'box-shadow 0.2s', cursor: 'pointer' }}
+              <div style={{ background: C.cardBg, borderRadius: 16, padding: '28px 24px', border: `1px solid ${C.cardBorder}`, transition: 'box-shadow 0.2s', cursor: 'pointer' }}
                 onMouseEnter={e => e.currentTarget.style.boxShadow='0 4px 24px rgba(0,0,0,0.08)'}
                 onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
                 <div style={{ width: 52, height: 52, borderRadius: 14, background: '#f0f4ff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073C24 5.404 18.627 0 12 0S0 5.404 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.491 0-1.956.93-1.956 1.886v2.267h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/></svg>
                 </div>
-                <h4 style={{ fontWeight: 800, fontSize: '1rem', color: '#0f0f0f', marginBottom: 6 }}>Follow us on Facebook</h4>
-                <p style={{ fontSize: '0.88rem', color: '#666', lineHeight: 1.6, marginBottom: 8 }}>Get FeaziMove news, updates, and community resources.</p>
+                <h4 style={{ fontWeight: 800, fontSize: '1rem', color: C.text, marginBottom: 6 }}>Follow us on Facebook</h4>
+                <p style={{ fontSize: '0.88rem', color: C.textSoft, lineHeight: 1.6, marginBottom: 8 }}>Get FeaziMove news, updates, and community resources.</p>
                 <span style={{ fontSize: '0.88rem', color: '#15803d', fontWeight: 700 }}>@feazimove</span>
               </div>
             </a>
 
             {/* X / Twitter */}
             <a href="https://x.com/feazimove" target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
-              <div style={{ background: '#ffffff', borderRadius: 16, padding: '28px 24px', border: '1px solid #e8e8e8', transition: 'box-shadow 0.2s', cursor: 'pointer' }}
+              <div style={{ background: C.cardBg, borderRadius: 16, padding: '28px 24px', border: `1px solid ${C.cardBorder}`, transition: 'box-shadow 0.2s', cursor: 'pointer' }}
                 onMouseEnter={e => e.currentTarget.style.boxShadow='0 4px 24px rgba(0,0,0,0.08)'}
                 onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
                 <div style={{ width: 52, height: 52, borderRadius: 14, background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="#0f0f0f"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.632 5.905-5.632zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
                 </div>
-                <h4 style={{ fontWeight: 800, fontSize: '1rem', color: '#0f0f0f', marginBottom: 6 }}>Follow us on X</h4>
-                <p style={{ fontSize: '0.88rem', color: '#666', lineHeight: 1.6, marginBottom: 8 }}>Get FeaziMove news, updates, and company information.</p>
+                <h4 style={{ fontWeight: 800, fontSize: '1rem', color: C.text, marginBottom: 6 }}>Follow us on X</h4>
+                <p style={{ fontSize: '0.88rem', color: C.textSoft, lineHeight: 1.6, marginBottom: 8 }}>Get FeaziMove news, updates, and company information.</p>
                 <span style={{ fontSize: '0.88rem', color: '#15803d', fontWeight: 700 }}>@feazimove</span>
               </div>
             </a>
 
             {/* Instagram */}
             <a href="https://instagram.com/feazimove" target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
-              <div style={{ background: '#ffffff', borderRadius: 16, padding: '28px 24px', border: '1px solid #e8e8e8', transition: 'box-shadow 0.2s', cursor: 'pointer' }}
+              <div style={{ background: C.cardBg, borderRadius: 16, padding: '28px 24px', border: `1px solid ${C.cardBorder}`, transition: 'box-shadow 0.2s', cursor: 'pointer' }}
                 onMouseEnter={e => e.currentTarget.style.boxShadow='0 4px 24px rgba(0,0,0,0.08)'}
                 onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
                 <div style={{ width: 52, height: 52, borderRadius: 14, background: '#fff0f7', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
@@ -869,22 +881,22 @@ export default function HomePage() {
                     <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
                   </svg>
                 </div>
-                <h4 style={{ fontWeight: 800, fontSize: '1rem', color: '#0f0f0f', marginBottom: 6 }}>Follow us on Instagram</h4>
-                <p style={{ fontSize: '0.88rem', color: '#666', lineHeight: 1.6, marginBottom: 8 }}>Behind-the-scenes, community stories, and updates.</p>
+                <h4 style={{ fontWeight: 800, fontSize: '1rem', color: C.text, marginBottom: 6 }}>Follow us on Instagram</h4>
+                <p style={{ fontSize: '0.88rem', color: C.textSoft, lineHeight: 1.6, marginBottom: 8 }}>Behind-the-scenes, community stories, and updates.</p>
                 <span style={{ fontSize: '0.88rem', color: '#15803d', fontWeight: 700 }}>@feazimove</span>
               </div>
             </a>
 
             {/* WhatsApp / Contact */}
             <a href="https://wa.me/2347000000000" target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
-              <div style={{ background: '#ffffff', borderRadius: 16, padding: '28px 24px', border: '1px solid #e8e8e8', transition: 'box-shadow 0.2s', cursor: 'pointer' }}
+              <div style={{ background: C.cardBg, borderRadius: 16, padding: '28px 24px', border: `1px solid ${C.cardBorder}`, transition: 'box-shadow 0.2s', cursor: 'pointer' }}
                 onMouseEnter={e => e.currentTarget.style.boxShadow='0 4px 24px rgba(0,0,0,0.08)'}
                 onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
                 <div style={{ width: 52, height: 52, borderRadius: 14, background: '#f0fff4', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.118 1.532 5.845L.057 23.547a.75.75 0 00.921.921l5.702-1.475A11.952 11.952 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.014-1.376l-.36-.214-3.727.977.993-3.62-.235-.374A9.818 9.818 0 0112 2.182c5.427 0 9.818 4.39 9.818 9.818 0 5.427-4.39 9.818-9.818 9.818z"/></svg>
                 </div>
-                <h4 style={{ fontWeight: 800, fontSize: '1rem', color: '#0f0f0f', marginBottom: 6 }}>Chat with Us</h4>
-                <p style={{ fontSize: '0.88rem', color: '#666', lineHeight: 1.6, marginBottom: 8 }}>Reach our support team directly on WhatsApp.</p>
+                <h4 style={{ fontWeight: 800, fontSize: '1rem', color: C.text, marginBottom: 6 }}>Chat with Us</h4>
+                <p style={{ fontSize: '0.88rem', color: C.textSoft, lineHeight: 1.6, marginBottom: 8 }}>Reach our support team directly on WhatsApp.</p>
                 <span style={{ fontSize: '0.88rem', color: '#15803d', fontWeight: 700 }}>WhatsApp Support</span>
               </div>
             </a>

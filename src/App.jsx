@@ -24,6 +24,7 @@ import ServicesPage    from './pages/landing/ServicesPage'
 import AboutPage       from './pages/landing/AboutPage'
 import ContactPage     from './pages/landing/ContactPage'
 import PoliciesPage    from './pages/landing/PoliciesPage'
+import SafetyPage      from './pages/landing/SafetyPage'
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 import Login           from './pages/auth/Login'
@@ -71,6 +72,7 @@ export default function App() {
           <Route path="/about"        element={<AboutPage />} />
           <Route path="/contact"      element={<ContactPage />} />
           <Route path="/policies"     element={<PoliciesPage />} />
+          <Route path="/safety"       element={<SafetyPage />} />
 
           {/* Auth */}
           <Route path="/login"           element={<Login />} />

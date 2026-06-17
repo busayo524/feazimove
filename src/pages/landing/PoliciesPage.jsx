@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import LandingLayout from '../../components/LandingLayout'
+import { useTheme } from '../../context/ThemeContext'
 
-// ── Shared style helpers ──────────────────────────────────────────────────────
+// ── Shared style helpers (uses CSS variables — theme-aware) ───────────────────
 const S = {
-  h2: { fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(2rem,4vw,3rem)', color: '#0f0f0f', margin: '0 0 6px' },
-  date: { fontSize: '0.82rem', color: '#2d7a00', fontWeight: 700, letterSpacing: '0.04em', marginBottom: '2.4rem', display: 'block' },
-  h3: { fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.18rem', color: '#0f0f0f', margin: '2.6rem 0 0.7rem', paddingBottom: '6px', borderBottom: '2px solid #ccff00', display: 'inline-block' },
-  p: { color: '#3a3a3a', lineHeight: 1.9, marginBottom: '0.7rem', fontSize: '1rem' },
-  li: { color: '#3a3a3a', lineHeight: 1.85, marginBottom: '0.55rem', fontSize: '1rem' },
-  ul: { paddingLeft: '1.5rem', marginBottom: '1rem' },
-  ol: { paddingLeft: '1.5rem', marginBottom: '1rem' },
-  note: { background: '#f8f8f0', border: '1.5px solid #ccff00', borderRadius: 10, padding: '14px 18px', margin: '1.2rem 0', fontSize: '0.95rem', color: '#444', lineHeight: 1.75 },
-  strong: { color: '#0f0f0f', fontWeight: 700 },
+  h2:     { fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(2rem,4vw,3rem)', color: 'var(--text)', margin: '0 0 6px' },
+  date:   { fontSize: '0.82rem', color: '#5a9e00', fontWeight: 700, letterSpacing: '0.04em', marginBottom: '2.4rem', display: 'block' },
+  h3:     { fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.18rem', color: 'var(--text)', margin: '2.6rem 0 0.7rem', paddingBottom: '6px', borderBottom: '2px solid #ccff00', display: 'inline-block' },
+  p:      { color: 'var(--text-muted)', lineHeight: 1.9, marginBottom: '0.7rem', fontSize: '1rem' },
+  li:     { color: 'var(--text-muted)', lineHeight: 1.85, marginBottom: '0.55rem', fontSize: '1rem' },
+  ul:     { paddingLeft: '1.5rem', marginBottom: '1rem' },
+  ol:     { paddingLeft: '1.5rem', marginBottom: '1rem' },
+  note:   { background: 'var(--bg-subtle)', border: '1.5px solid #ccff00', borderRadius: 10, padding: '14px 18px', margin: '1.2rem 0', fontSize: '0.95rem', color: 'var(--text-muted)', lineHeight: 1.75 },
+  strong: { color: 'var(--text)', fontWeight: 700 },
 }
 
 function H3({ children }) {
@@ -37,7 +38,7 @@ function B({ children }) {
   return <strong style={S.strong}>{children}</strong>
 }
 function A({ href, children }) {
-  return <a href={href} style={{ color: '#2d7a00', fontWeight: 600, textDecoration: 'underline' }}>{children}</a>
+  return <a href={href} style={{ color: '#5a9e00', fontWeight: 600, textDecoration: 'underline' }}>{children}</a>
 }
 
 // ── POLICIES ─────────────────────────────────────────────────────────────────
@@ -51,7 +52,7 @@ const POLICIES = [
     content: (
       <>
         <h2 style={S.h2}>Terms of Use</h2>
-        <span style={S.date}>Effective Date: 1 January 2025 &nbsp;|&nbsp; Last Updated: 1 June 2025</span>
+        <span style={S.date}>Effective Date: 1 July 2026 &nbsp;|&nbsp; Last Updated: 17 June 2026</span>
 
         <Note>
           <B>Please read these Terms carefully.</B> By creating an account or using any part of the FeaziMove platform, you confirm that you have read, understood, and agree to be bound by these Terms of Use and all policies incorporated herein by reference. If you do not agree, you must not use our platform.
@@ -236,7 +237,7 @@ const POLICIES = [
     content: (
       <>
         <h2 style={S.h2}>Privacy Policy</h2>
-        <span style={S.date}>Effective Date: 1 January 2025 &nbsp;|&nbsp; Last Updated: 1 June 2025</span>
+        <span style={S.date}>Effective Date: 1 July 2026 &nbsp;|&nbsp; Last Updated: 17 June 2026</span>
 
         <Note>
           FeaziMove Technologies Limited is committed to protecting your personal data in compliance with the Nigerian Data Protection Act 2023 (NDPA) and the Nigeria Data Protection Regulation (NDPR). This Privacy Policy explains exactly what data we collect, why we collect it, how we use it, and your rights over it.
@@ -367,7 +368,7 @@ const POLICIES = [
     content: (
       <>
         <h2 style={S.h2}>Behaviour Policy</h2>
-        <span style={S.date}>Effective Date: 1 January 2025 &nbsp;|&nbsp; Last Updated: 1 June 2025</span>
+        <span style={S.date}>Effective Date: 1 July 2026 &nbsp;|&nbsp; Last Updated: 17 June 2026</span>
 
         <Note>
           FeaziMove is built on the belief that everyone — regardless of background, gender, or status — deserves to move through their city safely and with dignity. This Behaviour Policy sets out the minimum standards of conduct we expect from every person who uses our platform.
@@ -486,7 +487,7 @@ const POLICIES = [
     content: (
       <>
         <h2 style={S.h2}>Safety Policy</h2>
-        <span style={S.date}>Effective Date: 1 January 2025 &nbsp;|&nbsp; Last Updated: 1 June 2025</span>
+        <span style={S.date}>Effective Date: 1 July 2026 &nbsp;|&nbsp; Last Updated: 17 June 2026</span>
 
         <Note>
           Safety is FeaziMove's highest priority. Every design decision, product feature, and operational standard we implement is evaluated through the lens of safety first. This Policy explains how we build and maintain safety on our platform and what we expect from all users.
@@ -586,7 +587,7 @@ const POLICIES = [
     content: (
       <>
         <h2 style={S.h2}>Cookie Policy</h2>
-        <span style={S.date}>Effective Date: 1 January 2025 &nbsp;|&nbsp; Last Updated: 1 June 2025</span>
+        <span style={S.date}>Effective Date: 1 July 2026 &nbsp;|&nbsp; Last Updated: 17 June 2026</span>
 
         <Note>
           This Cookie Policy explains what cookies and similar tracking technologies we use on the FeaziMove website and app, why we use them, and how you can manage your preferences. It should be read alongside our Privacy Policy.
@@ -679,7 +680,7 @@ const POLICIES = [
     content: (
       <>
         <h2 style={S.h2}>Trip Cancellation Policy</h2>
-        <span style={S.date}>Effective Date: 1 January 2025 &nbsp;|&nbsp; Last Updated: 1 June 2025</span>
+        <span style={S.date}>Effective Date: 1 July 2026 &nbsp;|&nbsp; Last Updated: 17 June 2026</span>
 
         <Note>
           We understand that plans change. This policy is designed to be fair to both Riders and Drivers. Please read it carefully before booking, as cancellation fees may apply depending on when a cancellation is made.
@@ -779,7 +780,7 @@ const POLICIES = [
     content: (
       <>
         <h2 style={S.h2}>Refund Policy</h2>
-        <span style={S.date}>Effective Date: 1 January 2025 &nbsp;|&nbsp; Last Updated: 1 June 2025</span>
+        <span style={S.date}>Effective Date: 1 July 2026 &nbsp;|&nbsp; Last Updated: 17 June 2026</span>
 
         <Note>
           FeaziMove is committed to fair and transparent refund practices. This Policy sets out exactly when you are entitled to a refund, how to request one, and how long the process takes.
@@ -879,6 +880,7 @@ export default function PoliciesPage() {
   const tabParam = searchParams.get('tab')
   const initialTab = POLICIES.find(p => p.id === tabParam)?.id || POLICIES[0].id
   const [activeTab, setActiveTab] = useState(initialTab)
+  const { isDark } = useTheme()
 
   useEffect(() => {
     const id = searchParams.get('tab')
@@ -906,34 +908,34 @@ export default function PoliciesPage() {
           transition: all 0.18s ease;
           white-space: nowrap;
           background: transparent;
-          color: #555;
+          color: var(--text-muted);
           font-family: inherit;
         }
-        .tab-btn:hover { color: #0f0f0f; border-color: #ddd; }
+        .tab-btn:hover { color: var(--text); border-color: var(--border-mid); }
         .tab-btn.active {
-          background: #0f0f0f;
+          background: var(--text);
           color: #ccff00;
-          border-color: #0f0f0f;
+          border-color: var(--text);
         }
       `}</style>
 
       {/* ── Hero ── */}
-      <section style={{ background: '#f8f8f6', borderBottom: '1px solid #e8e8e4', padding: '80px clamp(20px,6vw,80px) 60px' }}>
+      <section style={{ background: isDark ? '#0a0a0a' : '#f8f8f6', borderBottom: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #e8e8e4', padding: '80px clamp(20px,6vw,80px) 60px' }}>
         <div style={{ maxWidth: 860, margin: '0 auto', textAlign: 'center' }}>
-          <p style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.18em', color: '#2d7a00', textTransform: 'uppercase', marginBottom: 16 }}>
+          <p style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.18em', color: '#5a9e00', textTransform: 'uppercase', marginBottom: 16 }}>
             FeaziMove · Legal
           </p>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(2.6rem,5vw,4rem)', color: '#0f0f0f', margin: '0 0 20px', lineHeight: 1.08 }}>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(2.6rem,5vw,4rem)', color: 'var(--text)', margin: '0 0 20px', lineHeight: 1.08 }}>
             FeaziMove Policies
           </h1>
-          <p style={{ fontSize: '1.05rem', color: '#666', lineHeight: 1.75, maxWidth: 600, margin: '0 auto' }}>
+          <p style={{ fontSize: '1.05rem', color: 'var(--text-muted)', lineHeight: 1.75, maxWidth: 600, margin: '0 auto' }}>
             Our policies form the legal agreement between you and FeaziMove Technologies Limited, governing how you access and use our platform and the services we provide. Please read each policy carefully.
           </p>
         </div>
       </section>
 
       {/* ── Tab bar ── */}
-      <div style={{ position: 'sticky', top: 0, zIndex: 40, background: '#ffffff', borderBottom: '1px solid #e8e8e4', padding: '0 clamp(20px,4vw,60px)' }}>
+      <div style={{ position: 'sticky', top: 0, zIndex: 40, background: isDark ? '#111111' : '#ffffff', borderBottom: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #e8e8e4', padding: '0 clamp(20px,4vw,60px)' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', overflowX: 'auto', display: 'flex', gap: 4, padding: '12px 0', scrollbarWidth: 'none' }}>
           {POLICIES.map(p => (
             <button
@@ -948,19 +950,19 @@ export default function PoliciesPage() {
       </div>
 
       {/* ── Content ── */}
-      <section style={{ background: '#ffffff', padding: '60px clamp(20px,6vw,80px) 100px' }}>
+      <section style={{ background: 'var(--bg)', padding: '60px clamp(20px,6vw,80px) 100px' }}>
         <div style={{ maxWidth: 800, margin: '0 auto' }}>
           {active?.content}
         </div>
       </section>
 
       {/* ── Bottom CTA ── */}
-      <section style={{ background: '#f8f8f6', borderTop: '1px solid #e8e8e4', padding: '60px clamp(20px,6vw,80px)' }}>
+      <section style={{ background: isDark ? '#0a0a0a' : '#f8f8f6', borderTop: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #e8e8e4', padding: '60px clamp(20px,6vw,80px)' }}>
         <div style={{ maxWidth: 680, margin: '0 auto', textAlign: 'center' }}>
-          <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '1.6rem', color: '#0f0f0f', marginBottom: 12 }}>
+          <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '1.6rem', color: 'var(--text)', marginBottom: 12 }}>
             Have questions about our policies?
           </h3>
-          <p style={{ color: '#666', fontSize: '1rem', lineHeight: 1.7, marginBottom: 28 }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '1rem', lineHeight: 1.7, marginBottom: 28 }}>
             Our legal team is available to answer any questions. We aim to respond to all enquiries within 1 business day.
           </p>
           <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>

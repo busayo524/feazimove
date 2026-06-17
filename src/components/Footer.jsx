@@ -19,7 +19,7 @@ const links = {
   Support:  [
     { label: 'Contact',     to: '/contact' },
     { label: 'Help Center', to: '#' },
-    { label: 'Safety',      to: '#' },
+    { label: 'Safety',      to: '/safety' },
     { label: 'Community',   to: '#' },
   ],
   Legal:    [

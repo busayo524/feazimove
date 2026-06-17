@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Users, Package, Briefcase, ArrowRight, Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import LandingLayout from '../../components/LandingLayout'
+import { useTheme } from '../../context/ThemeContext'
 import { CarWithPeople, DeliveryPerson, CommuterGroup } from '../../components/illustrations/PeopleIllustration'
 import africanMob from '../../assets/AfricanMobimage.jpg'
 import onePlatformImg from '../../assets/oneplatform.jpg'
@@ -135,6 +136,13 @@ export default function ServicesPage() {
   const [active, setActive] = useState('pool')
   const [slide, setSlide] = useState(0)
   const service = services.find(s => s.id === active)
+  const { isDark } = useTheme()
+  const C = {
+    text:      isDark ? '#ffffff'                : '#0f0f0f',
+    textSoft:  isDark ? 'rgba(255,255,255,0.55)' : '#555',
+    textFaint: isDark ? 'rgba(255,255,255,0.4)'  : '#888',
+    heroBg:    isDark ? '#0a0a0a'               : '#ffffff',
+  }
 
   const prevSlide = () => setSlide(s => (s - 1 + apartSlides.length) % apartSlides.length)
   const nextSlide = () => setSlide(s => (s + 1) % apartSlides.length)
@@ -143,15 +151,15 @@ export default function ServicesPage() {
   return (
     <LandingLayout>
       {/* Hero */}
-      <section style={{ background: '#ffffff', padding: '80px clamp(20px,6vw,80px)' }}>
+      <section style={{ background: C.heroBg, padding: '80px clamp(20px,6vw,80px)' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
           {/* Left: text */}
           <div>
-            <p style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#888', marginBottom: 20 }}>Our Services</p>
-            <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(2.8rem,5vw,4.4rem)', letterSpacing: '-0.04em', color: '#0f0f0f', lineHeight: 1.05, marginBottom: 24 }}>
+            <p style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: C.textFaint, marginBottom: 20 }}>Our Services</p>
+            <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(2.8rem,5vw,4.4rem)', letterSpacing: '-0.04em', color: C.text, lineHeight: 1.05, marginBottom: 24 }}>
               One platform.<br />Every move.
             </h1>
-            <p style={{ fontSize: '1.05rem', color: '#555', lineHeight: 1.8, maxWidth: 480 }}>
+            <p style={{ fontSize: '1.05rem', color: C.textSoft, lineHeight: 1.8, maxWidth: 480 }}>
               Whether you're commuting daily, sending a package, or managing a team — FeaziMove has a service built for you.
             </p>
           </div>
@@ -189,9 +197,9 @@ export default function ServicesPage() {
               <div style={{ width: 56, height: 56, borderRadius: 16, background: service.colorDim, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
                 <service.icon size={26} style={{ color: '#0f0f0f' }} />
               </div>
-              <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#555', marginBottom: 6 }}>{service.tagline}</p>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(2.2rem,5vw,3.2rem)', letterSpacing: '-0.04em', color: '#0f0f0f', lineHeight: 1.05, marginBottom: 20 }}>{service.name}</h2>
-              <p style={{ fontSize: '1rem', color: '#444', lineHeight: 1.8, marginBottom: 28 }}>{service.desc}</p>
+              <p style={{ fontSize: '0.85rem', fontWeight: 700, color: C.textSoft, marginBottom: 6 }}>{service.tagline}</p>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(2.2rem,5vw,3.2rem)', letterSpacing: '-0.04em', color: C.text, lineHeight: 1.05, marginBottom: 20 }}>{service.name}</h2>
+              <p style={{ fontSize: '1rem', color: C.textSoft, lineHeight: 1.8, marginBottom: 28 }}>{service.desc}</p>
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 32px', display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {service.features.map(f => (
                   <li key={f} style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: '0.95rem', color: '#333' }}>
