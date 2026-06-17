@@ -23,9 +23,13 @@ const links = {
     { label: 'Community',   to: '#' },
   ],
   Legal:    [
-    { label: 'Privacy Policy',  to: '#' },
-    { label: 'Terms of Service',to: '#' },
-    { label: 'Cookie Policy',   to: '#' },
+    { label: 'Terms of Use',          to: '/policies?tab=terms' },
+    { label: 'Privacy Policy',        to: '/policies?tab=privacy' },
+    { label: 'Behaviour Policy',      to: '/policies?tab=behaviour' },
+    { label: 'Safety Policy',         to: '/policies?tab=safety' },
+    { label: 'Cookie Policy',         to: '/policies?tab=cookie' },
+    { label: 'Trip Cancellation',     to: '/policies?tab=cancellation' },
+    { label: 'Refund Policy',         to: '/policies?tab=refund' },
   ],
 }
 

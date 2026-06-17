@@ -23,6 +23,7 @@ import HowItWorksPage  from './pages/landing/HowItWorksPage'
 import ServicesPage    from './pages/landing/ServicesPage'
 import AboutPage       from './pages/landing/AboutPage'
 import ContactPage     from './pages/landing/ContactPage'
+import PoliciesPage    from './pages/landing/PoliciesPage'
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 import Login           from './pages/auth/Login'
@@ -69,6 +70,7 @@ export default function App() {
           <Route path="/services"     element={<ServicesPage />} />
           <Route path="/about"        element={<AboutPage />} />
           <Route path="/contact"      element={<ContactPage />} />
+          <Route path="/policies"     element={<PoliciesPage />} />
 
           {/* Auth */}
           <Route path="/login"           element={<Login />} />
