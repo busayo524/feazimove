@@ -456,4 +456,101 @@
 @media (max-width: 768px) {
   .display    { font-size: clamp(2.8rem, 10vw, 5rem); }
   .display-md { font-size: clamp(2rem, 7vw, 3.2rem); }
+  .section    { @apply py-16; }
+  .section-title { font-size: clamp(1.9rem, 7vw, 2.8rem); }
+  .section-sub   { font-size: 15px; }
+}
+
+/* ── Mobile-specific layout fixes ───────────────────────────────────────── */
+@media (max-width: 640px) {
+
+  /* ── Hero section ── */
+  .hero-headline { font-size: clamp(2.2rem, 9vw, 3.5rem) !important; }
+
+  /* ── App download section ── */
+  .app-dl-left {
+    padding: 48px 28px 40px !important;
+  }
+  .app-dl-right { display: none !important; }
+
+  /* ── Stats bar: 2-col instead of 4 ── */
+  .stats-grid { grid-template-columns: repeat(2,1fr) !important; }
+
+  /* ── Safety page pill navigation ── */
+  .safety-pill-row {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    justify-content: center !important;
+  }
+
+  /* ── SafetyPage cards ── */
+  .safety-cards-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Services page ── */
+  .services-hero-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Policies tabs ── */
+  .policies-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap !important;
+  }
+
+  /* ── Generic two-col inline grids → stack ── */
+  [style*="gridTemplateColumns: '1fr 1fr'"],
+  [style*="gridTemplateColumns: 'repeat(2"] {
+    grid-template-columns: 1fr !important;
+  }
+  [style*="gridTemplateColumns: 'repeat(3"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Reduce large section paddings ── */
+  [style*="padding: '100px"] {
+    padding-top: 60px !important;
+    padding-bottom: 60px !important;
+  }
+
+  /* ── Card padding on small screens ── */
+  .card.p-10 { padding: 28px !important; }
+  .card.p-8  { padding: 20px !important; }
+}
+
+/* ── Tablet tweaks (641–1023px) ─────────────────────────────────────────── */
+@media (min-width: 641px) and (max-width: 1023px) {
+  .app-dl-left { padding: 48px 40px !important; }
+}
+
+/* ── Touch / tap target improvements ───────────────────────────────────── */
+@media (hover: none) and (pointer: coarse) {
+  .btn-lime, .btn-green, .btn-outline, .btn-ghost {
+    min-height: 48px;
+  }
+  .tab-btn {
+    min-height: 44px;
+  }
+  a, button {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* ── Prevent horizontal overflow on all screens ─────────────────────────── */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* ── SafetyPage pill row ─────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .safety-pills-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+  .safety-pills-wrap::-webkit-scrollbar { display: none; }
 }

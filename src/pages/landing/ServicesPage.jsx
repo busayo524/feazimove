@@ -151,8 +151,8 @@ export default function ServicesPage() {
   return (
     <LandingLayout>
       {/* Hero */}
-      <section style={{ background: C.heroBg, padding: '80px clamp(20px,6vw,80px)' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
+      <section style={{ background: C.heroBg, padding: 'clamp(48px,6vw,80px) clamp(20px,6vw,80px)' }}>
+        <div className="grid grid-cols-1 md:grid-cols-2" style={{ maxWidth: 1200, margin: '0 auto', gap: 'clamp(32px,5vw,64px)', alignItems: 'center' }}>
           {/* Left: text */}
           <div>
             <p style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: C.textFaint, marginBottom: 20 }}>Our Services</p>
@@ -225,7 +225,7 @@ export default function ServicesPage() {
 
       {/* Alternating feature sections */}
       {features.map(({ id, tag, icon, title, desc, cta, img, flip, bg }) => (
-        <section key={id} style={{ padding: '100px 20px', background: flip ? 'var(--bg-subtle)' : 'var(--bg)' }}>
+        <section key={id} style={{ padding: 'clamp(60px,8vw,100px) clamp(20px,5vw,60px)', background: flip ? 'var(--bg-subtle)' : 'var(--bg)' }}>
           <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '60px', alignItems: 'center' }}>
             <div style={{ order: flip ? 2 : 1 }}>
               <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'rgba(204,255,0,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, marginBottom: 24 }}>
@@ -247,7 +247,7 @@ export default function ServicesPage() {
       ))}
 
       {/* What Sets Us Apart carousel */}
-      <section style={{ padding: '100px 20px', background: 'var(--bg)' }}>
+      <section style={{ padding: 'clamp(60px,8vw,100px) clamp(20px,5vw,60px)', background: 'var(--bg)' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginBottom: 56 }}>
             <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(1.8rem,3.5vw,2.6rem)', letterSpacing: '-0.03em', color: 'var(--text)', whiteSpace: 'nowrap' }}>
@@ -255,7 +255,7 @@ export default function ServicesPage() {
             </h2>
             <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'center' }}>
+          <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: 'clamp(32px,5vw,60px)', alignItems: 'center' }}>
             <div style={{ position: 'relative', paddingBottom: 32, paddingRight: 0 }}>
               {/* Lime blob behind image — bottom left */}
               <div style={{ position: 'absolute', bottom: 0, left: -20, width: 120, height: 120, borderRadius: '50%', background: '#ccff00', opacity: 0.35, zIndex: 0 }} />
@@ -289,41 +289,6 @@ export default function ServicesPage() {
         </div>
       </section>
 
-      {/* Comparison table */}
-      <section className="py-24" style={{ background: 'var(--bg)' }}>
-        <div className="max-w-5xl mx-auto px-5 sm:px-8">
-          <div className="text-center mb-14">
-            <h2 className="font-display font-black section-title mb-4">
-              Why choose <span className="text-lime">FeaziMove?</span>
-            </h2>
-            <p className="section-sub mx-auto" style={{ maxWidth: 520 }}>
-              See how FeaziMove compares to traditional transport options across the metrics that matter.
-            </p>
-          </div>
-          <div className="card overflow-hidden">
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: '#0f0f0f' }}>
-                  <th style={{ padding: '18px 24px', textAlign: 'left', color: '#aaa', fontSize: 13, fontWeight: 600, letterSpacing: '0.05em' }}>Feature</th>
-                  <th style={{ padding: '18px 24px', textAlign: 'center', color: '#ccff00', fontSize: 13, fontWeight: 700, letterSpacing: '0.05em' }}>FeaziMove</th>
-                  <th style={{ padding: '18px 24px', textAlign: 'center', color: '#aaa', fontSize: 13, fontWeight: 600, letterSpacing: '0.05em' }}>Regular Transport</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tableRows.map(({ label, feazi, regular, highlight }, i) => (
-                  <tr key={label} style={{ background: highlight ? 'var(--bg-subtle)' : 'var(--bg-card)', borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '16px 24px', fontSize: '0.95rem', color: 'var(--text)', fontWeight: 500 }}>{label}</td>
-                    <td style={{ padding: '16px 24px', textAlign: 'center' }}>
-                      <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f0f0f' }}>{feazi}</span>
-                    </td>
-                    <td style={{ padding: '16px 24px', textAlign: 'center', fontSize: '0.9rem', color: 'var(--text-muted)' }}>{regular}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
 
       {/* CTA */}
       <section style={{ padding: '100px 20px', textAlign: 'center', background: '#fdf6e3', position: 'relative', overflow: 'hidden' }}>

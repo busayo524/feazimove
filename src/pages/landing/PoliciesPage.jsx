@@ -920,7 +920,7 @@ export default function PoliciesPage() {
       `}</style>
 
       {/* ── Hero ── */}
-      <section style={{ background: isDark ? '#0a0a0a' : '#f8f8f6', borderBottom: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #e8e8e4', padding: '80px clamp(20px,6vw,80px) 60px' }}>
+      <section style={{ background: isDark ? '#0a0a0a' : '#f8f8f6', borderBottom: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #e8e8e4', padding: 'clamp(48px,6vw,80px) clamp(20px,6vw,80px) clamp(36px,4vw,60px)' }}>
         <div style={{ maxWidth: 860, margin: '0 auto', textAlign: 'center' }}>
           <p style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.18em', color: '#5a9e00', textTransform: 'uppercase', marginBottom: 16 }}>
             FeaziMove · Legal

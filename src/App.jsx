@@ -29,6 +29,7 @@ import SafetyPage      from './pages/landing/SafetyPage'
 // ── Auth ──────────────────────────────────────────────────────────────────────
 import Login           from './pages/auth/Login'
 import Register        from './pages/auth/Register'
+import RoleSelect      from './pages/auth/RoleSelect'
 import ForgotPassword  from './pages/auth/ForgotPassword'
 
 // ── Rider ─────────────────────────────────────────────────────────────────────
@@ -75,9 +76,10 @@ export default function App() {
           <Route path="/safety"       element={<SafetyPage />} />
 
           {/* Auth */}
-          <Route path="/login"           element={<Login />} />
-          <Route path="/register"        element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/login"              element={<Login />} />
+          <Route path="/register"           element={<RoleSelect />} />
+          <Route path="/register/:role"     element={<Register />} />
+          <Route path="/forgot-password"    element={<ForgotPassword />} />
 
           {/* Rider */}
           <Route path="/book"          element={<ProtectedRoute requiredRole="rider"><BookRide /></ProtectedRoute>} />

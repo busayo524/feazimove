@@ -288,7 +288,7 @@ export default function SafetyPage() {
       </section>
 
       {/* ── 2. SAFETY STANDARDS ───────────────────────────────────────────────── */}
-      <section style={{ background: C.sectionBg, padding: '80px clamp(20px,6vw,80px)' }}>
+      <section style={{ background: C.sectionBg, padding: 'clamp(48px,7vw,80px) clamp(20px,6vw,80px)' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(2rem,4vw,3rem)', color: C.text, textAlign: 'center', marginBottom: 56 }}>
             Safety at{' '}
@@ -311,12 +311,12 @@ export default function SafetyPage() {
       </section>
 
       {/* ── 3. HIGH SAFETY STANDARDS IN THE APP ──────────────────────────────── */}
-      <section style={{ background: C.whiteBg, padding: '80px clamp(20px,6vw,80px)' }}>
+      <section style={{ background: C.whiteBg, padding: 'clamp(48px,7vw,80px) clamp(20px,6vw,80px)' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(2rem,4vw,3rem)', color: C.text, textAlign: 'center', marginBottom: 60 }}>
             High safety standards in the app
           </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'center' }}>
+          <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: 'clamp(32px,5vw,60px)', alignItems: 'center' }}>
             {/* Left: phone mockup */}
             <div style={{ background: C.phoneBg, borderRadius: 24, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 420, position: 'relative', padding: 32 }}>
               <SOSIllustration />
@@ -396,7 +396,7 @@ export default function SafetyPage() {
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.72)' }} />
         {/* Lime blob */}
         <div style={{ position: 'absolute', right: 0, bottom: 0, width: 320, height: 320, background: '#ccff00', borderRadius: '80% 0 0 0', opacity: 0.18 }} />
-        <div style={{ position: 'relative', zIndex: 2, padding: '80px clamp(20px,6vw,80px)', maxWidth: 800 }}>
+        <div style={{ position: 'relative', zIndex: 2, padding: 'clamp(48px,7vw,80px) clamp(20px,6vw,80px)', maxWidth: 800 }}>
           <p style={{ fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.18em', color: '#ccff00', textTransform: 'uppercase', marginBottom: 24 }}>Our commitment</p>
           <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(1.8rem,3.5vw,2.8rem)', color: 'white', lineHeight: 1.3, marginBottom: 32 }}>
             Our commuters' safety is as{' '}
@@ -410,7 +410,7 @@ export default function SafetyPage() {
       </section>
 
       {/* ── 7. SAFETY TIPS GRID ───────────────────────────────────────────────── */}
-      <section style={{ background: '#0f0f0f', padding: '80px clamp(20px,6vw,80px)' }}>
+      <section style={{ background: '#0f0f0f', padding: 'clamp(48px,7vw,80px) clamp(20px,6vw,80px)' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(1.8rem,3.5vw,2.6rem)', color: 'white', marginBottom: 12 }}>
             Before every trip
@@ -435,8 +435,8 @@ export default function SafetyPage() {
       </section>
 
       {/* ── 8. SAFETY IMAGE + CTA ─────────────────────────────────────────────── */}
-      <section style={{ background: C.sectionBg, padding: '80px clamp(20px,6vw,80px)' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'center' }}>
+      <section style={{ background: C.sectionBg, padding: 'clamp(48px,7vw,80px) clamp(20px,6vw,80px)' }}>
+        <div className="grid grid-cols-1 md:grid-cols-2" style={{ maxWidth: 1100, margin: '0 auto', gap: 'clamp(32px,5vw,60px)', alignItems: 'center' }}>
           <div style={{ borderRadius: 24, overflow: 'hidden', aspectRatio: '4/3' }}>
             <img src={safetyImg} alt="Safety" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
           </div>

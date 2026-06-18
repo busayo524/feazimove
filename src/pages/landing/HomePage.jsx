@@ -641,7 +641,7 @@ export default function HomePage() {
           <div className="grid lg:grid-cols-2 gap-0" style={{ background: '#2c4a2c', minHeight: 360, overflow: 'visible', position: 'relative' }}>
 
             {/* Left: text + buttons */}
-            <div className="app-dl-left" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <div className="app-dl-left" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 'clamp(40px,5vw,80px) clamp(28px,5vw,80px)' }}>
               <h2 style={{
                 fontWeight: 900, color: '#ffffff',
                 fontSize: 'clamp(2rem, 3.5vw, 3rem)',

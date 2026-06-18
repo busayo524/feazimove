@@ -33,9 +33,7 @@ const LEARN_ITEMS = [
 ]
 
 const SIMPLE_LINKS = [
-  { label: 'How It Works', href: '/how-it-works' },
   { label: 'Services',     href: '/services'     },
-  { label: 'Safety',       href: '/safety'       },
   { label: 'About',        href: '/about'        },
   { label: 'Contact',      href: '/contact'      },
 ]
@@ -245,27 +243,45 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {/* Mobile hamburger */}
-        <button className="md:hidden" onClick={() => setOpen(!open)}
-          style={{ color: isDark ? '#fff' : '#1a1a1a', background:'none', border:'none', cursor:'pointer' }}
-          aria-label={open ? 'Close menu' : 'Open menu'}>
-          {open ? <X size={22}/> : <Menu size={22}/>}
-        </button>
+        {/* Mobile hamburger — pushed to far right */}
+        <div className="md:hidden" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button onClick={toggle} aria-label="Toggle theme" style={{
+            width:34, height:34, borderRadius:10, border:'1px solid',
+            borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)',
+            background:'transparent', display:'flex', alignItems:'center', justifyContent:'center',
+            cursor:'pointer', color: isDark ? 'rgba(255,255,255,0.6)' : '#3a3a3a',
+          }}>
+            {isDark ? <Sun size={15}/> : <Moon size={15}/>}
+          </button>
+          <button onClick={() => setOpen(!open)}
+            style={{ color: isDark ? '#fff' : '#1a1a1a', background:'none', border:'none', cursor:'pointer', padding: 4 }}
+            aria-label={open ? 'Close menu' : 'Open menu'}>
+            {open ? <X size={22}/> : <Menu size={22}/>}
+          </button>
+        </div>
       </nav>
 
       {/* Mobile drawer */}
       {open && (
-        <div className="md:hidden" style={{ background: isDark?'rgba(12,12,12,0.98)':'rgba(255,255,255,0.98)', backdropFilter:'blur(20px)', borderTop: isDark?'1px solid rgba(255,255,255,0.08)':'1px solid rgba(0,0,0,0.08)' }}>
+        <div className="md:hidden" style={{ background: isDark?'rgba(12,12,12,0.98)':'rgba(255,255,255,0.98)', backdropFilter:'blur(20px)', borderTop: isDark?'1px solid rgba(255,255,255,0.08)':'1px solid rgba(0,0,0,0.08)', maxHeight:'80vh', overflowY:'auto' }}>
           <ul style={{ margin:0, padding:'8px 24px 4px', listStyle:'none' }}>
-            {[{label:'Ride', href:'/services'},{label:'Drive', href:'/services#driver'},{label:'Safety', href:'/safety'}, ...SIMPLE_LINKS].map(({ label, href }) => (
-              <li key={href}>
+            {[
+              { label:'Ride', href:'/services' },
+              { label:'Drive', href:'/services#driver' },
+              { label:'How It Works', href:'/how-it-works' },
+              { label:'Safety', href:'/safety' },
+              ...SIMPLE_LINKS,
+              { label:'Contact', href:'/contact' },
+            ].filter((v, i, arr) => arr.findIndex(x => x.href === v.href && x.label === v.label) === i)
+             .map(({ label, href }) => (
+              <li key={label}>
                 <Link to={href} style={{ display:'flex', alignItems:'center', padding:'14px 0', fontSize:15, fontWeight: isActive(href)?700:500, color: isActive(href)?FOREST:(isDark?'#fff':'#1a1a1a'), borderBottom: isDark?'1px solid rgba(255,255,255,0.07)':'1px solid rgba(0,0,0,0.06)', textDecoration:'none' }}>
                   {label}
                 </Link>
               </li>
             ))}
           </ul>
-          <div style={{ padding:'16px 24px 24px', display:'flex', flexDirection:'column', gap:10 }}>
+          <div style={{ padding:'16px 24px 28px', display:'flex', flexDirection:'column', gap:10 }}>
             <Link to="/login" style={{ display:'flex', justifyContent:'center', padding:'13px', borderRadius:50, border: isDark?'1.5px solid rgba(255,255,255,0.2)':'1.5px solid rgba(0,0,0,0.15)', color: isDark?'#fff':'#1a1a1a', fontSize:15, fontWeight:700, textDecoration:'none' }}>Log in</Link>
             <Link to="/register" style={{ display:'flex', justifyContent:'center', padding:'13px', borderRadius:50, background:NEON, color:NT, fontSize:15, fontWeight:700, textDecoration:'none' }}>Create account</Link>
           </div>
