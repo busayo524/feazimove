@@ -400,7 +400,7 @@ export default function HomePage() {
 
             {/* CTAs */}
             <div className="flex flex-wrap items-center gap-4 mb-12">
-              <Link to="/register" style={{
+              <Link to="/signup" style={{
                 display: 'inline-flex', alignItems: 'center', gap: 8,
                 background: '#ccff00', color: '#0a0a0a',
                 padding: '15px 32px', borderRadius: 50,
@@ -607,7 +607,7 @@ export default function HomePage() {
                 We're launching soon in Lagos. Register now to get early access, priority matching, and exclusive launch pricing — before we go public.
               </p>
               <div className="flex flex-wrap gap-4">
-                <Link to="/register" className="btn-lime">
+                <Link to="/signup" className="btn-lime">
                   Join the waitlist <ArrowRight size={16} />
                 </Link>
                 <Link to="/how-it-works" className="btn-ghost">
@@ -656,7 +656,7 @@ export default function HomePage() {
               </p>
 
               <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-                <Link to="/register" style={{
+                <Link to="/signup" style={{
                   display: 'inline-flex', alignItems: 'center', gap: 8,
                   background: '#ccff00', color: '#0a0a0a',
                   padding: '14px 28px', borderRadius: 50,

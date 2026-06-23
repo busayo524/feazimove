@@ -7,7 +7,7 @@ const links = {
   Product:  [
     { label: 'How It Works', to: '/how-it-works' },
     { label: 'Services',     to: '/services' },
-    { label: 'For Drivers',  to: '/register' },
+    { label: 'For Drivers',  to: '/signup' },
     { label: 'FeaziBiz',     to: '/services' },
   ],
   Company:  [

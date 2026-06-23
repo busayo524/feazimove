@@ -42,7 +42,7 @@ export default function RoleSelect() {
 
           {/* RIDER */}
           <div
-            onClick={() => navigate('/register/rider')}
+            onClick={() => navigate('/signup?role=rider')}
             onMouseEnter={() => setHovered('rider')}
             onMouseLeave={() => setHovered(null)}
             style={{
@@ -86,7 +86,7 @@ export default function RoleSelect() {
 
           {/* DRIVER */}
           <div
-            onClick={() => navigate('/register/driver')}
+            onClick={() => navigate('/signup?role=driver')}
             onMouseEnter={() => setHovered('driver')}
             onMouseLeave={() => setHovered(null)}
             style={{

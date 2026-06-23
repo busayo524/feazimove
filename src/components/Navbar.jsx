@@ -232,7 +232,7 @@ export default function Navbar() {
             Log in
           </Link>
 
-          <Link to="/register" style={{
+          <Link to="/signup" style={{
             display:'inline-flex', alignItems:'center', gap:6, padding:'9px 20px', borderRadius:50,
             background: NEON, color: NT, fontSize:13, fontWeight:700,
             transition:'background 0.2s, transform 0.15s', textDecoration:'none',
@@ -283,7 +283,7 @@ export default function Navbar() {
           </ul>
           <div style={{ padding:'16px 24px 28px', display:'flex', flexDirection:'column', gap:10 }}>
             <Link to="/login" style={{ display:'flex', justifyContent:'center', padding:'13px', borderRadius:50, border: isDark?'1.5px solid rgba(255,255,255,0.2)':'1.5px solid rgba(0,0,0,0.15)', color: isDark?'#fff':'#1a1a1a', fontSize:15, fontWeight:700, textDecoration:'none' }}>Log in</Link>
-            <Link to="/register" style={{ display:'flex', justifyContent:'center', padding:'13px', borderRadius:50, background:NEON, color:NT, fontSize:15, fontWeight:700, textDecoration:'none' }}>Create account</Link>
+            <Link to="/signup" style={{ display:'flex', justifyContent:'center', padding:'13px', borderRadius:50, background:NEON, color:NT, fontSize:15, fontWeight:700, textDecoration:'none' }}>Create account</Link>
           </div>
         </div>
       )}

@@ -83,7 +83,7 @@ export default function HowItWorksPage() {
                   </li>
                 ))}
               </ul>
-              <Link to="/register?role=driver" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'var(--text)', color: 'var(--bg)', fontWeight: 700, fontSize: '0.95rem', padding: '14px 28px', borderRadius: 50, textDecoration: 'none' }}>
+              <Link to="/signup?role=driver" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'var(--text)', color: 'var(--bg)', fontWeight: 700, fontSize: '0.95rem', padding: '14px 28px', borderRadius: 50, textDecoration: 'none' }}>
                 Become a driver <ArrowRight size={16} />
               </Link>
             </div>
@@ -118,7 +118,7 @@ export default function HowItWorksPage() {
                   </li>
                 ))}
               </ul>
-              <Link to="/register?role=rider" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'var(--text)', color: 'var(--bg)', fontWeight: 700, fontSize: '0.95rem', padding: '14px 28px', borderRadius: 50, textDecoration: 'none' }}>
+              <Link to="/signup?role=rider" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'var(--text)', color: 'var(--bg)', fontWeight: 700, fontSize: '0.95rem', padding: '14px 28px', borderRadius: 50, textDecoration: 'none' }}>
                 Become a rider <ArrowRight size={16} />
               </Link>
             </div>
@@ -135,7 +135,7 @@ export default function HowItWorksPage() {
           <p style={{ fontSize: '1rem', color: 'var(--text-muted)', lineHeight: 1.75, marginBottom: 32 }}>
             Join thousands of commuters saving time and money every day.
           </p>
-          <Link to="/register" className="btn-lime">Get Started Free <ArrowRight size={16} /></Link>
+          <Link to="/signup" className="btn-lime">Get Started Free <ArrowRight size={16} /></Link>
         </div>
       </section>
 

@@ -146,7 +146,7 @@ export default function Login() {
       <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#888', flexWrap: 'wrap', justifyContent: 'center' }}>
           <span>Don't have an account?{' '}
-            <Link to="/register" style={{ color: DARK, fontWeight: 700, textDecoration: 'none' }}>Create account</Link>
+            <Link to="/signup" style={{ color: DARK, fontWeight: 700, textDecoration: 'none' }}>Create account</Link>
           </span>
           <span style={{ color: '#ccc' }}>·</span>
           <Link to="/forgot-password" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#2a6048', fontWeight: 600, textDecoration: 'none' }}>

@@ -84,8 +84,9 @@ export default function App() {
           <Route path="/signup/:role"       element={<Signup />} />
           <Route path="/verify-otp"         element={<VerifyOtp />} />
           <Route path="/email-sent"         element={<EmailSent />} />
-          {/* Legacy / direct registration (token-gated from email link) */}
-          <Route path="/register"           element={<RoleSelect />} />
+          {/* /register redirects to /signup — keeps old links working */}
+          <Route path="/register"           element={<Navigate to="/signup" replace />} />
+          {/* /register/:role is still valid — arrived via email token link or OTP nav */}
           <Route path="/register/:role"     element={<Register />} />
           <Route path="/forgot-password"    element={<ForgotPassword />} />
 

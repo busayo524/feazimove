@@ -215,7 +215,7 @@ export default function ServicesPage() {
                   <div style={{ fontSize: '0.8rem', color: '#888', marginBottom: 4 }}>Starting at</div>
                   <div style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '1.6rem', color: '#0f0f0f' }}>{service.price}</div>
                 </div>
-                <Link to="/register" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#0f0f0f', color: '#ffffff', fontWeight: 700, fontSize: '0.95rem', padding: '14px 28px', borderRadius: 50, textDecoration: 'none' }}>Get started <ArrowRight size={16} /></Link>
+                <Link to="/signup" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#0f0f0f', color: '#ffffff', fontWeight: 700, fontSize: '0.95rem', padding: '14px 28px', borderRadius: 50, textDecoration: 'none' }}>Get started <ArrowRight size={16} /></Link>
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 340 }}>{service.illustration}</div>
@@ -235,7 +235,7 @@ export default function ServicesPage() {
                 {title}
               </h2>
               <p style={{ fontSize: '1.05rem', color: 'var(--text-muted)', lineHeight: 1.75, marginBottom: 28 }}>{desc}</p>
-              <Link to="/register" style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, borderBottom: '2px solid #ccff00', paddingBottom: 2 }}>
+              <Link to="/signup" style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, borderBottom: '2px solid #ccff00', paddingBottom: 2 }}>
                 {cta} <ArrowRight size={14} />
               </Link>
             </div>
@@ -303,7 +303,7 @@ export default function ServicesPage() {
             Join thousands of commuters across African cities saving time and money every day. Download the app or sign up online.
           </p>
           <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link to="/register" className="btn-lime">Start riding free <ArrowRight size={16} /></Link>
+            <Link to="/signup" className="btn-lime">Start riding free <ArrowRight size={16} /></Link>
             <Link to="/how-it-works" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 28px', borderRadius: 50, border: '1.5px solid rgba(0,0,0,0.2)', color: '#0f0f0f', fontWeight: 700, fontSize: '0.95rem', textDecoration: 'none', transition: 'all 0.2s' }}>
               How it works
             </Link>
