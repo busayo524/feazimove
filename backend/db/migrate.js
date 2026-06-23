@@ -64,6 +64,10 @@ CREATE INDEX IF NOT EXISTS idx_rides_status   ON rides(status);
 CREATE INDEX IF NOT EXISTS idx_wallet_user    ON wallet_transactions(user_id);
 
 -- ── Email verification columns on users ──────────────────────────────────────
+-- Add email column for databases created before it was included in the schema
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email              VARCHAR(254);
+CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique ON users(email) WHERE email IS NOT NULL;
+
 ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified     BOOLEAN     NOT NULL DEFAULT false;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_pending         BOOLEAN     NOT NULL DEFAULT true;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS registration_token TEXT        UNIQUE;

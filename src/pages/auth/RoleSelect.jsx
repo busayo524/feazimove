@@ -1,148 +1,200 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowRight, TrendingUp, Shield, Zap, MapPin, Star, Package } from 'lucide-react'
+import { Bike, Car, ArrowRight } from 'lucide-react'
 import faviconImg from '../../assets/favicon.png'
 
-const NEON = '#ccff00'
-const DARK = '#0a0a0a'
+const LIME  = '#ccff00'
+const GREEN = '#2a6048'
+const DARK  = '#0a1f15'
 
 export default function RoleSelect() {
   const navigate = useNavigate()
   const [hovered, setHovered] = useState(null)
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f7f7f5', display: 'flex', flexDirection: 'column' }}>
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #f0fdf4 0%, #fefce8 60%, #f0f9ff 100%)',
+      display: 'flex', flexDirection: 'column',
+    }}>
 
-      {/* Top bar */}
-      <div style={{ padding: '20px clamp(20px,5vw,60px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(0,0,0,0.07)' }}>
-        <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-          <img src={faviconImg} alt="FeaziMove" style={{ width: 30, height: 30, objectFit: 'contain' }} />
-          <span style={{ fontSize: 18, letterSpacing: '-0.01em', color: DARK }}>
-            <span style={{ fontWeight: 500 }}>Feazi</span><span style={{ fontWeight: 900 }}>Move</span>
-          </span>
+      {/* Navbar */}
+      <nav style={{
+        background: '#fff', borderBottom: '1px solid #f0f0f0',
+        padding: '14px clamp(20px,5vw,60px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+          <img src={faviconImg} alt="FeaziMove" style={{ width: 36, height: 36, objectFit: 'contain' }} />
+          <div>
+            <p style={{ margin: 0, fontSize: 15, fontWeight: 900, color: DARK, letterSpacing: '-0.3px' }}>
+              Feazi<span style={{ color: GREEN }}>Move</span>
+            </p>
+            <p style={{ margin: 0, fontSize: 10, color: '#9ca3af' }}>Smart Urban Mobility</p>
+          </div>
         </Link>
-        <Link to="/login" style={{ fontSize: 14, fontWeight: 600, color: '#888', textDecoration: 'none' }}>
-          Have an account? <span style={{ color: DARK, borderBottom: `2px solid ${NEON}` }}>Log in</span>
-        </Link>
-      </div>
+        <span style={{ fontSize: 13, color: '#6b7280' }}>
+          Already have an account?{' '}
+          <Link to="/login" style={{ color: GREEN, fontWeight: 700, textDecoration: 'none' }}>Sign in</Link>
+        </span>
+      </nav>
 
       {/* Main */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 'clamp(32px,5vw,60px) clamp(20px,5vw,60px)' }}>
+      <main style={{
+        flex: 1, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        padding: 'clamp(32px,5vw,64px) clamp(16px,4vw,24px)',
+      }}>
 
-        {/* Headline */}
-        <div style={{ textAlign: 'center', marginBottom: 36 }}>
-          <h1 style={{ fontWeight: 900, fontSize: 'clamp(1.8rem,4vw,2.6rem)', color: DARK, letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 8 }}>
+        {/* Heading */}
+        <div style={{ textAlign: 'center', marginBottom: 40 }}>
+          <h1 style={{
+            margin: '0 0 10px',
+            fontSize: 'clamp(1.8rem,4vw,2.4rem)',
+            fontWeight: 900, color: DARK, letterSpacing: '-0.5px', lineHeight: 1.15,
+          }}>
             How would you like to move?
           </h1>
-          <p style={{ fontSize: 15, color: '#888', fontWeight: 500 }}>Pick your role to get started.</p>
+          <p style={{ margin: 0, fontSize: 15, color: '#6b7280' }}>
+            Choose your role to get started with FeaziMove.
+          </p>
         </div>
 
-        {/* Cards */}
-        <div className="role-select-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, width: '100%', maxWidth: 780 }}>
+        {/* Role cards */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: 20, width: '100%', maxWidth: 580,
+        }}>
 
-          {/* RIDER */}
-          <div
+          {/* Rider */}
+          <button
             onClick={() => navigate('/signup?role=rider')}
             onMouseEnter={() => setHovered('rider')}
             onMouseLeave={() => setHovered(null)}
             style={{
-              background: '#ffffff',
-              border: `2px solid ${hovered === 'rider' ? NEON : 'rgba(0,0,0,0.1)'}`,
-              borderRadius: 20, padding: 'clamp(36px,5vw,48px)', cursor: 'pointer',
-              transition: 'all 0.25s ease',
-              transform: hovered === 'rider' ? 'translateY(-4px)' : 'translateY(0)',
-              boxShadow: hovered === 'rider' ? '0 20px 50px rgba(204,255,0,0.2)' : '0 2px 12px rgba(0,0,0,0.06)',
+              background: hovered === 'rider' ? DARK : '#fff',
+              border: `2.5px solid ${hovered === 'rider' ? DARK : '#e5e7eb'}`,
+              borderRadius: 24, padding: 'clamp(32px,5vw,48px) 28px',
+              cursor: 'pointer', fontFamily: 'inherit',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16,
+              transition: 'all 0.22s ease',
+              transform: hovered === 'rider' ? 'translateY(-6px)' : 'translateY(0)',
+              boxShadow: hovered === 'rider'
+                ? '0 20px 48px rgba(10,31,21,0.18)'
+                : '0 2px 16px rgba(0,0,0,0.06)',
             }}
           >
-            <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#999', marginBottom: 6 }}>For Commuters</p>
-            <h2 style={{ fontWeight: 900, fontSize: 'clamp(1.4rem,2.5vw,1.8rem)', color: DARK, letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: 10 }}>
-              Ride with Feazi
-            </h2>
-            <p style={{ fontSize: 14, color: '#777', lineHeight: 1.6, marginBottom: 20 }}>
-              Pooled rides along shared routes — affordable, safe, and stress-free every day.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
-              {[
-                [<TrendingUp size={13}/>, 'Save up to 60% per trip'],
-                [<Zap size={13}/>,        'Instant route matching'],
-                [<Shield size={13}/>,     'Verified drivers only'],
-              ].map(([icon, text]) => (
-                <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ color: '#15803d' }}>{icon}</span>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: '#444' }}>{text}</span>
-                </div>
-              ))}
+            <div style={{
+              width: 72, height: 72, borderRadius: '50%',
+              background: hovered === 'rider' ? LIME : '#f0fdf4',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'background 0.22s',
+            }}>
+              <Bike size={32} color={DARK} />
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{
+                margin: '0 0 4px', fontSize: 11, fontWeight: 700,
+                letterSpacing: '0.1em', textTransform: 'uppercase',
+                color: hovered === 'rider' ? 'rgba(255,255,255,0.5)' : '#9ca3af',
+              }}>
+                For Commuters
+              </p>
+              <h2 style={{
+                margin: '0 0 6px', fontSize: 'clamp(1.2rem,2.5vw,1.5rem)',
+                fontWeight: 900, letterSpacing: '-0.3px',
+                color: hovered === 'rider' ? '#fff' : DARK,
+              }}>
+                Sign up as Rider
+              </h2>
+              <p style={{
+                margin: 0, fontSize: 13, lineHeight: 1.6,
+                color: hovered === 'rider' ? 'rgba(255,255,255,0.65)' : '#6b7280',
+              }}>
+                Pool rides, save money,<br />move the Feazi Way.
+              </p>
             </div>
             <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              background: NEON,
-              borderRadius: 12, padding: '13px 18px',
-              transition: 'background 0.25s',
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: hovered === 'rider' ? LIME : DARK,
+              color: hovered === 'rider' ? DARK : '#fff',
+              padding: '10px 22px', borderRadius: 50,
+              fontSize: 13, fontWeight: 700,
+              transition: 'all 0.22s',
             }}>
-              <span style={{ fontWeight: 800, fontSize: 14, color: DARK }}>Sign up as Rider</span>
-              <ArrowRight size={16} style={{ color: DARK }} />
+              Get started <ArrowRight size={14} />
             </div>
-          </div>
+          </button>
 
-          {/* DRIVER */}
-          <div
+          {/* Driver */}
+          <button
             onClick={() => navigate('/signup?role=driver')}
             onMouseEnter={() => setHovered('driver')}
             onMouseLeave={() => setHovered(null)}
             style={{
-              background: '#ffffff',
-              border: `2px solid ${hovered === 'driver' ? NEON : 'rgba(0,0,0,0.1)'}`,
-              borderRadius: 20, padding: 'clamp(36px,5vw,48px)', cursor: 'pointer',
-              transition: 'all 0.25s ease',
-              transform: hovered === 'driver' ? 'translateY(-4px)' : 'translateY(0)',
-              boxShadow: hovered === 'driver' ? '0 20px 50px rgba(204,255,0,0.2)' : '0 2px 12px rgba(0,0,0,0.06)',
+              background: hovered === 'driver' ? DARK : '#fff',
+              border: `2.5px solid ${hovered === 'driver' ? DARK : '#e5e7eb'}`,
+              borderRadius: 24, padding: 'clamp(32px,5vw,48px) 28px',
+              cursor: 'pointer', fontFamily: 'inherit',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16,
+              transition: 'all 0.22s ease',
+              transform: hovered === 'driver' ? 'translateY(-6px)' : 'translateY(0)',
+              boxShadow: hovered === 'driver'
+                ? '0 20px 48px rgba(10,31,21,0.18)'
+                : '0 2px 16px rgba(0,0,0,0.06)',
             }}
           >
-            <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#999', marginBottom: 6 }}>For Drivers</p>
-            <h2 style={{ fontWeight: 900, fontSize: 'clamp(1.4rem,2.5vw,1.8rem)', color: DARK, letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: 10 }}>
-              Drive &amp; Earn Daily
-            </h2>
-            <p style={{ fontSize: 14, color: '#777', lineHeight: 1.6, marginBottom: 20 }}>
-              Turn your daily route into steady income — pick up passengers heading your way.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
-              {[
-                [<TrendingUp size={13}/>, 'Predictable daily income'],
-                [<MapPin size={13}/>,     'Trips along your own route'],
-                [<Star size={13}/>,       'Build your driver rating'],
-              ].map(([icon, text]) => (
-                <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ color: '#15803d' }}>{icon}</span>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: '#444' }}>{text}</span>
-                </div>
-              ))}
+            <div style={{
+              width: 72, height: 72, borderRadius: '50%',
+              background: hovered === 'driver' ? LIME : '#f0fdf4',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'background 0.22s',
+            }}>
+              <Car size={32} color={DARK} />
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{
+                margin: '0 0 4px', fontSize: 11, fontWeight: 700,
+                letterSpacing: '0.1em', textTransform: 'uppercase',
+                color: hovered === 'driver' ? 'rgba(255,255,255,0.5)' : '#9ca3af',
+              }}>
+                For Drivers
+              </p>
+              <h2 style={{
+                margin: '0 0 6px', fontSize: 'clamp(1.2rem,2.5vw,1.5rem)',
+                fontWeight: 900, letterSpacing: '-0.3px',
+                color: hovered === 'driver' ? '#fff' : DARK,
+              }}>
+                Sign up as Driver
+              </h2>
+              <p style={{
+                margin: 0, fontSize: 13, lineHeight: 1.6,
+                color: hovered === 'driver' ? 'rgba(255,255,255,0.65)' : '#6b7280',
+              }}>
+                Earn daily along your route,<br />on your own schedule.
+              </p>
             </div>
             <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              background: NEON,
-              borderRadius: 12, padding: '13px 18px',
-              transition: 'background 0.25s',
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: hovered === 'driver' ? LIME : DARK,
+              color: hovered === 'driver' ? DARK : '#fff',
+              padding: '10px 22px', borderRadius: 50,
+              fontSize: 13, fontWeight: 700,
+              transition: 'all 0.22s',
             }}>
-              <span style={{ fontWeight: 800, fontSize: 14, color: DARK }}>Sign up as Driver</span>
-              <ArrowRight size={16} style={{ color: DARK }} />
+              Get started <ArrowRight size={14} />
             </div>
-          </div>
+          </button>
 
         </div>
 
-        {/* Footer note */}
-        <p style={{ marginTop: 28, fontSize: 15, color: '#888', textAlign: 'center' }}>
+        <p style={{ marginTop: 32, fontSize: 12, color: '#9ca3af', textAlign: 'center' }}>
           By signing up you agree to our{' '}
-          <Link to="/policies" style={{ color: '#666', textDecoration: 'underline' }}>Terms</Link> &amp;{' '}
-          <Link to="/policies" style={{ color: '#666', textDecoration: 'underline' }}>Privacy Policy</Link>.
+          <Link to="/policies" style={{ color: GREEN, fontWeight: 600, textDecoration: 'none' }}>Terms & Privacy Policy</Link>
         </p>
-      </div>
 
-      <style>{`
-        @media (max-width: 600px) {
-          .role-select-grid { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
+      </main>
     </div>
   )
 }
