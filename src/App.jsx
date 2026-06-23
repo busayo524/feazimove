@@ -28,6 +28,9 @@ import SafetyPage      from './pages/landing/SafetyPage'
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 import Login           from './pages/auth/Login'
+import Signup          from './pages/auth/Signup'
+import VerifyOtp       from './pages/auth/VerifyOtp'
+import EmailSent       from './pages/auth/EmailSent'
 import Register        from './pages/auth/Register'
 import RoleSelect      from './pages/auth/RoleSelect'
 import ForgotPassword  from './pages/auth/ForgotPassword'
@@ -75,8 +78,13 @@ export default function App() {
           <Route path="/policies"     element={<PoliciesPage />} />
           <Route path="/safety"       element={<SafetyPage />} />
 
-          {/* Auth */}
+          {/* Auth — signup flow */}
           <Route path="/login"              element={<Login />} />
+          <Route path="/signup"             element={<Signup />} />
+          <Route path="/signup/:role"       element={<Signup />} />
+          <Route path="/verify-otp"         element={<VerifyOtp />} />
+          <Route path="/email-sent"         element={<EmailSent />} />
+          {/* Legacy / direct registration (token-gated from email link) */}
           <Route path="/register"           element={<RoleSelect />} />
           <Route path="/register/:role"     element={<Register />} />
           <Route path="/forgot-password"    element={<ForgotPassword />} />

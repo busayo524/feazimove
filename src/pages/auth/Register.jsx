@@ -1,10 +1,11 @@
-import React, { useState, useRef } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import React, { useState, useRef, useEffect } from 'react'
+import { Link, useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom'
 import {
   Eye, EyeOff, Upload, Check, ArrowRight, ChevronLeft,
-  User, FileText, Shield, Car, AlertCircle,
+  User, FileText, Shield, Car, AlertCircle, Lock,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { api } from '../../services/api'
 import faviconImg from '../../assets/favicon.png'
 
 /* ── helpers ──────────────────────────────────────────────────────────── */
@@ -59,12 +60,12 @@ function UploadBox({ label, required, file, onFile, error }) {
   )
 }
 
-function Stepper({ steps, current }) {
+function Stepper({ steps, current, minDone = 0 }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center' }}>
       {steps.map((s, i) => {
-        const done   = current > s.id
-        const active = current === s.id
+        const done   = current > s.id || s.id <= minDone
+        const active = current === s.id && s.id > minDone
         const Icon   = s.icon
         return (
           <React.Fragment key={s.id}>
@@ -147,19 +148,57 @@ const LAGOS_AREAS = [
 export default function Register() {
   const { register } = useAuth()
   const navigate     = useNavigate()
+  const location     = useLocation()
   const { role: urlRole } = useParams()
+  const [searchParams]    = useSearchParams()
   const role  = urlRole === 'driver' ? 'driver' : 'rider'
   const steps = role === 'driver' ? DRIVER_STEPS : RIDER_STEPS
 
-  const [step,    setStep]    = useState(1)
+  // ── Prefill + token from OTP signup flow (navigation state) ──────────
+  // When coming from Signup.jsx → VerifyOtp, navigation state contains:
+  //   { registrationToken, prefill: { name, email, phone, password, confirm } }
+  const navState      = location.state || {}
+  const navToken      = navState.registrationToken || null
+  const prefill       = navState.prefill           || {}
+
+  // ── Legacy: token in URL query param (from email link) ───────────────
+  const urlToken = searchParams.get('token')
+
+  // Combined token — nav state takes priority (direct OTP flow)
+  const regToken = navToken || urlToken
+
+  // Token validation (only needed for URL-based tokens from old email-link flow)
+  const [tokenState, setTokenState] = useState(
+    navToken ? 'valid'                    // came from OTP — already verified
+    : urlToken ? 'validating'             // came from email link — need to validate
+    : 'none'
+  )
+
+  useEffect(() => {
+    if (!urlToken || navToken) return     // skip if using nav-state token
+    api.get(`/auth/validate-reg-token?token=${encodeURIComponent(urlToken)}`)
+      .then(res => setTokenState(res.data.valid ? 'valid' : 'invalid'))
+      .catch(() => setTokenState('invalid'))
+  }, [urlToken, navToken])
+
+  // ── Start at step 2 when prefill data is present (OTP flow) ──────────
+  const startStep = prefill.name ? 2 : 1
+
+  const [step,    setStep]    = useState(startStep)
   const [showPw,  setShowPw]  = useState(false)
   const [errors,  setErrors]  = useState({})
   const [apiError,setApiError]= useState('')
   const [loading, setLoading] = useState(false)
 
   const [form, setForm] = useState({
-    // step 1
-    name:'', email:'', phone:'', city:'', area:'', password:'', confirm:'',
+    // step 1 — pre-filled from signup if coming from OTP flow
+    name:    prefill.name    || '',
+    email:   prefill.email   || '',
+    phone:   prefill.phone   || '',
+    city:    '',
+    area:    '',
+    password: prefill.password || '',
+    confirm:  prefill.confirm  || '',
     // step 2 rider
     idType:'', idNumber:'',
     // step 2 driver
@@ -182,13 +221,17 @@ export default function Register() {
   /* ── validation ─────────────────────────────────────────────────────── */
   function v1() {
     const e = {}
-    if (!form.name || form.name.length < 2) e.name = 'Enter your full name.'
-    if (!validateEmail(form.email))         e.email = 'Enter a valid email address.'
-    if (!validatePhone(form.phone))         e.phone = 'Enter a valid Nigerian phone number.'
-    if (!form.city)                         e.city  = 'Select your city.'
-    if (!form.area) e.area = form.city === 'Lagos' ? 'Select your area in Lagos.' : 'Enter your area / neighbourhood.'
-    if (!validatePassword(form.password))   e.password = 'Min 8 chars, 1 uppercase, 1 number.'
-    if (form.password !== form.confirm)     e.confirm = 'Passwords do not match.'
+    // When prefill is present (from OTP flow), name/email/phone/password were already validated at signup
+    if (!prefill.name) {
+      if (!form.name || form.name.length < 2) e.name     = 'Enter your full name.'
+      if (!validateEmail(form.email))          e.email    = 'Enter a valid email address.'
+      if (!validatePhone(form.phone))          e.phone    = 'Enter a valid Nigerian phone number.'
+      if (!validatePassword(form.password))    e.password = 'Min 8 chars, 1 uppercase, 1 number.'
+      if (form.password !== form.confirm)      e.confirm  = 'Passwords do not match.'
+    }
+    // City and area always required
+    if (!form.city)  e.city = 'Select your city.'
+    if (!form.area)  e.area = form.city === 'Lagos' ? 'Select your area in Lagos.' : 'Enter your area / neighbourhood.'
     setErrors(e); return !Object.keys(e).length
   }
   function v2Rider() {
@@ -230,7 +273,12 @@ export default function Register() {
     if (!v3()) return
     setLoading(true); setApiError('')
     try {
-      const user = await register({ name: form.name, email: form.email, phone: form.phone, password: form.password, role })
+      // Pass registration token — server validates email verification & activates account
+      // regToken is either from nav state (OTP flow) or from URL (email-link flow)
+      const user = await register({
+        registrationToken: regToken,
+        role,
+      })
       navigate(user.role === 'driver' ? '/driver' : '/book')
     } catch (e) {
       setApiError(!e.status
@@ -238,6 +286,41 @@ export default function Register() {
         : e.data?.message || 'Registration failed. Please try again.'
       )
     } finally { setLoading(false) }
+  }
+
+  /* ── Token gate screens ─────────────────────────────────────────────── */
+  if (tokenState === 'validating') {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f2f3f4' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: 40, height: 40, borderRadius: '50%', border: '3px solid #ccff00', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
+          <p style={{ color: '#666', fontSize: 14 }}>Verifying your registration link…</p>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    )
+  }
+
+  if (tokenState === 'invalid') {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f2f3f4', padding: 24 }}>
+        <div style={{ maxWidth: 420, textAlign: 'center', background: '#fff', borderRadius: 20, padding: 48, boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>⏱</div>
+          <h2 style={{ margin: '0 0 12px', fontSize: '1.4rem', fontWeight: 800, color: '#1a1a1a' }}>Link expired or invalid</h2>
+          <p style={{ color: '#666', fontSize: 14, lineHeight: 1.7, margin: '0 0 28px' }}>
+            Your registration link has expired or is no longer valid. Registration links are only valid for 24 hours.
+          </p>
+          <Link to="/signup" style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            padding: '12px 28px', borderRadius: 50,
+            background: '#ccff00', color: '#0a1f15',
+            fontSize: 14, fontWeight: 800, textDecoration: 'none',
+          }}>
+            Start a new registration →
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   /* ── render ─────────────────────────────────────────────────────────── */
@@ -264,7 +347,8 @@ export default function Register() {
       {/* ── Stepper bar ── */}
       <div style={{ background: '#fff', borderBottom: '1px solid #e8e8e8', padding: '18px clamp(20px,5vw,60px) 0' }}>
         <div style={{ maxWidth: 900, margin: '0 auto' }}>
-          <Stepper steps={steps} current={step} />
+          {/* When starting at step 2 (prefill from OTP), treat step 1 as already done */}
+          <Stepper steps={steps} current={step} minDone={startStep > 1 ? 1 : 0} />
           <p style={{ textAlign: 'right', fontSize: 12, color: '#999', margin: '12px 0 0', paddingBottom: 16 }}>
             Step {step} of {steps.length}
           </p>
@@ -279,7 +363,16 @@ export default function Register() {
             {/* ════ STEP 1 — Personal Details ════ */}
             {step === 1 && <>
               <h2 style={{ fontSize: 'clamp(1.3rem,2.5vw,1.7rem)', fontWeight: 800, color: '#1a1a1a', marginBottom: 4 }}>Personal Details</h2>
-              <p style={{ fontSize: 14, color: '#666', marginBottom: 28 }}>Fill in your name, contact information, and create a secure password.</p>
+              <p style={{ fontSize: 14, color: '#666', marginBottom: prefill.name ? 16 : 28 }}>Fill in your name, contact information, and create a secure password.</p>
+              {/* Pre-fill banner — shown when arriving from OTP flow */}
+              {prefill.name && (
+                <div style={{ background: 'rgba(204,255,0,0.18)', border: '1.5px solid #ccff00', borderRadius: 10, padding: '12px 16px', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 18 }}>✅</span>
+                  <p style={{ margin: 0, fontSize: 13, color: '#2a6048', fontWeight: 600 }}>
+                    Name, email, phone and password pre-filled from your signup. Just add your city and area below.
+                  </p>
+                </div>
+              )}
 
               <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 28 }}>
                 <p style={secHead}>Basic Information</p>
@@ -548,11 +641,15 @@ export default function Register() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 36, paddingTop: 24, borderTop: '1px solid #f0f0f0' }}>
 
               {/* Back / Change Role */}
-              {step > 1 ? (
+              {step > startStep ? (
                 <button type="button" onClick={() => { setStep(s => s - 1); window.scrollTo(0, 0) }}
                   style={backBtn}>
                   <ChevronLeft size={16} /> Back
                 </button>
+              ) : startStep > 1 ? (
+                <Link to="/signup" style={{ ...backBtn, textDecoration: 'none' }}>
+                  <ChevronLeft size={16} /> Back to Signup
+                </Link>
               ) : (
                 <Link to="/register" style={{ ...backBtn, textDecoration: 'none' }}>
                   <ChevronLeft size={16} /> Change Role

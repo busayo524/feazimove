@@ -62,6 +62,28 @@ CREATE INDEX IF NOT EXISTS idx_rides_rider    ON rides(rider_id);
 CREATE INDEX IF NOT EXISTS idx_rides_driver   ON rides(driver_id);
 CREATE INDEX IF NOT EXISTS idx_rides_status   ON rides(status);
 CREATE INDEX IF NOT EXISTS idx_wallet_user    ON wallet_transactions(user_id);
+
+-- ── Email verification columns on users ──────────────────────────────────────
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified     BOOLEAN     NOT NULL DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_pending         BOOLEAN     NOT NULL DEFAULT true;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS registration_token TEXT        UNIQUE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS reg_token_expires  TIMESTAMPTZ;
+
+-- ── Email OTPs — hashed, expiring, single-use ─────────────────────────────────
+-- Security: we store a bcrypt hash of the OTP, never the raw value.
+-- Each OTP expires in 10 minutes and is marked used after verification.
+CREATE TABLE IF NOT EXISTS email_otps (
+  id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  email       VARCHAR(254) NOT NULL,
+  otp_hash    TEXT        NOT NULL,           -- bcrypt hash of 6-digit OTP
+  expires_at  TIMESTAMPTZ NOT NULL,           -- 10 minutes from creation
+  used        BOOLEAN     NOT NULL DEFAULT false,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_otps_user_id ON email_otps(user_id);
+CREATE INDEX IF NOT EXISTS idx_otps_expires ON email_otps(expires_at);
 `
 
 ;(async () => {
