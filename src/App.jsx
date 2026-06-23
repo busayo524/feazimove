@@ -84,9 +84,9 @@ export default function App() {
           <Route path="/signup/:role"       element={<Signup />} />
           <Route path="/verify-otp"         element={<VerifyOtp />} />
           <Route path="/email-sent"         element={<EmailSent />} />
-          {/* /register redirects to /signup — keeps old links working */}
-          <Route path="/register"           element={<Navigate to="/signup" replace />} />
-          {/* /register/:role is still valid — arrived via email token link or OTP nav */}
+          {/* Role selection page — two cards: Rider and Driver */}
+          <Route path="/register"           element={<RoleSelect />} />
+          {/* Multi-step registration wizard — reached after OTP verification */}
           <Route path="/register/:role"     element={<Register />} />
           <Route path="/forgot-password"    element={<ForgotPassword />} />
 
