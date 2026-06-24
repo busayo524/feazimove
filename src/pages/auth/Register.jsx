@@ -7,9 +7,16 @@ import {
 import { useAuth } from '../../context/AuthContext'
 import { api } from '../../services/api'
 import faviconImg from '../../assets/favicon.png'
+import PhoneInput from '../../components/PhoneInput'
 
 /* ── helpers ──────────────────────────────────────────────────────────── */
-function validatePhone(p) { return /^(\+?234|0)[789][01]\d{8}$/.test(p.replace(/\s/g, '')) }
+function validatePhone(p) {
+  const cleaned = p.replace(/[\s\-()]/g, '')
+  // Full E.164 with any country code (6–15 digits after the +)
+  if (/^\+\d{6,15}$/.test(cleaned)) return true
+  // Nigerian local format
+  return /^(\+?234|0)[789][01]\d{8}$/.test(cleaned)
+}
 function validateEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) }
 function validatePassword(p) { return p.length >= 8 && /[A-Z]/.test(p) && /[0-9]/.test(p) }
 function clean(v) { return v.replace(/[<>"']/g, '').trim() }
@@ -389,8 +396,12 @@ export default function Register() {
                 <div className="reg-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
                   <div>
                     <label style={lbl}>Telephone <Req /></label>
-                    <input type="tel" value={form.phone} onChange={e => f('phone', e.target.value)}
-                      placeholder="+234 800 000 0000" autoComplete="tel" style={inp(!!errors.phone)} />
+                    <PhoneInput
+                      value={form.phone}
+                      onChange={v => { setForm(p => ({ ...p, phone: v })); setErrors(p => ({ ...p, phone: '' })) }}
+                      error={!!errors.phone}
+                      disabled={!!prefill.phone}
+                    />
                     {errors.phone && <p style={err}>{errors.phone}</p>}
                   </div>
                   <div>

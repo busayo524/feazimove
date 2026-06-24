@@ -4,6 +4,7 @@ import { Eye, EyeOff, AlertCircle, RefreshCw, CheckCircle2, ArrowRight } from 'l
 import { useGoogleLogin } from '@react-oauth/google'
 import { api } from '../../services/api'
 import faviconImg from '../../assets/favicon.png'
+import PhoneInput from '../../components/PhoneInput'
 
 const NEON  = '#ccff00'
 const DARK  = '#0a0a0a'
@@ -11,7 +12,11 @@ const GREEN = '#2a6048'
 const OTP_SECS = 5 * 60
 
 function validEmail(e)    { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) }
-function validPhone(p)    { return /^(\+?234|0)[789][01]\d{8}$/.test(p.replace(/\s/g, '')) }
+function validPhone(p) {
+  const c = p.replace(/[\s\-()]/g, '')
+  if (/^\+\d{6,15}$/.test(c)) return true
+  return /^(\+?234|0)[789][01]\d{8}$/.test(c)
+}
 function validPassword(p) { return p.length >= 8 && /[A-Z]/.test(p) && /[0-9]/.test(p) }
 function maskEmail(e)     { return e.replace(/^(.)(.*)(@.*)$/, (_, a, b, c) => a + '*'.repeat(Math.min(b.length, 5)) + c) }
 function fmt(s)           { return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` }
@@ -68,7 +73,7 @@ export default function Signup() {
     const e = {}
     if (!form.name || form.name.length < 2) e.name     = 'Enter your full name.'
     if (!validEmail(form.email))            e.email    = 'Enter a valid email address.'
-    if (!validPhone(form.phone))            e.phone    = 'Valid Nigerian number required (e.g. 08012345678).'
+    if (!validPhone(form.phone))            e.phone    = 'Enter a valid phone number with country code.'
     if (!validPassword(form.password))      e.password = 'Min 8 chars, 1 uppercase, 1 number.'
     if (form.password !== form.confirm)     e.confirm  = 'Passwords do not match.'
     setErrors(e)
@@ -270,17 +275,15 @@ export default function Signup() {
             {/* Phone */}
             <div>
               <label style={labelStyle}>Phone Number</label>
-              <input
-                type="tel" value={form.phone} placeholder="+234 801 234 5678"
-                autoComplete="tel"
-                onChange={e => set('phone', e.target.value)}
-                style={{ ...inputStyle, borderColor: errors.phone ? '#ef4444' : '#e0e0e0' }}
-                onFocus={e => e.target.style.borderColor = NEON}
-                onBlur={e  => e.target.style.borderColor = errors.phone ? '#ef4444' : '#e0e0e0'}
+              <PhoneInput
+                value={form.phone}
+                onChange={v => set('phone', v)}
+                error={!!errors.phone}
+                focusColor={NEON}
               />
               {errors.phone
                 ? <Err msg={errors.phone} />
-                : <p style={{ fontSize: 12, color: '#aaa', marginTop: 5 }}>e.g. 08012345678 or +2348012345678</p>
+                : <p style={{ fontSize: 12, color: '#aaa', marginTop: 5 }}>Select your country code then enter your number</p>
               }
             </div>
 
