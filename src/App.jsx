@@ -1,6 +1,9 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { GoogleOAuthProvider } from '@react-oauth/google'
 import { AuthProvider, useAuth } from './context/AuthContext'
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 
 class ErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { error: null } }
@@ -66,6 +69,7 @@ function ProtectedRoute({ children, requiredRole }) {
 export default function App() {
   return (
     <ErrorBoundary>
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
     <BrowserRouter>
       <AuthProvider>
         <Routes>
@@ -110,6 +114,7 @@ export default function App() {
         </Routes>
       </AuthProvider>
     </BrowserRouter>
+    </GoogleOAuthProvider>
     </ErrorBoundary>
   )
 }

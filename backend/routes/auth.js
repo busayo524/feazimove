@@ -3,10 +3,13 @@ const bcrypt    = require('bcryptjs')
 const jwt       = require('jsonwebtoken')
 const { v4: uuidv4 } = require('uuid')
 const { body }  = require('express-validator')
+const { OAuth2Client } = require('google-auth-library')
 const { query } = require('../db')
 const { requireAuth }  = require('../middleware/auth')
 const { validate }     = require('../middleware/validate')
 const { generateOtp, sendOtpEmail, sendRegistrationLink } = require('../services/emailService')
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
 const router = express.Router()
 
@@ -302,6 +305,170 @@ router.post('/register',
 
       res.status(201).json({ token, user: safeUser(user) })
     } catch (err) { next(err) }
+  }
+)
+
+// ── Google OAuth ──────────────────────────────────────────────────────────────
+router.post('/google',
+  [
+    body('credential').notEmpty().isString(),
+    body('role').optional().isIn(['rider', 'driver']),
+  ],
+  validate,
+  async (req, res, next) => {
+    try {
+      const { credential, role } = req.body
+
+      // Verify Google ID token
+      const ticket = await googleClient.verifyIdToken({
+        idToken:  credential,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      })
+      const payload = ticket.getPayload()
+      const { sub: googleId, email, name, email_verified } = payload
+
+      if (!email_verified) {
+        return res.status(400).json({ message: 'Your Google account email is not verified. Please verify it with Google first.' })
+      }
+
+      // Check for existing active user by email OR google_id
+      const existingResult = await query(
+        `SELECT id, name, email, phone, role, wallet_balance, rating, is_active
+         FROM users WHERE (email = $1 OR google_id = $2) AND is_active = true LIMIT 1`,
+        [email, googleId]
+      )
+      const existingUser = existingResult.rows[0]
+
+      if (existingUser) {
+        // Attach google_id if not already stored
+        await query(
+          'UPDATE users SET google_id = $1 WHERE id = $2 AND google_id IS NULL',
+          [googleId, existingUser.id]
+        )
+        const token = signToken(existingUser)
+        return res.json({ token, user: safeUser(existingUser), isNew: false })
+      }
+
+      // New user — need a role to proceed
+      if (!role) {
+        return res.json({ needsRole: true, email, name })
+      }
+
+      // Clean up any stale pending Google signups
+      await query(
+        "DELETE FROM users WHERE email = $1 AND (email_verified = false OR is_pending = true)",
+        [email]
+      )
+
+      // Create pending user — phone added later in registration wizard
+      const passwordHash = await bcrypt.hash(require('crypto').randomBytes(32).toString('hex'), SALT_ROUNDS)
+      const userResult = await query(
+        `INSERT INTO users (name, email, google_id, password_hash, role, email_verified, is_pending, is_active)
+         VALUES ($1, $2, $3, $4, $5, true, true, false)
+         RETURNING id, name, email, role`,
+        [name, email, googleId, passwordHash, role]
+      )
+      const newUser = userResult.rows[0]
+
+      // Issue registration token so wizard can activate the account
+      const regToken = uuidv4()
+      const tokenExp = new Date(Date.now() + REG_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000)
+      await query(
+        'UPDATE users SET registration_token = $1, reg_token_expires = $2 WHERE id = $3',
+        [regToken, tokenExp, newUser.id]
+      )
+
+      return res.status(201).json({
+        isNew: true,
+        registrationToken: regToken,
+        role,
+        prefill: { name, email, phone: '', password: '', confirm: '' },
+      })
+
+    } catch (err) {
+      if (err.message?.includes('Token used too late') || err.message?.includes('Invalid token')) {
+        return res.status(401).json({ message: 'Google sign-in expired. Please try again.' })
+      }
+      next(err)
+    }
+  }
+)
+
+// ── Google OAuth (access token / implicit flow) ───────────────────────────────
+router.post('/google-access',
+  [
+    body('email').isEmail().normalizeEmail(),
+    body('name').trim().notEmpty(),
+    body('googleId').trim().notEmpty(),
+    body('emailVerified').isBoolean(),
+    body('role').optional().isIn(['rider', 'driver']),
+  ],
+  validate,
+  async (req, res, next) => {
+    try {
+      const { email, name, googleId, emailVerified, role } = req.body
+
+      if (!emailVerified) {
+        return res.status(400).json({ message: 'Your Google account email is not verified.' })
+      }
+
+      // Check existing active user
+      const existingResult = await query(
+        `SELECT id, name, email, phone, role, wallet_balance, rating, is_active
+         FROM users WHERE (email = $1 OR google_id = $2) AND is_active = true LIMIT 1`,
+        [email, googleId]
+      )
+      const existingUser = existingResult.rows[0]
+
+      if (existingUser) {
+        await query('UPDATE users SET google_id = $1 WHERE id = $2 AND google_id IS NULL', [googleId, existingUser.id])
+        const token = signToken(existingUser)
+        return res.json({ token, user: safeUser(existingUser), isNew: false })
+      }
+
+      // New user — need role
+      if (!role) {
+        return res.json({ needsRole: true, email, name })
+      }
+
+      // Clean up stale pending records
+      await query(
+        "DELETE FROM users WHERE (email = $1 OR google_id = $2) AND (email_verified = false OR is_pending = true)",
+        [email, googleId]
+      )
+
+      // Create pending user (phone added in wizard)
+      const crypto = require('crypto')
+      const passwordHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), SALT_ROUNDS)
+
+      const userResult = await query(
+        `INSERT INTO users (name, email, google_id, password_hash, role, email_verified, is_pending, is_active)
+         VALUES ($1, $2, $3, $4, $5, true, true, false)
+         RETURNING id, name, email, role`,
+        [name, email, googleId, passwordHash, role]
+      )
+      const newUser = userResult.rows[0]
+
+      const regToken = uuidv4()
+      const tokenExp = new Date(Date.now() + REG_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000)
+      await query(
+        'UPDATE users SET registration_token = $1, reg_token_expires = $2 WHERE id = $3',
+        [regToken, tokenExp, newUser.id]
+      )
+
+      return res.status(201).json({
+        isNew: true,
+        registrationToken: regToken,
+        role,
+        prefill: { name, email, phone: '', password: '', confirm: '' },
+      })
+
+    } catch (err) {
+      if (err.code === '23505') {
+        return res.status(409).json({ message: 'An account with this email already exists. Please sign in.' })
+      }
+      next(err)
+    }
   }
 )
 

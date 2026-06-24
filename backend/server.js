@@ -37,6 +37,8 @@ async function runMigrations() {
 
     -- Add columns that may be missing from older deployments
     ALTER TABLE users ADD COLUMN IF NOT EXISTS email          VARCHAR(254);
+    ALTER TABLE users ALTER COLUMN phone DROP NOT NULL;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id      VARCHAR(128) UNIQUE;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT false;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS is_pending     BOOLEAN NOT NULL DEFAULT true;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS registration_token TEXT UNIQUE;
