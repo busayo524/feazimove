@@ -79,7 +79,7 @@ export default function Login() {
               id="login-id"
               type="text"
               value={identifier}
-              onChange={e => { setIdentifier(e.target.value); setError('') }}
+              onChange={e => setIdentifier(e.target.value)}
               placeholder="you@example.com or +234 800 000 0000"
               autoComplete="username"
               style={inputStyle()}
@@ -98,7 +98,7 @@ export default function Login() {
                 id="login-password"
                 type={showPw ? 'text' : 'password'}
                 value={password}
-                onChange={e => { setPassword(e.target.value); setError('') }}
+                onChange={e => setPassword(e.target.value)}
                 placeholder="Your password"
                 autoComplete="current-password"
                 style={{ ...inputStyle(), paddingRight: 46 }}
@@ -146,7 +146,7 @@ export default function Login() {
       <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#888', flexWrap: 'wrap', justifyContent: 'center' }}>
           <span>Don't have an account?{' '}
-            <Link to="/signup" style={{ color: DARK, fontWeight: 700, textDecoration: 'none' }}>Create account</Link>
+            <Link to="/register" style={{ color: DARK, fontWeight: 700, textDecoration: 'none' }}>Create account</Link>
           </span>
           <span style={{ color: '#ccc' }}>·</span>
           <Link to="/forgot-password" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#2a6048', fontWeight: 600, textDecoration: 'none' }}>

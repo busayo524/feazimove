@@ -53,10 +53,10 @@ router.post('/signup',
         return res.status(409).json({ message: 'An account with those details already exists. Please log in instead.' })
       }
 
-      // Clean up any stale pending signups for this email (allow re-registration)
+      // Clean up any stale pending signups for this email OR phone (allow re-registration)
       await query(
-        "DELETE FROM users WHERE email = $1 AND (email_verified = false OR is_pending = true)",
-        [email]
+        "DELETE FROM users WHERE (email = $1 OR phone = $2) AND (email_verified = false OR is_pending = true)",
+        [email, phone]
       )
 
       const password_hash = await bcrypt.hash(password, SALT_ROUNDS)
@@ -95,7 +95,19 @@ router.post('/signup',
         userId:  user.id,
         maskedEmail: masked,
       })
-    } catch (err) { next(err) }
+    } catch (err) {
+      // Handle duplicate phone/email with a friendly message
+      if (err.code === '23505') {
+        if (err.constraint === 'users_phone_key') {
+          return res.status(409).json({ message: 'This phone number is already linked to an account. Please sign in or use a different number.' })
+        }
+        if (err.constraint === 'users_email_key') {
+          return res.status(409).json({ message: 'This email address is already linked to an account. Please sign in or use a different email.' })
+        }
+        return res.status(409).json({ message: 'An account with those details already exists. Please sign in instead.' })
+      }
+      next(err)
+    }
   }
 )
 

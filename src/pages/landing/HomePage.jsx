@@ -400,7 +400,7 @@ export default function HomePage() {
 
             {/* CTAs */}
             <div className="flex flex-wrap items-center gap-4 mb-12">
-              <Link to="/signup" style={{
+              <Link to="/register" style={{
                 display: 'inline-flex', alignItems: 'center', gap: 8,
                 background: '#ccff00', color: '#0a0a0a',
                 padding: '15px 32px', borderRadius: 50,

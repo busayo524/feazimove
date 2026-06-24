@@ -1,14 +1,6 @@
 /**
  * FeaziMove Email Service
- * ─────────────────────────────────────────────────────────────────────────────
- * Uses Nodemailer with any SMTP provider (Gmail, Resend, Mailgun, SendGrid…)
  * All credentials come from environment variables — NEVER hardcoded.
- *
- * Security considerations:
- *  - OTP is only generated here; the hash is stored in DB (never raw value)
- *  - Registration tokens are cryptographically random (uuid v4 + extra entropy)
- *  - Emails never reveal whether an address is registered (anti-enumeration)
- *  - HTML is hand-crafted — no user input is interpolated into email HTML
  */
 const nodemailer = require('nodemailer')
 const crypto     = require('crypto')
@@ -18,85 +10,134 @@ function createTransport() {
   return nodemailer.createTransport({
     host:   process.env.SMTP_HOST,
     port:   parseInt(process.env.SMTP_PORT || '587', 10),
-    secure: process.env.SMTP_SECURE === 'true',   // true = port 465
+    secure: process.env.SMTP_SECURE === 'true',
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
-    // Security: reject unauthorised TLS certs in production
     tls: { rejectUnauthorized: process.env.NODE_ENV === 'production' },
   })
 }
 
-// ── OTP generator — cryptographically random 6-digit code ────────────────────
+// ── OTP generator ─────────────────────────────────────────────────────────────
 function generateOtp() {
-  // Using crypto.randomInt to avoid modulo bias
   return String(crypto.randomInt(100000, 999999))
 }
 
-// ── Shared email wrapper ──────────────────────────────────────────────────────
+// ── Send helper ───────────────────────────────────────────────────────────────
 async function sendEmail({ to, subject, html }) {
   const transporter = createTransport()
   await transporter.sendMail({
-    from: `"FeaziMove" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+    from: process.env.SMTP_FROM || `"FeaziMove" <${process.env.SMTP_USER}>`,
     to,
     subject,
     html,
-    // Plain-text fallback (stripped HTML)
     text: html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim(),
   })
 }
 
-// ── Base email shell — consistent branded wrapper ─────────────────────────────
-function emailShell(bodyHtml) {
-  return `
-<!DOCTYPE html>
+// ── Shared disclaimer footer ──────────────────────────────────────────────────
+const DISCLAIMER = `
+  <tr>
+    <td style="padding:0 0 0 0;">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr><td style="border-top:1px solid #cccccc;padding-top:16px;">
+          <p style="margin:0 0 12px;font-size:12px;color:#444;line-height:1.7;">
+            We want to hear from you. For information, requests, suggestions and complaints, please contact us:
+            <br/>📧 <a href="mailto:support@feazimove.com" style="color:#2a6048;">support@feazimove.com</a>
+            &nbsp;|&nbsp; 🌐 <a href="https://feazimove.com" style="color:#2a6048;">www.feazimove.com</a>
+          </p>
+          <p style="margin:0;font-size:11px;color:#888;line-height:1.7;border-top:1px solid #eeeeee;padding-top:12px;">
+            <strong>FeaziMove Disclaimer and Confidentiality Notice:</strong> This e-mail and any attachments are confidential and intended solely for the addressee. If you have received this e-mail in error, please notify the sender immediately and delete it. Do not disclose or use the contents in any way. FeaziMove does not warrant that this email is free from errors, viruses, or interference, and accepts no liability for any loss or damage arising from its use or transmission. Views expressed are those of the sender and do not necessarily represent those of FeaziMove Ltd.
+          </p>
+        </td></tr>
+      </table>
+    </td>
+  </tr>
+`
+
+// ── Email shell — Stanbic-style corporate layout ──────────────────────────────
+function emailShell(headerAccentColor = '#2a6048', bodyHtml) {
+  const now = new Date().toLocaleString('en-NG', {
+    timeZone: 'Africa/Lagos',
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  })
+
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>FeaziMove</title>
 </head>
-<body style="margin:0;padding:0;background:#f4f6f3;font-family:'Helvetica Neue',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f3;padding:40px 0;">
+<body style="margin:0;padding:0;background:#f0f0f0;font-family:Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f0f0;padding:32px 0;">
     <tr>
       <td align="center">
-        <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;">
 
-          <!-- Logo bar -->
+          <!-- Top accent bar -->
           <tr>
-            <td align="center" style="padding-bottom:28px;">
-              <table cellpadding="0" cellspacing="0">
+            <td style="background:#ccff00;height:5px;font-size:0;">&nbsp;</td>
+          </tr>
+
+          <!-- Header: logo + timestamp -->
+          <tr>
+            <td style="padding:20px 32px;border-bottom:1px solid #eeeeee;">
+              <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td style="background:#0a1f15;border-radius:12px;padding:14px 28px;">
-                    <span style="font-size:22px;font-weight:900;color:#ccff00;letter-spacing:-0.5px;">Feazi</span><span style="font-size:22px;font-weight:900;color:#ffffff;letter-spacing:-0.5px;">Move</span>
+                  <td valign="middle">
+                    <!-- Favicon-style icon -->
+                    <table cellpadding="0" cellspacing="0" style="display:inline-table;vertical-align:middle;">
+                      <tr>
+                        <td style="background:#ccff00;border-radius:8px;width:40px;height:40px;text-align:center;vertical-align:middle;">
+                          <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
+                            <tr><td style="height:3px;width:22px;background:#0a1f15;border-radius:2px;display:block;">&nbsp;</td></tr>
+                            <tr><td style="height:3px;">&nbsp;</td></tr>
+                            <tr><td style="height:3px;width:22px;background:#0a1f15;border-radius:2px;display:block;">&nbsp;</td></tr>
+                            <tr><td style="height:3px;">&nbsp;</td></tr>
+                            <tr><td style="height:3px;width:16px;background:#0a1f15;border-radius:2px;display:block;">&nbsp;</td></tr>
+                          </table>
+                        </td>
+                        <td style="width:10px;">&nbsp;</td>
+                        <td valign="middle">
+                          <span style="font-size:22px;font-weight:400;color:#0a1f15;letter-spacing:-0.5px;font-family:Arial,sans-serif;">Feazi</span><span style="font-size:22px;font-weight:900;color:#0a1f15;letter-spacing:-0.5px;font-family:Arial,sans-serif;">Move</span>
+                        </td>
+                      </tr>
+                    </table>
                   </td>
+                  <td align="right" style="font-size:11px;color:#999;">${now} (WAT)</td>
                 </tr>
               </table>
             </td>
           </tr>
 
-          <!-- Card -->
+          <!-- Body -->
           <tr>
-            <td style="background:#ffffff;border-radius:20px;box-shadow:0 4px 24px rgba(0,0,0,0.08);overflow:hidden;">
+            <td style="padding:32px 32px 24px;">
               ${bodyHtml}
             </td>
           </tr>
 
-          <!-- Footer -->
+          <!-- Disclaimer -->
           <tr>
-            <td style="padding:28px 0 8px;text-align:center;">
-              <p style="margin:0;font-size:12px;color:#999;">
-                © ${new Date().getFullYear()} FeaziMove Ltd. — Making Mobility Feasible. Making Everyday Life Easy.
-              </p>
-              <p style="margin:6px 0 0;font-size:11px;color:#bbb;">
-                This email was sent to you because you created a FeaziMove account.
-                If this wasn't you, please ignore this email.
-              </p>
+            <td style="padding:0 32px 32px;">
+              ${DISCLAIMER}
             </td>
           </tr>
 
         </table>
+
+        <!-- Sub-footer -->
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;padding:16px 0;">
+          <tr>
+            <td align="center" style="font-size:11px;color:#aaa;">
+              © ${new Date().getFullYear()} FeaziMove Ltd. | Making Mobility Feasible. Making Everyday Life Easy.
+            </td>
+          </tr>
+        </table>
+
       </td>
     </tr>
   </table>
@@ -104,121 +145,131 @@ function emailShell(bodyHtml) {
 </html>`
 }
 
-// ── Send OTP email ────────────────────────────────────────────────────────────
-/**
- * @param {string} to        - Recipient email address
- * @param {string} firstName - Recipient's first name
- * @param {string} otp       - 6-digit plain OTP (NOT the hash)
- * @returns {string}         - The plain OTP (caller hashes & stores it)
- */
-async function sendOtpEmail(to, firstName, otp) {
-  const digits = otp.split('')
-  const digitCells = digits.map(d =>
-    `<td style="width:48px;height:60px;border-radius:10px;background:#f0f9f4;border:2px solid #ccff00;text-align:center;vertical-align:middle;font-size:28px;font-weight:900;color:#0a1f15;font-family:monospace;">${d}</td>`
-  ).join('<td style="width:10px;"></td>')
+// ── OTP email ─────────────────────────────────────────────────────────────────
+async function sendOtpEmail(to, fullName, otp) {
+  const firstName = fullName.split(' ')[0]
+  const now = new Date().toLocaleString('en-NG', {
+    timeZone: 'Africa/Lagos',
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  })
 
-  const html = emailShell(`
-    <!-- Green accent bar -->
-    <div style="background:#ccff00;height:6px;"></div>
+  const body = `
+    <p style="margin:0 0 20px;font-size:15px;color:#222;">Dear ${firstName},</p>
 
-    <div style="padding:40px 48px 48px;">
-      <p style="margin:0 0 6px;font-size:13px;font-weight:700;color:#2a6048;text-transform:uppercase;letter-spacing:0.08em;">Email Verification</p>
-      <h1 style="margin:0 0 16px;font-size:26px;font-weight:900;color:#0a1f15;line-height:1.25;">
-        Verify your email, ${firstName.split(' ')[0]} 👋
-      </h1>
-      <p style="margin:0 0 32px;font-size:15px;color:#555;line-height:1.7;">
-        Welcome to FeaziMove! Enter the code below to verify your email address and continue setting up your account.
-      </p>
+    <p style="margin:0 0 16px;font-size:15px;color:#333;line-height:1.7;">
+      We refer to your account verification request initiated on <strong>${now} (WAT)</strong>.
+      Kindly find below the One-Time Password (OTP) required to complete the request:
+    </p>
 
-      <!-- OTP digits -->
-      <table cellpadding="0" cellspacing="0" style="margin:0 auto 32px;">
-        <tr>${digitCells}</tr>
-      </table>
+    <p style="margin:24px 0;font-size:32px;font-weight:900;color:#0a1f15;letter-spacing:6px;text-align:center;">
+      ${otp}
+    </p>
 
-      <div style="background:#f8fdf9;border:1.5px solid #e0f0e5;border-radius:12px;padding:16px 20px;margin-bottom:28px;">
-        <p style="margin:0;font-size:13px;color:#555;line-height:1.7;">
-          ⏱ This code expires in <strong>10 minutes</strong>.<br/>
-          🔒 Never share this code with anyone — FeaziMove will never ask for it.
-        </p>
-      </div>
+    <p style="margin:0 0 16px;font-size:15px;color:#333;line-height:1.7;">
+      This code expires in <strong>5 minutes</strong>. In the event that this request was not initiated by you, please contact our support team immediately via any of the channels listed below.
+    </p>
 
-      <p style="margin:0;font-size:13px;color:#999;">
-        Didn't request this? You can safely ignore this email.
-      </p>
-    </div>
-  `)
+    <p style="margin:0 0 16px;font-size:15px;color:#333;line-height:1.7;">
+      For your security, never share this code with anyone. FeaziMove staff will never ask for your OTP.
+    </p>
 
-  await sendEmail({ to, subject: `${otp} — Your FeaziMove verification code`, html })
+    <p style="margin:32px 0 8px;font-size:15px;color:#333;">Best Regards,</p>
+    <p style="margin:0 0 4px;font-size:15px;font-weight:700;color:#0a1f15;">The FeaziMove Team</p>
+    <p style="margin:0;font-size:13px;color:#666;">
+      FeaziMove Ltd. | Lagos, Nigeria<br/>
+      📧 <a href="mailto:support@feazimove.com" style="color:#2a6048;">support@feazimove.com</a>
+      &nbsp;|&nbsp; 🌐 <a href="https://feazimove.com" style="color:#2a6048;">www.feazimove.com</a>
+    </p>
+  `
+
+  await sendEmail({
+    to,
+    subject: `Your FeaziMove Verification Code: ${otp}`,
+    html: emailShell('#2a6048', body),
+  })
 }
 
-// ── Send registration continuation link ───────────────────────────────────────
-/**
- * Sent after successful OTP verification.
- * The link contains a secure token so the user can resume registration.
- *
- * @param {string} to        - Recipient email
- * @param {string} firstName - First name
- * @param {string} token     - Secure registration token (UUID stored in DB)
- * @param {string} role      - 'rider' | 'driver'
- */
-async function sendRegistrationLink(to, firstName, token, role) {
+// ── Registration link email ───────────────────────────────────────────────────
+async function sendRegistrationLink(to, fullName, token, role) {
+  const firstName = fullName.split(' ')[0]
   const APP_URL   = process.env.APP_URL || 'http://localhost:5173'
   const link      = `${APP_URL}/register/${role}?token=${encodeURIComponent(token)}`
   const roleLabel = role === 'driver' ? 'Driver' : 'Rider'
-  const roleIcon  = role === 'driver' ? '🚗' : '🛵'
 
-  const html = emailShell(`
-    <!-- Lime bar -->
-    <div style="background:#ccff00;height:6px;"></div>
+  const body = `
+    <!-- Volt green accent block -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+      <tr>
+        <td style="background:#ccff00;border-radius:10px;padding:18px 22px;">
+          <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#0a1f15;text-transform:uppercase;letter-spacing:0.1em;">
+            Account Verified ✅
+          </p>
+          <p style="margin:0;font-size:20px;font-weight:900;color:#0a1f15;line-height:1.3;">
+            Email confirmed! Complete your ${roleLabel} profile
+          </p>
+        </td>
+      </tr>
+    </table>
 
-    <div style="padding:40px 48px 48px;">
-      <p style="margin:0 0 6px;font-size:13px;font-weight:700;color:#2a6048;text-transform:uppercase;letter-spacing:0.08em;">Account Verified ${roleIcon}</p>
-      <h1 style="margin:0 0 16px;font-size:26px;font-weight:900;color:#0a1f15;line-height:1.25;">
-        Email confirmed! Complete your ${roleLabel} profile
-      </h1>
-      <p style="margin:0 0 32px;font-size:15px;color:#555;line-height:1.7;">
-        Great job, ${firstName.split(' ')[0]}! Your email has been verified. Click the button below to complete your FeaziMove ${roleLabel.toLowerCase()} registration — it only takes a few minutes.
-      </p>
+    <p style="margin:0 0 20px;font-size:15px;color:#222;">Dear ${firstName},</p>
 
-      <!-- CTA Button -->
-      <table cellpadding="0" cellspacing="0" style="margin:0 auto 32px;">
-        <tr>
-          <td style="background:#ccff00;border-radius:50px;padding:0;">
-            <a href="${link}" style="display:inline-block;padding:16px 40px;font-size:16px;font-weight:800;color:#0a1f15;text-decoration:none;letter-spacing:-0.2px;">
-              Complete Registration →
-            </a>
-          </td>
-        </tr>
-      </table>
+    <p style="margin:0 0 20px;font-size:15px;color:#333;line-height:1.7;">
+      Great job! Your email has been successfully verified. Click the button below to complete your FeaziMove <strong>${roleLabel}</strong> registration — it only takes a few minutes.
+    </p>
 
-      <!-- What to expect -->
-      <div style="background:#f8fdf9;border:1.5px solid #e0f0e5;border-radius:14px;padding:22px 24px;margin-bottom:28px;">
-        <p style="margin:0 0 14px;font-size:13px;font-weight:700;color:#2a6048;text-transform:uppercase;letter-spacing:0.06em;">What to expect next</p>
-        ${role === 'rider' ? `
-          <p style="margin:0 0 8px;font-size:14px;color:#333;">📋 <strong>Step 1</strong> — Review your personal details</p>
-          <p style="margin:0 0 8px;font-size:14px;color:#333;">🪪 <strong>Step 2</strong> — Upload your government-issued ID</p>
-          <p style="margin:0;font-size:14px;color:#333;">✅ <strong>Step 3</strong> — Agree to terms & go live</p>
-        ` : `
-          <p style="margin:0 0 8px;font-size:14px;color:#333;">📋 <strong>Step 1</strong> — Review your personal details</p>
-          <p style="margin:0 0 8px;font-size:14px;color:#333;">🚘 <strong>Step 2</strong> — Add vehicle info & upload documents</p>
-          <p style="margin:0;font-size:14px;color:#333;">✅ <strong>Step 3</strong> — Certify & submit driver application</p>
-        `}
-      </div>
+    <!-- CTA Button -->
+    <table cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
+      <tr>
+        <td style="background:#ccff00;border-radius:50px;">
+          <a href="${link}" style="display:inline-block;padding:15px 36px;font-size:16px;font-weight:900;color:#0a1f15;text-decoration:none;letter-spacing:-0.2px;">
+            Complete Registration →
+          </a>
+        </td>
+      </tr>
+    </table>
 
-      <!-- Link fallback -->
-      <p style="margin:0;font-size:12px;color:#aaa;word-break:break-all;">
-        Button not working? Copy and paste this link:<br/>
-        <a href="${link}" style="color:#2a6048;">${link}</a>
-      </p>
+    <!-- What to expect -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+      <tr>
+        <td style="background:#f8fdf9;border:1.5px solid #d4f5df;border-radius:8px;padding:18px 20px;">
+          <p style="margin:0 0 12px;font-size:11px;font-weight:700;color:#2a6048;text-transform:uppercase;letter-spacing:0.08em;">What to expect next</p>
+          ${role === 'rider' ? `
+            <p style="margin:0 0 8px;font-size:14px;color:#333;">📋 <strong>Step 1</strong> — Review your personal details</p>
+            <p style="margin:0 0 8px;font-size:14px;color:#333;">🪪 <strong>Step 2</strong> — Upload your government-issued ID</p>
+            <p style="margin:0;font-size:14px;color:#333;">✅ <strong>Step 3</strong> — Agree to terms &amp; go live</p>
+          ` : `
+            <p style="margin:0 0 8px;font-size:14px;color:#333;">📋 <strong>Step 1</strong> — Review your personal details</p>
+            <p style="margin:0 0 8px;font-size:14px;color:#333;">🚘 <strong>Step 2</strong> — Add vehicle info &amp; upload documents</p>
+            <p style="margin:0;font-size:14px;color:#333;">✅ <strong>Step 3</strong> — Certify &amp; submit driver application</p>
+          `}
+        </td>
+      </tr>
+    </table>
 
-      <p style="margin:20px 0 0;font-size:12px;color:#bbb;">
-        This link expires in <strong>24 hours</strong>. After that, you'll need to start a new registration.
-      </p>
-    </div>
-  `)
+    <p style="margin:0 0 16px;font-size:13px;color:#888;word-break:break-all;">
+      Button not working? Copy and paste this link into your browser:<br/>
+      <a href="${link}" style="color:#2a6048;">${link}</a>
+    </p>
 
-  await sendEmail({ to, subject: `Complete your FeaziMove ${roleLabel} registration`, html })
+    <p style="margin:0 0 24px;font-size:13px;color:#aaa;">
+      This link expires in <strong>24 hours</strong>. If you did not initiate this request, please contact our support team immediately.
+    </p>
+
+    <p style="margin:0 0 4px;font-size:15px;color:#333;">Best Regards,</p>
+    <p style="margin:0 0 4px;font-size:15px;font-weight:700;color:#0a1f15;">The FeaziMove Team</p>
+    <p style="margin:0;font-size:13px;color:#666;">
+      FeaziMove Ltd. | Lagos, Nigeria<br/>
+      📧 <a href="mailto:support@feazimove.com" style="color:#2a6048;">support@feazimove.com</a>
+      &nbsp;|&nbsp; 🌐 <a href="https://feazimove.com" style="color:#2a6048;">www.feazimove.com</a>
+    </p>
+  `
+
+  await sendEmail({
+    to,
+    subject: `Complete your FeaziMove ${roleLabel} Registration`,
+    html: emailShell('#2a6048', body),
+  })
 }
 
-// ── Export plain OTP generator too (used by routes) ──────────────────────────
 module.exports = { generateOtp, sendOtpEmail, sendRegistrationLink }
