@@ -531,7 +531,7 @@ export default function HomePage() {
                   <p className="label mb-3" style={{ color:'#555', letterSpacing:'0.16em' }}>SEND</p>
                   <h3 className="font-black mb-2" style={{ fontSize:'clamp(1.8rem,2.5vw,2.4rem)', letterSpacing:'-0.04em', color:'#0f0f0f', lineHeight:1 }}>FeaziSend</h3>
                   <p className="text-sm leading-relaxed mb-4" style={{ color:'#444' }}>
-                    Ship packages with drivers already heading your way. Affordable, same-day, trackable end-to-end.
+                    Send and move items, from groceries to full apartment. Pool your delivery space with others moving items in the same direction.
                   </p>
                 </div>
                 <Link to="/services#feazisend" className="inline-flex items-center gap-2 font-bold text-sm" style={{ color:'#0f0f0f' }}

@@ -31,9 +31,11 @@ function sanitizeBody(obj) {
 
 async function request(method, path, body, options = {}) {
   const token = localStorage.getItem('fm_token')
+  const isFormData = body instanceof FormData
 
   const headers = {
-    'Content-Type': 'application/json',
+    // Skip Content-Type for FormData — the browser sets the multipart boundary itself
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...options.headers,
   }
@@ -42,13 +44,15 @@ async function request(method, path, body, options = {}) {
     method,
     headers,
     // Prevent SSRF — only allow requests to our own API base
-    ...(body ? { body: JSON.stringify(sanitizeBody(body)) } : {}),
+    ...(body ? { body: isFormData ? body : JSON.stringify(sanitizeBody(body)) } : {}),
   }
 
   const res = await fetch(`${BASE_URL}${path}`, config)
 
   // Token expired — force logout
-  if (res.status === 401) {
+  // Skip this for auth routes (login/signup) — a 401 there means wrong credentials, not expired token
+  const isAuthRoute = path.startsWith('/auth/')
+  if (res.status === 401 && !isAuthRoute) {
     localStorage.removeItem('fm_token')
     localStorage.removeItem('fm_user')
     window.location.href = '/login'
@@ -67,10 +71,22 @@ async function request(method, path, body, options = {}) {
   return { data, status: res.status }
 }
 
+// Fetches a binary resource (e.g. an uploaded document) with the auth header attached —
+// needed because plain <img>/<a> tags can't send an Authorization header themselves.
+async function getBlob(path) {
+  const token = localStorage.getItem('fm_token')
+  const res = await fetch(`${BASE_URL}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+  if (!res.ok) throw new Error('Could not load file.')
+  return res.blob()
+}
+
 export const api = {
   get:    (path, options)       => request('GET',    path, null, options),
   post:   (path, body, options) => request('POST',   path, body, options),
   put:    (path, body, options) => request('PUT',    path, body, options),
   patch:  (path, body, options) => request('PATCH',  path, body, options),
   delete: (path, options)       => request('DELETE', path, null, options),
+  getBlob,
 }

@@ -13,6 +13,7 @@ const authRoutes   = require('./routes/auth')
 const rideRoutes   = require('./routes/rides')
 const walletRoutes = require('./routes/wallet')
 const driverRoutes = require('./routes/driver')
+const adminRoutes  = require('./routes/admin')
 
 const app  = express()
 const PORT = process.env.PORT || 4000
@@ -43,6 +44,31 @@ async function runMigrations() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS is_pending     BOOLEAN NOT NULL DEFAULT true;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS registration_token TEXT UNIQUE;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS reg_token_expires  TIMESTAMPTZ;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS is_online          BOOLEAN NOT NULL DEFAULT false;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS force_password_change BOOLEAN NOT NULL DEFAULT false;
+
+    -- Info collected at registration that previously had nowhere to live
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS id_type        VARCHAR(40);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS id_number      VARCHAR(40);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS vehicle_type   VARCHAR(30);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS vehicle_make   VARCHAR(50);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS vehicle_model  VARCHAR(50);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS plate_number   VARCHAR(20);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS vehicle_year   SMALLINT;
+
+    -- Admin is a third account type alongside rider/driver — widen the role check
+    ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+    ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('rider','driver','admin'));
+
+    -- Dual-role support: users can be both rider and driver
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS can_ride   BOOLEAN NOT NULL DEFAULT true;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS can_drive  BOOLEAN NOT NULL DEFAULT false;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS active_role VARCHAR(10) NOT NULL DEFAULT 'rider';
+    -- Backfill existing users based on their role column
+    UPDATE users SET can_ride  = true  WHERE role = 'rider'  AND can_drive = false;
+    UPDATE users SET can_drive = true  WHERE role = 'driver';
+    UPDATE users SET can_ride  = true  WHERE role = 'driver' AND can_ride = false;
+    UPDATE users SET active_role = role WHERE active_role = 'rider' AND role = 'driver';
 
     -- OTP table
     CREATE TABLE IF NOT EXISTS email_otps (
@@ -97,6 +123,59 @@ async function runMigrations() {
     CREATE INDEX IF NOT EXISTS idx_rides_driver  ON rides(driver_id);
     CREATE INDEX IF NOT EXISTS idx_rides_status  ON rides(status);
     CREATE INDEX IF NOT EXISTS idx_wallet_user   ON wallet_transactions(user_id);
+
+    -- Driver route sessions: driver publishes availability for a time+route
+    CREATE TABLE IF NOT EXISTS driver_availability (
+      id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+      driver_id   UUID         NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      period      VARCHAR(10)  NOT NULL CHECK (period IN ('morning','evening')),
+      time_slot   VARCHAR(20)  NOT NULL,
+      pickup      VARCHAR(100) NOT NULL,
+      dropoff     VARCHAR(100) NOT NULL,
+      seats       SMALLINT     NOT NULL DEFAULT 1,
+      status      VARCHAR(20)  NOT NULL DEFAULT 'waiting',
+      created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+      expires_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW() + INTERVAL '8 hours'
+    );
+    CREATE INDEX IF NOT EXISTS idx_avail_driver ON driver_availability(driver_id);
+    CREATE INDEX IF NOT EXISTS idx_avail_match  ON driver_availability(period, time_slot, pickup, dropoff, status);
+
+    -- Rider booking intents: rider registers route so drivers can find them
+    CREATE TABLE IF NOT EXISTS rider_bookings (
+      id              UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+      rider_id        UUID         NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      availability_id UUID         REFERENCES driver_availability(id) ON DELETE SET NULL,
+      period          VARCHAR(10)  NOT NULL,
+      time_slot       VARCHAR(20)  NOT NULL,
+      pickup          VARCHAR(100) NOT NULL,
+      dropoff         VARCHAR(100) NOT NULL,
+      service         VARCHAR(20)  NOT NULL DEFAULT 'pool',
+      status          VARCHAR(20)  NOT NULL DEFAULT 'pending',
+      created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_rb_rider ON rider_bookings(rider_id);
+    CREATE INDEX IF NOT EXISTS idx_rb_match ON rider_bookings(period, time_slot, pickup, dropoff, status);
+
+    -- In-ride chat between the rider and driver of a single ride
+    CREATE TABLE IF NOT EXISTS ride_messages (
+      id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+      ride_id     UUID        NOT NULL REFERENCES rides(id) ON DELETE CASCADE,
+      sender_id   UUID        NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+      body        VARCHAR(1000) NOT NULL,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_ride_messages_ride ON ride_messages(ride_id, created_at);
+
+    -- Documents uploaded at registration (ID, selfie, vehicle docs, etc.) —
+    -- lets admins review what a rider/driver actually submitted.
+    CREATE TABLE IF NOT EXISTS user_documents (
+      id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id     UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      doc_type    VARCHAR(30) NOT NULL,
+      file_path   TEXT        NOT NULL,
+      uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_user_documents_user ON user_documents(user_id);
   `
   try {
     await pool.query(migrations)
@@ -143,26 +222,28 @@ app.use(cors({
 app.use(express.json({ limit: '10kb' })) // Prevent large payload attacks
 
 // ── Global rate limit ────────────────────────────────────────────────────────
+// This is a generic DoS backstop, not a feature throttle — the app polls for
+// live ride status and chat messages every few seconds, so the budget needs
+// real headroom above that. Sensitive endpoints (login, OTP) have their own
+// much tighter, endpoint-scoped limits inside routes/auth.js.
 app.use(rateLimit({
   windowMs: 15 * 60 * 1000, // 15 min
-  max: 100,
+  max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many requests. Please try again later.' },
 }))
 
-// ── Stricter rate limit for auth endpoints ───────────────────────────────────
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  message: { message: 'Too many login attempts. Please wait 15 minutes.' },
-})
-
 // ── Routes ───────────────────────────────────────────────────────────────────
-app.use('/api/auth',   authLimiter, authRoutes)
+// Stricter, endpoint-specific rate limits (login, OTP) are applied inside routes/auth.js
+// — scoping them per-endpoint instead of the whole /api/auth router so that normal
+// navigation (session check, switching roles, registration steps) can't burn through
+// the same budget as actual login attempts.
+app.use('/api/auth',   authRoutes)
 app.use('/api/rides',  rideRoutes)
 app.use('/api/wallet', walletRoutes)
 app.use('/api/driver', driverRoutes)
+app.use('/api/admin',  adminRoutes)
 
 // ── Health check (public, no sensitive info) ─────────────────────────────────
 app.get('/health', (_, res) => res.json({ status: 'ok' }))

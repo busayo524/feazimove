@@ -66,14 +66,230 @@ router.get('/requests', async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-// ── Toggle online status ──────────────────────────────────────────────────────
+// ── Get current online status ─────────────────────────────────────────────────
+router.get('/status', async (req, res, next) => {
+  try {
+    const result = await query('SELECT is_online FROM users WHERE id = $1', [req.user.id])
+    res.json({ online: result.rows[0]?.is_online || false })
+  } catch (err) { next(err) }
+})
+
+// ── Toggle online status — drivers are only matchable while online ───────────
 router.patch('/status',
   [body('online').isBoolean()],
   validate,
   async (req, res, next) => {
     try {
-      // In production: update a driver_sessions table with location + timestamp
-      res.json({ online: req.body.online, message: `You are now ${req.body.online ? 'online' : 'offline'}.` })
+      const { online } = req.body
+      await query('UPDATE users SET is_online = $1 WHERE id = $2', [online, req.user.id])
+
+      // Going offline ends any live route immediately — riders can no longer match it
+      if (!online) {
+        await query(
+          `UPDATE driver_availability SET status = 'cancelled'
+           WHERE driver_id = $1 AND status IN ('waiting', 'active')`,
+          [req.user.id]
+        )
+      }
+
+      res.json({ online, message: `You are now ${online ? 'online' : 'offline'}.` })
+    } catch (err) { next(err) }
+  }
+)
+
+// ── Pickup expansion chains (same order as frontend) ─────────────────────────
+const MORNING_PICKUP_CHAIN = [
+  'Berger', 'Secretariate', '7up', 'Estate (Alapere)',
+  'Ogudu Express', 'Ifako', 'Iyana Woro (Berger)',
+]
+const EVENING_PICKUP_CHAIN = [
+  'Ajah', 'Checking Point', 'SandFill', 'Lekki Phase 2',
+  'Lekki Phase 1', 'Victoria Island', 'Marina (CMS)',
+]
+const ALL_PICKUPS = [...MORNING_PICKUP_CHAIN, ...EVENING_PICKUP_CHAIN]
+
+// ── Go live on a route ────────────────────────────────────────────────────────
+router.post('/go-live',
+  [
+    body('period').isIn(['morning', 'evening']),
+    body('timeSlot').trim().notEmpty().isLength({ max: 20 }).escape(),
+    body('pickup').trim().notEmpty().isLength({ max: 100 }).escape(),
+    body('dropoff').trim().notEmpty().isLength({ max: 100 }).escape(),
+    body('seats').isInt({ min: 1, max: 8 }),
+  ],
+  validate,
+  async (req, res, next) => {
+    try {
+      const { period, timeSlot, pickup, dropoff, seats } = req.body
+
+      // Reject unknown locations to prevent injection via free-text
+      if (!ALL_PICKUPS.includes(pickup)) {
+        return res.status(422).json({ message: 'Unknown pickup location.' })
+      }
+
+      const onlineCheck = await query('SELECT is_online FROM users WHERE id = $1', [req.user.id])
+      if (!onlineCheck.rows[0]?.is_online) {
+        return res.status(409).json({ message: 'Go online before setting a route.' })
+      }
+
+      // Cancel any existing active session for this driver — including a stale
+      // 'in_progress' one left behind by a completed trip, so it never piles up
+      await query(
+        `UPDATE driver_availability SET status = 'cancelled'
+         WHERE driver_id = $1 AND status IN ('waiting','active','in_progress')`,
+        [req.user.id]
+      )
+
+      const result = await query(
+        `INSERT INTO driver_availability (driver_id, period, time_slot, pickup, dropoff, seats)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+        [req.user.id, period, timeSlot, pickup, dropoff, seats]
+      )
+
+      res.status(201).json({ availabilityId: result.rows[0].id })
+    } catch (err) { next(err) }
+  }
+)
+
+// ── Poll for matched riders ───────────────────────────────────────────────────
+router.get('/matches', async (req, res, next) => {
+  try {
+    const { availabilityId } = req.query
+    if (!availabilityId) return res.status(422).json({ message: 'availabilityId required.' })
+
+    // Verify this availability belongs to the requesting driver
+    const avail = await query(
+      `SELECT id, period, time_slot, pickup, dropoff, seats
+       FROM driver_availability WHERE id = $1 AND driver_id = $2`,
+      [availabilityId, req.user.id]
+    )
+    if (!avail.rows[0]) return res.status(404).json({ message: 'Availability not found.' })
+    const a = avail.rows[0]
+
+    // Find pending riders on the exact same route + time
+    const matches = await query(
+      `SELECT rb.id, rb.pickup, rb.dropoff, rb.service, rb.created_at,
+              u.name AS rider_name, u.phone AS rider_phone, u.rating AS rider_rating
+       FROM rider_bookings rb
+       JOIN users u ON rb.rider_id = u.id
+       WHERE rb.period   = $1
+         AND rb.time_slot = $2
+         AND rb.pickup    = $3
+         AND rb.dropoff   = $4
+         AND rb.status    = 'pending'
+         AND rb.rider_id != $5
+       ORDER BY rb.created_at ASC
+       LIMIT $6`,
+      [a.period, a.time_slot, a.pickup, a.dropoff, req.user.id, a.seats]
+    )
+
+    res.json({
+      count: matches.rows.length,
+      pickup: a.pickup,
+      matches: matches.rows.map(r => ({
+        id:          r.id,
+        pickup:      r.pickup,
+        dropoff:     r.dropoff,
+        service:     r.service,
+        riderName:   r.rider_name,
+        riderRating: parseFloat(r.rider_rating) || 5.0,
+        waitingSince: new Date(r.created_at).toLocaleTimeString('en-NG', {
+          hour: '2-digit', minute: '2-digit',
+        }),
+      })),
+    })
+  } catch (err) { next(err) }
+})
+
+// ── Expand pickup to next location in chain ───────────────────────────────────
+router.post('/expand-pickup',
+  [
+    body('availabilityId').isUUID(),
+    body('newPickup').trim().notEmpty().isLength({ max: 100 }).escape(),
+  ],
+  validate,
+  async (req, res, next) => {
+    try {
+      const { availabilityId, newPickup } = req.body
+
+      if (!ALL_PICKUPS.includes(newPickup)) {
+        return res.status(422).json({ message: 'Unknown pickup location.' })
+      }
+
+      const result = await query(
+        `UPDATE driver_availability SET pickup = $1
+         WHERE id = $2 AND driver_id = $3 AND status IN ('waiting','active')
+         RETURNING id`,
+        [newPickup, availabilityId, req.user.id]
+      )
+      if (!result.rows[0]) return res.status(404).json({ message: 'Active session not found.' })
+
+      res.json({ availabilityId, newPickup })
+    } catch (err) { next(err) }
+  }
+)
+
+// ── Confirm a matched route: create a real ride and start the trip ───────────
+router.post('/confirm-route',
+  [body('availabilityId').isUUID()],
+  validate,
+  async (req, res, next) => {
+    try {
+      const { availabilityId } = req.body
+
+      const avail = await query(
+        `SELECT id, period, time_slot, pickup, dropoff, status
+         FROM driver_availability WHERE id = $1 AND driver_id = $2`,
+        [availabilityId, req.user.id]
+      )
+      if (!avail.rows[0]) return res.status(404).json({ message: 'Availability not found.' })
+      const a = avail.rows[0]
+      if (!['waiting', 'active'].includes(a.status)) {
+        return res.status(409).json({ message: 'This route is no longer active.' })
+      }
+
+      // Re-derive the oldest still-pending matched rider on this exact route + time
+      // (same matching logic as GET /driver/matches)
+      const match = await query(
+        `SELECT id, rider_id, service FROM rider_bookings
+         WHERE period = $1 AND time_slot = $2 AND pickup = $3 AND dropoff = $4
+           AND status = 'pending' AND rider_id != $5
+         ORDER BY created_at ASC LIMIT 1`,
+        [a.period, a.time_slot, a.pickup, a.dropoff, req.user.id]
+      )
+      if (!match.rows[0]) return res.status(409).json({ message: 'No riders currently matched on this route.' })
+      const m = match.rows[0]
+
+      const fareKobo = m.service === 'solo' ? 70000 : 45000 // ₦700 solo / ₦450 pool
+
+      const ride = await query(
+        `INSERT INTO rides (rider_id, driver_id, type, pickup, destination, fare_kobo, status)
+         VALUES ($1, $2, 'pool', $3, $4, $5, 'driver_assigned') RETURNING id`,
+        [m.rider_id, req.user.id, a.pickup, a.dropoff, fareKobo]
+      )
+
+      await query(`UPDATE rider_bookings SET status = 'matched' WHERE id = $1`, [m.id])
+      await query(`UPDATE driver_availability SET status = 'in_progress' WHERE id = $1`, [availabilityId])
+
+      res.status(201).json({ rideId: ride.rows[0].id })
+    } catch (err) { next(err) }
+  }
+)
+
+// ── Go offline / cancel session ───────────────────────────────────────────────
+router.post('/go-offline',
+  [body('availabilityId').optional().isUUID()],
+  validate,
+  async (req, res, next) => {
+    try {
+      if (req.body.availabilityId) {
+        await query(
+          `UPDATE driver_availability SET status = 'cancelled'
+           WHERE id = $1 AND driver_id = $2`,
+          [req.body.availabilityId, req.user.id]
+        )
+      }
+      res.json({ message: 'You are now offline.' })
     } catch (err) { next(err) }
   }
 )

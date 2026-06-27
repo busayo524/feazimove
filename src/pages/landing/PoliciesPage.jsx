@@ -877,8 +877,9 @@ const POLICIES = [
 
 export default function PoliciesPage() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const tabParam = searchParams.get('tab')
-  const initialTab = POLICIES.find(p => p.id === tabParam)?.id || POLICIES[0].id
+  const tabParam    = searchParams.get('tab')
+  const fromReg     = searchParams.get('from') === 'register'
+  const initialTab  = POLICIES.find(p => p.id === tabParam)?.id || POLICIES[0].id
   const [activeTab, setActiveTab] = useState(initialTab)
   const { isDark } = useTheme()
 
@@ -889,14 +890,40 @@ export default function PoliciesPage() {
 
   const handleTab = (id) => {
     setActiveTab(id)
-    setSearchParams({ tab: id })
+    setSearchParams({ tab: id, ...(fromReg ? { from: 'register' } : {}) })
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const active = POLICIES.find(p => p.id === activeTab)
 
   return (
-    <LandingLayout>
+    <LandingLayout hideNav={fromReg} hideFooter={fromReg}>
+      {/* ── Go back banner — shown only when opened from registration ── */}
+      {fromReg && (
+        <div style={{
+          position: 'sticky', top: 0, zIndex: 100,
+          background: '#243800', padding: '12px 24px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+        }}>
+          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)' }}>
+            📋 Opened from <strong style={{ color: '#ccff00' }}>Registration</strong> — your progress is saved in the other tab
+          </span>
+          <button
+            onClick={() => window.close()}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '8px 18px', borderRadius: 999,
+              background: '#ccff00', color: '#243800',
+              fontWeight: 800, fontSize: 13, border: 'none',
+              cursor: 'pointer', fontFamily: 'inherit',
+              boxShadow: '0 2px 8px rgba(204,255,0,0.35)',
+            }}
+          >
+            ← Go back to Registration
+          </button>
+        </div>
+      )}
       <style>{`
         .tab-btn {
           padding: 10px 20px;

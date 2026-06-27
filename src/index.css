@@ -554,3 +554,9 @@ html, body {
   }
   .safety-pills-wrap::-webkit-scrollbar { display: none; }
 }
+
+/* ── Mapbox GL JS — hide the wordmark; we already disable the attribution
+   control per-map, this just covers the separate logo control. ──────────── */
+.mapboxgl-ctrl-logo {
+  display: none !important;
+}

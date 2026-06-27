@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { Menu, X, Sun, Moon, ChevronDown, Users, Car, Clock, Package, Briefcase, TrendingUp, MapPin, BookOpen } from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Menu, X, Sun, Moon, ChevronDown, Users, Car, Clock, Package, Briefcase, TrendingUp, MapPin, BookOpen, Wallet } from 'lucide-react'
 import Logo from './Logo'
 import { useTheme } from '../context/ThemeContext'
+import { useAuth } from '../context/AuthContext'
+import { api } from '../services/api'
 
 const FOREST = '#15803d'
 const NEON   = '#ccff00'
@@ -75,11 +77,24 @@ function Dropdown({ items, onClose, isDark }) {
 
 export default function Navbar() {
   const { toggle, isDark } = useTheme()
+  const { user } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
   const [dropdown, setDropdown] = useState(null) // 'ride' | 'drive' | null
   const closeTimer = useRef(null)
+  const [walletBalance, setWalletBalance] = useState(null)
+
+  useEffect(() => {
+    if (!user) { setWalletBalance(null); return }
+    api.get('/wallet/balance')
+      .then(res => setWalletBalance(res.data?.balance ?? 0))
+      .catch(() => setWalletBalance(0))
+  }, [user])
+
+  const avatarUrl = user?.id ? localStorage.getItem(`feazi_avatar_${user.id}`) : null
+  const initials  = user ? `${user.firstName?.[0]||''}${user.lastName?.[0]||''}`.toUpperCase() || 'U' : ''
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40)
@@ -105,22 +120,24 @@ export default function Navbar() {
   const linkColor = (href) => isActive(href) ? FOREST : (isDark ? '#ffffff' : '#0a0a0a')
 
   return (
-    <header className="fixed top-0 inset-x-0 z-50 transition-all duration-300" style={{
+    <header style={{
+      position:'fixed', top:0, left:0, right:0, zIndex:50,
       background: isDark
         ? (scrolled ? 'rgba(12,12,12,0.96)' : 'rgba(12,12,12,0.85)')
         : (scrolled ? 'rgba(255,255,255,0.97)' : 'rgba(255,255,255,0.92)'),
       backdropFilter: 'blur(20px) saturate(1.6)',
       borderBottom: isDark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(0,0,0,0.08)',
+      transition: 'background 0.3s',
     }}>
       <nav style={{ maxWidth: "100%", padding: "0 clamp(20px,4vw,60px)", height: 72, display: "flex", alignItems: "center", gap: 0 }}>
 
         {/* Logo — extreme left */}
         <div style={{ flexShrink: 0, marginRight: 32 }}><Logo /></div>
         {/* Divider */}
-        <div style={{ width: 1, height: 28, background: "rgba(0,0,0,0.10)", marginRight: 28, flexShrink: 0 }} />
+        <div className="nav-divider" style={{ width: 1, height: 28, background: "rgba(0,0,0,0.10)", marginRight: 28, flexShrink: 0 }} />
 
-        {/* Desktop nav */}
-        <ul className="hidden md:flex items-center gap-0" style={{ listStyle:'none', margin:0, padding:0, flex: 1 }}>
+        {/* Desktop nav links */}
+        <ul className="nav-desktop-links" style={{ listStyle:'none', margin:0, padding:0, flex: 1, display:'flex', alignItems:'center' }}>
 
           {/* Ride dropdown */}
           <li style={{ position:'relative' }}
@@ -212,58 +229,108 @@ export default function Navbar() {
           ))}
         </ul>
 
-        {/* Right actions */}
-        <div className="hidden md:flex items-center gap-3" style={{ flexShrink: 0, marginLeft: 24 }}>
-          <button onClick={toggle} aria-label="Toggle theme" style={{
-            width:34, height:34, borderRadius:10, border:'1px solid',
-            borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)',
-            background:'transparent', display:'flex', alignItems:'center', justifyContent:'center',
-            cursor:'pointer', transition:'all 0.2s',
-            color: isDark ? 'rgba(255,255,255,0.6)' : '#3a3a3a',
-          }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = FOREST; e.currentTarget.style.color = FOREST }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'; e.currentTarget.style.color = isDark ? 'rgba(255,255,255,0.6)' : '#3a3a3a' }}>
-            {isDark ? <Sun size={15}/> : <Moon size={15}/>}
-          </button>
+        {/* Desktop right actions */}
+        <div className="nav-desktop-actions" style={{ flexShrink: 0, marginLeft: 24, display:'flex', alignItems:'center', gap:12 }}>
+          {/* Theme toggle — only when signed out */}
+          {!user && (
+            <button onClick={toggle} aria-label="Toggle theme" style={{
+              width:34, height:34, borderRadius:10, border:'1px solid',
+              borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)',
+              background:'transparent', display:'flex', alignItems:'center', justifyContent:'center',
+              cursor:'pointer', transition:'all 0.2s',
+              color: isDark ? 'rgba(255,255,255,0.6)' : '#3a3a3a',
+            }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = FOREST; e.currentTarget.style.color = FOREST }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'; e.currentTarget.style.color = isDark ? 'rgba(255,255,255,0.6)' : '#3a3a3a' }}>
+              {isDark ? <Sun size={15}/> : <Moon size={15}/>}
+            </button>
+          )}
 
-          <Link to="/login" style={{ padding:'9px 20px', borderRadius:50, background:'transparent', border:`1.5px solid ${isDark?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.15)'}`, color: isDark?'#fff':NT, fontSize:13, fontWeight:700, textDecoration:'none', transition:'all 0.15s' }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = FOREST; e.currentTarget.style.color = FOREST }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = isDark?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.15)'; e.currentTarget.style.color = isDark?'#fff':NT }}>
-            Log in
-          </Link>
-
-          <Link to="/register" style={{
-            display:'inline-flex', alignItems:'center', gap:6, padding:'9px 20px', borderRadius:50,
-            background: NEON, color: NT, fontSize:13, fontWeight:700,
-            transition:'background 0.2s, transform 0.15s', textDecoration:'none',
-          }}
-            onMouseEnter={e => { e.currentTarget.style.background='#d4ff1a'; e.currentTarget.style.transform='translateY(-1px)' }}
-            onMouseLeave={e => { e.currentTarget.style.background=NEON; e.currentTarget.style.transform='translateY(0)' }}>
-            Create account
-          </Link>
+          {user ? (
+            /* ── Signed-in state ── */
+            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+              {/* Wallet pill */}
+              <button onClick={() => navigate(user.role === 'driver' ? '/driver' : '/wallet')}
+                style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:50, background:NEON, border:'none', cursor:'pointer' }}>
+                <Wallet size={13} color={NT} strokeWidth={2.5}/>
+                <span style={{ fontWeight:800, fontSize:13, color:NT }}>
+                  {walletBalance === null ? '—' : `₦${walletBalance.toLocaleString()}`}
+                </span>
+              </button>
+              {/* Avatar → goes to dashboard */}
+              <button onClick={() => navigate(user.role === 'driver' ? '/driver' : '/book')}
+                style={{ width:36, height:36, borderRadius:'50%', background:'#0a0a0a', border:`2px solid ${NEON}`, overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', padding:0 }}>
+                {avatarUrl
+                  ? <img src={avatarUrl} alt="avatar" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
+                  : <span style={{ color:NEON, fontWeight:800, fontSize:13 }}>{initials}</span>
+                }
+              </button>
+            </div>
+          ) : (
+            /* ── Signed-out state ── */
+            <>
+              <Link to="/login" style={{ padding:'9px 20px', borderRadius:50, background:'transparent', border:`1.5px solid ${isDark?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.15)'}`, color: isDark?'#fff':NT, fontSize:13, fontWeight:700, textDecoration:'none', transition:'all 0.15s' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = FOREST; e.currentTarget.style.color = FOREST }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = isDark?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.15)'; e.currentTarget.style.color = isDark?'#fff':NT }}>
+                Log in
+              </Link>
+              <Link to="/register" style={{
+                display:'inline-flex', alignItems:'center', gap:6, padding:'9px 20px', borderRadius:50,
+                background: NEON, color: NT, fontSize:13, fontWeight:700,
+                transition:'background 0.2s, transform 0.15s', textDecoration:'none',
+              }}
+                onMouseEnter={e => { e.currentTarget.style.background='#d4ff1a'; e.currentTarget.style.transform='translateY(-1px)' }}
+                onMouseLeave={e => { e.currentTarget.style.background=NEON; e.currentTarget.style.transform='translateY(0)' }}>
+                Create account
+              </Link>
+            </>
+          )}
         </div>
 
-        {/* Mobile hamburger — pushed to far right */}
-        <div className="md:hidden" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button onClick={toggle} aria-label="Toggle theme" style={{
-            width:34, height:34, borderRadius:10, border:'1px solid',
-            borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)',
-            background:'transparent', display:'flex', alignItems:'center', justifyContent:'center',
-            cursor:'pointer', color: isDark ? 'rgba(255,255,255,0.6)' : '#3a3a3a',
-          }}>
-            {isDark ? <Sun size={15}/> : <Moon size={15}/>}
-          </button>
-          <button onClick={() => setOpen(!open)}
-            style={{ color: isDark ? '#fff' : '#1a1a1a', background:'none', border:'none', cursor:'pointer', padding: 4 }}
-            aria-label={open ? 'Close menu' : 'Open menu'}>
-            {open ? <X size={22}/> : <Menu size={22}/>}
-          </button>
+        {/* Mobile right — pushed to far right */}
+        <div className="nav-mobile-right" style={{ marginLeft: 'auto', display: 'none', alignItems: 'center', gap: 10 }}>
+          {user ? (
+            /* Signed in: show wallet + avatar only, no toggle/hamburger */
+            <>
+              <button onClick={() => navigate(user.role === 'driver' ? '/driver' : '/wallet')}
+                style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 12px', borderRadius:50, background:NEON, border:'none', cursor:'pointer' }}>
+                <Wallet size={13} color={NT} strokeWidth={2.5}/>
+                <span style={{ fontWeight:800, fontSize:12, color:NT }}>
+                  {walletBalance === null ? '—' : `₦${walletBalance.toLocaleString()}`}
+                </span>
+              </button>
+              <button onClick={() => navigate(user.role === 'driver' ? '/driver' : '/book')}
+                style={{ width:34, height:34, borderRadius:'50%', background:'#0a0a0a', border:`2px solid ${NEON}`, overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', padding:0 }}>
+                {avatarUrl
+                  ? <img src={avatarUrl} alt="avatar" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
+                  : <span style={{ color:NEON, fontWeight:800, fontSize:12 }}>{initials}</span>
+                }
+              </button>
+            </>
+          ) : (
+            /* Signed out: show theme toggle + hamburger */
+            <>
+              <button onClick={toggle} aria-label="Toggle theme" style={{
+                width:34, height:34, borderRadius:10, border:'1px solid',
+                borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)',
+                background:'transparent', display:'flex', alignItems:'center', justifyContent:'center',
+                cursor:'pointer', color: isDark ? 'rgba(255,255,255,0.6)' : '#3a3a3a',
+              }}>
+                {isDark ? <Sun size={15}/> : <Moon size={15}/>}
+              </button>
+              <button onClick={() => setOpen(!open)}
+                style={{ color: isDark ? '#fff' : '#1a1a1a', background:'none', border:'none', cursor:'pointer', padding: 4 }}
+                aria-label={open ? 'Close menu' : 'Open menu'}>
+                {open ? <X size={22}/> : <Menu size={22}/>}
+              </button>
+            </>
+          )}
         </div>
       </nav>
 
       {/* Mobile drawer */}
       {open && (
-        <div className="md:hidden" style={{ background: isDark?'rgba(12,12,12,0.98)':'rgba(255,255,255,0.98)', backdropFilter:'blur(20px)', borderTop: isDark?'1px solid rgba(255,255,255,0.08)':'1px solid rgba(0,0,0,0.08)', maxHeight:'80vh', overflowY:'auto' }}>
+        <div className="nav-mobile-drawer" style={{ background: isDark?'rgba(12,12,12,0.98)':'rgba(255,255,255,0.98)', backdropFilter:'blur(20px)', borderTop: isDark?'1px solid rgba(255,255,255,0.08)':'1px solid rgba(0,0,0,0.08)', maxHeight:'80vh', overflowY:'auto' }}>
           <ul style={{ margin:0, padding:'8px 24px 4px', listStyle:'none' }}>
             {[
               { label:'Ride', href:'/services' },
@@ -282,8 +349,23 @@ export default function Navbar() {
             ))}
           </ul>
           <div style={{ padding:'16px 24px 28px', display:'flex', flexDirection:'column', gap:10 }}>
-            <Link to="/login" style={{ display:'flex', justifyContent:'center', padding:'13px', borderRadius:50, border: isDark?'1.5px solid rgba(255,255,255,0.2)':'1.5px solid rgba(0,0,0,0.15)', color: isDark?'#fff':'#1a1a1a', fontSize:15, fontWeight:700, textDecoration:'none' }}>Log in</Link>
-            <Link to="/register" style={{ display:'flex', justifyContent:'center', padding:'13px', borderRadius:50, background:NEON, color:NT, fontSize:15, fontWeight:700, textDecoration:'none' }}>Create account</Link>
+            {user ? (
+              <>
+                <button onClick={() => { navigate(user.role === 'driver' ? '/wallet' : '/wallet'); setOpen(false) }}
+                  style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'13px', borderRadius:50, background:NEON, color:NT, fontSize:15, fontWeight:700, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
+                  <Wallet size={16}/> Wallet · {walletBalance === null ? '—' : `₦${walletBalance.toLocaleString()}`}
+                </button>
+                <button onClick={() => { navigate(user.role === 'driver' ? '/driver' : '/book'); setOpen(false) }}
+                  style={{ display:'flex', justifyContent:'center', padding:'13px', borderRadius:50, border: isDark?'1.5px solid rgba(255,255,255,0.2)':'1.5px solid rgba(0,0,0,0.15)', color: isDark?'#fff':'#1a1a1a', fontSize:15, fontWeight:700, background:'transparent', cursor:'pointer', fontFamily:'inherit' }}>
+                  Go to Dashboard
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/login" style={{ display:'flex', justifyContent:'center', padding:'13px', borderRadius:50, border: isDark?'1.5px solid rgba(255,255,255,0.2)':'1.5px solid rgba(0,0,0,0.15)', color: isDark?'#fff':'#1a1a1a', fontSize:15, fontWeight:700, textDecoration:'none' }}>Log in</Link>
+                <Link to="/register" style={{ display:'flex', justifyContent:'center', padding:'13px', borderRadius:50, background:NEON, color:NT, fontSize:15, fontWeight:700, textDecoration:'none' }}>Create account</Link>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -293,7 +375,21 @@ export default function Navbar() {
           from { opacity:0; transform:translateY(-6px); }
           to   { opacity:1; transform:translateY(0); }
         }
-        .nav-link { position:relative; text-decoration:none; font-size:14px; transition:color 0.15s; }
+        /* Desktop: show nav links + right actions, hide mobile right */
+        @media (min-width: 768px) {
+          .nav-desktop-links  { display: flex !important; }
+          .nav-desktop-actions{ display: flex !important; }
+          .nav-mobile-right   { display: none !important; }
+          .nav-mobile-drawer  { display: none !important; }
+          .nav-divider        { display: block !important; }
+        }
+        /* Mobile: hide desktop links + right actions, show mobile right */
+        @media (max-width: 767px) {
+          .nav-desktop-links  { display: none !important; }
+          .nav-desktop-actions{ display: none !important; }
+          .nav-mobile-right   { display: flex !important; }
+          .nav-divider        { display: none !important; }
+        }
       `}</style>
     </header>
   )

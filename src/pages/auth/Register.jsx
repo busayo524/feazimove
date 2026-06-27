@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { Link, useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom'
 import {
   Eye, EyeOff, Upload, Check, ArrowRight, ChevronLeft,
-  User, FileText, Shield, Car, AlertCircle, Lock,
+  User, FileText, Shield, Car, AlertCircle, Lock, Camera, RefreshCw, X,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { api } from '../../services/api'
@@ -12,10 +12,20 @@ import PhoneInput from '../../components/PhoneInput'
 /* ── helpers ──────────────────────────────────────────────────────────── */
 function validatePhone(p) {
   const cleaned = p.replace(/[\s\-()]/g, '')
-  // Full E.164 with any country code (6–15 digits after the +)
   if (/^\+\d{6,15}$/.test(cleaned)) return true
-  // Nigerian local format
   return /^(\+?234|0)[789][01]\d{8}$/.test(cleaned)
+}
+
+// Per-ID-type format validation
+const ID_FORMATS = {
+  'National ID (NIN)':  { regex: /^\d{11}$/, hint: '11 digits (e.g. 12345678901)' },
+  "Driver's License":   { regex: /^[A-Z0-9\-]{8,15}$/i, hint: '8–15 alphanumeric characters (e.g. LAG290184543)' },
+  "Voter's Card":       { regex: /^[A-Z0-9]{19}$/i, hint: '19 alphanumeric characters (VIN)' },
+}
+function validateIdNumber(idType, idNumber) {
+  const fmt = ID_FORMATS[idType]
+  if (!fmt) return false
+  return fmt.regex.test(idNumber.replace(/\s/g, ''))
 }
 function validateEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) }
 function validatePassword(p) { return p.length >= 8 && /[A-Z]/.test(p) && /[0-9]/.test(p) }
@@ -128,7 +138,7 @@ const DRIVER_STEPS = [
 ]
 
 const CITIES    = ['Lagos','Abuja','Port Harcourt','Kano','Ibadan','Enugu','Benin City','Accra','Nairobi','Cape Town','Dakar']
-const ID_TYPES  = ['National ID (NIN)','International Passport',"Driver's License","Voter's Card"]
+const ID_TYPES  = ['National ID (NIN)',"Driver's License","Voter's Card"]
 const VEH_TYPES = ['Car','Motorcycle','Tricycle (Keke)','Minibus','Bus']
 
 const LAGOS_AREAS = [
@@ -151,14 +161,187 @@ const LAGOS_AREAS = [
   'Badagry', 'Ikorodu', 'Ojo', 'Ijede', 'Agbowa',
 ].sort()
 
+/* ── Webcam Capture Modal ─────────────────────────────────────────────── */
+function CameraModal({ onCapture, onClose }) {
+  const videoRef  = useRef(null)
+  const canvasRef = useRef(null)
+  const streamRef = useRef(null)
+  const [ready,    setReady]    = useState(false)
+  const [error,    setError]    = useState(null)
+  const [flash,    setFlash]    = useState(false)
+  const [devices,  setDevices]  = useState([])
+  const [deviceId, setDeviceId] = useState(null)
+
+  function isVirtualCamera(label='') {
+    return /virtual|obs|snap|ManyCam|XSplit|splitcam/i.test(label)
+  }
+
+  async function loadDevices() {
+    try {
+      const all  = await navigator.mediaDevices.enumerateDevices()
+      const cams = all.filter(d => d.kind === 'videoinput')
+      setDevices(cams)
+      return cams
+    } catch { return [] }
+  }
+
+  async function tryStream(deviceId) {
+    const constraints = {
+      video: deviceId
+        ? { deviceId:{ exact:deviceId }, width:{ideal:1280}, height:{ideal:720} }
+        : { width:{ideal:1280}, height:{ideal:720} },
+      audio: false,
+    }
+    return navigator.mediaDevices.getUserMedia(constraints)
+  }
+
+  function attachStream(stream, cams) {
+    streamRef.current = stream
+    const label  = stream.getVideoTracks()[0]?.label || ''
+    const active = cams.find(d => d.label === label)
+    if (active) setDeviceId(active.deviceId)
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream
+      videoRef.current.onloadedmetadata = () => setReady(true)
+    }
+  }
+
+  const startCamera = useCallback(async (preferredId = null) => {
+    streamRef.current?.getTracks().forEach(t => t.stop())
+    setReady(false); setError(null)
+    try {
+      const stream = await tryStream(preferredId)
+      const cams   = await loadDevices()
+      attachStream(stream, cams)
+    } catch(firstErr) {
+      const cams = await loadDevices()
+      if (firstErr.name === 'NotReadableError' || firstErr.name === 'AbortError') {
+        // Auto-try real cameras, skipping virtual ones
+        const realCams = cams.filter(d => !isVirtualCamera(d.label) && d.deviceId !== preferredId)
+        for (const cam of realCams) {
+          try {
+            const stream = await tryStream(cam.deviceId)
+            attachStream(stream, cams)
+            return
+          } catch { /* try next */ }
+        }
+        setError('notreadable')
+      } else if (firstErr.name === 'NotAllowedError') {
+        setError('permission')
+      } else if (firstErr.name === 'NotFoundError') {
+        setError('notfound')
+      } else {
+        setError('other:' + firstErr.message)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    startCamera()
+    return () => streamRef.current?.getTracks().forEach(t => t.stop())
+  }, [startCamera])
+
+  function capture() {
+    if (!videoRef.current || !canvasRef.current || !ready) return
+    const v = videoRef.current, c = canvasRef.current
+    c.width = v.videoWidth; c.height = v.videoHeight
+    const ctx = c.getContext('2d')
+    ctx.translate(c.width, 0); ctx.scale(-1, 1)
+    ctx.drawImage(v, 0, 0)
+    setFlash(true); setTimeout(() => setFlash(false), 200)
+    streamRef.current?.getTracks().forEach(t => t.stop())
+    onCapture(c.toDataURL('image/jpeg', 0.92))
+  }
+
+  function renderError() {
+    const msg = {
+      permission:   'Camera permission denied. Click the camera icon in your browser\'s address bar and allow access.',
+      notfound:     'No camera detected on this device.',
+      notreadable:  'This camera couldn\'t start — it may be in use by another app, or it\'s a virtual camera (like OBS) that isn\'t active.',
+    }[error] || (error?.startsWith('other:') ? error.replace('other:','') : 'Could not access camera.')
+    return (
+      <div style={{ padding:'20px 20px 0', textAlign:'center' }}>
+        <Camera size={34} color="rgba(255,255,255,0.25)" style={{ marginBottom:10 }}/>
+        <p style={{ color:'rgba(255,255,255,0.75)', fontSize:13, lineHeight:1.6, marginBottom:14 }}>{msg}</p>
+        {devices.length > 1 && (
+          <div style={{ marginBottom:12, textAlign:'left' }}>
+            <p style={{ color:'rgba(255,255,255,0.45)', fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:6 }}>
+              Try a different camera:
+            </p>
+            <select value={deviceId||''} onChange={e=>{setDeviceId(e.target.value);startCamera(e.target.value)}}
+              style={{ width:'100%', padding:'9px 12px', borderRadius:8, background:'rgba(255,255,255,0.08)',
+                border:'1px solid rgba(255,255,255,0.15)', color:'#fff', fontSize:13, fontFamily:'inherit', cursor:'pointer' }}>
+              {devices.map(d=>(
+                <option key={d.deviceId} value={d.deviceId} style={{ background:'#222', color:'#fff' }}>
+                  {d.label || `Camera ${d.deviceId.slice(0,8)}`}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        <button onClick={() => startCamera(deviceId||null)}
+          style={{ padding:'8px 18px', borderRadius:8, background:'rgba(204,255,0,0.12)', border:'1px solid rgba(204,255,0,0.3)',
+            color:'#ccff00', fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit', marginBottom:4 }}>
+          ↺ Try again
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ position:'fixed', inset:0, zIndex:2000, background:'rgba(0,0,0,0.85)', display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
+      <div style={{ background:'#111', borderRadius:24, overflow:'hidden', maxWidth:440, width:'100%', boxShadow:'0 24px 60px rgba(0,0,0,0.6)' }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px', borderBottom:'1px solid rgba(255,255,255,0.1)' }}>
+          <span style={{ color:'#fff', fontWeight:700, fontSize:16 }}>Take a Selfie</span>
+          <button onClick={onClose} style={{ background:'rgba(255,255,255,0.1)', border:'none', borderRadius:'50%', width:32, height:32, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'#fff' }}>
+            <X size={16}/>
+          </button>
+        </div>
+        <div style={{ position:'relative', background:'#000', aspectRatio:'4/3', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden' }}>
+          <video ref={videoRef} autoPlay playsInline muted
+            style={{ width:'100%', height:'100%', objectFit:'cover', transform:'scaleX(-1)', display: (!error && ready) ? 'block' : 'none' }}/>
+          {!error && !ready && <div style={{ color:'rgba(255,255,255,0.5)', fontSize:14 }}>Starting camera…</div>}
+          {flash && <div style={{ position:'absolute', inset:0, background:'#fff', opacity:0.6, pointerEvents:'none' }}/>}
+        </div>
+        {error && renderError()}
+        <canvas ref={canvasRef} style={{ display:'none' }}/>
+        <div style={{ padding:'16px 20px 20px', display:'flex', justifyContent:'center', gap:12, flexWrap:'wrap' }}>
+          <button type="button" onClick={onClose}
+            style={{ padding:'11px 22px', borderRadius:50, background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.2)', color:'#fff', fontWeight:600, fontSize:14, cursor:'pointer', fontFamily:'inherit' }}>
+            Cancel
+          </button>
+          {!error && (
+            <button type="button" onClick={capture} disabled={!ready}
+              style={{ padding:'11px 28px', borderRadius:50, background: ready ? '#ccff00' : 'rgba(204,255,0,0.25)', border:'none', color: ready ? '#243800' : 'rgba(36,56,0,0.4)', fontWeight:800, fontSize:14, cursor: ready ? 'pointer' : 'not-allowed', fontFamily:'inherit', display:'flex', alignItems:'center', gap:8 }}>
+              <Camera size={15}/> Capture
+            </button>
+          )}
+          {!error && ready && devices.length > 1 && (
+            <select value={deviceId||''} onChange={e=>{setDeviceId(e.target.value);startCamera(e.target.value)}}
+              style={{ padding:'8px 10px', borderRadius:50, background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.2)', color:'#fff', fontSize:12, fontFamily:'inherit', cursor:'pointer', maxWidth:130 }}>
+              {devices.map(d=>(
+                <option key={d.deviceId} value={d.deviceId} style={{ background:'#222', color:'#fff' }}>
+                  {(d.label||'Camera').slice(0,22)}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /* ══════════════════════════════════════════════════════════════════════ */
 export default function Register() {
-  const { register } = useAuth()
+  const { register, addRole, user: currentUser } = useAuth()
   const navigate     = useNavigate()
   const location     = useLocation()
   const { role: urlRole } = useParams()
   const [searchParams]    = useSearchParams()
   const role  = urlRole === 'driver' ? 'driver' : 'rider'
+  // ?add=true means an existing logged-in user is adding a second role
+  const isAddingRole = searchParams.get('add') === 'true' && !!currentUser
   const steps = role === 'driver' ? DRIVER_STEPS : RIDER_STEPS
 
   // ── Prefill + token from OTP signup flow (navigation state) ──────────
@@ -166,7 +349,6 @@ export default function Register() {
   //   { registrationToken, prefill: { name, email, phone, password, confirm } }
   const navState      = location.state || {}
   const navToken      = navState.registrationToken || null
-  const prefill       = navState.prefill           || {}
 
   // ── Legacy: token in URL query param (from email link) ───────────────
   const urlToken = searchParams.get('token')
@@ -180,16 +362,26 @@ export default function Register() {
     : urlToken ? 'validating'             // came from email link — need to validate
     : 'none'
   )
+  // Prefill fetched from the server when arriving via the email link (no nav state available)
+  const [linkPrefill, setLinkPrefill] = useState(null)
+  const prefill = navState.prefill || linkPrefill || {}
 
   useEffect(() => {
     if (!urlToken || navToken) return     // skip if using nav-state token
     api.get(`/auth/validate-reg-token?token=${encodeURIComponent(urlToken)}`)
-      .then(res => setTokenState(res.data.valid ? 'valid' : 'invalid'))
+      .then(res => {
+        if (res.data.valid) {
+          setLinkPrefill({ name: res.data.name, email: res.data.email, phone: res.data.phone })
+          setTokenState('valid')
+        } else {
+          setTokenState('invalid')
+        }
+      })
       .catch(() => setTokenState('invalid'))
   }, [urlToken, navToken])
 
-  // ── Start at step 2 when prefill data is present (OTP flow) ──────────
-  const startStep = prefill.name ? 2 : 1
+  // ── Always start at step 1 — name is now entered in the wizard ──────
+  const startStep = 1
 
   const [step,    setStep]    = useState(startStep)
   const [showPw,  setShowPw]  = useState(false)
@@ -197,13 +389,51 @@ export default function Register() {
   const [apiError,setApiError]= useState('')
   const [loading, setLoading] = useState(false)
 
+  // Selfie
+  const selfieInputRef   = useRef(null)
+  const [selfiePreview, setSelfiePreview] = useState(null)
+  const [showCamera, setShowCamera] = useState(false)
+  // File upload is offered alongside the camera only for desktop/laptop —
+  // phones/tablets already have a fast native camera, so we keep that flow simple.
+  const isDesktop = !/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+
+  function handleSelfieDataUrl(dataUrl) {
+    setSelfiePreview(dataUrl)
+    setShowCamera(false)
+    // Convert dataUrl to a File-like blob for any backend upload
+    fetch(dataUrl).then(r => r.blob()).then(blob => {
+      const file = new File([blob], 'selfie.jpg', { type: 'image/jpeg' })
+      setFile('selfie', file)
+    })
+  }
+
+  function handleSelfie(file) {
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = e => handleSelfieDataUrl(e.target.result)
+    reader.readAsDataURL(file)
+  }
+
+  // ID format check — updates live as user types
+  const [idVerified, setIdVerified] = useState(false)
+
+  function fId(field, val) {
+    f(field, val)
+    const nextType   = field === 'idType'   ? val : form.idType
+    const nextNumber = field === 'idNumber' ? val : form.idNumber
+    setIdVerified(!!(nextType && nextNumber && validateIdNumber(nextType, nextNumber)))
+  }
+
   const [form, setForm] = useState({
     // step 1 — pre-filled from signup if coming from OTP flow
-    name:    prefill.name    || '',
+    firstName: prefill.name ? prefill.name.split(' ')[0] : '',
+    lastName:  prefill.name ? prefill.name.split(' ').slice(1).join(' ') : '',
     email:   prefill.email   || '',
     phone:   prefill.phone   || '',
     city:    '',
     area:    '',
+    dobDay:  '', dobMonth: '', dobYear: '',
+    gender:  '',
     password: prefill.password || '',
     confirm:  prefill.confirm  || '',
     // step 2 rider
@@ -219,6 +449,19 @@ export default function Register() {
     carFront: null, carSide: null, roadworthiness: null, utilityBill: null,
   })
 
+  // linkPrefill resolves asynchronously (after the email-link token validates),
+  // so the form's initial state above is empty — fill it in once it arrives.
+  useEffect(() => {
+    if (!linkPrefill) return
+    setForm(p => ({
+      ...p,
+      firstName: linkPrefill.name ? linkPrefill.name.split(' ')[0] : p.firstName,
+      lastName:  linkPrefill.name ? linkPrefill.name.split(' ').slice(1).join(' ') : p.lastName,
+      email: linkPrefill.email || p.email,
+      phone: linkPrefill.phone || p.phone,
+    }))
+  }, [linkPrefill])
+
   function f(field, val) {
     setForm(p => ({ ...p, [field]: typeof val === 'string' ? clean(val) : val }))
     setErrors(p => ({ ...p, [field]: '' }))
@@ -230,12 +473,24 @@ export default function Register() {
     const e = {}
     // When prefill is present (from OTP flow), name/email/phone/password were already validated at signup
     if (!prefill.name) {
-      if (!form.name || form.name.length < 2) e.name     = 'Enter your full name.'
-      if (!validateEmail(form.email))          e.email    = 'Enter a valid email address.'
-      if (!validatePhone(form.phone))          e.phone    = 'Enter a valid Nigerian phone number.'
-      if (!validatePassword(form.password))    e.password = 'Min 8 chars, 1 uppercase, 1 number.'
-      if (form.password !== form.confirm)      e.confirm  = 'Passwords do not match.'
+      if (!form.firstName || form.firstName.length < 2) e.firstName = 'Enter your first name.'
+      if (!form.lastName  || form.lastName.length  < 2) e.lastName  = 'Enter your last name.'
+      if (!validateEmail(form.email))                   e.email     = 'Enter a valid email address.'
+      if (!validatePhone(form.phone))                   e.phone     = 'Enter a valid phone number.'
+      if (!validatePassword(form.password))             e.password  = 'Min 8 chars, 1 uppercase, 1 number.'
+      if (form.password !== form.confirm)               e.confirm   = 'Passwords do not match.'
     }
+    // Date of birth
+    if (!form.dobDay || !form.dobMonth || !form.dobYear) {
+      e.dob = 'Please enter your complete date of birth.'
+    } else {
+      const dob = new Date(+form.dobYear, +form.dobMonth - 1, +form.dobDay)
+      const age = Math.floor((Date.now() - dob.getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+      if (isNaN(dob.getTime())) e.dob = 'Invalid date of birth.'
+      else if (age < 18) e.dob = 'You must be at least 18 years old to register.'
+      else if (age > 100) e.dob = 'Please enter a valid date of birth.'
+    }
+    if (!form.gender) e.gender = 'Select your gender.'
     // City and area always required
     if (!form.city)  e.city = 'Select your city.'
     if (!form.area)  e.area = form.city === 'Lagos' ? 'Select your area in Lagos.' : 'Enter your area / neighbourhood.'
@@ -243,9 +498,13 @@ export default function Register() {
   }
   function v2Rider() {
     const e = {}
-    if (!form.idType)                          e.idType   = 'Select an ID type.'
-    if (!form.idNumber || form.idNumber.length < 5) e.idNumber = 'Enter a valid ID number.'
-    if (!files.idDoc)                          e.idDoc    = 'Upload your ID document.'
+    if (!selfiePreview) e.selfie = 'Please take a selfie photo to use as your profile picture.'
+    if (!form.idType) e.idType = 'Select an ID type.'
+    if (!form.idNumber) {
+      e.idNumber = 'Enter your ID number.'
+    } else if (form.idType && !validateIdNumber(form.idType, form.idNumber)) {
+      e.idNumber = `Invalid format. ${ID_FORMATS[form.idType]?.hint || ''}`
+    }
     setErrors(e); return !Object.keys(e).length
   }
   function v2Driver() {
@@ -280,12 +539,35 @@ export default function Register() {
     if (!v3()) return
     setLoading(true); setApiError('')
     try {
-      // Pass registration token — server validates email verification & activates account
-      // regToken is either from nav state (OTP flow) or from URL (email-link flow)
-      const user = await register({
-        registrationToken: regToken,
-        role,
-      })
+      let user
+      if (isAddingRole) {
+        // Existing user adding a second role — no new account, just unlock the role
+        user = await addRole(role)
+      } else {
+        // New account registration — multipart so uploaded documents go along with it
+        const formData = new FormData()
+        formData.append('registrationToken', regToken || '')
+        formData.append('role', role)
+        formData.append('name', [form.firstName, form.lastName].filter(Boolean).join(' '))
+        if (role === 'rider') {
+          if (form.idType)   formData.append('idType', form.idType)
+          if (form.idNumber) formData.append('idNumber', form.idNumber)
+        } else {
+          if (form.vehicleType)  formData.append('vehicleType', form.vehicleType)
+          if (form.vehicleMake)  formData.append('vehicleMake', form.vehicleMake)
+          if (form.vehicleModel) formData.append('vehicleModel', form.vehicleModel)
+          if (form.plateNumber)  formData.append('plateNumber', form.plateNumber)
+          if (form.vehicleYear)  formData.append('vehicleYear', form.vehicleYear)
+        }
+        Object.entries(files).forEach(([field, file]) => {
+          if (file) formData.append(field, file)
+        })
+        user = await register(formData)
+      }
+      // Save selfie as profile avatar to localStorage
+      if (selfiePreview && user?.id) {
+        localStorage.setItem(`feazi_avatar_${user.id}`, selfiePreview)
+      }
       navigate(user.role === 'driver' ? '/driver' : '/book')
     } catch (e) {
       setApiError(!e.status
@@ -376,7 +658,9 @@ export default function Register() {
                 <div style={{ background: 'rgba(204,255,0,0.18)', border: '1.5px solid #ccff00', borderRadius: 10, padding: '12px 16px', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: 18 }}>✅</span>
                   <p style={{ margin: 0, fontSize: 13, color: '#2a6048', fontWeight: 600 }}>
-                    Name, email, phone and password pre-filled from your signup. Just add your city and area below.
+                    {prefill.password
+                      ? 'Email, phone and password pre-filled from your signup. Add your name, city and area below.'
+                      : 'Email and phone pre-filled from your signup. Your password is already set — add your name, city and area below.'}
                   </p>
                 </div>
               )}
@@ -385,12 +669,20 @@ export default function Register() {
                 <p style={secHead}>Basic Information</p>
                 <p style={secSub}>Your full name and contact details.</p>
 
-                {/* Full name — full width */}
-                <div style={{ marginBottom: 18 }}>
-                  <label style={lbl}>Full Name <Req /></label>
-                  <input type="text" value={form.name} onChange={e => f('name', e.target.value)}
-                    placeholder="Adaeze Okonkwo" autoComplete="name" style={inp(!!errors.name)} />
-                  {errors.name && <p style={err}>{errors.name}</p>}
+                {/* First + Last name side by side */}
+                <div className="reg-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 18 }}>
+                  <div>
+                    <label style={lbl}>First Name <Req /></label>
+                    <input type="text" value={form.firstName} onChange={e => f('firstName', e.target.value)}
+                      placeholder="Adaeze" autoComplete="given-name" style={inp(!!errors.firstName)} />
+                    {errors.firstName && <p style={err}>{errors.firstName}</p>}
+                  </div>
+                  <div>
+                    <label style={lbl}>Last Name <Req /></label>
+                    <input type="text" value={form.lastName} onChange={e => f('lastName', e.target.value)}
+                      placeholder="Okonkwo" autoComplete="family-name" style={inp(!!errors.lastName)} />
+                    {errors.lastName && <p style={err}>{errors.lastName}</p>}
+                  </div>
                 </div>
 
                 <div className="reg-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
@@ -436,34 +728,85 @@ export default function Register() {
                   </div>
                 </div>
 
-                <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 24, marginBottom: 4 }}>
-                  <p style={secHead}>Security</p>
-                  <p style={secSub}>Create a strong password for your account.</p>
-                  <div className="reg-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                    <div>
-                      <label style={lbl}>Password <Req /></label>
-                      <div style={{ position: 'relative' }}>
-                        <input type={showPw ? 'text' : 'password'} value={form.password}
-                          onChange={e => f('password', e.target.value)}
-                          placeholder="Min 8 chars, 1 uppercase, 1 number" autoComplete="new-password"
-                          style={{ ...inp(!!errors.password), paddingRight: 44 }} />
-                        <button type="button" onClick={() => setShowPw(!showPw)} aria-label="Toggle password"
-                          style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 0 }}>
-                          {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
-                        </button>
-                      </div>
-                      {errors.password && <p style={err}>{errors.password}</p>}
+                {/* Date of Birth + Gender */}
+                <div className="reg-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
+                  <div>
+                    <label style={lbl}>Date of Birth <Req /></label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr 1.2fr', gap: 8 }}>
+                      {/* Day */}
+                      <select value={form.dobDay} onChange={e => f('dobDay', e.target.value)}
+                        style={{ ...inp(!!errors.dob), cursor: 'pointer' }}>
+                        <option value="">DD</option>
+                        {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                          <option key={d} value={d}>{String(d).padStart(2, '0')}</option>
+                        ))}
+                      </select>
+                      {/* Month */}
+                      <select value={form.dobMonth} onChange={e => f('dobMonth', e.target.value)}
+                        style={{ ...inp(!!errors.dob), cursor: 'pointer' }}>
+                        <option value="">Month</option>
+                        {['January','February','March','April','May','June','July','August','September','October','November','December'].map((m, i) => (
+                          <option key={m} value={i + 1}>{m}</option>
+                        ))}
+                      </select>
+                      {/* Year */}
+                      <select value={form.dobYear} onChange={e => f('dobYear', e.target.value)}
+                        style={{ ...inp(!!errors.dob), cursor: 'pointer' }}>
+                        <option value="">YYYY</option>
+                        {Array.from({ length: 82 }, (_, i) => new Date().getFullYear() - 17 - i).map(y => (
+                          <option key={y} value={y}>{y}</option>
+                        ))}
+                      </select>
                     </div>
-                    <div>
-                      <label style={lbl}>Confirm Password <Req /></label>
-                      <input type={showPw ? 'text' : 'password'} value={form.confirm}
-                        onChange={e => f('confirm', e.target.value)}
-                        placeholder="Repeat password" autoComplete="new-password"
-                        style={inp(!!errors.confirm)} />
-                      {errors.confirm && <p style={err}>{errors.confirm}</p>}
-                    </div>
+                    {errors.dob && <p style={err}>{errors.dob}</p>}
+                  </div>
+
+                  <div>
+                    <label style={lbl}>Gender <Req /></label>
+                    <select value={form.gender} onChange={e => f('gender', e.target.value)}
+                      style={{ ...inp(!!errors.gender), cursor: 'pointer' }}>
+                      <option value="">Select gender</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="prefer_not_to_say">Prefer not to say</option>
+                    </select>
+                    {errors.gender && <p style={err}>{errors.gender}</p>}
                   </div>
                 </div>
+
+                {/* Password was already set during the initial signup step — only show
+                    these fields when we actually have the plaintext value to confirm
+                    (i.e. came via in-app nav state, not the email link). */}
+                {!prefill.name || prefill.password ? (
+                  <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 24, marginBottom: 4 }}>
+                    <p style={secHead}>Security</p>
+                    <p style={secSub}>Create a strong password for your account.</p>
+                    <div className="reg-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                      <div>
+                        <label style={lbl}>Password <Req /></label>
+                        <div style={{ position: 'relative' }}>
+                          <input type={showPw ? 'text' : 'password'} value={form.password}
+                            onChange={e => f('password', e.target.value)}
+                            placeholder="Min 8 chars, 1 uppercase, 1 number" autoComplete="new-password"
+                            style={{ ...inp(!!errors.password), paddingRight: 44 }} />
+                          <button type="button" onClick={() => setShowPw(!showPw)} aria-label="Toggle password"
+                            style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 0 }}>
+                            {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
+                          </button>
+                        </div>
+                        {errors.password && <p style={err}>{errors.password}</p>}
+                      </div>
+                      <div>
+                        <label style={lbl}>Confirm Password <Req /></label>
+                        <input type={showPw ? 'text' : 'password'} value={form.confirm}
+                          onChange={e => f('confirm', e.target.value)}
+                          placeholder="Repeat password" autoComplete="new-password"
+                          style={inp(!!errors.confirm)} />
+                        {errors.confirm && <p style={err}>{errors.confirm}</p>}
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </>}
 
@@ -472,34 +815,158 @@ export default function Register() {
               <h2 style={{ fontSize: 'clamp(1.3rem,2.5vw,1.7rem)', fontWeight: 800, color: '#1a1a1a', marginBottom: 4 }}>Identity Verification</h2>
               <p style={{ fontSize: 14, color: '#666', marginBottom: 28 }}>Provide your government-issued ID to verify your identity.</p>
 
+              {/* ── Selfie / Profile Photo ── */}
+              {showCamera && <CameraModal onCapture={handleSelfieDataUrl} onClose={() => setShowCamera(false)}/>}
+              <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 28, marginBottom: 28 }}>
+                <p style={secHead}>Profile Photo</p>
+                <p style={secSub}>Take a clear selfie — this will be your profile picture on FeaziMove.</p>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
+                  {/* Circle preview / camera trigger */}
+                  <div
+                    onClick={() => setShowCamera(true)}
+                    style={{
+                      width: 110, height: 110, borderRadius: '50%', flexShrink: 0,
+                      background: selfiePreview ? 'transparent' : '#f8f8f8',
+                      border: `2.5px dashed ${selfiePreview ? '#22c55e' : errors.selfie ? '#e53935' : '#d1d5db'}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', overflow: 'hidden', position: 'relative',
+                      transition: 'border-color 0.2s',
+                    }}
+                  >
+                    {selfiePreview ? (
+                      <img src={selfiePreview} alt="Selfie preview"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: 8 }}>
+                        <Camera size={30} color={errors.selfie ? '#e53935' : '#aaa'} />
+                        <p style={{ fontSize: 11, color: errors.selfie ? '#e53935' : '#aaa', margin: '6px 0 0', lineHeight: 1.3 }}>Tap to open<br/>camera</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Hidden file input — fallback for retake from files */}
+                  <input
+                    ref={selfieInputRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={e => handleSelfie(e.target.files[0])}
+                  />
+
+                  <div style={{ flex: 1, minWidth: 200 }}>
+                    {selfiePreview ? (
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                          <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <Check size={13} color="#fff" strokeWidth={3}/>
+                          </span>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: '#15803d' }}>Photo uploaded!</span>
+                        </div>
+                        <p style={{ fontSize: 13, color: '#666', marginBottom: 12, lineHeight: 1.5 }}>
+                          This will be your profile picture. Make sure your face is clearly visible.
+                        </p>
+                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                          <button type="button"
+                            onClick={() => setShowCamera(true)}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, background: '#243800', border: 'none', color: '#ccff00', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                            <Camera size={13}/> Retake with camera
+                          </button>
+                          {isDesktop && (
+                            <button type="button"
+                              onClick={() => selfieInputRef.current?.click()}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, background: '#fff', border: '1.5px solid #ddd', color: '#444', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                              <Upload size={13}/> Upload photo
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <p style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a', marginBottom: 6 }}>Take your selfie</p>
+                        <p style={{ fontSize: 13, color: '#666', marginBottom: 14, lineHeight: 1.6 }}>
+                          Opens your live camera — works on both <strong>desktop</strong> and mobile.<br/>
+                          The image is mirrored so it looks natural.
+                        </p>
+                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                          <button type="button"
+                            onClick={() => setShowCamera(true)}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, background: '#243800', border: 'none', color: '#ccff00', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(36,56,0,0.2)' }}>
+                            <Camera size={15}/> Open Camera
+                          </button>
+                          {isDesktop && (
+                            <button type="button"
+                              onClick={() => selfieInputRef.current?.click()}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, background: '#fff', border: '1.5px solid #ddd', color: '#444', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                              <Upload size={15}/> Upload Photo
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {errors.selfie && (
+                  <p style={{ ...err, marginTop: 10 }}>{errors.selfie}</p>
+                )}
+              </div>
+
               <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 28 }}>
                 <p style={secHead}>ID Information</p>
-                <p style={secSub}>Select your ID type and enter the ID number.</p>
-                <div className="reg-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 32 }}>
-                  <div>
-                    <label style={lbl}>ID Type <Req /></label>
-                    <select value={form.idType} onChange={e => f('idType', e.target.value)} style={{ ...inp(!!errors.idType), cursor: 'pointer' }}>
-                      <option value="">Select ID type</option>
-                      {ID_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                    {errors.idType && <p style={err}>{errors.idType}</p>}
-                  </div>
-                  <div>
-                    <label style={lbl}>ID Number <Req /></label>
-                    <input type="text" value={form.idNumber} onChange={e => f('idNumber', e.target.value)}
-                      placeholder="Enter your ID number" style={inp(!!errors.idNumber)} />
-                    {errors.idNumber && <p style={err}>{errors.idNumber}</p>}
-                  </div>
+                <p style={secSub}>Select your ID type and enter the number.</p>
+
+                {/* ID Type */}
+                <div style={{ marginBottom: 18 }}>
+                  <label style={lbl}>ID Type <Req /></label>
+                  <select value={form.idType} onChange={e => fId('idType', e.target.value)} style={{ ...inp(!!errors.idType), cursor: 'pointer' }}>
+                    <option value="">Select ID type</option>
+                    {ID_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                  {form.idType && (
+                    <p style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
+                      Format: {ID_FORMATS[form.idType]?.hint}
+                    </p>
+                  )}
+                  {errors.idType && <p style={err}>{errors.idType}</p>}
                 </div>
 
-                <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 24 }}>
-                  <p style={secHead}>Required Documents</p>
-                  <p style={secSub}>ID document is mandatory. Selfie with ID is optional but recommended.</p>
-                  <div className="reg-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                    <UploadBox label="ID Document" required file={files.idDoc} onFile={v => setFile('idDoc', v)} error={errors.idDoc} />
-                    <UploadBox label="Selfie with ID (Optional)" file={files.selfie} onFile={v => setFile('selfie', v)} />
+                {/* ID Number — live format check with green tick */}
+                <div style={{ marginBottom: 18 }}>
+                  <label style={lbl}>ID Number <Req /></label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type="text"
+                      value={form.idNumber}
+                      onChange={e => fId('idNumber', e.target.value)}
+                      placeholder={
+                        form.idType === 'National ID (NIN)' ? '12345678901' :
+                        form.idType === "Driver's License"   ? 'LAG290184543' :
+                        form.idType === "Voter's Card"       ? '9876GH7654321098765' :
+                        'Enter your ID number'
+                      }
+                      style={{
+                        ...inp(!!errors.idNumber && !idVerified),
+                        paddingRight: idVerified ? 44 : 14,
+                        borderColor: idVerified ? '#22c55e' : errors.idNumber ? '#e53935' : '#ddd',
+                        transition: 'border-color 0.2s',
+                      }}
+                    />
+                    {idVerified && (
+                      <span style={{
+                        position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+                        width: 24, height: 24, borderRadius: '50%', background: '#22c55e',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: '0 2px 6px rgba(34,197,94,0.35)',
+                      }}>
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                          <path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </span>
+                    )}
                   </div>
+                  {errors.idNumber && !idVerified && <p style={err}>{errors.idNumber}</p>}
                 </div>
+
               </div>
             </>}
 
@@ -591,7 +1058,7 @@ export default function Register() {
                   <p style={{ fontSize: 12, fontWeight: 700, color: '#6b8000', marginBottom: 14, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Application Summary</p>
                   <div className="reg-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 24px' }}>
                     {[
-                      ['Full Name',    form.name],
+                      ['Full Name',    [form.firstName, form.lastName].filter(Boolean).join(' ')],
                       ['Email',        form.email],
                       ['Phone',        form.phone],
                       ['City',         form.city],
@@ -616,8 +1083,8 @@ export default function Register() {
                         style={{ marginTop: 2, accentColor: NEON, width: 16, height: 16, flexShrink: 0, cursor: 'pointer' }} />
                       <span style={{ fontSize: 13, color: '#444', lineHeight: 1.65 }}>
                         I agree to FeaziMove's{' '}
-                        <Link to="/policies" style={{ color: G, fontWeight: 600 }}>Terms of Service</Link> and{' '}
-                        <Link to="/policies" style={{ color: G, fontWeight: 600 }}>Privacy Policy</Link>.
+                        <a href="/policies?tab=terms&from=register" target="_blank" rel="noopener noreferrer" style={{ color: G, fontWeight: 600 }}>Terms of Service</a> and{' '}
+                        <a href="/policies?tab=privacy&from=register" target="_blank" rel="noopener noreferrer" style={{ color: G, fontWeight: 600 }}>Privacy Policy</a>.
                         I confirm that all information provided is accurate and truthful.
                       </span>
                     </label>

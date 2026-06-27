@@ -1,13 +1,16 @@
 const express   = require('express')
 const bcrypt    = require('bcryptjs')
 const jwt       = require('jsonwebtoken')
+const rateLimit = require('express-rate-limit')
 const { v4: uuidv4 } = require('uuid')
 const { body }  = require('express-validator')
 const { OAuth2Client } = require('google-auth-library')
+const axios     = require('axios')
 const { query } = require('../db')
 const { requireAuth }  = require('../middleware/auth')
 const { validate }     = require('../middleware/validate')
-const { generateOtp, sendOtpEmail, sendRegistrationLink } = require('../services/emailService')
+const { upload, DOC_FIELDS } = require('../middleware/upload')
+const { generateOtp, sendOtpEmail, sendRegistrationLink, sendWelcomeEmail } = require('../services/emailService')
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
@@ -16,6 +19,25 @@ const router = express.Router()
 const SALT_ROUNDS = 12  // bcrypt cost factor — NIST recommended minimum
 const OTP_EXPIRY_MINUTES = 5
 const REG_TOKEN_EXPIRY_HOURS = 24
+
+// ── Endpoint-scoped rate limits ───────────────────────────────────────────────
+// Short windows, applied only to the credential-guessing endpoints themselves —
+// not the whole router — so normal navigation (session checks, role switches,
+// registration steps) never eats into the same budget as actual login/OTP attempts.
+const loginLimiter = rateLimit({
+  windowMs: 2 * 60 * 1000, // 2 min
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many login attempts. Please wait 2 minutes.' },
+})
+const otpLimiter = rateLimit({
+  windowMs: 2 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many attempts. Please wait 2 minutes.' },
+})
 
 // ── STEP 1: Initial Signup — collect basic info, send OTP ────────────────────
 //
@@ -28,9 +50,9 @@ const REG_TOKEN_EXPIRY_HOURS = 24
 //
 router.post('/signup',
   [
-    body('name').trim().isLength({ min: 2, max: 100 }).escape(),
+    body('name').optional({ checkFalsy: true }).trim().isLength({ min: 2, max: 100 }).escape(),
     body('email').isEmail().normalizeEmail(),
-    body('phone').trim().matches(/^(\+?234|0)[789][01]\d{8}$/),
+    body('phone').trim().matches(/^\+\d{6,15}$|^(\+?234|0)[789][01]\d{8}$/),
     body('password').isLength({ min: 8 }).matches(/[A-Z]/).matches(/[0-9]/),
     body('confirmPassword').notEmpty(),
     body('role').isIn(['rider', 'driver']),
@@ -38,7 +60,7 @@ router.post('/signup',
   validate,
   async (req, res, next) => {
     try {
-      const { name, email, phone, password, confirmPassword, role } = req.body
+      const { name = '', email, phone, password, confirmPassword, role } = req.body
 
       // Frontend should check this but we enforce server-side too
       if (password !== confirmPassword) {
@@ -56,9 +78,13 @@ router.post('/signup',
         return res.status(409).json({ message: 'An account with those details already exists. Please log in instead.' })
       }
 
-      // Clean up any stale pending signups for this email OR phone (allow re-registration)
+      // Clean up stale pending signups for this email OR phone (allow re-registration).
+      // Only remove ones that never verified, or that verified but let their registration
+      // link expire — never a verified signup that's still mid-flow with a live token.
       await query(
-        "DELETE FROM users WHERE (email = $1 OR phone = $2) AND (email_verified = false OR is_pending = true)",
+        `DELETE FROM users WHERE (email = $1 OR phone = $2)
+         AND (email_verified = false OR is_pending = true)
+         AND (email_verified = false OR reg_token_expires IS NULL OR reg_token_expires < NOW())`,
         [email, phone]
       )
 
@@ -124,6 +150,7 @@ router.post('/signup',
 //   • Registration continuation link emailed — user must click it to proceed
 //
 router.post('/verify-otp',
+  otpLimiter,
   [
     body('userId').isUUID(),
     body('otp').trim().isLength({ min: 6, max: 6 }).isNumeric(),
@@ -192,10 +219,10 @@ router.post('/verify-otp',
 )
 
 // ── STEP 2b: Resend OTP ──────────────────────────────────────────────────────
-// Rate limiting is applied at the server level (authLimiter in server.js)
 // Additional guard: only allow resend if user is still pending
 //
 router.post('/resend-otp',
+  otpLimiter,
   [body('userId').isUUID()],
   validate,
   async (req, res, next) => {
@@ -244,7 +271,7 @@ router.get('/validate-reg-token',
       }
 
       const result = await query(
-        `SELECT id, name, email, role, reg_token_expires
+        `SELECT id, name, email, phone, role, reg_token_expires
          FROM users
          WHERE registration_token = $1 AND email_verified = true AND is_pending = true`,
         [token.trim()]
@@ -255,7 +282,7 @@ router.get('/validate-reg-token',
         return res.status(400).json({ valid: false, message: 'This link has expired or is invalid. Please sign up again.' })
       }
 
-      res.json({ valid: true, userId: user.id, name: user.name, role: user.role })
+      res.json({ valid: true, userId: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role })
     } catch (err) { next(err) }
   }
 )
@@ -267,16 +294,29 @@ router.get('/validate-reg-token',
 //   2. User is the legitimate owner of that email address
 //
 router.post('/register',
+  upload.fields(DOC_FIELDS), // parses multipart/form-data — populates req.body and req.files
   [
     body('registrationToken').notEmpty().isString(),
     body('role').isIn(['rider', 'driver']),
-    // The remaining fields are optional here — user already supplied them at signup
-    // but we accept updates in case they want to change anything
+    body('name').optional({ checkFalsy: true }).trim().isLength({ min: 2, max: 100 }).escape(),
+    // Rider identity (optional — only rider step 2 sends these)
+    body('idType').optional({ checkFalsy: true }).trim().isLength({ max: 40 }).escape(),
+    body('idNumber').optional({ checkFalsy: true }).trim().isLength({ max: 40 }).escape(),
+    // Driver vehicle info (optional — only driver step 2 sends these)
+    body('vehicleType').optional({ checkFalsy: true }).trim().isLength({ max: 30 }).escape(),
+    body('vehicleMake').optional({ checkFalsy: true }).trim().isLength({ max: 50 }).escape(),
+    body('vehicleModel').optional({ checkFalsy: true }).trim().isLength({ max: 50 }).escape(),
+    body('plateNumber').optional({ checkFalsy: true }).trim().isLength({ max: 20 }).escape(),
+    body('vehicleYear').optional({ checkFalsy: true }).isInt({ min: 1980, max: 2100 }),
   ],
   validate,
   async (req, res, next) => {
     try {
-      const { registrationToken, role } = req.body
+      const {
+        registrationToken, role, name,
+        idType, idNumber,
+        vehicleType, vehicleMake, vehicleModel, plateNumber, vehicleYear,
+      } = req.body
 
       // Validate the registration token
       const userResult = await query(
@@ -291,17 +331,50 @@ router.post('/register',
         return res.status(400).json({ message: 'Registration link expired or invalid. Please sign up again.' })
       }
 
-      // Activate the account — clear pending state and registration token
+      // Build the final name: prefer the one from the wizard; fall back to whatever was stored at signup
+      const finalName = (name && name.trim()) ? name.trim() : pendingUser.name
+
+      // Activate the account — clear pending state and registration token, save final name
+      // plus whatever rider-ID / driver-vehicle info the wizard collected
       const result = await query(
         `UPDATE users
-         SET is_active = true, is_pending = false, registration_token = NULL, reg_token_expires = NULL
+         SET is_active = true, is_pending = false, registration_token = NULL, reg_token_expires = NULL,
+             name = $2,
+             id_type       = COALESCE($3, id_type),
+             id_number     = COALESCE($4, id_number),
+             vehicle_type  = COALESCE($5, vehicle_type),
+             vehicle_make  = COALESCE($6, vehicle_make),
+             vehicle_model = COALESCE($7, vehicle_model),
+             plate_number  = COALESCE($8, plate_number),
+             vehicle_year  = COALESCE($9, vehicle_year)
          WHERE id = $1
-         RETURNING id, name, email, phone, role, wallet_balance`,
-        [pendingUser.id]
+         RETURNING id, name, email, phone, role, wallet_balance, rating, can_ride, can_drive, active_role`,
+        [
+          pendingUser.id, finalName,
+          idType || null, idNumber || null,
+          vehicleType || null, vehicleMake || null, vehicleModel || null,
+          plateNumber || null, vehicleYear || null,
+        ]
       )
 
       const user  = result.rows[0]
       const token = signToken(user)
+
+      // Persist any uploaded documents (ID, selfie, vehicle docs, etc.)
+      const uploaded = req.files || {}
+      for (const [docType, fileArr] of Object.entries(uploaded)) {
+        const file = fileArr[0]
+        if (!file) continue
+        await query(
+          'INSERT INTO user_documents (user_id, doc_type, file_path) VALUES ($1, $2, $3)',
+          [user.id, docType, file.filename]
+        )
+      }
+
+      // Fire welcome email — non-blocking, don't fail registration if it errors
+      sendWelcomeEmail(user.email, user.name, user.role).catch(e =>
+        console.error('[Welcome email]', e.message)
+      )
 
       res.status(201).json({ token, user: safeUser(user) })
     } catch (err) { next(err) }
@@ -354,9 +427,11 @@ router.post('/google',
         return res.json({ needsRole: true, email, name })
       }
 
-      // Clean up any stale pending Google signups
+      // Clean up stale pending Google signups — but never one that's mid-flow with a live token
       await query(
-        "DELETE FROM users WHERE email = $1 AND (email_verified = false OR is_pending = true)",
+        `DELETE FROM users WHERE email = $1
+         AND (email_verified = false OR is_pending = true)
+         AND (email_verified = false OR reg_token_expires IS NULL OR reg_token_expires < NOW())`,
         [email]
       )
 
@@ -431,9 +506,11 @@ router.post('/google-access',
         return res.json({ needsRole: true, email, name })
       }
 
-      // Clean up stale pending records
+      // Clean up stale pending records — but never one that's mid-flow with a live token
       await query(
-        "DELETE FROM users WHERE (email = $1 OR google_id = $2) AND (email_verified = false OR is_pending = true)",
+        `DELETE FROM users WHERE (email = $1 OR google_id = $2)
+         AND (email_verified = false OR is_pending = true)
+         AND (email_verified = false OR reg_token_expires IS NULL OR reg_token_expires < NOW())`,
         [email, googleId]
       )
 
@@ -474,18 +551,24 @@ router.post('/google-access',
 
 // ── Login ─────────────────────────────────────────────────────────────────────
 router.post('/login',
+  loginLimiter,
   [
-    body('phone').trim().notEmpty(),
-    body('password').notEmpty(),
+    body('identifier').trim().notEmpty().withMessage('Email or phone is required.'),
+    body('password').notEmpty().withMessage('Password is required.'),
   ],
   validate,
   async (req, res, next) => {
     try {
-      const { phone, password } = req.body
+      const { identifier, password } = req.body
+
+      // Detect whether identifier looks like an email
+      const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)
 
       const result = await query(
-        'SELECT id, name, phone, role, password_hash, wallet_balance FROM users WHERE phone = $1 AND is_active = true',
-        [phone]
+        `SELECT id, name, email, phone, role, password_hash, wallet_balance, rating, can_ride, can_drive, active_role, force_password_change
+         FROM users
+         WHERE ${isEmail ? 'email = $1' : 'phone = $1'} AND is_active = true`,
+        [isEmail ? identifier.toLowerCase().trim() : identifier.trim()]
       )
 
       const user = result.rows[0]
@@ -494,8 +577,14 @@ router.post('/login',
       const dummyHash = '$2a$12$dummyhashtopreventtimingattacksonnonexistentusers.......'
       const match = await bcrypt.compare(password, user?.password_hash || dummyHash)
 
-      if (!user || !match) {
-        return res.status(401).json({ message: 'Incorrect phone number or password.' })
+      if (!user) {
+        return res.status(401).json({ message: isEmail
+          ? 'No account found with that email address.'
+          : 'No account found with that phone number.'
+        })
+      }
+      if (!match) {
+        return res.status(401).json({ message: 'Incorrect password. Please try again.' })
       }
 
       const token = signToken(user)
@@ -508,13 +597,43 @@ router.post('/login',
 router.get('/me', requireAuth, async (req, res, next) => {
   try {
     const result = await query(
-      'SELECT id, name, phone, role, wallet_balance, rating FROM users WHERE id = $1',
+      'SELECT id, name, email, phone, role, wallet_balance, rating, can_ride, can_drive, active_role, force_password_change FROM users WHERE id = $1',
       [req.user.id]
     )
     if (!result.rows[0]) return res.status(404).json({ message: 'User not found.' })
     res.json({ user: safeUser(result.rows[0]) })
   } catch (err) { next(err) }
 })
+
+// ── Change password (also clears the forced first-login reset flag) ──────────
+router.post('/change-password',
+  requireAuth,
+  [
+    body('currentPassword').notEmpty().withMessage('Current password is required.'),
+    body('newPassword').isLength({ min: 8 }).matches(/[A-Z]/).matches(/[0-9]/)
+      .withMessage('New password must be at least 8 characters with 1 uppercase letter and 1 number.'),
+  ],
+  validate,
+  async (req, res, next) => {
+    try {
+      const { currentPassword, newPassword } = req.body
+
+      const result = await query('SELECT password_hash FROM users WHERE id = $1', [req.user.id])
+      const user = result.rows[0]
+      if (!user) return res.status(404).json({ message: 'User not found.' })
+
+      const match = await bcrypt.compare(currentPassword, user.password_hash)
+      if (!match) return res.status(401).json({ message: 'Current password is incorrect.' })
+
+      const newHash = await bcrypt.hash(newPassword, SALT_ROUNDS)
+      await query(
+        'UPDATE users SET password_hash = $1, force_password_change = false WHERE id = $2',
+        [newHash, req.user.id]
+      )
+      res.json({ message: 'Password updated.' })
+    } catch (err) { next(err) }
+  }
+)
 
 // ── Update profile ────────────────────────────────────────────────────────────
 router.patch('/profile',
@@ -543,22 +662,151 @@ router.post('/forgot-password',
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function signToken(user) {
   return jwt.sign(
-    { id: user.id, role: user.role },
+    { id: user.id, role: user.active_role || user.role },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d', algorithm: 'HS256' }
   )
 }
 
 function safeUser(user) {
-  // Minimum data returned — principle of least privilege
+  const activeRole = user.active_role || user.role || 'rider'
   return {
     id:            user.id,
     name:          user.name,
+    email:         user.email || null,
     phone:         user.phone,
-    role:          user.role,
-    walletBalance: Math.round((user.wallet_balance || 0) / 100), // kobo → naira
+    role:          activeRole,           // current active mode
+    activeRole,
+    canRide:       user.can_ride  ?? true,
+    canDrive:      user.can_drive ?? false,
+    walletBalance: Math.round((user.wallet_balance || 0) / 100),
     rating:        user.rating,
+    forcePasswordChange: user.force_password_change ?? false,
   }
 }
+
+// ── Switch active role (rider ↔ driver) ──────────────────────────────────────
+router.post('/switch-role', requireAuth, async (req, res, next) => {
+  try {
+    const { role } = req.body
+    if (!['rider', 'driver'].includes(role)) {
+      return res.status(400).json({ message: 'Invalid role.' })
+    }
+
+    // Verify user actually has this role enabled
+    const check = await query(
+      'SELECT can_ride, can_drive FROM users WHERE id = $1',
+      [req.user.id]
+    )
+    const u = check.rows[0]
+    if (!u) return res.status(404).json({ message: 'User not found.' })
+    if (role === 'driver' && !u.can_drive) {
+      return res.status(403).json({ message: 'You have not registered as a driver yet.' })
+    }
+    if (role === 'rider' && !u.can_ride) {
+      return res.status(403).json({ message: 'You have not registered as a rider yet.' })
+    }
+
+    const result = await query(
+      `UPDATE users SET active_role = $1 WHERE id = $2
+       RETURNING id, name, email, phone, role, wallet_balance, rating, can_ride, can_drive, active_role`,
+      [role, req.user.id]
+    )
+    // Re-issue the token — it embeds the active role, which just changed
+    const token = signToken(result.rows[0])
+    res.json({ token, user: safeUser(result.rows[0]) })
+  } catch (err) { next(err) }
+})
+
+// ── Add second role (e.g., rider adds driver profile) ────────────────────────
+router.post('/add-role', requireAuth,
+  [body('role').isIn(['rider', 'driver']).withMessage('Invalid role.')],
+  validate,
+  async (req, res, next) => {
+    try {
+      const { role } = req.body
+
+      const column = role === 'driver' ? 'can_drive' : 'can_ride'
+      const result = await query(
+        `UPDATE users SET ${column} = true, active_role = $1
+         WHERE id = $2 AND is_active = true
+         RETURNING id, name, email, phone, role, wallet_balance, rating, can_ride, can_drive, active_role`,
+        [role, req.user.id]
+      )
+      if (!result.rows[0]) return res.status(404).json({ message: 'User not found.' })
+      // Re-issue the token — it embeds the active role, which just changed
+      const token = signToken(result.rows[0])
+      res.json({ token, user: safeUser(result.rows[0]) })
+    } catch (err) { next(err) }
+  }
+)
+
+// ── ID Verification via Prembly Identitypass ─────────────────────────────────
+//
+// Security:
+//   • API keys never leave the server
+//   • Rate limited at auth limiter level (10 req / 15 min per IP)
+//   • Only accepts known ID types — no open-ended proxy
+//   • Returns only verified boolean + name — never raw Prembly payload
+//
+const PREMBLY_BASE   = 'https://api.prembly.com/identitypass/verification'
+const PREMBLY_ROUTES = {
+  'National ID (NIN)': { path: '/nin',             field: 'number' },
+  "Driver's License":  { path: '/drivers_license', field: 'number' },
+  "Voter's Card":      { path: '/voters_card',      field: 'number' },
+}
+
+router.post('/verify-id',
+  [
+    body('idType').isIn(Object.keys(PREMBLY_ROUTES)).withMessage('Invalid ID type.'),
+    body('idNumber').trim().notEmpty().withMessage('ID number is required.'),
+  ],
+  validate,
+  async (req, res, next) => {
+    try {
+      const { idType, idNumber } = req.body
+
+      const apiKey = process.env.PREMBLY_API_KEY
+      const appId  = process.env.PREMBLY_APP_ID
+
+      if (!apiKey || !appId) {
+        return res.status(503).json({ message: 'ID verification service is not configured yet.' })
+      }
+
+      const route = PREMBLY_ROUTES[idType]
+
+      const premblyRes = await axios.post(
+        `${PREMBLY_BASE}${route.path}`,
+        { [route.field]: idNumber.replace(/\s/g, '') },
+        {
+          headers: {
+            'x-api-key': apiKey,
+            'app-id':    appId,
+            'Content-Type': 'application/json',
+          },
+          timeout: 15000,
+        }
+      )
+
+      const data = premblyRes.data
+
+      // Prembly returns { status: true, response_code: '00', ... } on success
+      const verified = data?.status === true && data?.response_code === '00'
+
+      // Return only the minimum needed — never forward full Prembly payload
+      return res.json({
+        verified,
+        name: verified ? (data?.nin_data?.full_name || data?.license_data?.full_name || data?.voter_data?.full_name || null) : null,
+        message: verified ? 'ID verified successfully.' : 'Could not verify this ID. Please check the number and try again.',
+      })
+    } catch (err) {
+      // Prembly 4xx means ID not found / invalid
+      if (err.response?.status === 400 || err.response?.status === 404) {
+        return res.status(200).json({ verified: false, name: null, message: 'ID not found. Please check the number and try again.' })
+      }
+      next(err)
+    }
+  }
+)
 
 module.exports = router

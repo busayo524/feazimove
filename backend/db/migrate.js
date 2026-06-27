@@ -72,6 +72,20 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified     BOOLEAN     NOT NU
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_pending         BOOLEAN     NOT NULL DEFAULT true;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS registration_token TEXT        UNIQUE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS reg_token_expires  TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_online           BOOLEAN     NOT NULL DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS force_password_change BOOLEAN   NOT NULL DEFAULT false;
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS id_type        VARCHAR(40);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS id_number      VARCHAR(40);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS vehicle_type   VARCHAR(30);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS vehicle_make   VARCHAR(50);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS vehicle_model  VARCHAR(50);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS plate_number   VARCHAR(20);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS vehicle_year   SMALLINT;
+
+-- Admin is a third account type alongside rider/driver — widen the role check
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('rider','driver','admin'));
 
 -- ── Email OTPs — hashed, expiring, single-use ─────────────────────────────────
 -- Security: we store a bcrypt hash of the OTP, never the raw value.
@@ -88,6 +102,27 @@ CREATE TABLE IF NOT EXISTS email_otps (
 
 CREATE INDEX IF NOT EXISTS idx_otps_user_id ON email_otps(user_id);
 CREATE INDEX IF NOT EXISTS idx_otps_expires ON email_otps(expires_at);
+
+-- ── In-ride chat messages — between the rider and driver of a single ride ────
+CREATE TABLE IF NOT EXISTS ride_messages (
+  id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  ride_id     UUID        NOT NULL REFERENCES rides(id) ON DELETE CASCADE,
+  sender_id   UUID        NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+  body        VARCHAR(1000) NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_ride_messages_ride ON ride_messages(ride_id, created_at);
+
+-- Documents uploaded at registration (ID, selfie, vehicle docs, etc.)
+CREATE TABLE IF NOT EXISTS user_documents (
+  id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  doc_type    VARCHAR(30) NOT NULL,
+  file_path   TEXT        NOT NULL,
+  uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_user_documents_user ON user_documents(user_id);
 `
 
 ;(async () => {

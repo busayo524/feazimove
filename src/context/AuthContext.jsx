@@ -3,6 +3,18 @@ import { api } from '../services/api'
 
 const AuthContext = createContext(null)
 
+// Split "Full Name" → { firstName, lastName } for UI components that expect separate fields
+function normalizeUser(user) {
+  if (!user) return null
+  if (user.firstName) return user  // already split
+  const parts = (user.name || '').trim().split(/\s+/)
+  return {
+    ...user,
+    firstName: parts[0] || '',
+    lastName:  parts.slice(1).join(' ') || '',
+  }
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -11,7 +23,7 @@ export function AuthProvider({ children }) {
     const token = localStorage.getItem('fm_token')
     if (!token) { setLoading(false); return }
     api.get('/auth/me')
-      .then(res => setUser(res.data.user))
+      .then(res => setUser(normalizeUser(res.data.user)))
       .catch(() => {
         localStorage.removeItem('fm_token')
         localStorage.removeItem('fm_user')
@@ -19,22 +31,42 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false))
   }, [])
 
-  const login = useCallback(async (phone, password) => {
-    const res = await api.post('/auth/login', { phone, password })
+  const login = useCallback(async (identifier, password) => {
+    const res = await api.post('/auth/login', { identifier, password })
     const { token, user } = res.data
+    const normalized = normalizeUser(user)
     localStorage.setItem('fm_token', token)
-    localStorage.setItem('fm_user', JSON.stringify(user))
-    setUser(user)
-    return user
+    localStorage.setItem('fm_user', JSON.stringify(normalized))
+    setUser(normalized)
+    return normalized
   }, [])
 
   const register = useCallback(async (data) => {
     const res = await api.post('/auth/register', data)
     const { token, user } = res.data
+    const normalized = normalizeUser(user)
     localStorage.setItem('fm_token', token)
-    localStorage.setItem('fm_user', JSON.stringify(user))
-    setUser(user)
-    return user
+    localStorage.setItem('fm_user', JSON.stringify(normalized))
+    setUser(normalized)
+    return normalized
+  }, [])
+
+  const switchRole = useCallback(async (role) => {
+    const res = await api.post('/auth/switch-role', { role })
+    const normalized = normalizeUser(res.data.user)
+    if (res.data.token) localStorage.setItem('fm_token', res.data.token)
+    localStorage.setItem('fm_user', JSON.stringify(normalized))
+    setUser(normalized)
+    return normalized
+  }, [])
+
+  const addRole = useCallback(async (role) => {
+    const res = await api.post('/auth/add-role', { role })
+    const normalized = normalizeUser(res.data.user)
+    if (res.data.token) localStorage.setItem('fm_token', res.data.token)
+    localStorage.setItem('fm_user', JSON.stringify(normalized))
+    setUser(normalized)
+    return normalized
   }, [])
 
   const logout = useCallback(() => {
@@ -52,7 +84,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, updateUser, switchRole, addRole }}>
       {children}
     </AuthContext.Provider>
   )

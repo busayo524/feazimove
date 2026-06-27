@@ -48,7 +48,7 @@ const DISCLAIMER = `
             &nbsp;|&nbsp; 🌐 <a href="https://feazimove.com" style="color:#2a6048;">www.feazimove.com</a>
           </p>
           <p style="margin:0;font-size:11px;color:#888;line-height:1.7;border-top:1px solid #eeeeee;padding-top:12px;">
-            <strong>FeaziMove Disclaimer and Confidentiality Notice:</strong> This e-mail and any attachments are confidential and intended solely for the addressee. If you have received this e-mail in error, please notify the sender immediately and delete it. Do not disclose or use the contents in any way. FeaziMove does not warrant that this email is free from errors, viruses, or interference, and accepts no liability for any loss or damage arising from its use or transmission. Views expressed are those of the sender and do not necessarily represent those of FeaziMove Ltd.
+            <strong>FeaziMove Disclaimer and Confidentiality Notice:</strong> This e-mail and any attachments are confidential and intended solely for the addressee. If you have received this e-mail in error, please notify the sender immediately and delete it. Do not disclose or use the contents in any way. FeaziMove does not warrant that this email is free from errors, viruses, or interference, and accepts no liability for any loss or damage arising from its use or transmission. Views expressed are those of the sender and do not necessarily represent those of FeaziMove Technologies Ltd.
           </p>
         </td></tr>
       </table>
@@ -72,42 +72,25 @@ function emailShell(headerAccentColor = '#2a6048', bodyHtml) {
   <title>FeaziMove</title>
 </head>
 <body style="margin:0;padding:0;background:#f0f0f0;font-family:Arial,Helvetica,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f0f0;padding:32px 0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f0f0;padding:40px 0;">
     <tr>
       <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;">
+        <table width="680" cellpadding="0" cellspacing="0" style="max-width:680px;width:100%;background:#ffffff;">
 
           <!-- Top accent bar -->
           <tr>
-            <td style="background:#ccff00;height:5px;font-size:0;">&nbsp;</td>
+            <td style="background:#ccff00;height:6px;font-size:0;">&nbsp;</td>
           </tr>
 
-          <!-- Header: logo + timestamp -->
+          <!-- Header: wordmark + timestamp -->
           <tr>
-            <td style="padding:20px 32px;border-bottom:1px solid #eeeeee;">
+            <td style="padding:26px 40px;border-bottom:1px solid #eeeeee;">
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td valign="middle">
-                    <!-- Favicon-style icon -->
-                    <table cellpadding="0" cellspacing="0" style="display:inline-table;vertical-align:middle;">
-                      <tr>
-                        <td style="background:#ccff00;border-radius:8px;width:40px;height:40px;text-align:center;vertical-align:middle;">
-                          <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
-                            <tr><td style="height:3px;width:22px;background:#0a1f15;border-radius:2px;display:block;">&nbsp;</td></tr>
-                            <tr><td style="height:3px;">&nbsp;</td></tr>
-                            <tr><td style="height:3px;width:22px;background:#0a1f15;border-radius:2px;display:block;">&nbsp;</td></tr>
-                            <tr><td style="height:3px;">&nbsp;</td></tr>
-                            <tr><td style="height:3px;width:16px;background:#0a1f15;border-radius:2px;display:block;">&nbsp;</td></tr>
-                          </table>
-                        </td>
-                        <td style="width:10px;">&nbsp;</td>
-                        <td valign="middle">
-                          <span style="font-size:22px;font-weight:400;color:#0a1f15;letter-spacing:-0.5px;font-family:Arial,sans-serif;">Feazi</span><span style="font-size:22px;font-weight:900;color:#0a1f15;letter-spacing:-0.5px;font-family:Arial,sans-serif;">Move</span>
-                        </td>
-                      </tr>
-                    </table>
+                    <span style="font-size:26px;font-weight:400;color:#0a1f15;letter-spacing:-0.5px;font-family:Arial,sans-serif;">Feazi</span><span style="font-size:26px;font-weight:900;color:#0a1f15;letter-spacing:-0.5px;font-family:Arial,sans-serif;">Move</span>
                   </td>
-                  <td align="right" style="font-size:11px;color:#999;">${now} (WAT)</td>
+                  <td align="right" style="font-size:13px;color:#999;">${now} (WAT)</td>
                 </tr>
               </table>
             </td>
@@ -115,14 +98,14 @@ function emailShell(headerAccentColor = '#2a6048', bodyHtml) {
 
           <!-- Body -->
           <tr>
-            <td style="padding:32px 32px 24px;">
+            <td style="padding:40px 40px 28px;">
               ${bodyHtml}
             </td>
           </tr>
 
           <!-- Disclaimer -->
           <tr>
-            <td style="padding:0 32px 32px;">
+            <td style="padding:0 40px 40px;">
               ${DISCLAIMER}
             </td>
           </tr>
@@ -130,10 +113,10 @@ function emailShell(headerAccentColor = '#2a6048', bodyHtml) {
         </table>
 
         <!-- Sub-footer -->
-        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;padding:16px 0;">
+        <table width="680" cellpadding="0" cellspacing="0" style="max-width:680px;width:100%;padding:18px 0;">
           <tr>
-            <td align="center" style="font-size:11px;color:#aaa;">
-              © ${new Date().getFullYear()} FeaziMove Ltd. | Making Mobility Feasible. Making Everyday Life Easy.
+            <td align="center" style="font-size:12px;color:#aaa;">
+              © ${new Date().getFullYear()} FeaziMove Technologies Ltd. | Making Mobility Feasible. Making Everyday Life Easy.
             </td>
           </tr>
         </table>
@@ -147,7 +130,7 @@ function emailShell(headerAccentColor = '#2a6048', bodyHtml) {
 
 // ── OTP email ─────────────────────────────────────────────────────────────────
 async function sendOtpEmail(to, fullName, otp) {
-  const firstName = fullName.split(' ')[0]
+  const firstName = (fullName || '').split(' ')[0] || null
   const now = new Date().toLocaleString('en-NG', {
     timeZone: 'Africa/Lagos',
     day: '2-digit', month: '2-digit', year: 'numeric',
@@ -155,29 +138,29 @@ async function sendOtpEmail(to, fullName, otp) {
   })
 
   const body = `
-    <p style="margin:0 0 20px;font-size:15px;color:#222;">Dear ${firstName},</p>
+    <p style="margin:0 0 22px;font-size:17px;color:#222;">${firstName ? `Dear ${firstName},` : 'Hello,'}</p>
 
-    <p style="margin:0 0 16px;font-size:15px;color:#333;line-height:1.7;">
+    <p style="margin:0 0 18px;font-size:16px;color:#333;line-height:1.8;">
       We refer to your account verification request initiated on <strong>${now} (WAT)</strong>.
       Kindly find below the One-Time Password (OTP) required to complete the request:
     </p>
 
-    <p style="margin:24px 0;font-size:32px;font-weight:900;color:#0a1f15;letter-spacing:6px;text-align:center;">
+    <p style="margin:28px 0;font-size:42px;font-weight:900;color:#0a1f15;letter-spacing:10px;text-align:center;">
       ${otp}
     </p>
 
-    <p style="margin:0 0 16px;font-size:15px;color:#333;line-height:1.7;">
+    <p style="margin:0 0 18px;font-size:16px;color:#333;line-height:1.8;">
       This code expires in <strong>5 minutes</strong>. In the event that this request was not initiated by you, please contact our support team immediately via any of the channels listed below.
     </p>
 
-    <p style="margin:0 0 16px;font-size:15px;color:#333;line-height:1.7;">
+    <p style="margin:0 0 18px;font-size:16px;color:#333;line-height:1.8;">
       For your security, never share this code with anyone. FeaziMove staff will never ask for your OTP.
     </p>
 
-    <p style="margin:32px 0 8px;font-size:15px;color:#333;">Best Regards,</p>
-    <p style="margin:0 0 4px;font-size:15px;font-weight:700;color:#0a1f15;">The FeaziMove Team</p>
-    <p style="margin:0;font-size:13px;color:#666;">
-      FeaziMove Ltd. | Lagos, Nigeria<br/>
+    <p style="margin:36px 0 8px;font-size:16px;color:#333;">Best Regards,</p>
+    <p style="margin:0 0 4px;font-size:16px;font-weight:700;color:#0a1f15;">The FeaziMove Team</p>
+    <p style="margin:0;font-size:14px;color:#666;">
+      FeaziMove Technologies Ltd. | Lagos, Nigeria<br/>
       📧 <a href="mailto:support@feazimove.com" style="color:#2a6048;">support@feazimove.com</a>
       &nbsp;|&nbsp; 🌐 <a href="https://feazimove.com" style="color:#2a6048;">www.feazimove.com</a>
     </p>
@@ -259,7 +242,7 @@ async function sendRegistrationLink(to, fullName, token, role) {
     <p style="margin:0 0 4px;font-size:15px;color:#333;">Best Regards,</p>
     <p style="margin:0 0 4px;font-size:15px;font-weight:700;color:#0a1f15;">The FeaziMove Team</p>
     <p style="margin:0;font-size:13px;color:#666;">
-      FeaziMove Ltd. | Lagos, Nigeria<br/>
+      FeaziMove Technologies Ltd. | Lagos, Nigeria<br/>
       📧 <a href="mailto:support@feazimove.com" style="color:#2a6048;">support@feazimove.com</a>
       &nbsp;|&nbsp; 🌐 <a href="https://feazimove.com" style="color:#2a6048;">www.feazimove.com</a>
     </p>
@@ -272,4 +255,103 @@ async function sendRegistrationLink(to, fullName, token, role) {
   })
 }
 
-module.exports = { generateOtp, sendOtpEmail, sendRegistrationLink }
+// ── Welcome email — sent once profile is complete ─────────────────────────────
+async function sendWelcomeEmail(to, fullName, role) {
+  const firstName = (fullName || '').split(' ')[0] || 'there'
+  const isDriver  = role === 'driver'
+  const roleLabel = isDriver ? 'Driver' : 'Rider'
+  const APP_URL   = process.env.APP_URL || 'http://localhost:5173'
+  const dashLink  = isDriver ? `${APP_URL}/driver` : `${APP_URL}/book`
+
+  const body = `
+    <!-- Hero block -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:32px;">
+      <tr>
+        <td style="background:#0a1f15;border-radius:12px;padding:32px 28px;text-align:center;">
+          <p style="margin:0 0 8px;font-size:36px;letter-spacing:2px;">🎉</p>
+          <p style="margin:0 0 6px;font-size:22px;font-weight:900;color:#ccff00;font-family:Arial,sans-serif;">
+            Welcome to FeaziMove, ${firstName}!
+          </p>
+          <p style="margin:0;font-size:15px;color:#a0c4a0;line-height:1.6;">
+            Your ${roleLabel} profile is complete. You're all set to go.
+          </p>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin:0 0 20px;font-size:17px;color:#222;">Dear ${firstName},</p>
+
+    <p style="margin:0 0 20px;font-size:16px;color:#333;line-height:1.8;">
+      We're thrilled to have you on board. Your <strong>FeaziMove ${roleLabel}</strong> account is now active and ready to use.
+      ${isDriver
+        ? 'You can now go online, accept rides, and start earning — the Feazi Way.'
+        : 'You can now book rides and send packages — making everyday movement feasible, easy, and affordable.'}
+    </p>
+
+    ${isDriver ? `
+    <!-- Driver quick-start -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+      <tr>
+        <td style="background:#f8fdf9;border:1.5px solid #d4f5df;border-radius:10px;padding:22px 24px;">
+          <p style="margin:0 0 14px;font-size:12px;font-weight:700;color:#2a6048;text-transform:uppercase;letter-spacing:0.08em;">Getting started as a Driver</p>
+          <p style="margin:0 0 10px;font-size:15px;color:#333;">🟢 <strong>Go Online</strong> — Open your driver dashboard and set yourself as available</p>
+          <p style="margin:0 0 10px;font-size:15px;color:#333;">📍 <strong>Accept Rides</strong> — Pick up riders along your route and earn per trip</p>
+          <p style="margin:0 0 10px;font-size:15px;color:#333;">💰 <strong>Track Earnings</strong> — View your daily earnings and payout history</p>
+          <p style="margin:0;font-size:15px;color:#333;">⭐ <strong>Build Your Rating</strong> — Great service earns great ratings and more bookings</p>
+        </td>
+      </tr>
+    </table>
+    ` : `
+    <!-- Rider quick-start -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+      <tr>
+        <td style="background:#f8fdf9;border:1.5px solid #d4f5df;border-radius:10px;padding:22px 24px;">
+          <p style="margin:0 0 14px;font-size:12px;font-weight:700;color:#2a6048;text-transform:uppercase;letter-spacing:0.08em;">Getting started as a Rider</p>
+          <p style="margin:0 0 10px;font-size:15px;color:#333;">🚗 <strong>Book a Ride</strong> — Enter your pickup and destination to find available drivers</p>
+          <p style="margin:0 0 10px;font-size:15px;color:#333;">📦 <strong>Send a Package</strong> — Ship goods along shared routes quickly and affordably</p>
+          <p style="margin:0 0 10px;font-size:15px;color:#333;">💳 <strong>Fund Your Wallet</strong> — Top up your FeaziMove wallet for seamless payments</p>
+          <p style="margin:0;font-size:15px;color:#333;">⭐ <strong>Rate Your Trip</strong> — Your feedback helps keep FeaziMove safe and reliable</p>
+        </td>
+      </tr>
+    </table>
+    `}
+
+    <!-- CTA Button -->
+    <table cellpadding="0" cellspacing="0" style="margin:0 0 32px;">
+      <tr>
+        <td style="background:#ccff00;border-radius:50px;">
+          <a href="${dashLink}" style="display:inline-block;padding:15px 40px;font-size:16px;font-weight:900;color:#0a1f15;text-decoration:none;letter-spacing:-0.2px;">
+            ${isDriver ? 'Go to Driver Dashboard →' : 'Book Your First Ride →'}
+          </a>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Brand tagline -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+      <tr>
+        <td style="border-left:4px solid #ccff00;padding:10px 18px;">
+          <p style="margin:0;font-size:14px;color:#555;font-style:italic;line-height:1.7;">
+            "Making Mobility Feasible. Making Everyday Life Easy." — <strong>It's Feazi.</strong>
+          </p>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin:0 0 6px;font-size:16px;color:#333;">Warm regards,</p>
+    <p style="margin:0 0 4px;font-size:16px;font-weight:700;color:#0a1f15;">The FeaziMove Team</p>
+    <p style="margin:0;font-size:14px;color:#666;">
+      FeaziMove Technologies Ltd. | Lagos, Nigeria<br/>
+      📧 <a href="mailto:support@feazimove.com" style="color:#2a6048;">support@feazimove.com</a>
+      &nbsp;|&nbsp; 🌐 <a href="https://feazimove.com" style="color:#2a6048;">www.feazimove.com</a>
+    </p>
+  `
+
+  await sendEmail({
+    to,
+    subject: `Welcome to FeaziMove, ${firstName}! Your ${roleLabel} account is ready 🎉`,
+    html: emailShell('#2a6048', body),
+  })
+}
+
+module.exports = { generateOtp, sendOtpEmail, sendRegistrationLink, sendWelcomeEmail }

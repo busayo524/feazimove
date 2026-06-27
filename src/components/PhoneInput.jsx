@@ -42,6 +42,15 @@ export default function PhoneInput({ value = '', onChange, error, disabled, focu
     return () => document.removeEventListener('mousedown', onOut)
   }, [])
 
+  // Re-sync when the value prop is populated asynchronously after mount
+  // (e.g. fetched from the server once a registration-link token validates).
+  useEffect(() => {
+    if (!value) return
+    const c = COUNTRIES.find(c => value.startsWith(c.dial)) || COUNTRIES[0]
+    setCountry(c)
+    setLocalNum(value.replace(c.dial, '').replace(/^0/, ''))
+  }, [value])
+
   function pick(c) { setCountry(c); setOpen(false); setSearch(''); fire(c, localNum) }
   function fire(c, n) { onChange(n ? `${c.dial}${n.replace(/^0/, '')}` : '') }
   function onNumChange(e) {

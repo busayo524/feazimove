@@ -1,5 +1,5 @@
 import React from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import { AuthProvider, useAuth } from './context/AuthContext'
 
@@ -41,21 +41,33 @@ import ForgotPassword  from './pages/auth/ForgotPassword'
 // ── Rider ─────────────────────────────────────────────────────────────────────
 import BookRide        from './pages/rider/BookRide'
 import TrackRide       from './pages/rider/TrackRide'
+import CurrentTrackedRide from './pages/rider/CurrentRide'
 import TripHistory     from './pages/rider/TripHistory'
 import SendPackage     from './pages/rider/SendPackage'
 import Wallet          from './pages/rider/Wallet'
 
 // ── Driver ────────────────────────────────────────────────────────────────────
-import DriverDashboard from './pages/driver/DriverDashboard'
-import ActiveRide      from './pages/driver/ActiveRide'
-import Earnings        from './pages/driver/Earnings'
+import DriverDashboard  from './pages/driver/DriverDashboard'
+import Earnings         from './pages/driver/Earnings'
+import DriverTripHistory from './pages/driver/TripHistory'
 
 // ── Shared ────────────────────────────────────────────────────────────────────
 import RateRide        from './pages/shared/RateRide'
 import Profile         from './pages/shared/Profile'
 
+// ── Admin ─────────────────────────────────────────────────────────────────────
+import AdminDashboard     from './pages/admin/AdminDashboard'
+import AdminRiders        from './pages/admin/AdminRiders'
+import AdminRiderDetail   from './pages/admin/AdminRiderDetail'
+import AdminDrivers       from './pages/admin/AdminDrivers'
+import AdminDriverDetail  from './pages/admin/AdminDriverDetail'
+import AdminRides         from './pages/admin/AdminRides'
+import AdminUsers         from './pages/admin/AdminUsers'
+import AdminSettings      from './pages/admin/AdminSettings'
+
 function ProtectedRoute({ children, requiredRole }) {
   const { user, loading } = useAuth()
+  const location = useLocation()
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg)' }}>
       <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--lime)', borderTopColor: 'transparent' }} />
@@ -63,6 +75,10 @@ function ProtectedRoute({ children, requiredRole }) {
   )
   if (!user) return <Navigate to="/login" replace />
   if (requiredRole && user.role !== requiredRole) return <Navigate to="/" replace />
+  // Admin must set their own password before touching anything else
+  if (user.role === 'admin' && user.forcePasswordChange && location.pathname !== '/admin/settings') {
+    return <Navigate to="/admin/settings" replace />
+  }
   return children
 }
 
@@ -96,6 +112,7 @@ export default function App() {
 
           {/* Rider */}
           <Route path="/book"          element={<ProtectedRoute requiredRole="rider"><BookRide /></ProtectedRoute>} />
+          <Route path="/track"         element={<ProtectedRoute requiredRole="rider"><CurrentTrackedRide /></ProtectedRoute>} />
           <Route path="/track/:rideId" element={<ProtectedRoute requiredRole="rider"><TrackRide /></ProtectedRoute>} />
           <Route path="/history"       element={<ProtectedRoute requiredRole="rider"><TripHistory /></ProtectedRoute>} />
           <Route path="/send"          element={<ProtectedRoute requiredRole="rider"><SendPackage /></ProtectedRoute>} />
@@ -104,11 +121,21 @@ export default function App() {
 
           {/* Driver */}
           <Route path="/driver"              element={<ProtectedRoute requiredRole="driver"><DriverDashboard /></ProtectedRoute>} />
-          <Route path="/driver/ride/:rideId" element={<ProtectedRoute requiredRole="driver"><ActiveRide /></ProtectedRoute>} />
           <Route path="/driver/earnings"     element={<ProtectedRoute requiredRole="driver"><Earnings /></ProtectedRoute>} />
+          <Route path="/driver/history"      element={<ProtectedRoute requiredRole="driver"><DriverTripHistory /></ProtectedRoute>} />
 
           {/* Shared */}
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+
+          {/* Admin */}
+          <Route path="/admin"                element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/admin/riders"         element={<ProtectedRoute requiredRole="admin"><AdminRiders /></ProtectedRoute>} />
+          <Route path="/admin/riders/:id"     element={<ProtectedRoute requiredRole="admin"><AdminRiderDetail /></ProtectedRoute>} />
+          <Route path="/admin/drivers"        element={<ProtectedRoute requiredRole="admin"><AdminDrivers /></ProtectedRoute>} />
+          <Route path="/admin/drivers/:id"    element={<ProtectedRoute requiredRole="admin"><AdminDriverDetail /></ProtectedRoute>} />
+          <Route path="/admin/rides"          element={<ProtectedRoute requiredRole="admin"><AdminRides /></ProtectedRoute>} />
+          <Route path="/admin/users"          element={<ProtectedRoute requiredRole="admin"><AdminUsers /></ProtectedRoute>} />
+          <Route path="/admin/settings"       element={<ProtectedRoute requiredRole="admin"><AdminSettings /></ProtectedRoute>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -62,12 +62,16 @@ export default function Login() {
     setLoading(true); setError('')
     try {
       const user = await login(identifier, password)
+      if (user.role === 'admin') {
+        navigate(user.forcePasswordChange ? '/admin/settings' : '/admin', { replace: true })
+        return
+      }
       if (from) { navigate(from, { replace: true }); return }
       navigate(user.role === 'driver' ? '/driver' : '/book', { replace: true })
     } catch (err) {
       setError(!err.status
         ? 'Cannot connect to server. Make sure the backend is running on port 4000.'
-        : err.data?.message || 'Incorrect email / phone or password.'
+        : err.data?.message || 'Something went wrong. Please try again.'
       )
     } finally { setLoading(false) }
   }

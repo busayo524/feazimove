@@ -9,6 +9,42 @@ const router = express.Router()
 // All ride routes require authentication
 router.use(requireAuth)
 
+// ── Rider registers their route intent for driver matching ────────────────────
+router.post('/book-intent',
+  [
+    body('period').isIn(['morning', 'evening']),
+    body('timeSlot').trim().notEmpty().isLength({ max: 20 }).escape(),
+    body('pickup').trim().notEmpty().isLength({ max: 100 }).escape(),
+    body('dropoff').trim().notEmpty().isLength({ max: 100 }).escape(),
+    body('service').isIn(['pool', 'solo']),
+  ],
+  validate,
+  async (req, res, next) => {
+    try {
+      const { period, timeSlot, pickup, dropoff, service } = req.body
+
+      if (pickup === dropoff) {
+        return res.status(422).json({ message: 'Pickup and drop-off cannot be the same.' })
+      }
+
+      // Cancel any existing pending intent for same period+slot (prevent duplicates)
+      await query(
+        `UPDATE rider_bookings SET status = 'cancelled'
+         WHERE rider_id = $1 AND status = 'pending' AND period = $2 AND time_slot = $3`,
+        [req.user.id, period, timeSlot]
+      )
+
+      const result = await query(
+        `INSERT INTO rider_bookings (rider_id, period, time_slot, pickup, dropoff, service)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+        [req.user.id, period, timeSlot, pickup, dropoff, service]
+      )
+
+      res.status(201).json({ bookingId: result.rows[0].id })
+    } catch (err) { next(err) }
+  }
+)
+
 // ── Book a ride ───────────────────────────────────────────────────────────────
 router.post('/',
   requireRole('rider'),
@@ -46,6 +82,20 @@ router.post('/',
   }
 )
 
+// ── Get my current active ride (driver or rider) ──────────────────────────────
+router.get('/me/active', async (req, res, next) => {
+  try {
+    const result = await query(
+      `SELECT id FROM rides
+        WHERE (rider_id = $1 OR driver_id = $1)
+          AND status IN ('pending', 'driver_assigned', 'arrived_pickup', 'in_transit')
+        ORDER BY created_at DESC LIMIT 1`,
+      [req.user.id]
+    )
+    res.json({ rideId: result.rows[0]?.id || null })
+  } catch (err) { next(err) }
+})
+
 // ── Get ride by ID ────────────────────────────────────────────────────────────
 router.get('/:rideId',
   [param('rideId').isUUID()],
@@ -54,9 +104,11 @@ router.get('/:rideId',
     try {
       const result = await query(
         `SELECT r.*,
-          u.name AS driver_name, u.phone AS driver_phone, u.rating AS driver_rating
+          ud.name AS driver_name, ud.phone AS driver_phone, ud.rating AS driver_rating,
+          ur.name AS rider_name,  ur.phone AS rider_phone,  ur.rating AS rider_rating
           FROM rides r
-          LEFT JOIN users u ON r.driver_id = u.id
+          LEFT JOIN users ud ON r.driver_id = ud.id
+          LEFT JOIN users ur ON r.rider_id  = ur.id
           WHERE r.id = $1 AND (r.rider_id = $2 OR r.driver_id = $2)`,
         [req.params.rideId, req.user.id]
       )
@@ -71,6 +123,11 @@ router.get('/:rideId',
             name:   row.driver_name,
             phone:  row.driver_phone,
             rating: row.driver_rating,
+          } : null,
+          rider: row.rider_name ? {
+            name:   row.rider_name,
+            phone:  row.rider_phone,
+            rating: row.rider_rating,
           } : null,
         },
       })
@@ -168,6 +225,74 @@ router.patch('/:rideId/status',
       }
 
       res.json({ message: 'Status updated.' })
+    } catch (err) { next(err) }
+  }
+)
+
+// ── Ride chat: list messages ──────────────────────────────────────────────────
+router.get('/:rideId/messages',
+  [param('rideId').isUUID()],
+  validate,
+  async (req, res, next) => {
+    try {
+      // Only a participant (rider or driver) on this ride may read its messages
+      const ride = await query(
+        'SELECT id FROM rides WHERE id = $1 AND (rider_id = $2 OR driver_id = $2)',
+        [req.params.rideId, req.user.id]
+      )
+      if (!ride.rows[0]) return res.status(404).json({ message: 'Ride not found.' })
+
+      const result = await query(
+        `SELECT m.id, m.sender_id, m.body, m.created_at
+          FROM ride_messages m
+          WHERE m.ride_id = $1
+          ORDER BY m.created_at ASC
+          LIMIT 200`,
+        [req.params.rideId]
+      )
+
+      res.json({
+        messages: result.rows.map(m => ({
+          id:       m.id,
+          body:     m.body,
+          mine:     m.sender_id === req.user.id,
+          time:     new Date(m.created_at).toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' }),
+        })),
+      })
+    } catch (err) { next(err) }
+  }
+)
+
+// ── Ride chat: send a message ─────────────────────────────────────────────────
+router.post('/:rideId/messages',
+  [
+    param('rideId').isUUID(),
+    body('body').trim().isLength({ min: 1, max: 1000 }),
+  ],
+  validate,
+  async (req, res, next) => {
+    try {
+      const ride = await query(
+        'SELECT id FROM rides WHERE id = $1 AND (rider_id = $2 OR driver_id = $2)',
+        [req.params.rideId, req.user.id]
+      )
+      if (!ride.rows[0]) return res.status(404).json({ message: 'Ride not found.' })
+
+      const result = await query(
+        `INSERT INTO ride_messages (ride_id, sender_id, body)
+          VALUES ($1, $2, $3) RETURNING id, body, created_at`,
+        [req.params.rideId, req.user.id, req.body.body]
+      )
+
+      const m = result.rows[0]
+      res.status(201).json({
+        message: {
+          id:   m.id,
+          body: m.body,
+          mine: true,
+          time: new Date(m.created_at).toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' }),
+        },
+      })
     } catch (err) { next(err) }
   }
 )

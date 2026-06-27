@@ -22,6 +22,32 @@ function maskEmail(e)     { return e.replace(/^(.)(.*)(@.*)$/, (_, a, b, c) => a
 function fmt(s)           { return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` }
 function sanitize(v)      { return v.replace(/[<>"'`]/g, '').trimStart() }
 
+/* ── Strong password generator ── */
+function generatePassword() {
+  const upper  = 'ABCDEFGHJKLMNPQRSTUVWXYZ'
+  const lower  = 'abcdefghjkmnpqrstuvwxyz'
+  const digits = '23456789'
+  const syms   = '@#$%&!'
+  const all    = upper + lower + digits + syms
+  // Guarantee at least one of each required character class
+  let pw = [
+    upper [Math.floor(Math.random() * upper.length)],
+    upper [Math.floor(Math.random() * upper.length)],
+    lower [Math.floor(Math.random() * lower.length)],
+    lower [Math.floor(Math.random() * lower.length)],
+    digits[Math.floor(Math.random() * digits.length)],
+    digits[Math.floor(Math.random() * digits.length)],
+    syms  [Math.floor(Math.random() * syms.length)],
+  ]
+  for (let i = 0; i < 7; i++) pw.push(all[Math.floor(Math.random() * all.length)])
+  // Fisher-Yates shuffle
+  for (let i = pw.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pw[i], pw[j]] = [pw[j], pw[i]]
+  }
+  return pw.join('')
+}
+
 function strength(p) {
   if (!p) return { pct: 0, label: '', color: '#e5e7eb' }
   let s = 0
@@ -48,6 +74,26 @@ export default function Signup() {
   const [formErr, setFormErr] = useState('')
   const [sending, setSending] = useState(false)
 
+  // Password suggestion
+  const [suggestedPw,    setSuggestedPw]    = useState(() => generatePassword())
+  const [showSuggestion, setShowSuggestion] = useState(false)
+  const suggRef = useRef()
+
+  // Close suggestion on outside click
+  useEffect(() => {
+    function onOut(e) { if (suggRef.current && !suggRef.current.contains(e.target)) setShowSuggestion(false) }
+    document.addEventListener('mousedown', onOut)
+    return () => document.removeEventListener('mousedown', onOut)
+  }, [])
+
+  function useSuggested() {
+    setForm(p => ({ ...p, password: suggestedPw, confirm: suggestedPw }))
+    setErrors(p => ({ ...p, password: '', confirm: '' }))
+    setShowPw(true)   // show the password so user can see / copy it
+    setShowSuggestion(false)
+  }
+  function refreshSuggestion() { setSuggestedPw(generatePassword()) }
+
   const [userId,      setUserId]      = useState(null)
   const [maskedEmail, setMaskedEmail] = useState('')
   const [digits,      setDigits]      = useState(['', '', '', '', '', ''])
@@ -71,7 +117,6 @@ export default function Signup() {
 
   function validate() {
     const e = {}
-    if (!form.name || form.name.length < 2) e.name     = 'Enter your full name.'
     if (!validEmail(form.email))            e.email    = 'Enter a valid email address.'
     if (!validPhone(form.phone))            e.phone    = 'Enter a valid phone number with country code.'
     if (!validPassword(form.password))      e.password = 'Min 8 chars, 1 uppercase, 1 number.'
@@ -244,20 +289,6 @@ export default function Signup() {
         <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 2px 24px rgba(0,0,0,0.08)', padding: 'clamp(36px,5vw,52px)', width: '100%', maxWidth: 520 }}>
           <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-            {/* Full Name */}
-            <div>
-              <label style={labelStyle}>Full Name</label>
-              <input
-                type="text" value={form.name} placeholder="Adaeze Okonkwo"
-                autoComplete="name"
-                onChange={e => set('name', e.target.value)}
-                style={{ ...inputStyle, borderColor: errors.name ? '#ef4444' : '#e0e0e0' }}
-                onFocus={e => e.target.style.borderColor = NEON}
-                onBlur={e  => e.target.style.borderColor = errors.name ? '#ef4444' : '#e0e0e0'}
-              />
-              {errors.name && <Err msg={errors.name} />}
-            </div>
-
             {/* Email */}
             <div>
               <label style={labelStyle}>Email Address</label>
@@ -288,17 +319,18 @@ export default function Signup() {
             </div>
 
             {/* Password */}
-            <div>
+            <div ref={suggRef} style={{ position: 'relative' }}>
               <label style={labelStyle}>Password</label>
+
               <div style={{ position: 'relative' }}>
                 <input
                   type={showPw ? 'text' : 'password'}
                   value={form.password} placeholder="Min 8 chars, 1 uppercase, 1 number"
                   autoComplete="new-password"
                   onChange={e => set('password', e.target.value)}
-                  style={{ ...inputStyle, paddingRight: 46, borderColor: errors.password ? '#ef4444' : '#e0e0e0' }}
-                  onFocus={e => e.target.style.borderColor = NEON}
+                  onFocus={e => { e.target.style.borderColor = NEON; if (!form.password) setShowSuggestion(true) }}
                   onBlur={e  => e.target.style.borderColor = errors.password ? '#ef4444' : '#e0e0e0'}
+                  style={{ ...inputStyle, paddingRight: 46, borderColor: errors.password ? '#ef4444' : '#e0e0e0' }}
                 />
                 <button type="button" onClick={() => setShowPw(s => !s)}
                   style={{ position: 'absolute', right: 13, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 0 }}
@@ -306,6 +338,58 @@ export default function Signup() {
                   {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+
+              {/* Google-style suggestion popup — appears on focus */}
+              {showSuggestion && (
+                <div style={{
+                  position: 'absolute', top: 'calc(100% - 30px)', left: 0, zIndex: 9999,
+                  background: '#fff', borderRadius: 12,
+                  boxShadow: '0 2px 10px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.08)',
+                  width: '100%', overflow: 'hidden',
+                }}>
+                  {/* Use suggested password row */}
+                  <button type="button" onClick={useSuggested}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      width: '100%', padding: '12px 16px', background: 'none',
+                      border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
+                      borderBottom: '1px solid #f0f0f0',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#f5f5f5'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                  >
+                    <GoogleIcon />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>Use suggested password</p>
+                      <p style={{ margin: '1px 0 0', fontSize: 12, color: '#888', fontFamily: 'monospace', letterSpacing: '0.04em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {suggestedPw}
+                      </p>
+                    </div>
+                    <button type="button" onClick={e => { e.stopPropagation(); refreshSuggestion() }}
+                      title="Generate new"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 4, flexShrink: 0, display: 'flex', borderRadius: 4 }}>
+                      <RefreshCw size={13} />
+                    </button>
+                  </button>
+
+                  {/* Choose my own row */}
+                  <button type="button" onClick={() => setShowSuggestion(false)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      width: '100%', padding: '11px 16px', background: 'none',
+                      border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#f5f5f5'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                  >
+                    <div style={{ width: 18, height: 18, borderRadius: '50%', border: '2px solid #dadce0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Eye size={10} color="#888" />
+                    </div>
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>Choose my own password</p>
+                  </button>
+                </div>
+              )}
+
               {form.password && (
                 <div style={{ marginTop: 8 }}>
                   <div style={{ height: 4, borderRadius: 99, background: '#e5e7eb', overflow: 'hidden' }}>
