@@ -14,6 +14,7 @@ const rideRoutes   = require('./routes/rides')
 const walletRoutes = require('./routes/wallet')
 const driverRoutes = require('./routes/driver')
 const adminRoutes  = require('./routes/admin')
+const routesCatalog = require('./routes/routes')
 
 const app  = express()
 const PORT = process.env.PORT || 4000
@@ -190,6 +191,43 @@ async function runMigrations() {
     );
     CREATE INDEX IF NOT EXISTS idx_payouts_driver ON payout_requests(driver_id);
     CREATE INDEX IF NOT EXISTS idx_payouts_status ON payout_requests(status);
+
+    -- Named locations (the vocabulary admin manages — adding a stop here doesn't
+    -- make it bookable on its own; a priced "routes" row using it does).
+    CREATE TABLE IF NOT EXISTS stops (
+      id             UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+      name           VARCHAR(100) UNIQUE NOT NULL,
+      group_name     VARCHAR(10)  NOT NULL CHECK (group_name IN ('mainland','island')),
+      chain_position SMALLINT     NOT NULL,
+      lat            NUMERIC(9,6),
+      lng            NUMERIC(9,6),
+      is_active      BOOLEAN      NOT NULL DEFAULT true,
+      created_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+      UNIQUE (group_name, chain_position)
+    );
+
+    -- Priced pickup -> dropoff pairs — the actual source of truth for what's
+    -- bookable. FK on stop name (not id) so a rename cascades automatically and
+    -- a stop still used by an active route can't be deleted out from under it.
+    CREATE TABLE IF NOT EXISTS routes (
+      id              UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+      period          VARCHAR(10)  NOT NULL CHECK (period IN ('morning','evening')),
+      pickup          VARCHAR(100) NOT NULL REFERENCES stops(name) ON UPDATE CASCADE ON DELETE RESTRICT,
+      dropoff         VARCHAR(100) NOT NULL REFERENCES stops(name) ON UPDATE CASCADE ON DELETE RESTRICT,
+      pool_fare_kobo  BIGINT       NOT NULL,
+      solo_fare_kobo  BIGINT       NOT NULL,
+      is_active       BOOLEAN      NOT NULL DEFAULT true,
+      updated_by      UUID         REFERENCES users(id) ON DELETE SET NULL,
+      updated_at      TIMESTAMPTZ,
+      created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+      UNIQUE (period, pickup, dropoff)
+    );
+    CREATE INDEX IF NOT EXISTS idx_routes_period ON routes(period, is_active);
+
+    -- Fare is quoted and locked in at booking time, not re-looked-up at
+    -- confirmation time, so a later admin price edit never silently changes
+    -- what an already-matched rider is charged.
+    ALTER TABLE rider_bookings ADD COLUMN IF NOT EXISTS quoted_fare_kobo BIGINT;
   `
   try {
     await pool.query(migrations)
@@ -258,6 +296,7 @@ app.use('/api/rides',  rideRoutes)
 app.use('/api/wallet', walletRoutes)
 app.use('/api/driver', driverRoutes)
 app.use('/api/admin',  adminRoutes)
+app.use('/api/routes', routesCatalog)
 
 // ── Health check (public, no sensitive info) ─────────────────────────────────
 app.get('/health', (_, res) => res.json({ status: 'ok' }))

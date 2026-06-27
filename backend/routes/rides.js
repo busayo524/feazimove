@@ -27,6 +27,21 @@ router.post('/book-intent',
         return res.status(422).json({ message: 'Pickup and drop-off cannot be the same.' })
       }
 
+      // Look up the active, priced route for this exact pair — this both
+      // validates the pickup/dropoff (previously unchecked) and gives us the
+      // fare to quote. The fare is locked in now, not re-looked-up later, so
+      // an admin price edit after this point never changes what's charged.
+      const routeRes = await query(
+        `SELECT pool_fare_kobo, solo_fare_kobo FROM routes
+         WHERE period = $1 AND pickup = $2 AND dropoff = $3 AND is_active = true`,
+        [period, pickup, dropoff]
+      )
+      const route = routeRes.rows[0]
+      if (!route) {
+        return res.status(422).json({ message: 'That route is not currently available.' })
+      }
+      const quotedFareKobo = service === 'solo' ? route.solo_fare_kobo : route.pool_fare_kobo
+
       // Cancel any existing pending intent for same period+slot (prevent duplicates)
       await query(
         `UPDATE rider_bookings SET status = 'cancelled'
@@ -35,49 +50,12 @@ router.post('/book-intent',
       )
 
       const result = await query(
-        `INSERT INTO rider_bookings (rider_id, period, time_slot, pickup, dropoff, service)
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-        [req.user.id, period, timeSlot, pickup, dropoff, service]
+        `INSERT INTO rider_bookings (rider_id, period, time_slot, pickup, dropoff, service, quoted_fare_kobo)
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+        [req.user.id, period, timeSlot, pickup, dropoff, service, quotedFareKobo]
       )
 
-      res.status(201).json({ bookingId: result.rows[0].id })
-    } catch (err) { next(err) }
-  }
-)
-
-// ── Book a ride ───────────────────────────────────────────────────────────────
-router.post('/',
-  requireRole('rider'),
-  [
-    body('pickup').trim().isLength({ min: 3, max: 200 }).escape(),
-    body('destination').trim().isLength({ min: 3, max: 200 }).escape(),
-    body('type').isIn(['pool', 'send']),
-  ],
-  validate,
-  async (req, res, next) => {
-    try {
-      const { pickup, destination, type } = req.body
-
-      // Prevent same pickup/destination
-      if (pickup.toLowerCase() === destination.toLowerCase()) {
-        return res.status(422).json({ message: 'Pickup and destination cannot be the same.' })
-      }
-
-      // Estimate fare (kobo) — real implementation uses distance matrix API
-      const fareKobo = type === 'pool' ? 45000 : 70000 // ₦450 / ₦700
-
-      // Check wallet balance before booking
-      const userRes = await query('SELECT wallet_balance FROM users WHERE id = $1', [req.user.id])
-      if (userRes.rows[0].wallet_balance < fareKobo) {
-        return res.status(402).json({ message: 'Insufficient wallet balance. Please top up and try again.' })
-      }
-
-      const result = await query(
-        'INSERT INTO rides (rider_id, type, pickup, destination, fare_kobo, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-        [req.user.id, type, pickup, destination, fareKobo, 'pending']
-      )
-
-      res.status(201).json({ ride: sanitizeRide(result.rows[0]) })
+      res.status(201).json({ bookingId: result.rows[0].id, quotedFare: Math.round(quotedFareKobo / 100) })
     } catch (err) { next(err) }
   }
 )

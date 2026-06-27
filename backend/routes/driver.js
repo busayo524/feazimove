@@ -97,16 +97,37 @@ router.patch('/status',
   }
 )
 
-// ── Pickup expansion chains (same order as frontend) ─────────────────────────
-const MORNING_PICKUP_CHAIN = [
-  'Berger', 'Secretariate', '7up', 'Estate (Alapere)',
-  'Ogudu Express', 'Ifako', 'Iyana Woro (Berger)',
-]
-const EVENING_PICKUP_CHAIN = [
-  'Ajah', 'Checking Point', 'SandFill', 'Lekki Phase 2',
-  'Lekki Phase 1', 'Victoria Island', 'Marina (CMS)',
-]
-const ALL_PICKUPS = [...MORNING_PICKUP_CHAIN, ...EVENING_PICKUP_CHAIN]
+// Fixed business rule: morning pickups are mainland stops, evening pickups
+// are island stops (mirrors the dropdown direction in BookRide.jsx/DriverDashboard.jsx).
+const PICKUP_GROUP_FOR_PERIOD = { morning: 'mainland', evening: 'island' }
+
+// Walks forward through the pickup chain (by chain_position within the
+// driver's pickup group) and returns the next stop that also has an active
+// priced route to the given dropoff — stops and routes are decoupled, so a
+// stop can exist without every pairing being priced. Read-only; the caller
+// decides whether to actually move the driver's availability there.
+async function findNextPickup(period, currentPickup, dropoff) {
+  const group = PICKUP_GROUP_FOR_PERIOD[period]
+  const currentStop = await query(
+    'SELECT chain_position FROM stops WHERE name = $1 AND group_name = $2',
+    [currentPickup, group]
+  )
+  if (!currentStop.rows[0]) return null
+
+  const candidates = await query(
+    `SELECT name FROM stops WHERE group_name = $1 AND chain_position > $2 AND is_active = true
+     ORDER BY chain_position ASC`,
+    [group, currentStop.rows[0].chain_position]
+  )
+  for (const candidate of candidates.rows) {
+    const routeCheck = await query(
+      `SELECT 1 FROM routes WHERE period = $1 AND pickup = $2 AND dropoff = $3 AND is_active = true`,
+      [period, candidate.name, dropoff]
+    )
+    if (routeCheck.rows[0]) return candidate.name
+  }
+  return null
+}
 
 // ── Go live on a route ────────────────────────────────────────────────────────
 router.post('/go-live',
@@ -122,9 +143,14 @@ router.post('/go-live',
     try {
       const { period, timeSlot, pickup, dropoff, seats } = req.body
 
-      // Reject unknown locations to prevent injection via free-text
-      if (!ALL_PICKUPS.includes(pickup)) {
-        return res.status(422).json({ message: 'Unknown pickup location.' })
+      // Reject any pair that isn't an active, priced route (previously only
+      // checked pickup against a flat list — dropoff was never validated)
+      const routeCheck = await query(
+        `SELECT 1 FROM routes WHERE period = $1 AND pickup = $2 AND dropoff = $3 AND is_active = true`,
+        [period, pickup, dropoff]
+      )
+      if (!routeCheck.rows[0]) {
+        return res.status(422).json({ message: 'That route is not currently available.' })
       }
 
       const onlineCheck = await query('SELECT is_online FROM users WHERE id = $1', [req.user.id])
@@ -201,28 +227,49 @@ router.get('/matches', async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-// ── Expand pickup to next location in chain ───────────────────────────────────
+// ── Peek at the next chain stop without moving there (for UI preview) ────────
+router.get('/next-pickup', async (req, res, next) => {
+  try {
+    const { availabilityId } = req.query
+    if (!availabilityId) return res.status(422).json({ message: 'availabilityId required.' })
+
+    const avail = await query(
+      `SELECT period, pickup, dropoff FROM driver_availability
+       WHERE id = $1 AND driver_id = $2 AND status IN ('waiting','active')`,
+      [availabilityId, req.user.id]
+    )
+    if (!avail.rows[0]) return res.status(404).json({ message: 'Active session not found.' })
+    const a = avail.rows[0]
+
+    const newPickup = await findNextPickup(a.period, a.pickup, a.dropoff)
+    res.json({ newPickup })
+  } catch (err) { next(err) }
+})
+
+// ── Actually move to the next location in the chain ───────────────────────────
 router.post('/expand-pickup',
-  [
-    body('availabilityId').isUUID(),
-    body('newPickup').trim().notEmpty().isLength({ max: 100 }).escape(),
-  ],
+  [body('availabilityId').isUUID()],
   validate,
   async (req, res, next) => {
     try {
-      const { availabilityId, newPickup } = req.body
+      const { availabilityId } = req.body
 
-      if (!ALL_PICKUPS.includes(newPickup)) {
-        return res.status(422).json({ message: 'Unknown pickup location.' })
-      }
+      const avail = await query(
+        `SELECT period, pickup, dropoff FROM driver_availability
+         WHERE id = $1 AND driver_id = $2 AND status IN ('waiting','active')`,
+        [availabilityId, req.user.id]
+      )
+      if (!avail.rows[0]) return res.status(404).json({ message: 'Active session not found.' })
+      const a = avail.rows[0]
 
-      const result = await query(
+      const newPickup = await findNextPickup(a.period, a.pickup, a.dropoff)
+      if (!newPickup) return res.json({ newPickup: null, endOfChain: true })
+
+      await query(
         `UPDATE driver_availability SET pickup = $1
-         WHERE id = $2 AND driver_id = $3 AND status IN ('waiting','active')
-         RETURNING id`,
+         WHERE id = $2 AND driver_id = $3 AND status IN ('waiting','active')`,
         [newPickup, availabilityId, req.user.id]
       )
-      if (!result.rows[0]) return res.status(404).json({ message: 'Active session not found.' })
 
       res.json({ availabilityId, newPickup })
     } catch (err) { next(err) }
@@ -251,7 +298,7 @@ router.post('/confirm-route',
       // Re-derive the oldest still-pending matched rider on this exact route + time
       // (same matching logic as GET /driver/matches)
       const match = await query(
-        `SELECT id, rider_id, service FROM rider_bookings
+        `SELECT id, rider_id, service, quoted_fare_kobo FROM rider_bookings
          WHERE period = $1 AND time_slot = $2 AND pickup = $3 AND dropoff = $4
            AND status = 'pending' AND rider_id != $5
          ORDER BY created_at ASC LIMIT 1`,
@@ -260,7 +307,14 @@ router.post('/confirm-route',
       if (!match.rows[0]) return res.status(409).json({ message: 'No riders currently matched on this route.' })
       const m = match.rows[0]
 
-      const fareKobo = m.service === 'solo' ? 70000 : 45000 // ₦700 solo / ₦450 pool
+      // Fare was quoted and locked in at book-intent time — never re-looked-up
+      // here, so an admin price edit after booking never changes what's charged.
+      // A null here means this booking predates the quoted-fare column (made
+      // before this rollout) — reject rather than silently charging nothing.
+      if (m.quoted_fare_kobo == null) {
+        return res.status(409).json({ message: 'This booking is outdated. Please ask the rider to book again.' })
+      }
+      const fareKobo = m.quoted_fare_kobo
 
       const ride = await query(
         `INSERT INTO rides (rider_id, driver_id, type, pickup, destination, fare_kobo, status)

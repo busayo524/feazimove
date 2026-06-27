@@ -16,15 +16,7 @@ const NEON='#ccff00', NT='#0a0a0a'
 const OLIVE='#243800', MOSS='#4C6900'
 const CARD='#ffffff', BORDER='#d4e5a8', TEXT='#1a2800', MUTED='#4C6900', BG='#f0f5e0'
 
-// ── Route data (mirrors BookRide) ────────────────────────────────────────────
-const PICKUP_LOCATIONS = [
-  'Ifako','Iyana Woro (Berger)','Ogudu Roundabout','Ogudu Express',
-  'Estate (Alapere)','7up','Secretariate','Berger',
-]
-const DROPOFF_LOCATIONS = [
-  'Marina (CMS)','Victoria Island','Lekki Phase 1','Lekki Phase 2',
-  'SandFill','Checking Point','Ajah',
-]
+// ── Route data ────────────────────────────────────────────────────────────────
 const MORNING_SLOTS = [
   '5:00 AM','5:30 AM','6:00 AM','6:30 AM','7:00 AM',
   '7:30 AM','8:00 AM','8:30 AM','9:00 AM','9:30 AM','10:00 AM',
@@ -34,15 +26,6 @@ const EVENING_SLOTS = [
   '5:30 PM','6:00 PM','6:30 PM','7:00 PM','7:30 PM','8:00 PM',
 ]
 
-// ── Expansion chains (morning: mainland→island, evening: island→mainland) ─────
-const MORNING_PICKUP_CHAIN = [
-  'Berger','Secretariate','7up','Estate (Alapere)',
-  'Ogudu Express','Ifako','Iyana Woro (Berger)',
-]
-const EVENING_PICKUP_CHAIN = [
-  'Ajah','Checking Point','SandFill','Lekki Phase 2',
-  'Lekki Phase 1','Victoria Island','Marina (CMS)',
-]
 
 // ── Active-ride stage mapping (mirrors the old standalone ActiveRide page) ────
 const STAGES = ['Heading to pickup','Arrived at pickup','Trip in progress','Trip completed']
@@ -193,6 +176,26 @@ export default function DriverDashboard() {
   const [dropoff, setDropoff] = useState('')
   const [seats, setSeats]     = useState('')
 
+  // Active, priced routes for the selected period — replaces the old hardcoded
+  // location arrays. Pickup/dropoff dropdowns are derived from this.
+  const [routes, setRoutes] = useState([])
+  const [routesLoading, setRoutesLoading] = useState(true)
+
+  useEffect(() => {
+    setRoutesLoading(true)
+    api.get(`/routes?period=${period}`)
+      .then(res => setRoutes(res.data.routes))
+      .catch(() => setRoutes([]))
+      .finally(() => setRoutesLoading(false))
+  }, [period])
+
+  // If the chosen pickup no longer offers the currently-selected dropoff,
+  // clear it (e.g. period switched, or that pair isn't priced).
+  useEffect(() => {
+    const validDropoffs = routes.filter(r => !pickup || r.pickup === pickup).map(r => r.dropoff)
+    if (dropoff && !validDropoffs.includes(dropoff)) setDropoff('')
+  }, [pickup, routes]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Matching state machine: 'idle' | 'matching' | 'no-riders' | 'matched'
   const [matchPhase, setMatchPhase]       = useState('idle')
   const [availabilityId, setAvailabilityId] = useState(null)
@@ -267,19 +270,21 @@ export default function DriverDashboard() {
   }
 
   const slots         = period === 'morning' ? MORNING_SLOTS : EVENING_SLOTS
-  const pickupOptions = period === 'morning' ? PICKUP_LOCATIONS : DROPOFF_LOCATIONS
-  const dropoffOptions = period === 'morning' ? DROPOFF_LOCATIONS : PICKUP_LOCATIONS
+  const pickupOptions = [...new Set(routes.map(r => r.pickup))].sort()
+  const dropoffOptions = [...new Set(
+    routes.filter(r => !pickup || r.pickup === pickup).map(r => r.dropoff)
+  )].sort()
   const canGoLive     = timeSlot && pickup && dropoff && seats
 
-  // ── Pickup chain helpers ──
-  function getChain() {
-    return period === 'morning' ? MORNING_PICKUP_CHAIN : EVENING_PICKUP_CHAIN
-  }
-  function getNextPickup(current) {
-    const chain = getChain()
-    const idx   = chain.indexOf(current)
-    return idx >= 0 && idx < chain.length - 1 ? chain[idx + 1] : null
-  }
+  // "Next stop in the chain" is now computed server-side (single source of
+  // truth) — peek at it here just to show the preview in the no-riders UI.
+  const [nextPickupPreview, setNextPickupPreview] = useState(null)
+  useEffect(() => {
+    if (matchPhase !== 'no-riders' || !availabilityId) { setNextPickupPreview(null); return }
+    api.get(`/driver/next-pickup?availabilityId=${availabilityId}`)
+      .then(res => setNextPickupPreview(res.data.newPickup))
+      .catch(() => setNextPickupPreview(null))
+  }, [matchPhase, availabilityId])
 
   // ── Polling effect ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -338,11 +343,10 @@ export default function DriverDashboard() {
   }
 
   async function handleExpand() {
-    const next = getNextPickup(currentPickup)
-    if (!next) { handleGoOffline(); return }
     try {
-      await api.post('/driver/expand-pickup', { availabilityId, newPickup: next })
-      setCurrentPickup(next)
+      const res = await api.post('/driver/expand-pickup', { availabilityId })
+      if (!res.data.newPickup) { handleGoOffline(); return }
+      setCurrentPickup(res.data.newPickup)
       setCountdown(180)
       setMatchPhase('matching')
     } catch {
@@ -380,7 +384,7 @@ export default function DriverDashboard() {
 
   // ── Render: matching phase ────────────────────────────────────────────────
   function renderMatching() {
-    const nextPickup = getNextPickup(currentPickup)
+    const nextPickup = nextPickupPreview
     const pct = Math.round((countdown / 180) * 100)
 
     if (matchPhase === 'matching') {
@@ -763,13 +767,13 @@ export default function DriverDashboard() {
                   <p style={{ fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Pickup Location</p>
                   <div style={{ marginBottom:10 }}>
                     <Dropdown options={pickupOptions} value={pickup} onChange={setPickup}
-                      placeholder="Select pickup location" icon={<MapPin size={15}/>}/>
+                      placeholder={routesLoading ? 'Loading…' : 'Select pickup location'} icon={<MapPin size={15}/>}/>
                   </div>
 
                   <p style={{ fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Drop-off Location</p>
                   <div style={{ marginBottom:16 }}>
                     <Dropdown options={dropoffOptions} value={dropoff} onChange={setDropoff}
-                      placeholder="Select drop-off location" icon={<MapPin size={15}/>}/>
+                      placeholder={routesLoading ? 'Loading…' : 'Select drop-off location'} icon={<MapPin size={15}/>}/>
                   </div>
 
                   {/* Preview pill */}

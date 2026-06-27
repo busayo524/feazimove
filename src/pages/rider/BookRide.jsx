@@ -2,31 +2,11 @@ import React, { useState, useRef, useEffect } from 'react'
 import AppLayout from '../../components/AppLayout'
 import { MapPin, ArrowRight, Users, Navigation, ChevronDown, Check, Clock, Sun, Moon, CheckCircle } from 'lucide-react'
 import { api } from '../../services/api'
-import { LOCATION_COORDS } from '../../utils/locations'
+import { useStopCoords } from '../../hooks/useStopCoords'
 
 const NEON='#ccff00', NT='#0a0a0a'
 const OLIVE='#243800', MOSS='#4C6900'
 const CARD='#ffffff', BORDER='#d4e5a8', TEXT='#1a2800', MUTED='#4C6900', BG='#f0f5e0'
-
-const PICKUP_LOCATIONS=[
-  'Ifako',
-  'Iyana Woro (Berger)',
-  'Ogudu Roundabout',
-  'Ogudu Express',
-  'Estate (Alapere)',
-  '7up',
-  'Secretariate',
-  'Berger',
-]
-const DROPOFF_LOCATIONS=[
-  'Marina (CMS)',
-  'Victoria Island',
-  'Lekki Phase 1',
-  'Lekki Phase 2',
-  'SandFill',
-  'Checking Point',
-  'Ajah',
-]
 
 const MORNING_SLOTS=[
   '5:00 AM','5:30 AM','6:00 AM','6:30 AM','7:00 AM',
@@ -189,7 +169,27 @@ export default function BookRide(){
   const [timeSlot,setTimeSlot]=useState('')
   const [searching,setSearching]=useState(false)
   const [bookingId,setBookingId]=useState(null)
+  const [quotedFare,setQuotedFare]=useState(null)
   const [bookError,setBookError]=useState(null)
+
+  // Active, priced routes for the selected period — replaces the old hardcoded
+  // location arrays. Pickup/dropoff dropdowns are derived from this.
+  const [routes,setRoutes]=useState([])
+  const [routesLoading,setRoutesLoading]=useState(true)
+  const { coords: stopCoords } = useStopCoords()
+
+  useEffect(()=>{
+    setRoutesLoading(true)
+    api.get(`/routes?period=${period}`)
+      .then(res => setRoutes(res.data.routes))
+      .catch(() => setRoutes([]))
+      .finally(() => setRoutesLoading(false))
+  },[period])
+
+  const pickupOptions = [...new Set(routes.map(r => r.pickup))].sort()
+  const dropoffOptions = [...new Set(
+    routes.filter(r => !pickup || r.pickup === pickup).map(r => r.dropoff)
+  )].sort()
 
   function switchPeriod(p){
     if(p === period) return
@@ -198,6 +198,7 @@ export default function BookRide(){
     setPickup('')
     setDropoff('')
     setBookingId(null)
+    setQuotedFare(null)
     setBookError(null)
   }
 
@@ -206,16 +207,24 @@ export default function BookRide(){
     if(!pickup||!dropoff||!timeSlot)return
     setSearching(true)
     setBookingId(null)
+    setQuotedFare(null)
     setBookError(null)
     try {
       const res = await api.post('/rides/book-intent', { period, timeSlot, pickup, dropoff, service })
       setBookingId(res.data.bookingId)
+      setQuotedFare(res.data.quotedFare)
     } catch(err) {
       setBookError(err.data?.message || 'Could not register your booking. Please try again.')
     } finally {
       setSearching(false)
     }
   }
+
+  // If the chosen pickup no longer offers the currently-selected dropoff
+  // (e.g. period switched, or that pair simply isn't priced), clear it.
+  useEffect(() => {
+    if (dropoff && !dropoffOptions.includes(dropoff)) setDropoff('')
+  }, [pickup, routes]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return(
     <AppLayout title="Book a Ride">
@@ -286,17 +295,17 @@ export default function BookRide(){
           <div style={{display:'flex',flexDirection:'column',gap:14}}>
             <LocationDropdown
               label="Pickup Location"
-              options={period==='morning' ? PICKUP_LOCATIONS : DROPOFF_LOCATIONS}
+              options={pickupOptions}
               value={pickup}
               onChange={setPickup}
-              placeholder="Select pickup location"
+              placeholder={routesLoading ? 'Loading…' : 'Select pickup location'}
             />
             <LocationDropdown
               label="Drop-off Location"
-              options={period==='morning' ? DROPOFF_LOCATIONS : PICKUP_LOCATIONS}
+              options={dropoffOptions}
               value={dropoff}
               onChange={setDropoff}
-              placeholder="Select drop-off location"
+              placeholder={routesLoading ? 'Loading…' : 'Select drop-off location'}
             />
           </div>
         </div>
@@ -322,7 +331,8 @@ export default function BookRide(){
             <div>
               <p style={{fontWeight:700,fontSize:14,color:'#15803d',marginBottom:2}}>You're on the list!</p>
               <p style={{fontSize:13,color:'#166534'}}>
-                We've registered your booking for <strong>{pickup} → {dropoff}</strong> at <strong>{timeSlot}</strong>.
+                We've registered your booking for <strong>{pickup} → {dropoff}</strong> at <strong>{timeSlot}</strong>
+                {quotedFare != null && <> for <strong>₦{quotedFare.toLocaleString()}</strong></>}.
                 A driver on this route will be matched with you automatically.
               </p>
             </div>
@@ -351,8 +361,8 @@ export default function BookRide(){
             {/* Mapbox Static Images API — no JS needed, just an img tag */}
             {(() => {
               const token = import.meta.env.VITE_MAPBOX_TOKEN
-              const pCoord = LOCATION_COORDS[pickup]
-              const dCoord = LOCATION_COORDS[dropoff]
+              const pCoord = stopCoords[pickup]
+              const dCoord = stopCoords[dropoff]
               if (!token || token === 'your_mapbox_public_token_here' || !pCoord || !dCoord) {
                 return (
                   <div style={{height:280,background:OLIVE,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:10,position:'relative',overflow:'hidden'}}>

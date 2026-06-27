@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import faviconImg from '../assets/favicon.png'
 import {
   LayoutGrid, Users, Car, Navigation, UserCog, LogOut, Menu, X, Settings, Wallet, AlertTriangle,
+  BarChart3, Map, MapPin, Tag,
 } from 'lucide-react'
 
 const SB_BG = '#0a0a0a', SB_BORDER = 'rgba(255,255,255,0.08)'
@@ -17,7 +18,11 @@ const NAV = [
   { to: '/admin/drivers',  icon: <Car size={18}/>,           label: 'Drivers' },
   { to: '/admin/rides',    icon: <Navigation size={18}/>,    label: 'Rides' },
   { to: '/admin/payments', icon: <Wallet size={18}/>,        label: 'Payments' },
+  { to: '/admin/routes',   icon: <Map size={18}/>,           label: 'Routes' },
+  { to: '/admin/stops',    icon: <MapPin size={18}/>,        label: 'Stops' },
+  { to: '/admin/pricing',  icon: <Tag size={18}/>,           label: 'Pricing' },
   { to: '/admin/alerts',   icon: <AlertTriangle size={18}/>, label: 'Alerts' },
+  { to: '/admin/reports',  icon: <BarChart3 size={18}/>,     label: 'Reports' },
   { to: '/admin/users',    icon: <UserCog size={18}/>,       label: 'User Management' },
   { to: '/admin/settings', icon: <Settings size={18}/>,      label: 'Settings' },
 ]

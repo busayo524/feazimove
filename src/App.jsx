@@ -64,6 +64,10 @@ import AdminDriverDetail  from './pages/admin/AdminDriverDetail'
 import AdminRides         from './pages/admin/AdminRides'
 import AdminPayments      from './pages/admin/AdminPayments'
 import AdminAlerts        from './pages/admin/AdminAlerts'
+import AdminReports       from './pages/admin/AdminReports'
+import AdminRoutesPage    from './pages/admin/AdminRoutes'
+import AdminStops         from './pages/admin/AdminStops'
+import AdminPricing       from './pages/admin/AdminPricing'
 import AdminUsers         from './pages/admin/AdminUsers'
 import AdminSettings      from './pages/admin/AdminSettings'
 
@@ -137,7 +141,11 @@ export default function App() {
           <Route path="/admin/drivers/:id"    element={<ProtectedRoute requiredRole="admin"><AdminDriverDetail /></ProtectedRoute>} />
           <Route path="/admin/rides"          element={<ProtectedRoute requiredRole="admin"><AdminRides /></ProtectedRoute>} />
           <Route path="/admin/payments"       element={<ProtectedRoute requiredRole="admin"><AdminPayments /></ProtectedRoute>} />
+          <Route path="/admin/routes"         element={<ProtectedRoute requiredRole="admin"><AdminRoutesPage /></ProtectedRoute>} />
+          <Route path="/admin/stops"          element={<ProtectedRoute requiredRole="admin"><AdminStops /></ProtectedRoute>} />
+          <Route path="/admin/pricing"        element={<ProtectedRoute requiredRole="admin"><AdminPricing /></ProtectedRoute>} />
           <Route path="/admin/alerts"         element={<ProtectedRoute requiredRole="admin"><AdminAlerts /></ProtectedRoute>} />
+          <Route path="/admin/reports"        element={<ProtectedRoute requiredRole="admin"><AdminReports /></ProtectedRoute>} />
           <Route path="/admin/users"          element={<ProtectedRoute requiredRole="admin"><AdminUsers /></ProtectedRoute>} />
           <Route path="/admin/settings"       element={<ProtectedRoute requiredRole="admin"><AdminSettings /></ProtectedRoute>} />
 

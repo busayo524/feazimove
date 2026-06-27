@@ -4,7 +4,7 @@ import AppLayout from '../../components/AppLayout'
 import ChatModal from '../../components/ChatModal'
 import { api } from '../../services/api'
 import { loadMapbox } from '../../utils/mapbox'
-import { LOCATION_COORDS } from '../../utils/locations'
+import { useStopCoords } from '../../hooks/useStopCoords'
 import { Phone, MessageSquare, Star, AlertCircle } from 'lucide-react'
 
 const NEON='#ccff00'
@@ -77,8 +77,9 @@ export default function TrackRide() {
   const step    = ride ? (STATUS_TO_STEP[ride.status] ?? 0) : 0
   const pickup  = ride?.pickup      || ''
   const dropoff = ride?.destination || ''
-  const pCoord  = LOCATION_COORDS[pickup]
-  const dCoord  = LOCATION_COORDS[dropoff]
+  const { coords: stopCoords } = useStopCoords()
+  const pCoord  = stopCoords[pickup]
+  const dCoord  = stopCoords[dropoff]
   const driver  = ride?.driver || { name: 'Driver', phone: '', rating: null }
 
   // ── Load Mapbox SDK ───────────────────────────────────────────────

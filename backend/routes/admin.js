@@ -403,4 +403,303 @@ router.get('/alerts', async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
+// ── Reports & analytics ──────────────────────────────────────────────────────
+router.get('/reports', async (req, res, next) => {
+  try {
+    const [daily, weekly, monthly, series, routes, retention] = await Promise.all([
+      query("SELECT COALESCE(SUM(fare_kobo),0) s FROM rides WHERE status='completed' AND completed_at >= CURRENT_DATE"),
+      query("SELECT COALESCE(SUM(fare_kobo),0) s FROM rides WHERE status='completed' AND completed_at >= NOW() - INTERVAL '7 days'"),
+      query("SELECT COALESCE(SUM(fare_kobo),0) s FROM rides WHERE status='completed' AND completed_at >= NOW() - INTERVAL '30 days'"),
+      query(
+        `SELECT DATE(completed_at) AS day, COALESCE(SUM(fare_kobo),0) AS total
+         FROM rides WHERE status='completed' AND completed_at >= NOW() - INTERVAL '14 days'
+         GROUP BY day ORDER BY day`
+      ),
+      query(
+        `SELECT pickup, destination, COUNT(*) AS cnt
+         FROM rides GROUP BY pickup, destination ORDER BY cnt DESC LIMIT 5`
+      ),
+      query(
+        `WITH counts AS (
+           SELECT rider_id, COUNT(*) AS c FROM rides WHERE status='completed' AND rider_id IS NOT NULL GROUP BY rider_id
+         )
+         SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE c > 1) AS repeat_riders FROM counts`
+      ),
+    ])
+
+    const totalRoutes = routes.rows.reduce((s, r) => s + parseInt(r.cnt, 10), 0)
+    const totalRiders = parseInt(retention.rows[0].total, 10)
+    const repeatRiders = parseInt(retention.rows[0].repeat_riders, 10)
+
+    res.json({
+      dailyRevenue: Math.round(fmt(daily.rows[0].s) * 0.2),
+      weeklyRevenue: Math.round(fmt(weekly.rows[0].s) * 0.2),
+      monthlyRevenue: Math.round(fmt(monthly.rows[0].s) * 0.2),
+      dailySeries: series.rows.map(r => ({ day: r.day, amount: Math.round(fmt(r.total) * 0.2) })),
+      topRoutes: routes.rows.map(r => ({
+        pickup: r.pickup, destination: r.destination, count: parseInt(r.cnt, 10),
+        sharePct: totalRoutes > 0 ? Math.round((parseInt(r.cnt, 10) / totalRoutes) * 100) : 0,
+      })),
+      retention: {
+        totalRiders, repeatRiders,
+        pct: totalRiders > 0 ? Math.round((repeatRiders / totalRiders) * 100) : 0,
+      },
+    })
+  } catch (err) { next(err) }
+})
+
+// ── CSV export ────────────────────────────────────────────────────────────────
+function toCsv(rows, columns) {
+  const header = columns.map(c => c.label).join(',')
+  const lines = rows.map(row =>
+    columns.map(c => {
+      const val = row[c.key] ?? ''
+      const escaped = String(val).replace(/"/g, '""')
+      return /[",\n]/.test(escaped) ? `"${escaped}"` : escaped
+    }).join(',')
+  )
+  return [header, ...lines].join('\n')
+}
+
+router.get('/export/:type', async (req, res, next) => {
+  try {
+    const { type } = req.params
+    if (!['rides', 'transactions'].includes(type)) {
+      return res.status(400).json({ message: 'Unknown export type.' })
+    }
+
+    let csv
+    if (type === 'rides') {
+      const result = await query(
+        `SELECT r.id, r.type, r.pickup, r.destination, r.fare_kobo, r.status, r.created_at, r.completed_at,
+                ur.name AS rider_name, ud.name AS driver_name
+         FROM rides r
+         LEFT JOIN users ur ON r.rider_id = ur.id
+         LEFT JOIN users ud ON r.driver_id = ud.id
+         ORDER BY r.created_at DESC`
+      )
+      csv = toCsv(
+        result.rows.map(r => ({ ...r, fare: fmt(r.fare_kobo) })),
+        [
+          { key:'id', label:'Ride ID' }, { key:'type', label:'Type' },
+          { key:'rider_name', label:'Rider' }, { key:'driver_name', label:'Driver' },
+          { key:'pickup', label:'Pickup' }, { key:'destination', label:'Destination' },
+          { key:'fare', label:'Fare (NGN)' }, { key:'status', label:'Status' },
+          { key:'created_at', label:'Created At' }, { key:'completed_at', label:'Completed At' },
+        ]
+      )
+    } else {
+      const result = await query(
+        `SELECT t.id, t.type, t.amount_kobo, t.description, t.created_at, u.name AS user_name
+         FROM wallet_transactions t JOIN users u ON t.user_id = u.id
+         ORDER BY t.created_at DESC`
+      )
+      csv = toCsv(
+        result.rows.map(t => ({ ...t, amount: fmt(t.amount_kobo) })),
+        [
+          { key:'id', label:'Transaction ID' }, { key:'user_name', label:'User' },
+          { key:'type', label:'Type' }, { key:'amount', label:'Amount (NGN)' },
+          { key:'description', label:'Description' }, { key:'created_at', label:'Date' },
+        ]
+      )
+    }
+
+    res.setHeader('Content-Type', 'text/csv')
+    res.setHeader('Content-Disposition', `attachment; filename="feazimove-${type}-export.csv"`)
+    res.send(csv)
+  } catch (err) { next(err) }
+})
+
+// ── Route demand — live supply/demand per period+slot+route (read-only) ──────
+// Note: pickup/dropoff/time-slot options and pricing are still hardcoded in the
+// frontend (BookRide.jsx, DriverDashboard.jsx) and rides.js/driver.js fare logic.
+// This is a read-only view of current demand, not route/pricing management —
+// that would mean moving the hardcoded route config into the DB and touching
+// the live matching code, which is a separate, bigger change.
+router.get('/routes', async (req, res, next) => {
+  try {
+    const result = await query(
+      `WITH riders AS (
+         SELECT period, time_slot, pickup, dropoff, COUNT(*) AS waiting
+         FROM rider_bookings WHERE status = 'pending'
+         GROUP BY period, time_slot, pickup, dropoff
+       ),
+       drivers AS (
+         SELECT period, time_slot, pickup, dropoff, COUNT(*) AS live_drivers, COALESCE(SUM(seats),0) AS seats_available
+         FROM driver_availability WHERE status IN ('waiting','active')
+         GROUP BY period, time_slot, pickup, dropoff
+       )
+       SELECT
+         COALESCE(r.period, d.period)     AS period,
+         COALESCE(r.time_slot, d.time_slot) AS time_slot,
+         COALESCE(r.pickup, d.pickup)       AS pickup,
+         COALESCE(r.dropoff, d.dropoff)     AS dropoff,
+         COALESCE(r.waiting, 0)             AS waiting,
+         COALESCE(d.live_drivers, 0)        AS live_drivers,
+         COALESCE(d.seats_available, 0)     AS seats_available
+       FROM riders r
+       FULL OUTER JOIN drivers d
+         ON r.period = d.period AND r.time_slot = d.time_slot AND r.pickup = d.pickup AND r.dropoff = d.dropoff
+       ORDER BY waiting DESC, live_drivers DESC`
+    )
+    res.json({
+      routes: result.rows.map(r => ({
+        period: r.period, timeSlot: r.time_slot, pickup: r.pickup, dropoff: r.dropoff,
+        waitingRiders: parseInt(r.waiting, 10),
+        liveDrivers: parseInt(r.live_drivers, 10),
+        seatsAvailable: parseInt(r.seats_available, 10),
+      })),
+    })
+  } catch (err) { next(err) }
+})
+
+// ── Stops management ─────────────────────────────────────────────────────────
+router.get('/stops', async (req, res, next) => {
+  try {
+    const result = await query(
+      `SELECT id, name, group_name, chain_position, lat, lng, is_active, created_at
+       FROM stops ORDER BY group_name, chain_position`
+    )
+    res.json({
+      stops: result.rows.map(s => ({
+        id: s.id, name: s.name, group: s.group_name, chainPosition: s.chain_position,
+        lat: s.lat != null ? Number(s.lat) : null, lng: s.lng != null ? Number(s.lng) : null,
+        isActive: s.is_active, createdAt: s.created_at,
+      })),
+    })
+  } catch (err) { next(err) }
+})
+
+router.post('/stops',
+  [
+    body('name').trim().isLength({ min: 2, max: 100 }).escape(),
+    body('group').isIn(['mainland', 'island']),
+    body('chainPosition').isInt({ min: 0 }),
+    body('lat').optional({ checkFalsy: true }).isFloat({ min: -90, max: 90 }),
+    body('lng').optional({ checkFalsy: true }).isFloat({ min: -180, max: 180 }),
+  ],
+  validate,
+  async (req, res, next) => {
+    try {
+      const { name, group, chainPosition, lat, lng } = req.body
+      const result = await query(
+        `INSERT INTO stops (name, group_name, chain_position, lat, lng)
+         VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+        [name, group, chainPosition, lat || null, lng || null]
+      )
+      res.status(201).json({ id: result.rows[0].id })
+    } catch (err) {
+      if (err.code === '23505') return res.status(409).json({ message: 'A stop with that name or chain position already exists.' })
+      next(err)
+    }
+  }
+)
+
+router.patch('/stops/:id',
+  [
+    param('id').isUUID(),
+    body('name').optional({ checkFalsy: true }).trim().isLength({ min: 2, max: 100 }).escape(),
+    body('chainPosition').optional({ checkFalsy: true }).isInt({ min: 0 }),
+    body('lat').optional({ checkFalsy: true }).isFloat({ min: -90, max: 90 }),
+    body('lng').optional({ checkFalsy: true }).isFloat({ min: -180, max: 180 }),
+    body('isActive').optional().isBoolean(),
+  ],
+  validate,
+  async (req, res, next) => {
+    try {
+      const { name, chainPosition, lat, lng, isActive } = req.body
+      const result = await query(
+        `UPDATE stops SET
+           name = COALESCE($1, name),
+           chain_position = COALESCE($2, chain_position),
+           lat = COALESCE($3, lat),
+           lng = COALESCE($4, lng),
+           is_active = COALESCE($5, is_active)
+         WHERE id = $6 RETURNING id`,
+        [name || null, chainPosition ?? null, lat ?? null, lng ?? null, isActive ?? null, req.params.id]
+      )
+      if (!result.rows[0]) return res.status(404).json({ message: 'Stop not found.' })
+      res.json({ message: 'Stop updated.' })
+    } catch (err) {
+      if (err.code === '23505') return res.status(409).json({ message: 'That name or chain position is already in use.' })
+      next(err)
+    }
+  }
+)
+
+// ── Route pricing management ──────────────────────────────────────────────────
+router.get('/routes-pricing', async (req, res, next) => {
+  try {
+    const period = req.query.period
+    const result = await query(
+      `SELECT r.id, r.period, r.pickup, r.dropoff, r.pool_fare_kobo, r.solo_fare_kobo,
+              r.is_active, r.updated_at, u.name AS updated_by_name
+       FROM routes r
+       LEFT JOIN users u ON r.updated_by = u.id
+       ${period ? 'WHERE r.period = $1' : ''}
+       ORDER BY r.period, r.pickup, r.dropoff`,
+      period ? [period] : []
+    )
+    res.json({
+      routes: result.rows.map(r => ({
+        id: r.id, period: r.period, pickup: r.pickup, dropoff: r.dropoff,
+        poolFareKobo: Number(r.pool_fare_kobo), soloFareKobo: Number(r.solo_fare_kobo),
+        isActive: r.is_active, updatedAt: r.updated_at, updatedByName: r.updated_by_name,
+      })),
+    })
+  } catch (err) { next(err) }
+})
+
+router.post('/routes-pricing',
+  [
+    body('period').isIn(['morning', 'evening']),
+    body('pickup').trim().isLength({ min: 1, max: 100 }).escape(),
+    body('dropoff').trim().isLength({ min: 1, max: 100 }).escape(),
+    body('poolFareKobo').isInt({ min: 0 }),
+    body('soloFareKobo').isInt({ min: 0 }),
+  ],
+  validate,
+  async (req, res, next) => {
+    try {
+      const { period, pickup, dropoff, poolFareKobo, soloFareKobo } = req.body
+      const result = await query(
+        `INSERT INTO routes (period, pickup, dropoff, pool_fare_kobo, solo_fare_kobo, updated_by, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING id`,
+        [period, pickup, dropoff, poolFareKobo, soloFareKobo, req.user.id]
+      )
+      res.status(201).json({ id: result.rows[0].id })
+    } catch (err) {
+      if (err.code === '23503') return res.status(422).json({ message: 'Pickup or dropoff is not a known stop.' })
+      if (err.code === '23505') return res.status(409).json({ message: 'This route already exists for that period.' })
+      next(err)
+    }
+  }
+)
+
+router.patch('/routes-pricing/:id',
+  [
+    param('id').isUUID(),
+    body('poolFareKobo').optional({ checkFalsy: true }).isInt({ min: 0 }),
+    body('soloFareKobo').optional({ checkFalsy: true }).isInt({ min: 0 }),
+    body('isActive').optional().isBoolean(),
+  ],
+  validate,
+  async (req, res, next) => {
+    try {
+      const { poolFareKobo, soloFareKobo, isActive } = req.body
+      const result = await query(
+        `UPDATE routes SET
+           pool_fare_kobo = COALESCE($1, pool_fare_kobo),
+           solo_fare_kobo = COALESCE($2, solo_fare_kobo),
+           is_active = COALESCE($3, is_active),
+           updated_by = $4, updated_at = NOW()
+         WHERE id = $5 RETURNING id`,
+        [poolFareKobo ?? null, soloFareKobo ?? null, isActive ?? null, req.user.id, req.params.id]
+      )
+      if (!result.rows[0]) return res.status(404).json({ message: 'Route not found.' })
+      res.json({ message: 'Route updated.' })
+    } catch (err) { next(err) }
+  }
+)
+
 module.exports = router

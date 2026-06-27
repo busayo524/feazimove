@@ -136,6 +136,76 @@ CREATE TABLE IF NOT EXISTS payout_requests (
 );
 CREATE INDEX IF NOT EXISTS idx_payouts_driver ON payout_requests(driver_id);
 CREATE INDEX IF NOT EXISTS idx_payouts_status ON payout_requests(status);
+
+-- Driver route sessions: driver publishes availability for a time+route
+-- (pre-existing tables that previously only lived in server.js's runtime
+-- auto-migration — added here too so a fresh DB via this script also has them)
+CREATE TABLE IF NOT EXISTS driver_availability (
+  id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+  driver_id   UUID         NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  period      VARCHAR(10)  NOT NULL CHECK (period IN ('morning','evening')),
+  time_slot   VARCHAR(20)  NOT NULL,
+  pickup      VARCHAR(100) NOT NULL,
+  dropoff     VARCHAR(100) NOT NULL,
+  seats       SMALLINT     NOT NULL DEFAULT 1,
+  status      VARCHAR(20)  NOT NULL DEFAULT 'waiting',
+  created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  expires_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW() + INTERVAL '8 hours'
+);
+CREATE INDEX IF NOT EXISTS idx_avail_driver ON driver_availability(driver_id);
+CREATE INDEX IF NOT EXISTS idx_avail_match  ON driver_availability(period, time_slot, pickup, dropoff, status);
+
+-- Rider booking intents: rider registers route so drivers can find them
+CREATE TABLE IF NOT EXISTS rider_bookings (
+  id              UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+  rider_id        UUID         NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  availability_id UUID         REFERENCES driver_availability(id) ON DELETE SET NULL,
+  period          VARCHAR(10)  NOT NULL,
+  time_slot       VARCHAR(20)  NOT NULL,
+  pickup          VARCHAR(100) NOT NULL,
+  dropoff         VARCHAR(100) NOT NULL,
+  service         VARCHAR(20)  NOT NULL DEFAULT 'pool',
+  status          VARCHAR(20)  NOT NULL DEFAULT 'pending',
+  created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_rb_rider ON rider_bookings(rider_id);
+CREATE INDEX IF NOT EXISTS idx_rb_match ON rider_bookings(period, time_slot, pickup, dropoff, status);
+
+-- Named locations (the vocabulary admin manages — adding a stop here doesn't
+-- make it bookable on its own; a priced "routes" row using it does).
+CREATE TABLE IF NOT EXISTS stops (
+  id             UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+  name           VARCHAR(100) UNIQUE NOT NULL,
+  group_name     VARCHAR(10)  NOT NULL CHECK (group_name IN ('mainland','island')),
+  chain_position SMALLINT     NOT NULL,
+  lat            NUMERIC(9,6),
+  lng            NUMERIC(9,6),
+  is_active      BOOLEAN      NOT NULL DEFAULT true,
+  created_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  UNIQUE (group_name, chain_position)
+);
+
+-- Priced pickup -> dropoff pairs — the actual source of truth for what's
+-- bookable. FK on stop name (not id) so a rename cascades automatically and
+-- a stop still used by an active route can't be deleted out from under it.
+CREATE TABLE IF NOT EXISTS routes (
+  id              UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+  period          VARCHAR(10)  NOT NULL CHECK (period IN ('morning','evening')),
+  pickup          VARCHAR(100) NOT NULL REFERENCES stops(name) ON UPDATE CASCADE ON DELETE RESTRICT,
+  dropoff         VARCHAR(100) NOT NULL REFERENCES stops(name) ON UPDATE CASCADE ON DELETE RESTRICT,
+  pool_fare_kobo  BIGINT       NOT NULL,
+  solo_fare_kobo  BIGINT       NOT NULL,
+  is_active       BOOLEAN      NOT NULL DEFAULT true,
+  updated_by      UUID         REFERENCES users(id) ON DELETE SET NULL,
+  updated_at      TIMESTAMPTZ,
+  created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  UNIQUE (period, pickup, dropoff)
+);
+CREATE INDEX IF NOT EXISTS idx_routes_period ON routes(period, is_active);
+
+-- Fare is quoted and locked in at booking time, not re-looked-up at
+-- confirmation time (see routes table comment above).
+ALTER TABLE rider_bookings ADD COLUMN IF NOT EXISTS quoted_fare_kobo BIGINT;
 `
 
 ;(async () => {

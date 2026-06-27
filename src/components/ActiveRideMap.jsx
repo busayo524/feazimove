@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { MapPin } from 'lucide-react'
 import { loadMapbox } from '../utils/mapbox'
-import { LOCATION_COORDS } from '../utils/locations'
+import { useStopCoords } from '../hooks/useStopCoords'
 
 const NEON='#ccff00', OLIVE='#243800'
 const CARD='#ffffff', BORDER='#d4e5a8', MUTED='#4C6900'
@@ -19,10 +19,11 @@ export default function ActiveRideMap({ pickup, dropoff }) {
   const [tokenMissing, setTokenMissing] = useState(false)
   const [sdkError, setSdkError] = useState(false)
   const [retryKey, setRetryKey] = useState(0)
-  const [coords, setCoords] = useState(null)
+  const [coords, setCoords] = useState(null) // driver's own live GPS position
 
-  const pCoord = LOCATION_COORDS[pickup]
-  const dCoord = LOCATION_COORDS[dropoff]
+  const { coords: stopCoords } = useStopCoords()
+  const pCoord = stopCoords[pickup]
+  const dCoord = stopCoords[dropoff]
 
   // ── Load Mapbox SDK ───────────────────────────────────────────────
   useEffect(() => {

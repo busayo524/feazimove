@@ -1,6 +1,6 @@
 import React from 'react'
 import { MapPin } from 'lucide-react'
-import { LOCATION_COORDS } from '../utils/locations'
+import { useStopCoords } from '../hooks/useStopCoords'
 
 const NEON='#ccff00'
 const OLIVE='#243800', MOSS='#4C6900'
@@ -10,8 +10,9 @@ const CARD='#ffffff', BORDER='#d4e5a8', TEXT='#1a2800', MUTED='#4C6900', BG='#f0
 // no JS SDK or live tracking. Same pattern used on the rider's Book Ride page.
 export default function RouteMap({ pickup, dropoff }) {
   const token  = import.meta.env.VITE_MAPBOX_TOKEN
-  const pCoord = LOCATION_COORDS[pickup]
-  const dCoord = LOCATION_COORDS[dropoff]
+  const { coords } = useStopCoords()
+  const pCoord = coords[pickup]
+  const dCoord = coords[dropoff]
 
   return (
     <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:16, overflow:'hidden', marginBottom:16, boxShadow:'0 2px 8px rgba(36,56,0,0.06)' }}>
