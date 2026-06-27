@@ -272,4 +272,135 @@ router.patch('/users/:id/status',
   }
 )
 
+// ── Payments overview ───────────────────────────────────────────────────────────
+router.get('/payments', async (req, res, next) => {
+  try {
+    const [walletTotal, pendingPayouts, revenue, txns] = await Promise.all([
+      query("SELECT COALESCE(SUM(wallet_balance),0) s FROM users"),
+      query("SELECT COALESCE(SUM(amount_kobo),0) s FROM payout_requests WHERE status = 'pending'"),
+      // Platform keeps 20% of every completed ride's fare (drivers are paid 80% — see rides.js)
+      query("SELECT COALESCE(SUM(fare_kobo),0) s FROM rides WHERE status = 'completed'"),
+      query(
+        `SELECT t.id, t.type, t.amount_kobo, t.description, t.created_at, u.name AS user_name
+         FROM wallet_transactions t
+         JOIN users u ON t.user_id = u.id
+         ORDER BY t.created_at DESC LIMIT 25`
+      ),
+    ])
+
+    res.json({
+      totalWalletBalance: fmt(walletTotal.rows[0].s),
+      pendingPayouts: fmt(pendingPayouts.rows[0].s),
+      platformRevenue: Math.round(fmt(revenue.rows[0].s) * 0.2),
+      transactions: txns.rows.map(t => ({
+        id: t.id, type: t.type, amount: fmt(t.amount_kobo), description: t.description,
+        userName: t.user_name, date: t.created_at,
+      })),
+    })
+  } catch (err) { next(err) }
+})
+
+// ── Driver payout requests ──────────────────────────────────────────────────────
+router.get('/payouts', async (req, res, next) => {
+  try {
+    const statusFilter = req.query.status || 'pending'
+    const result = await query(
+      `SELECT p.id, p.amount_kobo, p.status, p.requested_at, p.processed_at,
+              u.id AS driver_id, u.name AS driver_name
+       FROM payout_requests p
+       JOIN users u ON p.driver_id = u.id
+       ${statusFilter !== 'all' ? 'WHERE p.status = $1' : ''}
+       ORDER BY p.requested_at DESC LIMIT 50`,
+      statusFilter !== 'all' ? [statusFilter] : []
+    )
+    res.json({
+      payouts: result.rows.map(p => ({
+        id: p.id, amount: fmt(p.amount_kobo), status: p.status,
+        driverId: p.driver_id, driverName: p.driver_name,
+        requestedAt: p.requested_at, processedAt: p.processed_at,
+      })),
+    })
+  } catch (err) { next(err) }
+})
+
+router.post('/payouts/:id/approve',
+  [param('id').isUUID()], validate,
+  async (req, res, next) => {
+    try {
+      const result = await query(
+        `UPDATE payout_requests SET status = 'approved', processed_at = NOW(), processed_by = $1
+         WHERE id = $2 AND status = 'pending' RETURNING id`,
+        [req.user.id, req.params.id]
+      )
+      if (!result.rows[0]) return res.status(409).json({ message: 'This request is no longer pending.' })
+      res.json({ message: 'Payout approved.' })
+    } catch (err) { next(err) }
+  }
+)
+
+router.post('/payouts/:id/reject',
+  [param('id').isUUID()], validate,
+  async (req, res, next) => {
+    try {
+      const payout = await query(
+        `UPDATE payout_requests SET status = 'rejected', processed_at = NOW(), processed_by = $1
+         WHERE id = $2 AND status = 'pending' RETURNING id, driver_id, amount_kobo`,
+        [req.user.id, req.params.id]
+      )
+      if (!payout.rows[0]) return res.status(409).json({ message: 'This request is no longer pending.' })
+
+      // Refund the escrowed balance back to the driver
+      await query('UPDATE users SET wallet_balance = wallet_balance + $1 WHERE id = $2',
+        [payout.rows[0].amount_kobo, payout.rows[0].driver_id])
+      await query(
+        'INSERT INTO wallet_transactions (user_id, type, amount_kobo, description) VALUES ($1, $2, $3, $4)',
+        [payout.rows[0].driver_id, 'credit', payout.rows[0].amount_kobo, 'Withdrawal request rejected — refunded']
+      )
+
+      res.json({ message: 'Payout rejected and refunded to driver wallet.' })
+    } catch (err) { next(err) }
+  }
+)
+
+// ── Alerts — real, derived operational issues (no fabricated data) ────────────
+router.get('/alerts', async (req, res, next) => {
+  try {
+    const [delayed, unmatched, lowBalance] = await Promise.all([
+      query(
+        `SELECT r.id, r.pickup, r.destination, r.status, r.created_at,
+                ur.name AS rider_name, ud.name AS driver_name
+         FROM rides r
+         LEFT JOIN users ur ON r.rider_id = ur.id
+         LEFT JOIN users ud ON r.driver_id = ud.id
+         WHERE r.status IN ('driver_assigned','arrived_pickup','in_transit')
+           AND r.created_at < NOW() - INTERVAL '10 minutes'
+         ORDER BY r.created_at ASC LIMIT 20`
+      ),
+      query(
+        `SELECT id, pickup, destination, created_at
+         FROM rides WHERE status = 'pending' AND created_at < NOW() - INTERVAL '5 minutes'
+         ORDER BY created_at ASC LIMIT 20`
+      ),
+      query(
+        `SELECT id, name, wallet_balance FROM users
+         WHERE can_ride = true AND is_active = true AND wallet_balance <= 0
+         ORDER BY wallet_balance ASC LIMIT 20`
+      ),
+    ])
+
+    res.json({
+      delayedRides: delayed.rows.map(r => ({
+        id: r.id, pickup: r.pickup, destination: r.destination, status: r.status,
+        riderName: r.rider_name, driverName: r.driver_name, since: r.created_at,
+      })),
+      unmatchedRequests: unmatched.rows.map(r => ({
+        id: r.id, pickup: r.pickup, destination: r.destination, since: r.created_at,
+      })),
+      lowBalanceRiders: lowBalance.rows.map(u => ({
+        id: u.id, name: u.name, walletBalance: fmt(u.wallet_balance),
+      })),
+    })
+  } catch (err) { next(err) }
+})
+
 module.exports = router

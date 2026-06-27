@@ -176,6 +176,20 @@ async function runMigrations() {
       uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS idx_user_documents_user ON user_documents(user_id);
+
+    -- Driver withdrawal requests — balance is escrowed (deducted) on request,
+    -- refunded if an admin rejects it, otherwise paid out externally on approval.
+    CREATE TABLE IF NOT EXISTS payout_requests (
+      id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+      driver_id    UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      amount_kobo  BIGINT      NOT NULL,
+      status       VARCHAR(20) NOT NULL DEFAULT 'pending',
+      requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      processed_at TIMESTAMPTZ,
+      processed_by UUID REFERENCES users(id) ON DELETE SET NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_payouts_driver ON payout_requests(driver_id);
+    CREATE INDEX IF NOT EXISTS idx_payouts_status ON payout_requests(status);
   `
   try {
     await pool.query(migrations)

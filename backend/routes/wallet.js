@@ -98,4 +98,49 @@ router.post('/webhook/flutterwave', async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
+// ── Request a payout (driver) — escrows the balance until admin approves ─────
+router.post('/withdraw',
+  [body('amount').isInt({ min: 100 })],
+  validate,
+  async (req, res, next) => {
+    try {
+      const amountKobo = req.body.amount * 100
+
+      const userRes = await query('SELECT wallet_balance FROM users WHERE id = $1', [req.user.id])
+      if (userRes.rows[0].wallet_balance < amountKobo) {
+        return res.status(402).json({ message: 'Insufficient wallet balance.' })
+      }
+
+      await query('UPDATE users SET wallet_balance = wallet_balance - $1 WHERE id = $2', [amountKobo, req.user.id])
+      const result = await query(
+        'INSERT INTO payout_requests (driver_id, amount_kobo) VALUES ($1, $2) RETURNING id, requested_at',
+        [req.user.id, amountKobo]
+      )
+      await query(
+        'INSERT INTO wallet_transactions (user_id, type, amount_kobo, description) VALUES ($1, $2, $3, $4)',
+        [req.user.id, 'debit', amountKobo, 'Withdrawal request — pending approval']
+      )
+
+      res.status(201).json({ message: 'Withdrawal requested — pending admin approval.', payoutId: result.rows[0].id })
+    } catch (err) { next(err) }
+  }
+)
+
+// ── My payout request history ─────────────────────────────────────────────────
+router.get('/payouts', async (req, res, next) => {
+  try {
+    const result = await query(
+      `SELECT id, amount_kobo, status, requested_at, processed_at
+       FROM payout_requests WHERE driver_id = $1 ORDER BY requested_at DESC LIMIT 20`,
+      [req.user.id]
+    )
+    res.json({
+      payouts: result.rows.map(p => ({
+        id: p.id, amount: Math.round(p.amount_kobo / 100), status: p.status,
+        requestedAt: p.requested_at, processedAt: p.processed_at,
+      })),
+    })
+  } catch (err) { next(err) }
+})
+
 module.exports = router

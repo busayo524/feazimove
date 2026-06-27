@@ -68,32 +68,53 @@ export default function Earnings(){
   const [txns, setTxns] = useState([])
   const [walletBalance, setWalletBalance] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [showWithdraw, setShowWithdraw] = useState(false)
+  const [withdrawAmount, setWithdrawAmount] = useState('')
+  const [withdrawing, setWithdrawing] = useState(false)
+  const [withdrawError, setWithdrawError] = useState('')
+  const [withdrawSuccess, setWithdrawSuccess] = useState('')
 
   const avatarUrl = user?.id ? localStorage.getItem(`feazi_avatar_${user.id}`) : null
   const initials  = `${user?.firstName?.[0]||''}${user?.lastName?.[0]||''}`.toUpperCase() || 'D'
   const fullName  = `${user?.firstName||''} ${user?.lastName||''}`.trim() || user?.name || 'Driver'
 
-  useEffect(()=>{
-    async function load(){
-      let anyError = false
+  async function loadWallet(){
+    let anyError = false
 
-      await api.get('/wallet/balance')
-        .then(res => setWalletBalance(res.data?.balance ?? 0))
-        .catch(() => { setWalletBalance(0); anyError = true })
+    await api.get('/wallet/balance')
+      .then(res => setWalletBalance(res.data?.balance ?? 0))
+      .catch(() => { setWalletBalance(0); anyError = true })
 
-      await api.get('/wallet/transactions')
-        .then(res => setTxns(res.data?.transactions || []))
-        .catch(() => { anyError = true })
+    await api.get('/wallet/transactions')
+      .then(res => setTxns(res.data?.transactions || []))
+      .catch(() => { anyError = true })
 
-      // Only show error banner if wallet balance also failed (transactions table may not exist yet)
-      if (anyError && walletBalance === 0) {
-        // silently degrade — demo data is shown instead
-      }
-
-      setLoading(false)
+    // Only show error banner if wallet balance also failed (transactions table may not exist yet)
+    if (anyError && walletBalance === 0) {
+      // silently degrade — demo data is shown instead
     }
-    load()
-  },[])
+
+    setLoading(false)
+  }
+
+  useEffect(()=>{ loadWallet() },[])
+
+  async function handleWithdraw(e){
+    e.preventDefault()
+    const amount = parseInt(withdrawAmount, 10)
+    if (!amount || amount <= 0) { setWithdrawError('Enter a valid amount.'); return }
+    if (amount > walletBalance) { setWithdrawError('Amount exceeds your available balance.'); return }
+    setWithdrawing(true); setWithdrawError(''); setWithdrawSuccess('')
+    try {
+      await api.post('/wallet/withdraw', { amount })
+      setWithdrawSuccess('Withdrawal requested — pending admin approval.')
+      setWithdrawAmount('')
+      await loadWallet()
+      setTimeout(() => { setShowWithdraw(false); setWithdrawSuccess('') }, 1800)
+    } catch (err) {
+      setWithdrawError(err.data?.message || 'Could not request withdrawal.')
+    } finally { setWithdrawing(false) }
+  }
 
   // ── Compute earnings per period ───────────────────────────────────────────
   const credits = txns.filter(t => t.type === 'credit')
@@ -193,10 +214,41 @@ export default function Earnings(){
           <p style={{ color:OLIVE, fontWeight:900, fontSize:26, letterSpacing:'-0.03em' }}>{fmt(walletBalance)}</p>
           <p style={{ color:MUTED, fontSize:12, marginTop:4 }}>Processed within 24 hours</p>
         </div>
-        <button style={{ padding:'13px 20px', borderRadius:12, background:OLIVE, color:NEON, fontWeight:800, fontSize:14, border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:8, boxShadow:'0 2px 8px rgba(36,56,0,0.2)', fontFamily:'inherit' }}>
+        <button onClick={() => setShowWithdraw(true)} disabled={walletBalance <= 0}
+          style={{ padding:'13px 20px', borderRadius:12, background:walletBalance>0?OLIVE:BORDER, color:walletBalance>0?NEON:MUTED, fontWeight:800, fontSize:14, border:'none', cursor:walletBalance>0?'pointer':'not-allowed', display:'flex', alignItems:'center', gap:8, boxShadow:'0 2px 8px rgba(36,56,0,0.2)', fontFamily:'inherit' }}>
           <Wallet size={16}/>Withdraw
         </button>
       </div>
+
+      {showWithdraw && (
+        <div style={{ position:'fixed', inset:0, zIndex:1000, background:'rgba(0,0,0,0.4)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
+          onClick={() => setShowWithdraw(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background:CARD, borderRadius:16, padding:24, maxWidth:340, width:'100%', boxShadow:'0 12px 32px rgba(0,0,0,0.2)' }}>
+            <p style={{ fontWeight:800, fontSize:16, color:TEXT, marginBottom:6 }}>Request Withdrawal</p>
+            <p style={{ fontSize:13, color:MUTED, marginBottom:16 }}>Available: {fmt(walletBalance)}. Requests are reviewed by an admin before payout.</p>
+            <form onSubmit={handleWithdraw}>
+              <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Amount (₦)</label>
+              <input type="number" min="1" max={walletBalance} value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} required
+                placeholder={`Up to ${walletBalance}`}
+                style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, marginBottom:14, fontFamily:'inherit', boxSizing:'border-box' }}/>
+
+              {withdrawError && <p style={{ fontSize:13, color:'#ef4444', marginBottom:12 }}>{withdrawError}</p>}
+              {withdrawSuccess && <p style={{ fontSize:13, color:'#15803d', marginBottom:12 }}>{withdrawSuccess}</p>}
+
+              <div style={{ display:'flex', gap:10 }}>
+                <button type="button" onClick={() => setShowWithdraw(false)}
+                  style={{ flex:1, padding:'11px', borderRadius:10, border:`1.5px solid ${BORDER}`, background:CARD, color:TEXT, fontWeight:700, fontSize:14, cursor:'pointer', fontFamily:'inherit' }}>
+                  Cancel
+                </button>
+                <button type="submit" disabled={withdrawing}
+                  style={{ flex:1, padding:'11px', borderRadius:10, border:'none', background:OLIVE, color:NEON, fontWeight:700, fontSize:14, cursor:withdrawing?'not-allowed':'pointer', fontFamily:'inherit', opacity:withdrawing?0.7:1 }}>
+                  {withdrawing ? 'Requesting…' : 'Request'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* ── Recent transactions ── */}
       <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:16, overflow:'hidden', marginBottom:16, boxShadow:'0 2px 8px rgba(36,56,0,0.06)' }}>

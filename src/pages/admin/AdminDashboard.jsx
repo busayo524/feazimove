@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
 import { api } from '../../services/api'
 import {
-  Users, Car, Navigation, Clock, Wifi, AlertCircle, CheckCircle, Wallet,
+  Users, Car, Navigation, Clock, Wifi, AlertCircle, CheckCircle, Wallet, AlertTriangle,
 } from 'lucide-react'
 
 const NEON = '#ccff00', OLIVE = '#243800'
@@ -26,12 +26,16 @@ function StatCard({ icon, label, value, sub, accent }) {
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null)
+  const [alertCount, setAlertCount] = useState(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
     api.get('/admin/stats')
       .then(res => setStats(res.data))
       .catch(err => setError(err.data?.message || 'Could not load dashboard stats.'))
+    api.get('/admin/alerts')
+      .then(res => setAlertCount(res.data.delayedRides.length + res.data.unmatchedRequests.length + res.data.lowBalanceRiders.length))
+      .catch(() => {})
   }, [])
 
   return (
@@ -66,10 +70,22 @@ export default function AdminDashboard() {
             <StatCard icon={<Wallet size={16}/>} label="Total Wallet Balance" value={`₦${stats.totalWalletBalance.toLocaleString()}`} accent="#f3e8ff"/>
           </div>
 
+          {alertCount > 0 && (
+            <Link to="/admin/alerts" style={{ display:'flex', alignItems:'center', gap:10, padding:'14px 18px', borderRadius:14,
+              background:'#fef2f2', border:'1px solid #fca5a5', marginBottom:20, textDecoration:'none' }}>
+              <AlertTriangle size={18} color="#dc2626"/>
+              <p style={{ fontSize:13, fontWeight:700, color:'#991b1b', flex:1 }}>
+                {alertCount} issue{alertCount !== 1 ? 's' : ''} need attention
+              </p>
+              <span style={{ fontSize:13, fontWeight:700, color:'#dc2626' }}>View All →</span>
+            </Link>
+          )}
+
           <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
             <Link to="/admin/riders" style={{ padding:'10px 18px', borderRadius:50, background:CARD, border:`1px solid ${BORDER}`, color:TEXT, fontWeight:600, fontSize:13, textDecoration:'none' }}>View Riders →</Link>
             <Link to="/admin/drivers" style={{ padding:'10px 18px', borderRadius:50, background:CARD, border:`1px solid ${BORDER}`, color:TEXT, fontWeight:600, fontSize:13, textDecoration:'none' }}>View Drivers →</Link>
             <Link to="/admin/rides" style={{ padding:'10px 18px', borderRadius:50, background:OLIVE, border:'none', color:NEON, fontWeight:700, fontSize:13, textDecoration:'none' }}>View Live Rides →</Link>
+            <Link to="/admin/payments" style={{ padding:'10px 18px', borderRadius:50, background:CARD, border:`1px solid ${BORDER}`, color:TEXT, fontWeight:600, fontSize:13, textDecoration:'none' }}>View Payments →</Link>
           </div>
         </>
       )}

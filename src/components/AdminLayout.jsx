@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import faviconImg from '../assets/favicon.png'
 import {
-  LayoutGrid, Users, Car, Navigation, UserCog, LogOut, Menu, X, Settings,
+  LayoutGrid, Users, Car, Navigation, UserCog, LogOut, Menu, X, Settings, Wallet, AlertTriangle,
 } from 'lucide-react'
 
 const SB_BG = '#0a0a0a', SB_BORDER = 'rgba(255,255,255,0.08)'
@@ -12,12 +12,14 @@ const NEON = '#ccff00', NT = '#0a0a0a'
 const BG = '#f5f7f2', TEXT = '#1a1a1a'
 
 const NAV = [
-  { to: '/admin',         icon: <LayoutGrid size={18}/>, label: 'Dashboard', end: true },
-  { to: '/admin/riders',  icon: <Users size={18}/>,      label: 'Riders' },
-  { to: '/admin/drivers', icon: <Car size={18}/>,        label: 'Drivers' },
-  { to: '/admin/rides',   icon: <Navigation size={18}/>, label: 'Rides' },
-  { to: '/admin/users',   icon: <UserCog size={18}/>,    label: 'User Management' },
-  { to: '/admin/settings',icon: <Settings size={18}/>,   label: 'Settings' },
+  { to: '/admin',          icon: <LayoutGrid size={18}/>,    label: 'Dashboard', end: true },
+  { to: '/admin/riders',   icon: <Users size={18}/>,         label: 'Riders' },
+  { to: '/admin/drivers',  icon: <Car size={18}/>,           label: 'Drivers' },
+  { to: '/admin/rides',    icon: <Navigation size={18}/>,    label: 'Rides' },
+  { to: '/admin/payments', icon: <Wallet size={18}/>,        label: 'Payments' },
+  { to: '/admin/alerts',   icon: <AlertTriangle size={18}/>, label: 'Alerts' },
+  { to: '/admin/users',    icon: <UserCog size={18}/>,       label: 'User Management' },
+  { to: '/admin/settings', icon: <Settings size={18}/>,      label: 'Settings' },
 ]
 
 export default function AdminLayout({ children, title }) {

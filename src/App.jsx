@@ -62,6 +62,8 @@ import AdminRiderDetail   from './pages/admin/AdminRiderDetail'
 import AdminDrivers       from './pages/admin/AdminDrivers'
 import AdminDriverDetail  from './pages/admin/AdminDriverDetail'
 import AdminRides         from './pages/admin/AdminRides'
+import AdminPayments      from './pages/admin/AdminPayments'
+import AdminAlerts        from './pages/admin/AdminAlerts'
 import AdminUsers         from './pages/admin/AdminUsers'
 import AdminSettings      from './pages/admin/AdminSettings'
 
@@ -134,6 +136,8 @@ export default function App() {
           <Route path="/admin/drivers"        element={<ProtectedRoute requiredRole="admin"><AdminDrivers /></ProtectedRoute>} />
           <Route path="/admin/drivers/:id"    element={<ProtectedRoute requiredRole="admin"><AdminDriverDetail /></ProtectedRoute>} />
           <Route path="/admin/rides"          element={<ProtectedRoute requiredRole="admin"><AdminRides /></ProtectedRoute>} />
+          <Route path="/admin/payments"       element={<ProtectedRoute requiredRole="admin"><AdminPayments /></ProtectedRoute>} />
+          <Route path="/admin/alerts"         element={<ProtectedRoute requiredRole="admin"><AdminAlerts /></ProtectedRoute>} />
           <Route path="/admin/users"          element={<ProtectedRoute requiredRole="admin"><AdminUsers /></ProtectedRoute>} />
           <Route path="/admin/settings"       element={<ProtectedRoute requiredRole="admin"><AdminSettings /></ProtectedRoute>} />
 
