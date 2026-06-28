@@ -34,7 +34,7 @@ export default function TripHistory(){
       {/* Stats */}
       <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,marginBottom:20}}>
         {[['Total Trips',completed.length],['Cancelled',TRIPS.filter(t=>t.status==='cancelled').length],['Spent','₦'+total.toLocaleString()]].map(([l,v])=>(
-          <div key={l} style={{background:NEON,borderRadius:14,padding:'18px 12px',textAlign:'center',boxShadow:'0 4px 12px rgba(204,255,0,0.3)'}}>
+          <div key={l} style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:14,padding:'18px 12px',textAlign:'center',boxShadow:'0 2px 8px rgba(36,56,0,0.06)'}}>
             <p style={{fontWeight:900,fontSize:'clamp(1.2rem,3vw,1.6rem)',color:OLIVE,letterSpacing:'-0.03em'}}>{v}</p>
             <p style={{fontSize:11,color:'rgba(36,56,0,0.6)',fontWeight:600,marginTop:2}}>{l}</p>
           </div>

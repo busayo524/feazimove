@@ -824,7 +824,7 @@ export default function HomePage() {
 
       {/* ── Connect with Us ──────────────────────────────────────────────── */}
       <section style={{ background: C.subtleBg, padding: '80px clamp(20px,6vw,80px)' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '64px', alignItems: 'start' }}>
+        <div className="connect-grid" style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '64px', alignItems: 'start' }}>
           {/* Left: heading */}
           <div>
             <p style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#5a9e00', marginBottom: 16 }}>Socials</p>

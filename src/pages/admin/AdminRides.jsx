@@ -58,6 +58,7 @@ export default function AdminRides() {
       )}
 
       <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, overflow:'hidden', boxShadow:'0 1px 3px rgba(0,0,0,0.04)' }}>
+        <div style={{ overflowX:'auto' }}>
         <table style={{ width:'100%', borderCollapse:'collapse', fontSize:14 }}>
           <thead>
             <tr style={{ background:BG, textAlign:'left' }}>
@@ -92,6 +93,7 @@ export default function AdminRides() {
             })}
           </tbody>
         </table>
+        </div>
       </div>
     </AdminLayout>
   )

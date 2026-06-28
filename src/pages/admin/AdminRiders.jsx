@@ -35,7 +35,7 @@ export default function AdminRiders() {
           <div style={{ position:'relative' }}>
             <Search size={15} color={MUTED} style={{ position:'absolute', left:12, top:'50%', transform:'translateY(-50%)' }}/>
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, email, phone…"
-              style={{ padding:'9px 14px 9px 34px', borderRadius:10, border:`1px solid ${BORDER}`, fontSize:13, width:240, fontFamily:'inherit', outline:'none' }}/>
+              style={{ padding:'9px 14px 9px 34px', borderRadius:10, border:`1px solid ${BORDER}`, fontSize:13, width:240, fontFamily:'inherit', outline:'none', background:CARD, color:TEXT }}/>
           </div>
         </form>
       </div>
@@ -48,6 +48,7 @@ export default function AdminRiders() {
       )}
 
       <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, overflow:'hidden', boxShadow:'0 1px 3px rgba(0,0,0,0.04)' }}>
+        <div style={{ overflowX:'auto' }}>
         <table style={{ width:'100%', borderCollapse:'collapse', fontSize:14 }}>
           <thead>
             <tr style={{ background:BG, textAlign:'left' }}>
@@ -86,6 +87,7 @@ export default function AdminRiders() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </AdminLayout>
   )

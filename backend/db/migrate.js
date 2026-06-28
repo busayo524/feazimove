@@ -206,6 +206,28 @@ CREATE INDEX IF NOT EXISTS idx_routes_period ON routes(period, is_active);
 -- Fare is quoted and locked in at booking time, not re-looked-up at
 -- confirmation time (see routes table comment above).
 ALTER TABLE rider_bookings ADD COLUMN IF NOT EXISTS quoted_fare_kobo BIGINT;
+
+-- Driver's last-reported live GPS position on an active ride.
+ALTER TABLE rides ADD COLUMN IF NOT EXISTS driver_lat NUMERIC(9,6);
+ALTER TABLE rides ADD COLUMN IF NOT EXISTS driver_lng NUMERIC(9,6);
+ALTER TABLE rides ADD COLUMN IF NOT EXISTS driver_location_updated_at TIMESTAMPTZ;
+
+-- Rider's last-reported live GPS position, symmetric to the driver's.
+ALTER TABLE rides ADD COLUMN IF NOT EXISTS rider_lat NUMERIC(9,6);
+ALTER TABLE rides ADD COLUMN IF NOT EXISTS rider_lng NUMERIC(9,6);
+ALTER TABLE rides ADD COLUMN IF NOT EXISTS rider_location_updated_at TIMESTAMPTZ;
+
+-- Package-delivery ("Move an Item") bookings run through the same
+-- book-intent -> match -> confirm-route pipeline, service = 'send'.
+ALTER TABLE rider_bookings ADD COLUMN IF NOT EXISTS recipient_name  VARCHAR(100);
+ALTER TABLE rider_bookings ADD COLUMN IF NOT EXISTS recipient_phone VARCHAR(20);
+ALTER TABLE rider_bookings ADD COLUMN IF NOT EXISTS package_size    VARCHAR(10);
+ALTER TABLE rider_bookings ADD COLUMN IF NOT EXISTS notes           VARCHAR(500);
+
+ALTER TABLE rides ADD COLUMN IF NOT EXISTS recipient_name  VARCHAR(100);
+ALTER TABLE rides ADD COLUMN IF NOT EXISTS recipient_phone VARCHAR(20);
+ALTER TABLE rides ADD COLUMN IF NOT EXISTS package_size    VARCHAR(10);
+ALTER TABLE rides ADD COLUMN IF NOT EXISTS notes           VARCHAR(500);
 `
 
 ;(async () => {

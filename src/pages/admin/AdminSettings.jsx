@@ -52,15 +52,15 @@ export default function AdminSettings() {
         <form onSubmit={handleSubmit}>
           <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Current Password</label>
           <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} required
-            style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, marginBottom:14, fontFamily:'inherit', boxSizing:'border-box' }}/>
+            style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, marginBottom:14, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}/>
 
           <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>New Password</label>
           <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required
-            style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, marginBottom:14, fontFamily:'inherit', boxSizing:'border-box' }}/>
+            style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, marginBottom:14, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}/>
 
           <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Confirm New Password</label>
           <input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} required
-            style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, marginBottom:16, fontFamily:'inherit', boxSizing:'border-box' }}/>
+            style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, marginBottom:16, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}/>
 
           {error && (
             <div style={{ display:'flex', gap:8, padding:'10px 14px', background:'#fef2f2', border:'1px solid #fca5a5', borderRadius:10, marginBottom:14 }}>

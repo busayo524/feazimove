@@ -54,6 +54,7 @@ export default function AdminUsers() {
       )}
 
       <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, overflow:'hidden', boxShadow:'0 1px 3px rgba(0,0,0,0.04)' }}>
+        <div style={{ overflowX:'auto' }}>
         <table style={{ width:'100%', borderCollapse:'collapse', fontSize:14 }}>
           <thead>
             <tr style={{ background:BG, textAlign:'left' }}>
@@ -99,6 +100,7 @@ export default function AdminUsers() {
             })}
           </tbody>
         </table>
+        </div>
       </div>
 
       {showAdd && <AddUserModal onClose={() => setShowAdd(false)} onCreated={load}/>}
@@ -151,11 +153,11 @@ function AddUserModal({ onClose, onCreated }) {
           <form onSubmit={handleSubmit}>
             <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Full Name</label>
             <input value={name} onChange={e => setName(e.target.value)} required
-              style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, marginBottom:14, fontFamily:'inherit', boxSizing:'border-box' }}/>
+              style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, marginBottom:14, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}/>
 
             <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Email Address</label>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
-              style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, marginBottom:14, fontFamily:'inherit', boxSizing:'border-box' }}/>
+              style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, marginBottom:14, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}/>
 
             {error && <p style={{ fontSize:13, color:'#ef4444', marginBottom:12 }}>{error}</p>}
 

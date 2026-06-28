@@ -5,14 +5,14 @@ import { api } from '../services/api'
 import faviconImg from '../assets/favicon.png'
 import {
   MapPin, Clock, Package, Wallet, User, LogOut, Menu, X,
-  TrendingUp, Navigation, LayoutGrid,
+  TrendingUp, LayoutGrid,
 } from 'lucide-react'
 
 const NEON='#ccff00', NT='#0a0a0a', BG='#ffffff', CARD='#ffffff', BORDER='#d4e5a8', TEXT='#1a2800', MUTED='#4C6900'
 const NL='#f9ffe0', NB='#e8ff80'
 
 // Sidebar-specific palette
-const SB_BG      = '#243800'          // sidebar background
+const SB_BG      = '#0a0a0a'          // sidebar background
 const SB_BORDER  = 'rgba(255,255,255,0.08)'
 const SB_TEXT    = '#e8f5d0'          // inactive label
 const SB_MUTED   = '#7aad40'          // subdued text
@@ -22,7 +22,6 @@ const SB_HOVER   = 'rgba(255,255,255,0.08)'
 const RIDER_NAV=[
   { to:'/book',    icon:<MapPin size={19}/>,    label:'Book Ride' },
   { to:'/wallet',  icon:<Wallet size={19}/>,     label:'Wallet' },
-  { to:'/track',   icon:<Navigation size={19}/>, label:'Track Ride' },
   { to:'/history', icon:<Clock size={19}/>,      label:'Trip History' },
   { to:'/send',    icon:<Package size={19}/>,    label:'Move an Item' },
 ]
@@ -167,13 +166,13 @@ export default function AppLayout({ children, title }){
       <div style={{ flex:1, marginLeft:240, display:'flex', flexDirection:'column', minHeight:'100vh' }} className="main-content">
         {/* Top bar */}
         <header style={{ position:'sticky', top:0, zIndex:30, background:'rgba(255,255,255,0.96)', backdropFilter:'blur(10px)', borderBottom:`1px solid ${BORDER}`, padding:'0 24px', height:60, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-            <button onClick={() => setOpen(!open)} style={{ display:'none', background:'none', border:'none', cursor:'pointer', color:TEXT, padding:4 }} className="mobile-menu-btn" aria-label="Toggle menu">
+          <div style={{ display:'flex', alignItems:'center', gap:12, minWidth:0, flex:1 }}>
+            <button onClick={() => setOpen(!open)} style={{ display:'none', background:'none', border:'none', cursor:'pointer', color:TEXT, padding:4, flexShrink:0 }} className="mobile-menu-btn" aria-label="Toggle menu">
               <Menu size={22}/>
             </button>
-            <h1 style={{ fontWeight:800, fontSize:18, color:TEXT, letterSpacing:'-0.02em', margin:0 }}>{title}</h1>
+            <h1 style={{ fontWeight:800, fontSize:18, color:TEXT, letterSpacing:'-0.02em', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', minWidth:0 }}>{title}</h1>
           </div>
-          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
             {/* Wallet balance pill — drivers see their earnings, riders see their wallet */}
             <button onClick={() => navigate(user?.role === 'driver' ? '/driver/earnings' : '/wallet')}
               style={{ display:'flex', alignItems:'center', gap:7, padding:'6px 13px', borderRadius:50, background:NEON, border:'none', cursor:'pointer', textDecoration:'none', flexShrink:0 }}>

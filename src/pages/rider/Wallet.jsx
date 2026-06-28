@@ -35,9 +35,9 @@ export default function Wallet(){
   return(
     <AppLayout title="Wallet">
       {/* Balance card */}
-      <div style={{background:NEON,borderRadius:20,padding:'28px 24px',marginBottom:20,position:'relative',overflow:'hidden',boxShadow:'0 8px 24px rgba(204,255,0,0.35)'}}>
-        <div style={{position:'absolute',top:-30,right:-30,width:130,height:130,borderRadius:'50%',background:'rgba(36,56,0,0.07)'}}/>
-        <div style={{position:'absolute',bottom:-20,right:50,width:90,height:90,borderRadius:'50%',background:'rgba(36,56,0,0.04)'}}/>
+      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:20,padding:'28px 24px',marginBottom:20,position:'relative',overflow:'hidden',boxShadow:'0 2px 8px rgba(36,56,0,0.06)'}}>
+        <div style={{position:'absolute',top:-30,right:-30,width:130,height:130,borderRadius:'50%',background:'rgba(204,255,0,0.18)'}}/>
+        <div style={{position:'absolute',bottom:-20,right:50,width:90,height:90,borderRadius:'50%',background:'rgba(204,255,0,0.1)'}}/>
         <p style={{color:'rgba(36,56,0,0.6)',fontSize:13,fontWeight:600,marginBottom:6,textTransform:'uppercase',letterSpacing:'0.06em'}}>Available Balance</p>
         <p style={{color:OLIVE,fontWeight:900,fontSize:'clamp(2rem,5vw,3rem)',letterSpacing:'-0.03em',lineHeight:1}}>₦{balance.toLocaleString()}</p>
         <p style={{color:'rgba(36,56,0,0.45)',fontSize:13,marginTop:10}}>{user?.phone||'••• ••• ••••'}</p>

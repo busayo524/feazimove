@@ -298,7 +298,9 @@ router.post('/confirm-route',
       // Re-derive the oldest still-pending matched rider on this exact route + time
       // (same matching logic as GET /driver/matches)
       const match = await query(
-        `SELECT id, rider_id, service, quoted_fare_kobo FROM rider_bookings
+        `SELECT id, rider_id, service, quoted_fare_kobo,
+                recipient_name, recipient_phone, package_size, notes
+         FROM rider_bookings
          WHERE period = $1 AND time_slot = $2 AND pickup = $3 AND dropoff = $4
            AND status = 'pending' AND rider_id != $5
          ORDER BY created_at ASC LIMIT 1`,
@@ -315,11 +317,15 @@ router.post('/confirm-route',
         return res.status(409).json({ message: 'This booking is outdated. Please ask the rider to book again.' })
       }
       const fareKobo = m.quoted_fare_kobo
+      const rideType = m.service === 'send' ? 'send' : 'pool'
 
       const ride = await query(
-        `INSERT INTO rides (rider_id, driver_id, type, pickup, destination, fare_kobo, status)
-         VALUES ($1, $2, 'pool', $3, $4, $5, 'driver_assigned') RETURNING id`,
-        [m.rider_id, req.user.id, a.pickup, a.dropoff, fareKobo]
+        `INSERT INTO rides
+          (rider_id, driver_id, type, pickup, destination, fare_kobo, status,
+           recipient_name, recipient_phone, package_size, notes)
+         VALUES ($1, $2, $3, $4, $5, $6, 'driver_assigned', $7, $8, $9, $10) RETURNING id`,
+        [m.rider_id, req.user.id, rideType, a.pickup, a.dropoff, fareKobo,
+         m.recipient_name, m.recipient_phone, m.package_size, m.notes]
       )
 
       await query(`UPDATE rider_bookings SET status = 'matched' WHERE id = $1`, [m.id])
@@ -408,5 +414,26 @@ router.get('/earnings', async (req, res, next) => {
     })
   } catch (err) { next(err) }
 })
+
+// ── Push live GPS position while on an active ride, for the rider to track ────
+router.patch('/location',
+  [
+    body('lat').isFloat({ min: -90, max: 90 }),
+    body('lng').isFloat({ min: -180, max: 180 }),
+  ],
+  validate,
+  async (req, res, next) => {
+    try {
+      const { lat, lng } = req.body
+      const result = await query(
+        `UPDATE rides SET driver_lat = $1, driver_lng = $2, driver_location_updated_at = NOW()
+          WHERE driver_id = $3 AND status IN ('pending', 'driver_assigned', 'arrived_pickup', 'in_transit')
+          RETURNING id`,
+        [lat, lng, req.user.id]
+      )
+      res.json({ updated: result.rows.length > 0 })
+    } catch (err) { next(err) }
+  }
+)
 
 module.exports = router

@@ -228,6 +228,32 @@ async function runMigrations() {
     -- confirmation time, so a later admin price edit never silently changes
     -- what an already-matched rider is charged.
     ALTER TABLE rider_bookings ADD COLUMN IF NOT EXISTS quoted_fare_kobo BIGINT;
+
+    -- Driver's last-reported live GPS position on an active ride, pushed
+    -- periodically from their device so the rider can see real movement
+    -- (not a simulated position) before and during the trip.
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS driver_lat NUMERIC(9,6);
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS driver_lng NUMERIC(9,6);
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS driver_location_updated_at TIMESTAMPTZ;
+
+    -- Rider's last-reported live GPS position, symmetric to the driver's —
+    -- lets the driver's map show where the rider actually is too.
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS rider_lat NUMERIC(9,6);
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS rider_lng NUMERIC(9,6);
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS rider_location_updated_at TIMESTAMPTZ;
+
+    -- Package-delivery ("Move an Item") bookings run through the exact same
+    -- book-intent -> match -> confirm-route pipeline as pool/solo rides, just
+    -- with service = 'send' and these extra fields carried along.
+    ALTER TABLE rider_bookings ADD COLUMN IF NOT EXISTS recipient_name  VARCHAR(100);
+    ALTER TABLE rider_bookings ADD COLUMN IF NOT EXISTS recipient_phone VARCHAR(20);
+    ALTER TABLE rider_bookings ADD COLUMN IF NOT EXISTS package_size    VARCHAR(10);
+    ALTER TABLE rider_bookings ADD COLUMN IF NOT EXISTS notes           VARCHAR(500);
+
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS recipient_name  VARCHAR(100);
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS recipient_phone VARCHAR(20);
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS package_size    VARCHAR(10);
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS notes           VARCHAR(500);
   `
   try {
     await pool.query(migrations)

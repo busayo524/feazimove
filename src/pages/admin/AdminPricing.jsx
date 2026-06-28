@@ -37,7 +37,7 @@ function FareCell({ route, field, onSave }) {
       <span style={{ fontSize:12, color:MUTED }}>₦</span>
       <input autoFocus type="number" min="0" value={value} onChange={e => setValue(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false) }}
-        style={{ width:70, padding:'4px 6px', borderRadius:6, border:`1.5px solid ${OLIVE}`, fontSize:13, fontFamily:'inherit' }}/>
+        style={{ width:70, padding:'4px 6px', borderRadius:6, border:`1.5px solid ${OLIVE}`, fontSize:13, fontFamily:'inherit', background:CARD, color:TEXT }}/>
       <button onClick={save} disabled={saving} aria-label="Save" style={{ background:'none', border:'none', cursor:'pointer', color:'#15803d' }}>
         <Check size={14}/>
       </button>
@@ -105,6 +105,7 @@ export default function AdminPricing() {
       )}
 
       <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, overflow:'hidden', boxShadow:'0 1px 3px rgba(0,0,0,0.04)' }}>
+        <div style={{ overflowX:'auto' }}>
         <table style={{ width:'100%', borderCollapse:'collapse', fontSize:14 }}>
           <thead>
             <tr style={{ background:BG, textAlign:'left' }}>
@@ -142,6 +143,7 @@ export default function AdminPricing() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {showAdd && <AddRouteModal period={period} onClose={() => setShowAdd(false)} onCreated={load}/>}
@@ -189,14 +191,14 @@ function AddRouteModal({ period, onClose, onCreated }) {
         <form onSubmit={handleSubmit}>
           <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Pickup</label>
           <select value={pickup} onChange={e => setPickup(e.target.value)} required
-            style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, marginBottom:14, fontFamily:'inherit', boxSizing:'border-box' }}>
+            style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, marginBottom:14, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}>
             <option value="">Select…</option>
             {stops.map(s => <option key={s.id} value={s.name}>{s.name} ({s.group})</option>)}
           </select>
 
           <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Dropoff</label>
           <select value={dropoff} onChange={e => setDropoff(e.target.value)} required
-            style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, marginBottom:14, fontFamily:'inherit', boxSizing:'border-box' }}>
+            style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, marginBottom:14, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}>
             <option value="">Select…</option>
             {stops.map(s => <option key={s.id} value={s.name}>{s.name} ({s.group})</option>)}
           </select>
@@ -205,12 +207,12 @@ function AddRouteModal({ period, onClose, onCreated }) {
             <div>
               <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Pool Fare (₦)</label>
               <input type="number" min="0" value={poolFareKobo} onChange={e => setPoolFareKobo(e.target.value)} required
-                style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, fontFamily:'inherit', boxSizing:'border-box' }}/>
+                style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}/>
             </div>
             <div>
               <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Solo Fare (₦)</label>
               <input type="number" min="0" value={soloFareKobo} onChange={e => setSoloFareKobo(e.target.value)} required
-                style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, fontFamily:'inherit', boxSizing:'border-box' }}/>
+                style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}/>
             </div>
           </div>
 

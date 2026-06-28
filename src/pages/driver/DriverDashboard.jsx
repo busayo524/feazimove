@@ -234,9 +234,16 @@ export default function DriverDashboard() {
     }
   }
 
+  // Poll while the ride is active so the rider's live location (pushed from
+  // their device) stays fresh on this map, not just on the initial load.
   useEffect(() => {
-    if (activeRideId) loadActiveRide(activeRideId)
-  }, [activeRideId])
+    if (!activeRideId) return
+    loadActiveRide(activeRideId)
+    const id = setInterval(() => {
+      if (ride?.status !== 'completed') loadActiveRide(activeRideId)
+    }, 8000)
+    return () => clearInterval(id)
+  }, [activeRideId, ride?.status]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const stage = ride ? (STATUS_TO_STAGE[ride.status] ?? 0) : 0
   const tripDone = ride?.status === 'completed'
@@ -601,7 +608,7 @@ export default function DriverDashboard() {
           <ChatModal rideId={activeRideId} title={rider.name} onClose={() => setShowRideChat(false)}/>
         )}
 
-        <ActiveRideMap pickup={ride.pickup} dropoff={ride.destination}/>
+        <ActiveRideMap pickup={ride.pickup} dropoff={ride.destination} riderLocation={ride.riderLocation} status={ride.status}/>
 
         {rideError && (
           <div style={{ display:'flex', gap:8, padding:'10px 14px', background:'#fef2f2', border:'1px solid #fca5a5', borderRadius:10, marginBottom:16 }}>

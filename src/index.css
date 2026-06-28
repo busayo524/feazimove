@@ -493,6 +493,12 @@
     grid-template-columns: 1fr !important;
   }
 
+  /* ── Homepage: "Connect with Us" heading + social grid ── */
+  .connect-grid {
+    grid-template-columns: 1fr !important;
+    gap: 32px !important;
+  }
+
   /* ── Policies tabs ── */
   .policies-tabs {
     overflow-x: auto;
@@ -500,12 +506,10 @@
     flex-wrap: nowrap !important;
   }
 
-  /* ── Generic two-col inline grids → stack ── */
-  [style*="gridTemplateColumns: '1fr 1fr'"],
-  [style*="gridTemplateColumns: 'repeat(2"] {
-    grid-template-columns: 1fr !important;
-  }
-  [style*="gridTemplateColumns: 'repeat(3"] {
+  /* ── Admin: asymmetric detail/report layouts (main + side panel) → stack ── */
+  .admin-detail-grid,
+  .admin-reports-grid,
+  .admin-stops-grid {
     grid-template-columns: 1fr !important;
   }
 

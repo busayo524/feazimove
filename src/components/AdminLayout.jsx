@@ -81,7 +81,7 @@ export default function AdminLayout({ children, title }) {
   )
 
   return (
-    <div style={{ display:'flex', minHeight:'100vh', background:BG }}>
+    <div style={{ display:'flex', minHeight:'100vh', background:BG, colorScheme:'light' }}>
       <aside style={{ width:230, position:'fixed', top:0, left:0, height:'100vh', zIndex:40, flexShrink:0 }} className="admin-desktop-sidebar">
         <SidebarContent/>
       </aside>
@@ -98,12 +98,12 @@ export default function AdminLayout({ children, title }) {
       <div style={{ flex:1, marginLeft:230, display:'flex', flexDirection:'column', minHeight:'100vh' }} className="admin-main-content">
         <header style={{ position:'sticky', top:0, zIndex:30, background:'#fff', borderBottom:'1px solid #e5e7eb',
           padding:'0 24px', height:60, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-            <button onClick={() => setOpen(!open)} style={{ display:'none', background:'none', border:'none', cursor:'pointer', color:TEXT, padding:4 }}
+          <div style={{ display:'flex', alignItems:'center', gap:12, minWidth:0 }}>
+            <button onClick={() => setOpen(!open)} style={{ display:'none', background:'none', border:'none', cursor:'pointer', color:TEXT, padding:4, flexShrink:0 }}
               className="admin-mobile-menu-btn" aria-label="Toggle menu">
               <Menu size={22}/>
             </button>
-            <h1 style={{ fontWeight:800, fontSize:18, color:TEXT, margin:0 }}>{title}</h1>
+            <h1 style={{ fontWeight:800, fontSize:18, color:TEXT, margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', minWidth:0 }}>{title}</h1>
           </div>
         </header>
 

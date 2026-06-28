@@ -40,8 +40,6 @@ import ForgotPassword  from './pages/auth/ForgotPassword'
 
 // ── Rider ─────────────────────────────────────────────────────────────────────
 import BookRide        from './pages/rider/BookRide'
-import TrackRide       from './pages/rider/TrackRide'
-import CurrentTrackedRide from './pages/rider/CurrentRide'
 import TripHistory     from './pages/rider/TripHistory'
 import SendPackage     from './pages/rider/SendPackage'
 import Wallet          from './pages/rider/Wallet'
@@ -118,8 +116,6 @@ export default function App() {
 
           {/* Rider */}
           <Route path="/book"          element={<ProtectedRoute requiredRole="rider"><BookRide /></ProtectedRoute>} />
-          <Route path="/track"         element={<ProtectedRoute requiredRole="rider"><CurrentTrackedRide /></ProtectedRoute>} />
-          <Route path="/track/:rideId" element={<ProtectedRoute requiredRole="rider"><TrackRide /></ProtectedRoute>} />
           <Route path="/history"       element={<ProtectedRoute requiredRole="rider"><TripHistory /></ProtectedRoute>} />
           <Route path="/send"          element={<ProtectedRoute requiredRole="rider"><SendPackage /></ProtectedRoute>} />
           <Route path="/wallet"        element={<ProtectedRoute><Wallet /></ProtectedRoute>} />

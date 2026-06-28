@@ -16,12 +16,18 @@ router.post('/book-intent',
     body('timeSlot').trim().notEmpty().isLength({ max: 20 }).escape(),
     body('pickup').trim().notEmpty().isLength({ max: 100 }).escape(),
     body('dropoff').trim().notEmpty().isLength({ max: 100 }).escape(),
-    body('service').isIn(['pool', 'solo']),
+    body('service').isIn(['pool', 'solo', 'send']),
+    // Only required/validated when sending a package — same route structure
+    // as a ride, just with a recipient instead of a second rider.
+    body('recipientName').if(body('service').equals('send')).trim().notEmpty().isLength({ max: 100 }).escape(),
+    body('recipientPhone').if(body('service').equals('send')).trim().notEmpty().isLength({ max: 20 }).escape(),
+    body('packageSize').if(body('service').equals('send')).isIn(['sm', 'md', 'lg']),
+    body('notes').optional({ checkFalsy: true }).trim().isLength({ max: 500 }).escape(),
   ],
   validate,
   async (req, res, next) => {
     try {
-      const { period, timeSlot, pickup, dropoff, service } = req.body
+      const { period, timeSlot, pickup, dropoff, service, recipientName, recipientPhone, packageSize, notes } = req.body
 
       if (pickup === dropoff) {
         return res.status(422).json({ message: 'Pickup and drop-off cannot be the same.' })
@@ -31,6 +37,8 @@ router.post('/book-intent',
       // validates the pickup/dropoff (previously unchecked) and gives us the
       // fare to quote. The fare is locked in now, not re-looked-up later, so
       // an admin price edit after this point never changes what's charged.
+      // Package sends are priced as a dedicated (solo) trip — there's no
+      // separate package price table.
       const routeRes = await query(
         `SELECT pool_fare_kobo, solo_fare_kobo FROM routes
          WHERE period = $1 AND pickup = $2 AND dropoff = $3 AND is_active = true`,
@@ -40,7 +48,7 @@ router.post('/book-intent',
       if (!route) {
         return res.status(422).json({ message: 'That route is not currently available.' })
       }
-      const quotedFareKobo = service === 'solo' ? route.solo_fare_kobo : route.pool_fare_kobo
+      const quotedFareKobo = service === 'pool' ? route.pool_fare_kobo : route.solo_fare_kobo
 
       // Cancel any existing pending intent for same period+slot (prevent duplicates)
       await query(
@@ -50,9 +58,12 @@ router.post('/book-intent',
       )
 
       const result = await query(
-        `INSERT INTO rider_bookings (rider_id, period, time_slot, pickup, dropoff, service, quoted_fare_kobo)
-         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-        [req.user.id, period, timeSlot, pickup, dropoff, service, quotedFareKobo]
+        `INSERT INTO rider_bookings
+          (rider_id, period, time_slot, pickup, dropoff, service, quoted_fare_kobo,
+           recipient_name, recipient_phone, package_size, notes)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
+        [req.user.id, period, timeSlot, pickup, dropoff, service, quotedFareKobo,
+         recipientName || null, recipientPhone || null, packageSize || null, notes || null]
       )
 
       res.status(201).json({ bookingId: result.rows[0].id, quotedFare: Math.round(quotedFareKobo / 100) })
@@ -125,6 +136,29 @@ router.get('/:rideId/status',
       )
       if (!result.rows[0]) return res.status(404).json({ message: 'Ride not found.' })
       res.json({ status: result.rows[0].status })
+    } catch (err) { next(err) }
+  }
+)
+
+// ── Push the rider's live GPS position while on an active ride, symmetric to
+// the driver's POST /driver/location, so the driver's map can show it too ────
+router.patch('/:rideId/location',
+  [
+    param('rideId').isUUID(),
+    body('lat').isFloat({ min: -90, max: 90 }),
+    body('lng').isFloat({ min: -180, max: 180 }),
+  ],
+  validate,
+  async (req, res, next) => {
+    try {
+      const { lat, lng } = req.body
+      const result = await query(
+        `UPDATE rides SET rider_lat = $1, rider_lng = $2, rider_location_updated_at = NOW()
+          WHERE id = $3 AND rider_id = $4 AND status IN ('pending', 'driver_assigned', 'arrived_pickup', 'in_transit')
+          RETURNING id`,
+        [lat, lng, req.params.rideId, req.user.id]
+      )
+      res.json({ updated: result.rows.length > 0 })
     } catch (err) { next(err) }
   }
 )
@@ -334,6 +368,16 @@ function sanitizeRide(row) {
     fare:        Math.round((row.fare_kobo || 0) / 100), // kobo → naira
     status:      row.status,
     date:        row.created_at ? new Date(row.created_at).toLocaleDateString('en-NG', { weekday: 'short', hour: '2-digit', minute: '2-digit' }) : '',
+    driverLocation: (row.driver_lat != null && row.driver_lng != null)
+      ? { lat: parseFloat(row.driver_lat), lng: parseFloat(row.driver_lng), updatedAt: row.driver_location_updated_at }
+      : null,
+    riderLocation: (row.rider_lat != null && row.rider_lng != null)
+      ? { lat: parseFloat(row.rider_lat), lng: parseFloat(row.rider_lng), updatedAt: row.rider_location_updated_at }
+      : null,
+    recipientName:  row.recipient_name  || null,
+    recipientPhone: row.recipient_phone || null,
+    packageSize:    row.package_size    || null,
+    notes:          row.notes           || null,
   }
 }
 
