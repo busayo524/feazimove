@@ -35,6 +35,7 @@ import Signup          from './pages/auth/Signup'
 import VerifyOtp       from './pages/auth/VerifyOtp'
 import EmailSent       from './pages/auth/EmailSent'
 import Register        from './pages/auth/Register'
+import RegisterPending from './pages/auth/RegisterPending'
 import RoleSelect      from './pages/auth/RoleSelect'
 import ForgotPassword  from './pages/auth/ForgotPassword'
 
@@ -66,8 +67,10 @@ import AdminReports       from './pages/admin/AdminReports'
 import AdminRoutesPage    from './pages/admin/AdminRoutes'
 import AdminStops         from './pages/admin/AdminStops'
 import AdminPricing       from './pages/admin/AdminPricing'
-import AdminUsers         from './pages/admin/AdminUsers'
-import AdminSettings      from './pages/admin/AdminSettings'
+import AdminUsers             from './pages/admin/AdminUsers'
+import AdminUserDetail        from './pages/admin/AdminUserDetail'
+import AdminUserManagement    from './pages/admin/AdminUserManagement'
+import AdminSettings          from './pages/admin/AdminSettings'
 
 function ProtectedRoute({ children, requiredRole }) {
   const { user, loading } = useAuth()
@@ -79,6 +82,10 @@ function ProtectedRoute({ children, requiredRole }) {
   )
   if (!user) return <Navigate to="/login" replace />
   if (requiredRole && user.role !== requiredRole) return <Navigate to="/" replace />
+  // Admins should never land on rider/driver pages — send them to the admin panel
+  if (user.role === 'admin' && !location.pathname.startsWith('/admin')) {
+    return <Navigate to="/admin" replace />
+  }
   // Admin must set their own password before touching anything else
   if (user.role === 'admin' && user.forcePasswordChange && location.pathname !== '/admin/settings') {
     return <Navigate to="/admin/settings" replace />
@@ -112,6 +119,7 @@ export default function App() {
           <Route path="/register"           element={<RoleSelect />} />
           {/* Multi-step registration wizard — reached after OTP verification */}
           <Route path="/register/:role"     element={<Register />} />
+          <Route path="/register/pending"   element={<RegisterPending />} />
           <Route path="/forgot-password"    element={<ForgotPassword />} />
 
           {/* Rider */}
@@ -142,7 +150,9 @@ export default function App() {
           <Route path="/admin/pricing"        element={<ProtectedRoute requiredRole="admin"><AdminPricing /></ProtectedRoute>} />
           <Route path="/admin/alerts"         element={<ProtectedRoute requiredRole="admin"><AdminAlerts /></ProtectedRoute>} />
           <Route path="/admin/reports"        element={<ProtectedRoute requiredRole="admin"><AdminReports /></ProtectedRoute>} />
-          <Route path="/admin/users"          element={<ProtectedRoute requiredRole="admin"><AdminUsers /></ProtectedRoute>} />
+          <Route path="/admin/users"             element={<ProtectedRoute requiredRole="admin"><AdminUsers /></ProtectedRoute>} />
+          <Route path="/admin/users/:id"         element={<ProtectedRoute requiredRole="admin"><AdminUserDetail /></ProtectedRoute>} />
+          <Route path="/admin/user-management"   element={<ProtectedRoute requiredRole="admin"><AdminUserManagement /></ProtectedRoute>} />
           <Route path="/admin/settings"       element={<ProtectedRoute requiredRole="admin"><AdminSettings /></ProtectedRoute>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />

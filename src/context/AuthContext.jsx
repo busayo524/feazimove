@@ -43,6 +43,8 @@ export function AuthProvider({ children }) {
 
   const register = useCallback(async (data) => {
     const res = await api.post('/auth/register', data)
+    // Registration now returns { pending: true } — no token yet
+    if (res.data.pending) return { pending: true }
     const { token, user } = res.data
     const normalized = normalizeUser(user)
     localStorage.setItem('fm_token', token)

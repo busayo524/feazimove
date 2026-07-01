@@ -108,7 +108,7 @@ async function getUserDetail(userId, ridesClause) {
   const userRes = await query(
     `SELECT id, name, email, phone, role, active_role, can_ride, can_drive,
             wallet_balance, rating, is_active, is_online, created_at,
-            id_type, id_number, vehicle_type, vehicle_make, vehicle_model, plate_number, vehicle_year
+            id_type, id_number, vehicle_type, vehicle_make, vehicle_model, plate_number, vehicle_year, vehicle_color
      FROM users WHERE id = $1`,
     [userId]
   )
@@ -132,7 +132,7 @@ async function getUserDetail(userId, ridesClause) {
     isActive: user.is_active, isOnline: user.is_online, joinedAt: user.created_at,
     idType: user.id_type, idNumber: user.id_number,
     vehicleType: user.vehicle_type, vehicleMake: user.vehicle_make, vehicleModel: user.vehicle_model,
-    plateNumber: user.plate_number, vehicleYear: user.vehicle_year,
+    plateNumber: user.plate_number, vehicleYear: user.vehicle_year, vehicleColor: user.vehicle_color,
     documents: docsRes.rows.map(d => ({ id: d.id, type: d.doc_type, uploadedAt: d.uploaded_at })),
     rides: ridesRes.rows.map(r => ({
       id: r.id, type: r.type, pickup: r.pickup, destination: r.destination,
@@ -207,18 +207,80 @@ router.get('/rides', async (req, res, next) => {
 router.get('/users', async (req, res, next) => {
   try {
     const result = await query(
-      `SELECT id, name, email, phone, role, active_role, can_ride, can_drive, is_active, created_at
-       FROM users ORDER BY created_at DESC`
+      `SELECT u.id, u.name, u.email, u.phone, u.role, u.active_role,
+              u.can_ride, u.can_drive, u.is_active, u.is_pending, u.rating, u.created_at,
+              (SELECT COUNT(*) FROM rides r WHERE r.rider_id = u.id OR r.driver_id = u.id) AS trip_count,
+              (SELECT d.id FROM user_documents d WHERE d.user_id = u.id
+                 AND d.doc_type IN ('selfie','profilePhoto')
+                 ORDER BY d.uploaded_at DESC LIMIT 1) AS profile_doc_id
+       FROM users u ORDER BY u.created_at DESC`
     )
     res.json({
       users: result.rows.map(u => ({
         id: u.id, name: u.name, email: u.email, phone: u.phone,
         role: u.active_role || u.role, canRide: u.can_ride, canDrive: u.can_drive,
-        isActive: u.is_active, joinedAt: u.created_at,
+        isActive: u.is_active, isPending: u.is_pending,
+        rating: u.rating ? parseFloat(u.rating) : null,
+        tripCount: parseInt(u.trip_count, 10),
+        joinedAt: u.created_at,
+        profileDocId: u.profile_doc_id || null,
       })),
     })
   } catch (err) { next(err) }
 })
+
+// ── Single user detail for admin ──────────────────────────────────────────────
+router.get('/users/:id',
+  [param('id').isUUID()],
+  validate,
+  async (req, res, next) => {
+    try {
+      const [userRes, docsRes, ridesRes] = await Promise.all([
+        query(
+          `SELECT id, name, email, phone, role, active_role, can_ride, can_drive,
+                  is_active, is_pending, rating, wallet_balance, created_at,
+                  id_type, id_number,
+                  vehicle_type, vehicle_make, vehicle_model, plate_number, vehicle_year, vehicle_color
+           FROM users WHERE id = $1`,
+          [req.params.id]
+        ),
+        query(
+          `SELECT id, doc_type, uploaded_at FROM user_documents WHERE user_id = $1 ORDER BY uploaded_at DESC`,
+          [req.params.id]
+        ),
+        query(
+          `SELECT id, type, pickup, destination, fare_kobo, status, created_at
+           FROM rides WHERE rider_id = $1 OR driver_id = $1
+           ORDER BY created_at DESC LIMIT 20`,
+          [req.params.id]
+        ),
+      ])
+      if (!userRes.rows[0]) return res.status(404).json({ message: 'User not found.' })
+      const u = userRes.rows[0]
+      res.json({
+        user: {
+          id: u.id, name: u.name, email: u.email, phone: u.phone,
+          role: u.active_role || u.role, canRide: u.can_ride, canDrive: u.can_drive,
+          isActive: u.is_active, isPending: u.is_pending,
+          rating: u.rating ? parseFloat(u.rating) : null,
+          walletBalance: fmt(u.wallet_balance),
+          joinedAt: u.created_at,
+          idType: u.id_type, idNumber: u.id_number,
+          vehicleType: u.vehicle_type, vehicleMake: u.vehicle_make,
+          vehicleModel: u.vehicle_model, plateNumber: u.plate_number,
+          vehicleYear: u.vehicle_year, vehicleColor: u.vehicle_color,
+          profileDocId: docsRes.rows.find(d => d.doc_type === 'selfie' || d.doc_type === 'profilePhoto')?.id || null,
+          documents: docsRes.rows,
+          recentRides: ridesRes.rows.map(r => ({
+            id: r.id, type: r.type, pickup: r.pickup, destination: r.destination,
+            fare: fmt(r.fare_kobo), status: r.status,
+            date: new Date(r.created_at).toLocaleDateString('en-NG'),
+          })),
+        },
+      })
+    } catch (err) { next(err) }
+  }
+)
 
 // ── Create a new admin/staff user ─────────────────────────────────────────────
 router.post('/users',
@@ -253,7 +315,45 @@ router.post('/users',
   }
 )
 
-// ── Suspend / reactivate or delete any user ───────────────────────────────────
+// ── Approve a pending user registration ───────────────────────────────────────
+router.patch('/users/:id/approve',
+  [param('id').isUUID()],
+  validate,
+  async (req, res, next) => {
+    try {
+      const userRes = await query('SELECT id, role FROM users WHERE id = $1', [req.params.id])
+      if (!userRes.rows[0]) return res.status(404).json({ message: 'User not found.' })
+      const { role } = userRes.rows[0]
+      await query(
+        `UPDATE users
+         SET is_active = true, is_pending = false,
+             can_ride  = CASE WHEN role IN ('rider','admin') THEN true ELSE can_ride END,
+             can_drive = CASE WHEN role = 'driver' THEN true ELSE can_drive END
+         WHERE id = $1`,
+        [req.params.id]
+      )
+      res.json({ message: 'User approved and activated.' })
+    } catch (err) { next(err) }
+  }
+)
+
+// ── Reject a pending user registration ────────────────────────────────────────
+router.patch('/users/:id/reject',
+  [param('id').isUUID()],
+  validate,
+  async (req, res, next) => {
+    try {
+      const result = await query(
+        'UPDATE users SET is_active = false, is_pending = false WHERE id = $1 RETURNING id',
+        [req.params.id]
+      )
+      if (!result.rows[0]) return res.status(404).json({ message: 'User not found.' })
+      res.json({ message: 'User registration rejected.' })
+    } catch (err) { next(err) }
+  }
+)
+
+// ── Suspend / reactivate any user ─────────────────────────────────────────────
 router.patch('/users/:id/status',
   [param('id').isUUID(), body('isActive').isBoolean()],
   validate,
@@ -275,10 +375,9 @@ router.patch('/users/:id/status',
 // ── Payments overview ───────────────────────────────────────────────────────────
 router.get('/payments', async (req, res, next) => {
   try {
-    const [walletTotal, pendingPayouts, revenue, txns] = await Promise.all([
+    const [walletTotal, pendingPayouts, revenue, txns, feeRes] = await Promise.all([
       query("SELECT COALESCE(SUM(wallet_balance),0) s FROM users"),
       query("SELECT COALESCE(SUM(amount_kobo),0) s FROM payout_requests WHERE status = 'pending'"),
-      // Platform keeps 20% of every completed ride's fare (drivers are paid 80% — see rides.js)
       query("SELECT COALESCE(SUM(fare_kobo),0) s FROM rides WHERE status = 'completed'"),
       query(
         `SELECT t.id, t.type, t.amount_kobo, t.description, t.created_at, u.name AS user_name
@@ -286,12 +385,18 @@ router.get('/payments', async (req, res, next) => {
          JOIN users u ON t.user_id = u.id
          ORDER BY t.created_at DESC LIMIT 25`
       ),
+      query('SELECT platform_fee_percent FROM platform_settings WHERE id = 1'),
     ])
+
+    // Estimate at the *current* fee — past rides may have actually paid out
+    // at a different fee if the admin has changed it since, but each ride's
+    // own payout (already settled to wallets) is never recalculated.
+    const feePercent = Number(feeRes.rows[0]?.platform_fee_percent ?? 20)
 
     res.json({
       totalWalletBalance: fmt(walletTotal.rows[0].s),
       pendingPayouts: fmt(pendingPayouts.rows[0].s),
-      platformRevenue: Math.round(fmt(revenue.rows[0].s) * 0.2),
+      platformRevenue: Math.round(fmt(revenue.rows[0].s) * feePercent / 100),
       transactions: txns.rows.map(t => ({
         id: t.id, type: t.type, amount: fmt(t.amount_kobo), description: t.description,
         userName: t.user_name, date: t.created_at,
@@ -632,7 +737,7 @@ router.get('/routes-pricing', async (req, res, next) => {
   try {
     const period = req.query.period
     const result = await query(
-      `SELECT r.id, r.period, r.pickup, r.dropoff, r.pool_fare_kobo, r.solo_fare_kobo,
+      `SELECT r.id, r.period, r.pickup, r.dropoff, r.pool_fare_kobo, r.package_fare_kobo,
               r.is_active, r.updated_at, u.name AS updated_by_name
        FROM routes r
        LEFT JOIN users u ON r.updated_by = u.id
@@ -643,7 +748,7 @@ router.get('/routes-pricing', async (req, res, next) => {
     res.json({
       routes: result.rows.map(r => ({
         id: r.id, period: r.period, pickup: r.pickup, dropoff: r.dropoff,
-        poolFareKobo: Number(r.pool_fare_kobo), soloFareKobo: Number(r.solo_fare_kobo),
+        poolFareKobo: Number(r.pool_fare_kobo), packageFareKobo: Number(r.package_fare_kobo),
         isActive: r.is_active, updatedAt: r.updated_at, updatedByName: r.updated_by_name,
       })),
     })
@@ -656,16 +761,16 @@ router.post('/routes-pricing',
     body('pickup').trim().isLength({ min: 1, max: 100 }).escape(),
     body('dropoff').trim().isLength({ min: 1, max: 100 }).escape(),
     body('poolFareKobo').isInt({ min: 0 }),
-    body('soloFareKobo').isInt({ min: 0 }),
+    body('packageFareKobo').isInt({ min: 0 }),
   ],
   validate,
   async (req, res, next) => {
     try {
-      const { period, pickup, dropoff, poolFareKobo, soloFareKobo } = req.body
+      const { period, pickup, dropoff, poolFareKobo, packageFareKobo } = req.body
       const result = await query(
-        `INSERT INTO routes (period, pickup, dropoff, pool_fare_kobo, solo_fare_kobo, updated_by, updated_at)
+        `INSERT INTO routes (period, pickup, dropoff, pool_fare_kobo, package_fare_kobo, updated_by, updated_at)
          VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING id`,
-        [period, pickup, dropoff, poolFareKobo, soloFareKobo, req.user.id]
+        [period, pickup, dropoff, poolFareKobo, packageFareKobo, req.user.id]
       )
       res.status(201).json({ id: result.rows[0].id })
     } catch (err) {
@@ -680,24 +785,47 @@ router.patch('/routes-pricing/:id',
   [
     param('id').isUUID(),
     body('poolFareKobo').optional({ checkFalsy: true }).isInt({ min: 0 }),
-    body('soloFareKobo').optional({ checkFalsy: true }).isInt({ min: 0 }),
+    body('packageFareKobo').optional({ checkFalsy: true }).isInt({ min: 0 }),
     body('isActive').optional().isBoolean(),
   ],
   validate,
   async (req, res, next) => {
     try {
-      const { poolFareKobo, soloFareKobo, isActive } = req.body
+      const { poolFareKobo, packageFareKobo, isActive } = req.body
       const result = await query(
         `UPDATE routes SET
            pool_fare_kobo = COALESCE($1, pool_fare_kobo),
-           solo_fare_kobo = COALESCE($2, solo_fare_kobo),
+           package_fare_kobo = COALESCE($2, package_fare_kobo),
            is_active = COALESCE($3, is_active),
            updated_by = $4, updated_at = NOW()
          WHERE id = $5 RETURNING id`,
-        [poolFareKobo ?? null, soloFareKobo ?? null, isActive ?? null, req.user.id, req.params.id]
+        [poolFareKobo ?? null, packageFareKobo ?? null, isActive ?? null, req.user.id, req.params.id]
       )
       if (!result.rows[0]) return res.status(404).json({ message: 'Route not found.' })
       res.json({ message: 'Route updated.' })
+    } catch (err) { next(err) }
+  }
+)
+
+// ── Platform fee — the cut taken from every fare before the driver is paid ───
+router.get('/platform-fee', async (req, res, next) => {
+  try {
+    const result = await query('SELECT platform_fee_percent FROM platform_settings WHERE id = 1')
+    res.json({ feePercent: Number(result.rows[0].platform_fee_percent) })
+  } catch (err) { next(err) }
+})
+
+router.patch('/platform-fee',
+  [body('feePercent').isFloat({ min: 0, max: 100 })],
+  validate,
+  async (req, res, next) => {
+    try {
+      const { feePercent } = req.body
+      await query(
+        `UPDATE platform_settings SET platform_fee_percent = $1, updated_by = $2, updated_at = NOW() WHERE id = 1`,
+        [feePercent, req.user.id]
+      )
+      res.json({ feePercent, message: 'Platform fee updated.' })
     } catch (err) { next(err) }
   }
 )

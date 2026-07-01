@@ -14,6 +14,7 @@ const BG = '#f5f7f2', TEXT = '#1a1a1a'
 
 const NAV = [
   { to: '/admin',          icon: <LayoutGrid size={18}/>,    label: 'Dashboard', end: true },
+  { to: '/admin/users',    icon: <Users size={18}/>,         label: 'Users' },
   { to: '/admin/riders',   icon: <Users size={18}/>,         label: 'Riders' },
   { to: '/admin/drivers',  icon: <Car size={18}/>,           label: 'Drivers' },
   { to: '/admin/rides',    icon: <Navigation size={18}/>,    label: 'Rides' },
@@ -23,7 +24,7 @@ const NAV = [
   { to: '/admin/pricing',  icon: <Tag size={18}/>,           label: 'Pricing' },
   { to: '/admin/alerts',   icon: <AlertTriangle size={18}/>, label: 'Alerts' },
   { to: '/admin/reports',  icon: <BarChart3 size={18}/>,     label: 'Reports' },
-  { to: '/admin/users',    icon: <UserCog size={18}/>,       label: 'User Management' },
+  { to: '/admin/user-management', icon: <UserCog size={18}/>, label: 'User Management' },
   { to: '/admin/settings', icon: <Settings size={18}/>,      label: 'Settings' },
 ]
 

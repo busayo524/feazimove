@@ -189,16 +189,16 @@ async function sendRegistrationLink(to, fullName, token, role) {
             Account Verified ✅
           </p>
           <p style="margin:0;font-size:20px;font-weight:900;color:#0a1f15;line-height:1.3;">
-            Email confirmed! Complete your ${roleLabel} profile
+            Complete your ${roleLabel} profile
           </p>
         </td>
       </tr>
     </table>
 
-    <p style="margin:0 0 20px;font-size:15px;color:#222;">Dear ${firstName},</p>
+    <p style="margin:0 0 20px;font-size:15px;color:#222;">Hello ${firstName},</p>
 
     <p style="margin:0 0 20px;font-size:15px;color:#333;line-height:1.7;">
-      Great job! Your email has been successfully verified. Click the button below to complete your FeaziMove <strong>${roleLabel}</strong> registration — it only takes a few minutes.
+      Your email has been successfully verified. Click the button below to complete your FeaziMove <strong>${roleLabel}</strong> registration — it only takes a few minutes.
     </p>
 
     <!-- CTA Button -->
@@ -215,16 +215,16 @@ async function sendRegistrationLink(to, fullName, token, role) {
     <!-- What to expect -->
     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
       <tr>
-        <td style="background:#f8fdf9;border:1.5px solid #d4f5df;border-radius:8px;padding:18px 20px;">
-          <p style="margin:0 0 12px;font-size:11px;font-weight:700;color:#2a6048;text-transform:uppercase;letter-spacing:0.08em;">What to expect next</p>
+        <td style="border-top:1px solid #eeeeee;border-bottom:1px solid #eeeeee;padding:18px 0;">
+          <p style="margin:0 0 12px;font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.08em;">What to expect next</p>
           ${role === 'rider' ? `
-            <p style="margin:0 0 8px;font-size:14px;color:#333;">📋 <strong>Step 1</strong> — Review your personal details</p>
-            <p style="margin:0 0 8px;font-size:14px;color:#333;">🪪 <strong>Step 2</strong> — Upload your government-issued ID</p>
-            <p style="margin:0;font-size:14px;color:#333;">✅ <strong>Step 3</strong> — Agree to terms &amp; go live</p>
+            <p style="margin:0 0 8px;font-size:14px;color:#333;"><strong>Step 1</strong> — Review your personal details</p>
+            <p style="margin:0 0 8px;font-size:14px;color:#333;"><strong>Step 2</strong> — Upload your government-issued ID</p>
+            <p style="margin:0;font-size:14px;color:#333;"><strong>Step 3</strong> — Agree to terms &amp; go live</p>
           ` : `
-            <p style="margin:0 0 8px;font-size:14px;color:#333;">📋 <strong>Step 1</strong> — Review your personal details</p>
-            <p style="margin:0 0 8px;font-size:14px;color:#333;">🚘 <strong>Step 2</strong> — Add vehicle info &amp; upload documents</p>
-            <p style="margin:0;font-size:14px;color:#333;">✅ <strong>Step 3</strong> — Certify &amp; submit driver application</p>
+            <p style="margin:0 0 8px;font-size:14px;color:#333;"><strong>Step 1</strong> — Review your personal details</p>
+            <p style="margin:0 0 8px;font-size:14px;color:#333;"><strong>Step 2</strong> — Add vehicle info &amp; upload documents</p>
+            <p style="margin:0;font-size:14px;color:#333;"><strong>Step 3</strong> — Certify &amp; submit driver application</p>
           `}
         </td>
       </tr>
@@ -267,22 +267,21 @@ async function sendWelcomeEmail(to, fullName, role) {
     <!-- Hero block -->
     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:32px;">
       <tr>
-        <td style="background:#0a1f15;border-radius:12px;padding:32px 28px;text-align:center;">
-          <p style="margin:0 0 8px;font-size:36px;letter-spacing:2px;">🎉</p>
-          <p style="margin:0 0 6px;font-size:22px;font-weight:900;color:#ccff00;font-family:Arial,sans-serif;">
+        <td style="border-bottom:4px solid #ccff00;padding-bottom:22px;">
+          <p style="margin:0 0 6px;font-size:24px;font-weight:900;color:#0a1f15;font-family:Arial,sans-serif;">
             Welcome to FeaziMove, ${firstName}!
           </p>
-          <p style="margin:0;font-size:15px;color:#a0c4a0;line-height:1.6;">
-            Your ${roleLabel} profile is complete. You're all set to go.
+          <p style="margin:0;font-size:15px;color:#555;line-height:1.6;">
+            Your ${roleLabel} profile is complete. You are all set to go.
           </p>
         </td>
       </tr>
     </table>
 
-    <p style="margin:0 0 20px;font-size:17px;color:#222;">Dear ${firstName},</p>
+    <p style="margin:0 0 20px;font-size:15px;color:#222;">Hello ${firstName},</p>
 
-    <p style="margin:0 0 20px;font-size:16px;color:#333;line-height:1.8;">
-      We're thrilled to have you on board. Your <strong>FeaziMove ${roleLabel}</strong> account is now active and ready to use.
+    <p style="margin:0 0 20px;font-size:15px;color:#333;line-height:1.8;">
+      We are pleased to have you on board. Your <strong>FeaziMove ${roleLabel}</strong> account is now active and ready to use.
       ${isDriver
         ? 'You can now go online, accept rides, and start earning — the Feazi Way.'
         : 'You can now book rides and send packages — making everyday movement feasible, easy, and affordable.'}
@@ -292,12 +291,12 @@ async function sendWelcomeEmail(to, fullName, role) {
     <!-- Driver quick-start -->
     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
       <tr>
-        <td style="background:#f8fdf9;border:1.5px solid #d4f5df;border-radius:10px;padding:22px 24px;">
-          <p style="margin:0 0 14px;font-size:12px;font-weight:700;color:#2a6048;text-transform:uppercase;letter-spacing:0.08em;">Getting started as a Driver</p>
-          <p style="margin:0 0 10px;font-size:15px;color:#333;">🟢 <strong>Go Online</strong> — Open your driver dashboard and set yourself as available</p>
-          <p style="margin:0 0 10px;font-size:15px;color:#333;">📍 <strong>Accept Rides</strong> — Pick up riders along your route and earn per trip</p>
-          <p style="margin:0 0 10px;font-size:15px;color:#333;">💰 <strong>Track Earnings</strong> — View your daily earnings and payout history</p>
-          <p style="margin:0;font-size:15px;color:#333;">⭐ <strong>Build Your Rating</strong> — Great service earns great ratings and more bookings</p>
+        <td style="border-top:1px solid #eeeeee;border-bottom:1px solid #eeeeee;padding:18px 0;">
+          <p style="margin:0 0 14px;font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.08em;">Getting started as a Driver</p>
+          <p style="margin:0 0 10px;font-size:14px;color:#333;"><strong>Go Online</strong> — Open your driver dashboard and set yourself as available</p>
+          <p style="margin:0 0 10px;font-size:14px;color:#333;"><strong>Accept Rides</strong> — Pick up riders along your route and earn per trip</p>
+          <p style="margin:0 0 10px;font-size:14px;color:#333;"><strong>Track Earnings</strong> — View your daily earnings and payout history</p>
+          <p style="margin:0;font-size:14px;color:#333;"><strong>Build Your Rating</strong> — Great service earns great ratings and more bookings</p>
         </td>
       </tr>
     </table>
@@ -305,12 +304,12 @@ async function sendWelcomeEmail(to, fullName, role) {
     <!-- Rider quick-start -->
     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
       <tr>
-        <td style="background:#f8fdf9;border:1.5px solid #d4f5df;border-radius:10px;padding:22px 24px;">
-          <p style="margin:0 0 14px;font-size:12px;font-weight:700;color:#2a6048;text-transform:uppercase;letter-spacing:0.08em;">Getting started as a Rider</p>
-          <p style="margin:0 0 10px;font-size:15px;color:#333;">🚗 <strong>Book a Ride</strong> — Enter your pickup and destination to find available drivers</p>
-          <p style="margin:0 0 10px;font-size:15px;color:#333;">📦 <strong>Send a Package</strong> — Ship goods along shared routes quickly and affordably</p>
-          <p style="margin:0 0 10px;font-size:15px;color:#333;">💳 <strong>Fund Your Wallet</strong> — Top up your FeaziMove wallet for seamless payments</p>
-          <p style="margin:0;font-size:15px;color:#333;">⭐ <strong>Rate Your Trip</strong> — Your feedback helps keep FeaziMove safe and reliable</p>
+        <td style="border-top:1px solid #eeeeee;border-bottom:1px solid #eeeeee;padding:18px 0;">
+          <p style="margin:0 0 14px;font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.08em;">Getting started as a Rider</p>
+          <p style="margin:0 0 10px;font-size:14px;color:#333;"><strong>Book a Ride</strong> — Enter your pickup and destination to find available drivers</p>
+          <p style="margin:0 0 10px;font-size:14px;color:#333;"><strong>Send a Package</strong> — Ship goods along shared routes quickly and affordably</p>
+          <p style="margin:0 0 10px;font-size:14px;color:#333;"><strong>Fund Your Wallet</strong> — Top up your FeaziMove wallet for seamless payments</p>
+          <p style="margin:0;font-size:14px;color:#333;"><strong>Rate Your Trip</strong> — Your feedback helps keep FeaziMove safe and reliable</p>
         </td>
       </tr>
     </table>
@@ -338,9 +337,9 @@ async function sendWelcomeEmail(to, fullName, role) {
       </tr>
     </table>
 
-    <p style="margin:0 0 6px;font-size:16px;color:#333;">Warm regards,</p>
-    <p style="margin:0 0 4px;font-size:16px;font-weight:700;color:#0a1f15;">The FeaziMove Team</p>
-    <p style="margin:0;font-size:14px;color:#666;">
+    <p style="margin:0 0 6px;font-size:15px;color:#333;">Warm regards,</p>
+    <p style="margin:0 0 4px;font-size:15px;font-weight:700;color:#0a1f15;">The FeaziMove Team</p>
+    <p style="margin:0;font-size:13px;color:#666;">
       FeaziMove Technologies Ltd. | Lagos, Nigeria<br/>
       📧 <a href="mailto:support@feazimove.com" style="color:#2a6048;">support@feazimove.com</a>
       &nbsp;|&nbsp; 🌐 <a href="https://feazimove.com" style="color:#2a6048;">www.feazimove.com</a>

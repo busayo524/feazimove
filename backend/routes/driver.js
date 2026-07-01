@@ -137,11 +137,21 @@ router.post('/go-live',
     body('pickup').trim().notEmpty().isLength({ max: 100 }).escape(),
     body('dropoff').trim().notEmpty().isLength({ max: 100 }).escape(),
     body('seats').isInt({ min: 1, max: 8 }),
+    body('comment').optional({ checkFalsy: true }).trim().isLength({ max: 200 }).escape(),
   ],
   validate,
   async (req, res, next) => {
     try {
-      const { period, timeSlot, pickup, dropoff, seats } = req.body
+      const { period, timeSlot, pickup, dropoff, seats, comment } = req.body
+
+      // Block unapproved drivers from going live
+      const approval = await query('SELECT is_active, is_pending FROM users WHERE id = $1', [req.user.id])
+      if (approval.rows[0]?.is_pending) {
+        return res.status(403).json({ message: 'Your account is pending admin approval. You cannot go live yet.' })
+      }
+      if (!approval.rows[0]?.is_active) {
+        return res.status(403).json({ message: 'Your account is not active. Please contact support.' })
+      }
 
       // Reject any pair that isn't an active, priced route (previously only
       // checked pickup against a flat list — dropoff was never validated)
@@ -167,9 +177,9 @@ router.post('/go-live',
       )
 
       const result = await query(
-        `INSERT INTO driver_availability (driver_id, period, time_slot, pickup, dropoff, seats)
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-        [req.user.id, period, timeSlot, pickup, dropoff, seats]
+        `INSERT INTO driver_availability (driver_id, period, time_slot, pickup, dropoff, seats, comment)
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+        [req.user.id, period, timeSlot, pickup, dropoff, seats, comment || null]
       )
 
       res.status(201).json({ availabilityId: result.rows[0].id })
@@ -194,7 +204,7 @@ router.get('/matches', async (req, res, next) => {
 
     // Find pending riders on the exact same route + time
     const matches = await query(
-      `SELECT rb.id, rb.pickup, rb.dropoff, rb.service, rb.created_at,
+      `SELECT rb.id, rb.rider_id, rb.pickup, rb.dropoff, rb.service, rb.created_at,
               u.name AS rider_name, u.phone AS rider_phone, u.rating AS rider_rating
        FROM rider_bookings rb
        JOIN users u ON rb.rider_id = u.id
@@ -214,6 +224,7 @@ router.get('/matches', async (req, res, next) => {
       pickup: a.pickup,
       matches: matches.rows.map(r => ({
         id:          r.id,
+        riderId:     r.rider_id,
         pickup:      r.pickup,
         dropoff:     r.dropoff,
         service:     r.service,
@@ -285,7 +296,7 @@ router.post('/confirm-route',
       const { availabilityId } = req.body
 
       const avail = await query(
-        `SELECT id, period, time_slot, pickup, dropoff, status
+        `SELECT id, period, time_slot, pickup, dropoff, status, comment, seats
          FROM driver_availability WHERE id = $1 AND driver_id = $2`,
         [availabilityId, req.user.id]
       )
@@ -299,7 +310,7 @@ router.post('/confirm-route',
       // (same matching logic as GET /driver/matches)
       const match = await query(
         `SELECT id, rider_id, service, quoted_fare_kobo,
-                recipient_name, recipient_phone, package_size, notes
+                recipient_name, recipient_phone, package_size, notes, comment
          FROM rider_bookings
          WHERE period = $1 AND time_slot = $2 AND pickup = $3 AND dropoff = $4
            AND status = 'pending' AND rider_id != $5
@@ -309,29 +320,62 @@ router.post('/confirm-route',
       if (!match.rows[0]) return res.status(409).json({ message: 'No riders currently matched on this route.' })
       const m = match.rows[0]
 
-      // Fare was quoted and locked in at book-intent time — never re-looked-up
-      // here, so an admin price edit after booking never changes what's charged.
-      // A null here means this booking predates the quoted-fare column (made
-      // before this rollout) — reject rather than silently charging nothing.
-      if (m.quoted_fare_kobo == null) {
-        return res.status(409).json({ message: 'This booking is outdated. Please ask the rider to book again.' })
+      let fareKobo
+      if (m.service === 'solo') {
+        // Solo fare was never quoted at booking time — it's the route's pool
+        // fare × this specific driver's seats, since a solo rider is buying
+        // out the whole car. Only knowable now that a driver is matched.
+        const routeRes = await query(
+          `SELECT pool_fare_kobo FROM routes
+           WHERE period = $1 AND pickup = $2 AND dropoff = $3 AND is_active = true`,
+          [a.period, a.pickup, a.dropoff]
+        )
+        if (!routeRes.rows[0]) return res.status(422).json({ message: 'That route is not currently available.' })
+        fareKobo = Number(routeRes.rows[0].pool_fare_kobo) * a.seats
+
+        // Not checked at book-intent (fare was unknown then) — check now.
+        // BIGINT columns come back from pg as strings — compare as Numbers.
+        const riderRes = await query('SELECT wallet_balance FROM users WHERE id = $1', [m.rider_id])
+        if (Number(riderRes.rows[0].wallet_balance) < fareKobo) {
+          // Don't let an unaffordable rider keep blocking the queue for other drivers
+          await query(`UPDATE rider_bookings SET status = 'cancelled' WHERE id = $1`, [m.id])
+          return res.status(409).json({ message: 'This rider no longer has sufficient funds for this route. Try confirming again to match the next rider.' })
+        }
+      } else {
+        // Pool/package fare was quoted and locked in at book-intent time —
+        // never re-looked-up here, so an admin price edit after booking never
+        // changes what's charged. A null here means this booking predates the
+        // quoted-fare column — reject rather than silently charging nothing.
+        if (m.quoted_fare_kobo == null) {
+          return res.status(409).json({ message: 'This booking is outdated. Please ask the rider to book again.' })
+        }
+        fareKobo = m.quoted_fare_kobo
       }
-      const fareKobo = m.quoted_fare_kobo
       const rideType = m.service === 'send' ? 'send' : 'pool'
 
       const ride = await query(
         `INSERT INTO rides
           (rider_id, driver_id, type, pickup, destination, fare_kobo, status,
-           recipient_name, recipient_phone, package_size, notes)
-         VALUES ($1, $2, $3, $4, $5, $6, 'driver_assigned', $7, $8, $9, $10) RETURNING id`,
+           recipient_name, recipient_phone, package_size, notes, rider_comment, driver_comment)
+         VALUES ($1, $2, $3, $4, $5, $6, 'driver_assigned', $7, $8, $9, $10, $11, $12) RETURNING id`,
         [m.rider_id, req.user.id, rideType, a.pickup, a.dropoff, fareKobo,
-         m.recipient_name, m.recipient_phone, m.package_size, m.notes]
+         m.recipient_name, m.recipient_phone, m.package_size, m.notes, m.comment, a.comment]
       )
 
       await query(`UPDATE rider_bookings SET status = 'matched' WHERE id = $1`, [m.id])
       await query(`UPDATE driver_availability SET status = 'in_progress' WHERE id = $1`, [availabilityId])
 
-      res.status(201).json({ rideId: ride.rows[0].id })
+      // Seed the ride's chat with each side's handoff note (if they left one)
+      // so it's the opening message instead of a separate static box.
+      const rideId = ride.rows[0].id
+      if (m.comment) {
+        await query('INSERT INTO ride_messages (ride_id, sender_id, body) VALUES ($1, $2, $3)', [rideId, m.rider_id, m.comment])
+      }
+      if (a.comment) {
+        await query('INSERT INTO ride_messages (ride_id, sender_id, body) VALUES ($1, $2, $3)', [rideId, req.user.id, a.comment])
+      }
+
+      res.status(201).json({ rideId })
     } catch (err) { next(err) }
   }
 )

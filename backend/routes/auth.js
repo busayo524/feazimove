@@ -308,6 +308,7 @@ router.post('/register',
     body('vehicleModel').optional({ checkFalsy: true }).trim().isLength({ max: 50 }).escape(),
     body('plateNumber').optional({ checkFalsy: true }).trim().isLength({ max: 20 }).escape(),
     body('vehicleYear').optional({ checkFalsy: true }).isInt({ min: 1980, max: 2100 }),
+    body('vehicleColor').optional({ checkFalsy: true }).trim().isLength({ max: 30 }).escape(),
   ],
   validate,
   async (req, res, next) => {
@@ -315,7 +316,7 @@ router.post('/register',
       const {
         registrationToken, role, name,
         idType, idNumber,
-        vehicleType, vehicleMake, vehicleModel, plateNumber, vehicleYear,
+        vehicleType, vehicleMake, vehicleModel, plateNumber, vehicleYear, vehicleColor,
       } = req.body
 
       // Validate the registration token
@@ -334,31 +335,33 @@ router.post('/register',
       // Build the final name: prefer the one from the wizard; fall back to whatever was stored at signup
       const finalName = (name && name.trim()) ? name.trim() : pendingUser.name
 
-      // Activate the account — clear pending state and registration token, save final name
-      // plus whatever rider-ID / driver-vehicle info the wizard collected
+      // Save all registration data but keep the account pending — an admin must
+      // review and approve before the user can log in and book rides.
       const result = await query(
         `UPDATE users
-         SET is_active = true, is_pending = false, registration_token = NULL, reg_token_expires = NULL,
+         SET registration_token = NULL, reg_token_expires = NULL,
              name = $2,
+             can_ride      = false,
+             can_drive     = false,
              id_type       = COALESCE($3, id_type),
              id_number     = COALESCE($4, id_number),
              vehicle_type  = COALESCE($5, vehicle_type),
              vehicle_make  = COALESCE($6, vehicle_make),
              vehicle_model = COALESCE($7, vehicle_model),
              plate_number  = COALESCE($8, plate_number),
-             vehicle_year  = COALESCE($9, vehicle_year)
+             vehicle_year  = COALESCE($9, vehicle_year),
+             vehicle_color = COALESCE($10, vehicle_color)
          WHERE id = $1
-         RETURNING id, name, email, phone, role, wallet_balance, rating, can_ride, can_drive, active_role`,
+         RETURNING id, name, email, role`,
         [
           pendingUser.id, finalName,
           idType || null, idNumber || null,
           vehicleType || null, vehicleMake || null, vehicleModel || null,
-          plateNumber || null, vehicleYear || null,
+          plateNumber || null, vehicleYear || null, vehicleColor || null,
         ]
       )
 
-      const user  = result.rows[0]
-      const token = signToken(user)
+      const user = result.rows[0]
 
       // Persist any uploaded documents (ID, selfie, vehicle docs, etc.)
       const uploaded = req.files || {}
@@ -371,12 +374,11 @@ router.post('/register',
         )
       }
 
-      // Fire welcome email — non-blocking, don't fail registration if it errors
-      sendWelcomeEmail(user.email, user.name, user.role).catch(e =>
-        console.error('[Welcome email]', e.message)
-      )
-
-      res.status(201).json({ token, user: safeUser(user) })
+      // Return pending — no JWT yet. User must wait for admin approval.
+      res.status(201).json({
+        pending: true,
+        message: 'Registration submitted successfully. Your account is under review and will be activated within 24 hours.',
+      })
     } catch (err) { next(err) }
   }
 )
@@ -565,9 +567,10 @@ router.post('/login',
       const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)
 
       const result = await query(
-        `SELECT id, name, email, phone, role, password_hash, wallet_balance, rating, can_ride, can_drive, active_role, force_password_change
+        `SELECT id, name, email, phone, role, password_hash, wallet_balance, rating,
+                can_ride, can_drive, active_role, force_password_change, is_active, is_pending
          FROM users
-         WHERE ${isEmail ? 'email = $1' : 'phone = $1'} AND is_active = true`,
+         WHERE ${isEmail ? 'email = $1' : 'phone = $1'}`,
         [isEmail ? identifier.toLowerCase().trim() : identifier.trim()]
       )
 
@@ -585,6 +588,17 @@ router.post('/login',
       }
       if (!match) {
         return res.status(401).json({ message: 'Incorrect password. Please try again.' })
+      }
+      // Pending: registration submitted but not yet reviewed by admin
+      if (user.is_pending) {
+        return res.status(403).json({
+          pending: true,
+          message: 'Your account is awaiting admin approval. You will be notified once it is activated.',
+        })
+      }
+      // Rejected / suspended
+      if (!user.is_active) {
+        return res.status(403).json({ message: 'Your account has been suspended. Please contact support.' })
       }
 
       const token = signToken(user)
@@ -806,6 +820,21 @@ router.post('/verify-id',
       }
       next(err)
     }
+  }
+)
+
+// ── Set/replace my profile photo — any authenticated user (rider or driver),
+// not just what the driver registration wizard collects. This is the real,
+// server-visible photo that /rides/avatar serves to other ride participants.
+router.post('/avatar',
+  requireAuth,
+  upload.single('avatar'),
+  async (req, res, next) => {
+    try {
+      if (!req.file) return res.status(422).json({ message: 'No image uploaded.' })
+      await query('UPDATE users SET avatar_path = $1 WHERE id = $2', [req.file.filename, req.user.id])
+      res.json({ message: 'Profile photo updated.' })
+    } catch (err) { next(err) }
   }
 )
 

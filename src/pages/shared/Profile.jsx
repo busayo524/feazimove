@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/AppLayout'
 import { useAuth } from '../../context/AuthContext'
+import { api } from '../../services/api'
 import { User, Phone, Mail, Shield, Bell, ChevronRight, LogOut, Camera, CheckCircle, X, RefreshCw, Car, MapPin } from 'lucide-react'
 
 const NEON='#ccff00', NT='#0a0a0a'
@@ -269,11 +270,20 @@ export default function Profile(){
 
   function set(k,v){setForm(f=>({...f,[k]:sanitize(v)}))}
 
-  function handleAvatarDone(dataUrl){
+  async function handleAvatarDone(dataUrl){
     if(!user?.id)return
     localStorage.setItem(`feazi_avatar_${user.id}`,dataUrl)
     setAvatarUrl(dataUrl)
     setShowPicker(false)
+    // Also persist it server-side — this is what makes it visible to other
+    // riders/drivers, unlike the localStorage copy above which only ever
+    // showed up on this same browser.
+    try {
+      const blob = await (await fetch(dataUrl)).blob()
+      const formData = new FormData()
+      formData.append('avatar', blob, 'avatar.jpg')
+      await api.post('/auth/avatar', formData)
+    } catch {}
   }
 
   async function handleSave(e){

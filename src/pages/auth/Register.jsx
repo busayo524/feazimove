@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { Link, useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom'
 import {
   Eye, EyeOff, Upload, Check, ArrowRight, ChevronLeft,
-  User, FileText, Shield, Car, AlertCircle, Lock, Camera, RefreshCw, X,
+  User, FileText, Shield, Car, AlertCircle, Lock, Camera, RefreshCw, X, CheckCircle2,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { api } from '../../services/api'
@@ -138,7 +138,7 @@ const DRIVER_STEPS = [
 ]
 
 const CITIES    = ['Lagos','Abuja','Port Harcourt','Kano','Ibadan','Enugu','Benin City','Accra','Nairobi','Cape Town','Dakar']
-const ID_TYPES  = ['National ID (NIN)',"Driver's License","Voter's Card"]
+const ID_TYPES  = ['National ID (NIN)']
 const VEH_TYPES = ['Car','Motorcycle','Tricycle (Keke)','Minibus','Bus']
 
 const LAGOS_AREAS = [
@@ -350,6 +350,12 @@ export default function Register() {
   const navState      = location.state || {}
   const navToken      = navState.registrationToken || null
 
+  // Backup prefill stored in sessionStorage by Signup.jsx before navigating.
+  // Used when navState.prefill.password is missing (edge-case: state not hydrated yet).
+  const sessionPrefill = (() => {
+    try { return JSON.parse(sessionStorage.getItem('feazi_reg_prefill') || '{}') } catch { return {} }
+  })()
+
   // ── Legacy: token in URL query param (from email link) ───────────────
   const urlToken = searchParams.get('token')
 
@@ -437,14 +443,14 @@ export default function Register() {
     password: prefill.password || '',
     confirm:  prefill.confirm  || '',
     // step 2 rider
-    idType:'', idNumber:'',
+    idType:'National ID (NIN)', idNumber:'',
     // step 2 driver
-    vehicleType:'', vehicleMake:'', vehicleModel:'', plateNumber:'', vehicleYear:'',
+    vehicleType:'', vehicleMake:'', vehicleModel:'', vehicleColor:'', plateNumber:'', vehicleYear:'',
     // step 3
     agreeTerms: false, agreeBackground: false,
   })
   const [files, setFiles] = useState({
-    idDoc: null, selfie: null,
+    idDoc: null, otherIdDoc: null, selfie: null,
     driverLicense: null, vehicleReg: null, insurance: null, profilePhoto: null,
     carFront: null, carSide: null, roadworthiness: null, utilityBill: null,
   })
@@ -462,6 +468,19 @@ export default function Register() {
     }))
   }, [linkPrefill])
 
+  // Sync password from OTP nav-state prefill into form.
+  // Always overwrite so empty initial state doesn't block the update.
+  useEffect(() => {
+    const p = navState.prefill
+    if (!p?.password) return
+    setForm(prev => ({
+      ...prev,
+      password: p.password,
+      confirm:  p.confirm || p.password,
+    }))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   function f(field, val) {
     setForm(p => ({ ...p, [field]: typeof val === 'string' ? clean(val) : val }))
     setErrors(p => ({ ...p, [field]: '' }))
@@ -471,15 +490,15 @@ export default function Register() {
   /* ── validation ─────────────────────────────────────────────────────── */
   function v1() {
     const e = {}
-    // When prefill is present (from OTP flow), name/email/phone/password were already validated at signup
-    if (!prefill.name) {
-      if (!form.firstName || form.firstName.length < 2) e.firstName = 'Enter your first name.'
-      if (!form.lastName  || form.lastName.length  < 2) e.lastName  = 'Enter your last name.'
-      if (!validateEmail(form.email))                   e.email     = 'Enter a valid email address.'
-      if (!validatePhone(form.phone))                   e.phone     = 'Enter a valid phone number.'
-      if (!validatePassword(form.password))             e.password  = 'Min 8 chars, 1 uppercase, 1 number.'
-      if (form.password !== form.confirm)               e.confirm   = 'Passwords do not match.'
+    // When prefill is present (from OTP/email-link flow), email/phone/password were already validated at signup
+    if (!(prefill.email || prefill.phone)) {
+      if (!validateEmail(form.email))       e.email    = 'Enter a valid email address.'
+      if (!validatePhone(form.phone))       e.phone    = 'Enter a valid phone number.'
+      if (!validatePassword(form.password)) e.password = 'Min 8 chars, 1 uppercase, 1 number.'
+      if (form.password !== form.confirm)   e.confirm  = 'Passwords do not match.'
     }
+    if (!form.firstName || form.firstName.length < 2) e.firstName = 'Enter your first name.'
+    if (!form.lastName  || form.lastName.length  < 2) e.lastName  = 'Enter your last name.'
     // Date of birth
     if (!form.dobDay || !form.dobMonth || !form.dobYear) {
       e.dob = 'Please enter your complete date of birth.'
@@ -505,6 +524,7 @@ export default function Register() {
     } else if (form.idType && !validateIdNumber(form.idType, form.idNumber)) {
       e.idNumber = `Invalid format. ${ID_FORMATS[form.idType]?.hint || ''}`
     }
+    if (!files.otherIdDoc) e.otherIdDoc = 'Upload a valid government-issued ID document.'
     setErrors(e); return !Object.keys(e).length
   }
   function v2Driver() {
@@ -512,6 +532,7 @@ export default function Register() {
     if (!form.vehicleType)  e.vehicleType  = 'Select vehicle type.'
     if (!form.vehicleMake)  e.vehicleMake  = 'Enter vehicle make / brand.'
     if (!form.vehicleModel) e.vehicleModel = 'Enter vehicle model.'
+    if (!form.vehicleColor) e.vehicleColor = 'Enter vehicle color.'
     if (!form.plateNumber)  e.plateNumber  = 'Enter plate number.'
     if (!form.vehicleYear)  e.vehicleYear  = 'Enter year of manufacture.'
     if (!files.driverLicense)   e.driverLicense   = "Upload your driver's license."
@@ -556,6 +577,7 @@ export default function Register() {
           if (form.vehicleType)  formData.append('vehicleType', form.vehicleType)
           if (form.vehicleMake)  formData.append('vehicleMake', form.vehicleMake)
           if (form.vehicleModel) formData.append('vehicleModel', form.vehicleModel)
+          if (form.vehicleColor) formData.append('vehicleColor', form.vehicleColor)
           if (form.plateNumber)  formData.append('plateNumber', form.plateNumber)
           if (form.vehicleYear)  formData.append('vehicleYear', form.vehicleYear)
         }
@@ -563,6 +585,12 @@ export default function Register() {
           if (file) formData.append(field, file)
         })
         user = await register(formData)
+      }
+      sessionStorage.removeItem('feazi_reg_prefill')
+      // Registration is now pending admin approval — no token returned
+      if (user?.pending) {
+        navigate('/register/pending')
+        return
       }
       // Save selfie as profile avatar to localStorage
       if (selfiePreview && user?.id) {
@@ -651,18 +679,34 @@ export default function Register() {
 
             {/* ════ STEP 1 — Personal Details ════ */}
             {step === 1 && <>
-              <h2 style={{ fontSize: 'clamp(1.3rem,2.5vw,1.7rem)', fontWeight: 800, color: '#1a1a1a', marginBottom: 4 }}>Personal Details</h2>
-              <p style={{ fontSize: 14, color: '#666', marginBottom: prefill.name ? 16 : 28 }}>Fill in your name, contact information, and create a secure password.</p>
-              {/* Pre-fill banner — shown when arriving from OTP flow */}
-              {prefill.name && (
-                <div style={{ background: 'rgba(204,255,0,0.18)', border: '1.5px solid #ccff00', borderRadius: 10, padding: '12px 16px', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 18 }}>✅</span>
-                  <p style={{ margin: 0, fontSize: 13, color: '#2a6048', fontWeight: 600 }}>
+              {/* Verified header — shown when arriving from OTP flow */}
+              {prefill.name ? (
+                <div style={{ textAlign: 'center', marginBottom: 36, paddingBottom: 4 }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    width: 56, height: 56, borderRadius: '50%',
+                    background: '#f0fdf4', border: '1.5px solid #bbf7d0', marginBottom: 16 }}>
+                    <CheckCircle2 size={28} color="#16a34a" strokeWidth={2} />
+                  </div>
+                  <p style={{ fontSize: 11, fontWeight: 800, color: '#16a34a', textTransform: 'uppercase',
+                    letterSpacing: '0.12em', margin: '0 0 10px' }}>Account Verified</p>
+                  <h2 style={{ fontSize: 'clamp(1.6rem,3vw,2.1rem)', fontWeight: 900, color: '#1a1a1a',
+                    letterSpacing: '-0.03em', margin: '0 0 6px' }}>
+                    Hello, {prefill.name.split(' ')[0]}
+                  </h2>
+                  <p style={{ fontSize: 15, color: '#6b7280', margin: '0 0 10px', fontWeight: 500 }}>
+                    Complete your {role === 'driver' ? 'Driver' : 'Rider'} profile to get started.
+                  </p>
+                  <p style={{ fontSize: 13, color: '#9ca3af', margin: 0 }}>
                     {prefill.password
-                      ? 'Email, phone and password pre-filled from your signup. Add your name, city and area below.'
-                      : 'Email and phone pre-filled from your signup. Your password is already set — add your name, city and area below.'}
+                      ? 'Your email, phone, and password are pre-filled. Add your name, city and area below.'
+                      : 'Your email and phone are pre-filled. Add your name, city and area below.'}
                   </p>
                 </div>
+              ) : (
+                <>
+                  <h2 style={{ fontSize: 'clamp(1.3rem,2.5vw,1.7rem)', fontWeight: 800, color: '#1a1a1a', marginBottom: 4 }}>Personal Details</h2>
+                  <p style={{ fontSize: 14, color: '#666', marginBottom: 28 }}>Fill in your name, contact information, and create a secure password.</p>
+                </>
               )}
 
               <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 28 }}>
@@ -699,7 +743,9 @@ export default function Register() {
                   <div>
                     <label style={lbl}>Email Address <Req /></label>
                     <input type="email" value={form.email} onChange={e => f('email', e.target.value)}
-                      placeholder="you@example.com" autoComplete="email" style={inp(!!errors.email)} />
+                      placeholder="you@example.com" autoComplete="email"
+                      disabled={!!prefill.email}
+                      style={{ ...inp(!!errors.email), ...(prefill.email ? { background: '#f5f5f5', color: '#888', cursor: 'not-allowed' } : {}) }} />
                     {errors.email && <p style={err}>{errors.email}</p>}
                   </div>
                   <div>
@@ -774,39 +820,54 @@ export default function Register() {
                   </div>
                 </div>
 
-                {/* Password was already set during the initial signup step — only show
-                    these fields when we actually have the plaintext value to confirm
-                    (i.e. came via in-app nav state, not the email link). */}
-                {!prefill.name || prefill.password ? (
-                  <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 24, marginBottom: 4 }}>
-                    <p style={secHead}>Security</p>
-                    <p style={secSub}>Create a strong password for your account.</p>
-                    <div className="reg-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                      <div>
-                        <label style={lbl}>Password <Req /></label>
-                        <div style={{ position: 'relative' }}>
-                          <input type={showPw ? 'text' : 'password'} value={form.password}
-                            onChange={e => f('password', e.target.value)}
-                            placeholder="Min 8 chars, 1 uppercase, 1 number" autoComplete="new-password"
-                            style={{ ...inp(!!errors.password), paddingRight: 44 }} />
-                          <button type="button" onClick={() => setShowPw(!showPw)} aria-label="Toggle password"
-                            style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 0 }}>
-                            {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
-                          </button>
-                        </div>
-                        {errors.password && <p style={err}>{errors.password}</p>}
+                <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 24, marginBottom: 4 }}>
+                  <p style={secHead}>Security</p>
+                  <p style={secSub}>
+                    {prefill.email || prefill.phone
+                      ? 'Password set during signup.'
+                      : 'Create a strong password for your account.'}
+                  </p>
+                  <div className="reg-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                    <div>
+                      <label style={lbl}>Password <Req /></label>
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type={showPw ? 'text' : 'password'}
+                          value={prefill.email || prefill.phone ? (navState.prefill?.password || sessionPrefill.password || form.password) : form.password}
+                          onChange={e => f('password', e.target.value)}
+                          placeholder="Min 8 chars, 1 uppercase, 1 number"
+                          autoComplete="new-password"
+                          disabled={!!(prefill.email || prefill.phone)}
+                          style={{
+                            ...inp(!!errors.password), paddingRight: 44,
+                            ...(prefill.email || prefill.phone ? { background: '#f5f5f5', color: '#888', cursor: 'not-allowed' } : {}),
+                          }}
+                        />
+                        <button type="button" onClick={() => setShowPw(!showPw)} aria-label="Toggle password"
+                          style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 0 }}>
+                          {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
                       </div>
-                      <div>
-                        <label style={lbl}>Confirm Password <Req /></label>
-                        <input type={showPw ? 'text' : 'password'} value={form.confirm}
-                          onChange={e => f('confirm', e.target.value)}
-                          placeholder="Repeat password" autoComplete="new-password"
-                          style={inp(!!errors.confirm)} />
-                        {errors.confirm && <p style={err}>{errors.confirm}</p>}
-                      </div>
+                      {errors.password && <p style={err}>{errors.password}</p>}
+                    </div>
+                    <div>
+                      <label style={lbl}>Confirm Password <Req /></label>
+                      <input
+                        type={showPw ? 'text' : 'password'}
+                        value={prefill.email || prefill.phone ? (navState.prefill?.confirm || navState.prefill?.password || sessionPrefill.confirm || sessionPrefill.password || form.confirm) : form.confirm}
+                        onChange={e => f('confirm', e.target.value)}
+                        placeholder="Repeat password"
+                        autoComplete="new-password"
+                        disabled={!!(prefill.email || prefill.phone)}
+                        style={{
+                          ...inp(!!errors.confirm),
+                          ...(prefill.email || prefill.phone ? { background: '#f5f5f5', color: '#888', cursor: 'not-allowed' } : {}),
+                        }}
+                      />
+                      {errors.confirm && <p style={err}>{errors.confirm}</p>}
                     </div>
                   </div>
-                ) : null}
+                </div>
               </div>
             </>}
 
@@ -967,6 +1028,22 @@ export default function Register() {
                   {errors.idNumber && !idVerified && <p style={err}>{errors.idNumber}</p>}
                 </div>
 
+
+                {/* Other Valid ID Upload */}
+                <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 24 }}>
+                  <p style={{ ...secHead, marginBottom: 3 }}>Other Valid Means of ID</p>
+                  <p style={{ ...secSub, marginBottom: 14 }}>
+                    Upload a valid government-issued ID — e.g. National ID (NIN) slip, International Passport, Permanent Voter's Card, FRSC Driver's License, or CAC Business Certificate. Ensure the document is clear, well-lit, and fully visible with no blur or cut-off edges.
+                  </p>
+                  <UploadBox
+                    label="Valid ID Document"
+                    required
+                    file={files.otherIdDoc}
+                    onFile={v => setFile('otherIdDoc', v)}
+                    error={errors.otherIdDoc}
+                  />
+                </div>
+
               </div>
             </>}
 
@@ -998,6 +1075,12 @@ export default function Register() {
                     <input type="text" value={form.vehicleModel} onChange={e => f('vehicleModel', e.target.value)}
                       placeholder="e.g. Corolla" style={inp(!!errors.vehicleModel)} />
                     {errors.vehicleModel && <p style={err}>{errors.vehicleModel}</p>}
+                  </div>
+                  <div>
+                    <label style={lbl}>Vehicle Color <Req /></label>
+                    <input type="text" value={form.vehicleColor} onChange={e => f('vehicleColor', e.target.value)}
+                      placeholder="e.g. Black" style={inp(!!errors.vehicleColor)} />
+                    {errors.vehicleColor && <p style={err}>{errors.vehicleColor}</p>}
                   </div>
                   <div>
                     <label style={lbl}>Plate Number <Req /></label>
@@ -1065,7 +1148,7 @@ export default function Register() {
                       ['Account Type', role === 'driver' ? 'Driver' : 'Rider'],
                       ...(role === 'rider'
                         ? [['ID Type', form.idType]]
-                        : [['Vehicle', `${form.vehicleMake} ${form.vehicleModel} (${form.vehicleType})`]]),
+                        : [['Vehicle', `${form.vehicleMake} ${form.vehicleModel}, ${form.vehicleColor} (${form.vehicleType})`]]),
                     ].filter(([,v]) => v).map(([k, v]) => (
                       <div key={k}>
                         <p style={{ fontSize: 11, color: '#888', margin: 0 }}>{k}</p>

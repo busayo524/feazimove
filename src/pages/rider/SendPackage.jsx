@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import AppLayout from '../../components/AppLayout'
-import RideTracker from '../../components/RideTracker'
 import { LocationDropdown, TimeDropdown } from '../../components/RouteDropdowns'
-import { Package, ArrowRight } from 'lucide-react'
+import { Package, ArrowRight, Phone, Star } from 'lucide-react'
 import { api } from '../../services/api'
 import { useRoutes } from '../../hooks/useRoutes'
 
@@ -11,9 +10,9 @@ const OLIVE='#243800', MOSS='#4C6900'
 const CARD='#ffffff', BORDER='#d4e5a8', TEXT='#1a2800', MUTED='#4C6900'
 
 const SIZES=[
-  {id:'sm',label:'Small',desc:'Documents, phones, small items',icon:'📦'},
-  {id:'md',label:'Medium',desc:'Clothes, shoes, groceries',icon:'🗃️'},
-  {id:'lg',label:'Large',desc:'Electronics, furnitures to full apartment',icon:'📫'},
+  {id:'sm',label:'Small',desc:'Documents, phones, small items'},
+  {id:'md',label:'Medium',desc:'Clothes, shoes, groceries'},
+  {id:'lg',label:'Large',desc:'Electronics, furniture, full apartment moves'},
 ]
 const INPUT={width:'100%',padding:'13px 16px',borderRadius:10,fontSize:15,border:`1.5px solid ${BORDER}`,outline:'none',background:CARD,color:TEXT,fontFamily:'inherit',boxSizing:'border-box'}
 
@@ -29,6 +28,77 @@ const ALL_DAY_SLOTS=[
 // the right one from the chosen time so book-intent finds the priced route.
 function periodForSlot(slot){
   return slot.includes('PM') ? 'evening' : 'morning'
+}
+
+const STAGE_LABEL = {
+  pending:         'Finding a driver…',
+  driver_assigned: 'Driver assigned',
+  arrived_pickup:  'Driver at pickup',
+  in_transit:      'On the way to drop-off',
+  completed:       'Delivered',
+}
+
+// A compact status card, distinct from the full live-tracking map used for
+// ride bookings — package delivery is a different service and shouldn't
+// look/feel like "Track a Ride". Just enough info to know it's in progress.
+function DeliveryStatusBanner({ rideId }){
+  const [ride,setRide]=useState(null)
+  const [error,setError]=useState('')
+
+  useEffect(()=>{
+    let cancelled=false
+    function load(){
+      api.get(`/rides/${rideId}`)
+        .then(res=>{ if(!cancelled) setRide(res.data.ride) })
+        .catch(()=>{ if(!cancelled) setError('Could not load delivery status.') })
+    }
+    load()
+    const id=setInterval(load,8000)
+    return ()=>{ cancelled=true; clearInterval(id) }
+  },[rideId])
+
+  if(error) return (
+    <div style={{background:'#fef2f2',border:'1px solid #fca5a5',borderRadius:16,padding:16,marginBottom:16}}>
+      <p style={{fontSize:13,color:'#ef4444'}}>{error}</p>
+    </div>
+  )
+  if(!ride) return (
+    <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,padding:16,marginBottom:16,boxShadow:'0 2px 8px rgba(36,56,0,0.06)'}}>
+      <p style={{fontSize:13,color:MUTED}}>Loading delivery status…</p>
+    </div>
+  )
+
+  const driver=ride.driver
+
+  return (
+    <div style={{background:CARD,border:`1.5px solid ${NEON}`,borderRadius:16,padding:18,marginBottom:20,boxShadow:'0 2px 8px rgba(36,56,0,0.06)'}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10,gap:10}}>
+        <p style={{fontWeight:700,fontSize:13,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em'}}>Delivery in Progress</p>
+        <span style={{fontSize:11,fontWeight:700,padding:'4px 10px',borderRadius:20,background:ride.status==='completed'?'#dcfce7':NEON,color:ride.status==='completed'?'#15803d':OLIVE,whiteSpace:'nowrap',flexShrink:0}}>
+          {STAGE_LABEL[ride.status]||ride.status}
+        </span>
+      </div>
+      <p style={{fontSize:13,color:TEXT,fontWeight:600,marginBottom:driver?12:0}}>{ride.pickup} → {ride.destination}</p>
+      {driver && (
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,paddingTop:12,borderTop:`1px solid ${BORDER}`}}>
+          <div style={{minWidth:0}}>
+            <p style={{fontWeight:700,fontSize:14,color:TEXT,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{driver.name}</p>
+            {driver.rating!=null && (
+              <div style={{display:'flex',alignItems:'center',gap:4,marginTop:2}}>
+                <Star size={11} color='#f59e0b' fill='#f59e0b'/>
+                <span style={{fontSize:12,color:MUTED}}>{driver.rating}</span>
+              </div>
+            )}
+          </div>
+          {driver.phone && (
+            <a href={`tel:${driver.phone}`} style={{display:'flex',alignItems:'center',gap:6,padding:'9px 16px',borderRadius:50,background:NEON,color:OLIVE,fontWeight:700,fontSize:13,textDecoration:'none',flexShrink:0}}>
+              <Phone size={13}/> Call
+            </a>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function SendPackage(){
@@ -95,12 +165,6 @@ export default function SendPackage(){
     }
   }
 
-  function backToBooking() {
-    setActiveRideId(null)
-    setBookingId(null)
-    setQuotedFare(null)
-  }
-
   if (activeRideId === undefined) {
     return (
       <AppLayout title="Move an Item">
@@ -113,28 +177,25 @@ export default function SendPackage(){
   }
 
   return(
-    <AppLayout title={activeRideId ? 'Track Delivery' : 'Move an Item'}>
-      {activeRideId ? (
-        <RideTracker activeRideId={activeRideId} onDone={backToBooking} doneLabel="Send Another"/>
-      ) : (
-        <form onSubmit={handleSubmit}>
+    <AppLayout title="Move an Item">
+      {activeRideId && <DeliveryStatusBanner rideId={activeRideId}/>}
+      <form onSubmit={handleSubmit}>
           {/* Size */}
           <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,padding:20,marginBottom:16,boxShadow:'0 2px 8px rgba(36,56,0,0.06)'}}>
             <p style={{fontWeight:700,fontSize:13,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:14}}>Package Size</p>
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
               {SIZES.map(s=>(
                 <label key={s.id} style={{
-                  display:'flex',alignItems:'center',gap:14,padding:'14px 16px',
+                  display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,padding:'14px 18px',
                   borderRadius:12,border:`2px solid ${size===s.id?NEON:BORDER}`,
                   background:size===s.id?NEON:CARD,
                   cursor:'pointer',transition:'all 0.15s',
                   boxShadow:size===s.id?'0 4px 12px rgba(204,255,0,0.35)':'none'
                 }}>
                   <input type="radio" name="size" value={s.id} checked={size===s.id} onChange={()=>setSize(s.id)} style={{display:'none'}}/>
-                  <span style={{fontSize:22}}>{s.icon}</span>
                   <div style={{flex:1}}>
-                    <p style={{fontWeight:700,fontSize:14,color:size===s.id?OLIVE:TEXT}}>{s.label}</p>
-                    <p style={{fontSize:12,color:size===s.id?'rgba(36,56,0,0.65)':MUTED,marginTop:2}}>{s.desc}</p>
+                    <p style={{fontWeight:700,fontSize:14,color:size===s.id?OLIVE:TEXT,marginBottom:2}}>{s.label}</p>
+                    <p style={{fontSize:12,color:size===s.id?'rgba(36,56,0,0.6)':MUTED}}>{s.desc}</p>
                   </div>
                 </label>
               ))}
@@ -168,6 +229,7 @@ export default function SendPackage(){
                 value={dropoff}
                 onChange={setDropoff}
                 placeholder={routesLoading ? 'Loading…' : 'Select drop-off location'}
+                forceUpward
               />
             </div>
           </div>
@@ -218,7 +280,7 @@ export default function SendPackage(){
                 <p style={{fontSize:13,color:'#166534'}}>
                   We've registered your delivery for <strong>{pickup} → {dropoff}</strong> at <strong>{timeSlot}</strong>
                   {quotedFare != null && <> for <strong>₦{quotedFare.toLocaleString()}</strong></>}.
-                  A driver on this route will be matched automatically — this page will switch to live tracking once they confirm.
+                  A driver on this route will be matched automatically — a status update will appear at the top of this page once they confirm.
                 </p>
               </div>
             </div>
@@ -232,7 +294,6 @@ export default function SendPackage(){
             </div>
           )}
         </form>
-      )}
     </AppLayout>
   )
 }
