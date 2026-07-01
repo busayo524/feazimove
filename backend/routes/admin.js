@@ -179,6 +179,32 @@ router.get('/documents/:docId',
   }
 )
 
+// ── Admin avatar — checks avatar_path first, then selfie/profilePhoto doc ────
+router.get('/avatar/:userId',
+  [param('userId').isUUID()], validate,
+  async (req, res, next) => {
+    try {
+      const userRes = await query('SELECT avatar_path FROM users WHERE id = $1', [req.params.userId])
+      let filename = userRes.rows[0]?.avatar_path
+
+      if (!filename) {
+        const doc = await query(
+          `SELECT file_path FROM user_documents
+            WHERE user_id = $1 AND doc_type IN ('selfie','profilePhoto')
+            ORDER BY uploaded_at DESC LIMIT 1`,
+          [req.params.userId]
+        )
+        filename = doc.rows[0]?.file_path
+      }
+      if (!filename) return res.status(404).json({ message: 'No photo on file.' })
+
+      const filePath = path.join(UPLOAD_DIR, path.basename(filename))
+      if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'File not found on disk.' })
+      res.sendFile(filePath)
+    } catch (err) { next(err) }
+  }
+)
+
 // ── Live rides ──────────────────────────────────────────────────────────────────
 router.get('/rides', async (req, res, next) => {
   try {
@@ -210,9 +236,10 @@ router.get('/users', async (req, res, next) => {
       `SELECT u.id, u.name, u.email, u.phone, u.role, u.active_role,
               u.can_ride, u.can_drive, u.is_active, u.is_pending, u.rating, u.created_at,
               (SELECT COUNT(*) FROM rides r WHERE r.rider_id = u.id OR r.driver_id = u.id) AS trip_count,
-              (SELECT d.id FROM user_documents d WHERE d.user_id = u.id
-                 AND d.doc_type IN ('selfie','profilePhoto')
-                 ORDER BY d.uploaded_at DESC LIMIT 1) AS profile_doc_id
+              (u.avatar_path IS NOT NULL OR EXISTS (
+                SELECT 1 FROM user_documents d WHERE d.user_id = u.id
+                  AND d.doc_type IN ('selfie','profilePhoto')
+              )) AS has_avatar
        FROM users u ORDER BY u.created_at DESC`
     )
     res.json({
@@ -223,7 +250,7 @@ router.get('/users', async (req, res, next) => {
         rating: u.rating ? parseFloat(u.rating) : null,
         tripCount: parseInt(u.trip_count, 10),
         joinedAt: u.created_at,
-        profileDocId: u.profile_doc_id || null,
+        hasAvatar: !!u.has_avatar,
       })),
     })
   } catch (err) { next(err) }
@@ -240,7 +267,8 @@ router.get('/users/:id',
           `SELECT id, name, email, phone, role, active_role, can_ride, can_drive,
                   is_active, is_pending, rating, wallet_balance, created_at,
                   id_type, id_number,
-                  vehicle_type, vehicle_make, vehicle_model, plate_number, vehicle_year, vehicle_color
+                  vehicle_type, vehicle_make, vehicle_model, plate_number, vehicle_year, vehicle_color,
+                  avatar_path
            FROM users WHERE id = $1`,
           [req.params.id]
         ),
@@ -269,7 +297,7 @@ router.get('/users/:id',
           vehicleType: u.vehicle_type, vehicleMake: u.vehicle_make,
           vehicleModel: u.vehicle_model, plateNumber: u.plate_number,
           vehicleYear: u.vehicle_year, vehicleColor: u.vehicle_color,
-          profileDocId: docsRes.rows.find(d => d.doc_type === 'selfie' || d.doc_type === 'profilePhoto')?.id || null,
+          hasAvatar: !!(u.avatar_path || docsRes.rows.find(d => d.doc_type === 'selfie' || d.doc_type === 'profilePhoto')),
           documents: docsRes.rows,
           recentRides: ridesRes.rows.map(r => ({
             id: r.id, type: r.type, pickup: r.pickup, destination: r.destination,

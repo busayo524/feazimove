@@ -42,18 +42,23 @@ function StarRating({ value }) {
   )
 }
 
-function Avatar({ name, profileDocId }) {
+function Avatar({ name, userId, hasAvatar }) {
   const [src, setSrc] = React.useState(null)
   const initials = name ? name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase() : 'U'
 
   React.useEffect(() => {
-    if (!profileDocId) return
+    if (!hasAvatar) return
     let url
-    api.getBlob(`/admin/documents/${profileDocId}`)
-      .then(blob => { url = URL.createObjectURL(blob); setSrc(url) })
+    let cancelled = false
+    api.getBlob(`/admin/avatar/${userId}`)
+      .then(blob => {
+        if (cancelled) return
+        url = URL.createObjectURL(blob)
+        setSrc(url)
+      })
       .catch(() => {})
-    return () => { if (url) URL.revokeObjectURL(url) }
-  }, [profileDocId])
+    return () => { cancelled = true; if (url) URL.revokeObjectURL(url) }
+  }, [userId, hasAvatar])
 
   return (
     <div style={{ width:36, height:36, borderRadius:'50%', background:GREEN, color:'#fff',
@@ -196,7 +201,7 @@ export default function AdminUsers() {
                     {/* User */}
                     <td style={{ padding:'12px 16px' }}>
                       <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                        <Avatar name={u.name} profileDocId={u.profileDocId}/>
+                        <Avatar name={u.name} userId={u.id} hasAvatar={u.hasAvatar}/>
                         <div>
                           <p style={{ fontWeight:700, color:TEXT, margin:0 }}>{u.name}</p>
                           <p style={{ fontSize:12, color:MUTED, margin:0 }}>{u.email || u.phone}</p>

@@ -67,17 +67,22 @@ function InfoGrid({ rows }) {
   )
 }
 
-function ProfilePhoto({ docId, initials }) {
+function ProfilePhoto({ userId, hasAvatar, initials }) {
   const [src, setSrc] = useState(null)
 
   useEffect(() => {
-    if (!docId) return
+    if (!hasAvatar) return
     let url
-    api.getBlob(`/admin/documents/${docId}`)
-      .then(blob => { url = URL.createObjectURL(blob); setSrc(url) })
+    let cancelled = false
+    api.getBlob(`/admin/avatar/${userId}`)
+      .then(blob => {
+        if (cancelled) return
+        url = URL.createObjectURL(blob)
+        setSrc(url)
+      })
       .catch(() => {})
-    return () => { if (url) URL.revokeObjectURL(url) }
-  }, [docId])
+    return () => { cancelled = true; if (url) URL.revokeObjectURL(url) }
+  }, [userId, hasAvatar])
 
   return (
     <div style={{ width:72, height:72, borderRadius:'50%', background:GREEN, color:'#fff',
@@ -175,9 +180,14 @@ export default function AdminUserDetail() {
         <div style={{ display:'flex', alignItems:'center', gap:18, flexWrap:'wrap' }}>
           {/* Avatar with View button */}
           <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6, flexShrink:0 }}>
-            <ProfilePhoto docId={user.profileDocId} initials={initials}/>
-            {user.profileDocId && (
-              <button onClick={() => viewDocument(user.profileDocId)}
+            <ProfilePhoto userId={user.id} hasAvatar={user.hasAvatar} initials={initials}/>
+            {user.hasAvatar && (
+              <button onClick={async () => {
+                  try {
+                    const blob = await api.getBlob(`/admin/avatar/${user.id}`)
+                    window.open(URL.createObjectURL(blob), '_blank')
+                  } catch { alert('Could not load photo.') }
+                }}
                 style={{ fontSize:11, fontWeight:700, color:GREEN, background:'none', border:`1px solid ${GREEN}`,
                   borderRadius:6, padding:'3px 10px', cursor:'pointer', fontFamily:'inherit' }}>
                 View Photo
