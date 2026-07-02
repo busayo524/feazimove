@@ -940,9 +940,9 @@ export default function PoliciesPage() {
         }
         .tab-btn:hover { color: var(--text); border-color: var(--border-mid); }
         .tab-btn.active {
-          background: var(--text);
+          background: #0a0a0a;
           color: #ccff00;
-          border-color: var(--text);
+          border-color: #0a0a0a;
         }
       `}</style>
 
