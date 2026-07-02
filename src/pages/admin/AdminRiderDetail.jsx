@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
 import { api } from '../../services/api'
-import { AlertCircle, Navigation, Star, Wallet } from 'lucide-react'
+import { AlertCircle, ArrowLeft, Navigation, Star, Wallet } from 'lucide-react'
 
 const CARD = '#ffffff', BORDER = '#e9ecef', TEXT = '#1a1a1a', MUTED = '#6b7280'
 
@@ -13,6 +13,7 @@ const TRIP_STATUS_LABELS = {
 
 export default function AdminRiderDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const [rider, setRider] = useState(null)
   const [error, setError] = useState('')
 
@@ -38,12 +39,20 @@ export default function AdminRiderDetail() {
 
   return (
     <AdminLayout title={rider.name}>
-      <div style={{ marginBottom:20 }}>
-        <p style={{ color:MUTED, fontSize:13 }}>Rider ID: {rider.id}</p>
-        <span style={{ fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:20, marginTop:6, display:'inline-block',
-          background: rider.isActive ? '#f3fbd3' : '#fef2f2', color: rider.isActive ? '#3f6212' : '#ef4444' }}>
-          {rider.isActive ? 'Active' : 'Suspended'}
-        </span>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12, marginBottom:20, flexWrap:'wrap' }}>
+        <div>
+          <p style={{ color:MUTED, fontSize:13 }}>Rider ID: {rider.id}</p>
+          <span style={{ fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:20, marginTop:6, display:'inline-block',
+            background: rider.isActive ? '#f3fbd3' : '#fef2f2', color: rider.isActive ? '#3f6212' : '#ef4444' }}>
+            {rider.isActive ? 'Active' : 'Suspended'}
+          </span>
+        </div>
+        <button onClick={() => navigate('/admin/riders')}
+          style={{ display:'flex', alignItems:'center', gap:8, padding:'9px 18px', borderRadius:10,
+            background:CARD, border:`1px solid ${BORDER}`, color:TEXT, fontWeight:700, fontSize:13,
+            cursor:'pointer', fontFamily:'inherit', flexShrink:0 }}>
+          <ArrowLeft size={15}/> Back to Riders
+        </button>
       </div>
 
       {/* Stats */}
