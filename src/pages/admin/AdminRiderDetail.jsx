@@ -48,7 +48,7 @@ export default function AdminRiderDetail() {
 
       {/* Stats */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))', gap:14, marginBottom:20 }}>
-        {[['Total Trips', rider.rides.length], ['Wallet Balance', `₦${rider.walletBalance.toLocaleString()}`], ['Rating', rider.rating ? `⭐ ${rider.rating}` : '—']].map(([l,v]) => (
+        {[['Total Trips', rider.rides.length], ['Wallet Balance', `₦${rider.walletBalance.toLocaleString()}`]].map(([l,v]) => (
           <div key={l} style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, padding:16 }}>
             <p style={{ fontSize:12, color:MUTED, fontWeight:600, marginBottom:6 }}>{l}</p>
             <p style={{ fontWeight:900, fontSize:20, color:TEXT }}>{v}</p>
