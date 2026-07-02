@@ -257,11 +257,32 @@ async function getUserDetail(userId, ridesClause) {
   const user = userRes.rows[0]
   if (!user) return null
 
-  const [docsRes, ridesRes] = await Promise.all([
+  const [docsRes, ridesRes, walletRes, ratingsRes, activeRes] = await Promise.all([
     query('SELECT id, doc_type, uploaded_at FROM user_documents WHERE user_id = $1 ORDER BY uploaded_at DESC', [userId]),
     query(
       `SELECT id, type, pickup, destination, fare_kobo, status, created_at
        FROM rides WHERE ${ridesClause} = $1 ORDER BY created_at DESC LIMIT 20`,
+      [userId]
+    ),
+    query(
+      `SELECT id, type, amount_kobo, description, status, created_at
+       FROM wallet_transactions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 20`,
+      [userId]
+    ),
+    query(
+      `SELECT r.id, r.stars, r.comment, r.created_at, u.name AS rater_name
+       FROM ratings r LEFT JOIN users u ON r.rater_id = u.id
+       WHERE r.ratee_id = $1 ORDER BY r.created_at DESC LIMIT 20`,
+      [userId]
+    ),
+    query(
+      `SELECT r.id, r.type, r.pickup, r.destination, r.status, r.fare_kobo, r.created_at,
+              ur.name AS rider_name, ud.name AS driver_name
+       FROM rides r
+       LEFT JOIN users ur ON r.rider_id = ur.id
+       LEFT JOIN users ud ON r.driver_id = ud.id
+       WHERE r.${ridesClause} = $1 AND r.status IN ('pending','driver_assigned','arrived_pickup','in_transit')
+       ORDER BY r.created_at DESC LIMIT 1`,
       [userId]
     ),
   ])
@@ -280,6 +301,20 @@ async function getUserDetail(userId, ridesClause) {
       id: r.id, type: r.type, pickup: r.pickup, destination: r.destination,
       fare: fmt(r.fare_kobo), status: r.status, date: r.created_at,
     })),
+    walletTransactions: walletRes.rows.map(t => ({
+      id: t.id, type: t.type, amount: fmt(t.amount_kobo),
+      description: t.description, status: t.status, date: t.created_at,
+    })),
+    ratings: ratingsRes.rows.map(r => ({
+      id: r.id, stars: r.stars, comment: r.comment, raterName: r.rater_name, date: r.created_at,
+    })),
+    activeTrip: activeRes.rows[0] ? {
+      id: activeRes.rows[0].id, type: activeRes.rows[0].type,
+      pickup: activeRes.rows[0].pickup, destination: activeRes.rows[0].destination,
+      status: activeRes.rows[0].status, fare: fmt(activeRes.rows[0].fare_kobo),
+      riderName: activeRes.rows[0].rider_name, driverName: activeRes.rows[0].driver_name,
+      startedAt: activeRes.rows[0].created_at,
+    } : null,
   }
 }
 
