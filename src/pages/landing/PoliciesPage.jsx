@@ -245,7 +245,7 @@ const POLICIES = [
 
         <H3>1. Data Controller Information</H3>
         <P>The data controller responsible for your personal information is:</P>
-        <P><B>FeaziMove Technologies Limited</B><br />Lagos, Nigeria<br />Email: <A href="mailto:privacy@feazimove.com">privacy@feazimove.com</A><br />Data Protection Officer (DPO): <A href="mailto:dpo@feazimove.com">dpo@feazimove.com</A></P>
+        <P><B>FeaziMove Technologies Limited</B><br />Lagos, Nigeria<br />Email: <A href="mailto:support@feazimove.com">support@feazimove.com</A><br />Data Protection Officer (DPO): <A href="mailto:support@feazimove.com">support@feazimove.com</A></P>
 
         <H3>2. Information We Collect</H3>
         <P>We collect different categories of personal data depending on how you use the Platform:</P>
@@ -333,7 +333,7 @@ const POLICIES = [
           <LI><B>Right to Withdraw Consent:</B> Withdraw any consent you have given at any time, without affecting prior processing;</LI>
           <LI><B>Right to Lodge a Complaint:</B> File a complaint with the Nigeria Data Protection Commission (NDPC) at <A href="https://ndpc.gov.ng">ndpc.gov.ng</A>.</LI>
         </UL>
-        <P>To exercise any of these rights, email our DPO at <A href="mailto:dpo@feazimove.com">dpo@feazimove.com</A>. We will respond within <B>30 days</B>.</P>
+        <P>To exercise any of these rights, email our DPO at <A href="mailto:support@feazimove.com">support@feazimove.com</A>. We will respond within <B>30 days</B>.</P>
 
         <H3>8. Data Security</H3>
         <P>We implement robust technical and organisational measures to protect your personal data, including:</P>
@@ -350,7 +350,7 @@ const POLICIES = [
 
         <H3>9. Children's Privacy</H3>
         <P>9.1 The Platform is not directed at children under 18 years of age. We do not knowingly collect personal data from children.</P>
-        <P>9.2 If we become aware that we have inadvertently collected personal data from a child under 18, we will promptly delete such data. If you believe a child has provided us with personal information, contact us at <A href="mailto:privacy@feazimove.com">privacy@feazimove.com</A>.</P>
+        <P>9.2 If we become aware that we have inadvertently collected personal data from a child under 18, we will promptly delete such data. If you believe a child has provided us with personal information, contact us at <A href="mailto:support@feazimove.com">support@feazimove.com</A>.</P>
 
         <H3>10. International Transfers</H3>
         <P>10.1 Where we transfer personal data outside Nigeria (e.g., to cloud providers with servers in other countries), we ensure appropriate safeguards are in place, including standard contractual clauses or adequacy decisions recognised under Nigerian law.</P>
