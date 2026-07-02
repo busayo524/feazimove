@@ -28,7 +28,7 @@ function userStatus(u) {
 }
 
 const STATUS_MAP = {
-  pending:  { label:'Pending Review', bg:'#fef9c3', fg:'#854d0e' },
+  pending:  { label:'Pending', bg:'#fef9c3', fg:'#854d0e' },
   approved: { label:'Approved',       bg:'#dcfce7', fg:'#15803d' },
   rejected: { label:'Rejected',       bg:'#fef2f2', fg:'#dc2626' },
 }
