@@ -67,8 +67,8 @@ function CardHeader({ title, sub, icon, viewAll }) {
           View all <ArrowRight size={14}/>
         </Link>
       ) : icon ? (
-        <div style={{ width:32, height:32, borderRadius:9, background:'#eef6e0', display:'flex',
-          alignItems:'center', justifyContent:'center', color:'#243800', flexShrink:0 }}>{icon}</div>
+        <div style={{ width:32, height:32, borderRadius:9, background:'#f3fbd3', display:'flex',
+          alignItems:'center', justifyContent:'center', color:'#3f6212', flexShrink:0 }}>{icon}</div>
       ) : null}
     </div>
   )
@@ -79,8 +79,8 @@ function StatCard({ icon, label, value, sub }) {
     <Card style={{ padding:18 }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
         <p style={{ fontSize:13, color:MUTED, fontWeight:600, margin:0 }}>{label}</p>
-        <div style={{ width:32, height:32, borderRadius:9, background:'#eef6e0', display:'flex',
-          alignItems:'center', justifyContent:'center', color:'#243800' }}>{icon}</div>
+        <div style={{ width:32, height:32, borderRadius:9, background:'#f3fbd3', display:'flex',
+          alignItems:'center', justifyContent:'center', color:'#3f6212' }}>{icon}</div>
       </div>
       <p style={{ fontWeight:800, fontSize:26, color:TEXT, letterSpacing:'-0.02em', margin:0 }}>{value}</p>
       {sub && <p style={{ fontSize:12, color:MUTED, marginTop:5, marginBottom:0 }}>{sub}</p>}

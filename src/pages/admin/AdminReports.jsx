@@ -111,7 +111,7 @@ export default function AdminReports() {
                   <p style={{ fontSize:13, fontWeight:600, color:TEXT }}>{r.pickup} → {r.destination}</p>
                   <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                     <span style={{ fontSize:12, color:MUTED }}>{r.count} trip{r.count!==1?'s':''}</span>
-                    <span style={{ fontSize:12, fontWeight:700, color:OLIVE, background:'#eef6e0', padding:'2px 8px', borderRadius:20 }}>{r.sharePct}%</span>
+                    <span style={{ fontSize:12, fontWeight:700, color:'#3f6212', background:'#f3fbd3', padding:'2px 8px', borderRadius:20 }}>{r.sharePct}%</span>
                   </div>
                 </div>
               ))}
