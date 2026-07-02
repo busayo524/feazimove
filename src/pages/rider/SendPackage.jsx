@@ -4,6 +4,7 @@ import { LocationDropdown, TimeDropdown } from '../../components/RouteDropdowns'
 import { Package, ArrowRight, Phone, Star } from 'lucide-react'
 import { api } from '../../services/api'
 import { useRoutes } from '../../hooks/useRoutes'
+import movingImg from '../../assets/Moving.png'
 
 const NEON='#ccff00', NT='#0a0a0a'
 const OLIVE='#243800', MOSS='#4C6900'
@@ -28,6 +29,76 @@ const ALL_DAY_SLOTS=[
 // the right one from the chosen time so book-intent finds the priced route.
 function periodForSlot(slot){
   return slot.includes('PM') ? 'evening' : 'morning'
+}
+
+// Full-page "Launching Soon" takeover — the booking form stays mounted and
+// visible (blurred) underneath, but the feature is gated until launch.
+function LaunchingSoonOverlay(){
+  const floaters=[
+    {emoji:'📦', top:'12%', left:'8%',  delay:'0s',    size:34},
+    {emoji:'🛋️', top:'20%', right:'10%', delay:'0.8s', size:40},
+    {emoji:'🛍️', bottom:'28%', left:'12%', delay:'1.4s', size:30},
+    {emoji:'📦', bottom:'34%', right:'14%', delay:'2s',  size:26},
+  ]
+  return (
+    <div style={{position:'absolute',inset:0,zIndex:10,display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden',borderRadius:20,animation:'lsFade 0.5s ease-out both'}}>
+      {/* Moving.png backdrop — slightly transparent so the page peeks through */}
+      <div style={{position:'absolute',inset:0,backgroundImage:`url(${movingImg})`,backgroundSize:'cover',backgroundPosition:'center',opacity:0.88}}/>
+      {/* Dark wash so the text stays readable over the photo */}
+      <div style={{position:'absolute',inset:0,background:'linear-gradient(180deg, rgba(10,18,0,0.40) 0%, rgba(10,18,0,0.55) 55%, rgba(10,18,0,0.78) 100%)'}}/>
+
+      {/* Floating packages drifting gently */}
+      {floaters.map((f,i)=>(
+        <span key={i} aria-hidden="true" style={{
+          position:'absolute',top:f.top,bottom:f.bottom,left:f.left,right:f.right,
+          fontSize:f.size,opacity:0.85,animation:`lsFloat 4.5s ease-in-out ${f.delay} infinite`,
+          filter:'drop-shadow(0 6px 12px rgba(0,0,0,0.45))',
+        }}>{f.emoji}</span>
+      ))}
+
+      {/* Centre content */}
+      <div style={{position:'relative',textAlign:'center',padding:'0 28px',maxWidth:680,animation:'lsRise 0.8s cubic-bezier(.22,1,.36,1) 0.15s both'}}>
+        <span style={{
+          display:'inline-flex',alignItems:'center',gap:8,padding:'7px 18px',borderRadius:50,
+          background:NEON,color:OLIVE,fontWeight:900,fontSize:12,letterSpacing:'0.14em',
+          textTransform:'uppercase',marginBottom:22,boxShadow:'0 0 30px rgba(204,255,0,0.5)',
+          animation:'lsBadge 2.2s ease-in-out infinite',
+        }}>
+          <Package size={14}/> Coming to FeaziMove
+        </span>
+
+        <h2 style={{
+          fontSize:'clamp(2.4rem,6vw,4rem)',fontWeight:900,color:'#ffffff',
+          letterSpacing:'-0.03em',lineHeight:1.05,marginBottom:18,
+          animation:'lsGlow 2.8s ease-in-out infinite',
+        }}>
+          Launching <span style={{color:NEON}}>Soon!!!</span>
+        </h2>
+
+        <div style={{width:64,height:3,background:NEON,borderRadius:2,margin:'0 auto 18px',boxShadow:'0 0 14px rgba(204,255,0,0.8)'}}/>
+
+        <p style={{fontSize:'clamp(1.05rem,2.2vw,1.35rem)',color:'rgba(255,255,255,0.92)',fontWeight:600,lineHeight:1.6,marginBottom:34}}>
+          Move an Item - from groceries to full apartments.
+        </p>
+
+        {/* Little delivery truck driving across a dashed road */}
+        <div style={{position:'relative',height:40,borderBottom:'2px dashed rgba(204,255,0,0.45)',overflow:'hidden'}}>
+          <span aria-hidden="true" style={{position:'absolute',bottom:2,left:0,fontSize:28,animation:'lsDrive 5s linear infinite'}}>
+            <span style={{display:'inline-block',transform:'scaleX(-1)'}}>🚚</span>
+          </span>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes lsFade  { from { opacity:0 } to { opacity:1 } }
+        @keyframes lsRise  { from { opacity:0; transform:translateY(28px) scale(0.96) } to { opacity:1; transform:translateY(0) scale(1) } }
+        @keyframes lsFloat { 0%,100% { transform:translateY(0) rotate(-3deg) } 50% { transform:translateY(-16px) rotate(3deg) } }
+        @keyframes lsGlow  { 0%,100% { text-shadow:0 0 24px rgba(204,255,0,0.25) } 50% { text-shadow:0 0 46px rgba(204,255,0,0.65) } }
+        @keyframes lsBadge { 0%,100% { transform:scale(1) } 50% { transform:scale(1.06) } }
+        @keyframes lsDrive { 0% { left:-12% } 100% { left:104% } }
+      `}</style>
+    </div>
+  )
 }
 
 const STAGE_LABEL = {
@@ -178,6 +249,10 @@ export default function SendPackage(){
 
   return(
     <AppLayout title="Move an Item">
+      <div style={{position:'relative',height:'calc(100vh - 175px)',minHeight:480,borderRadius:20,overflow:'hidden'}}>
+        <LaunchingSoonOverlay/>
+        {/* Existing page, kept intact but frozen behind the launch overlay */}
+        <div aria-hidden="true" style={{height:'100%',overflow:'hidden',filter:'blur(3px)',pointerEvents:'none',userSelect:'none'}}>
       {activeRideId && <DeliveryStatusBanner rideId={activeRideId}/>}
       <form onSubmit={handleSubmit}>
           {/* Size */}
@@ -294,6 +369,8 @@ export default function SendPackage(){
             </div>
           )}
         </form>
+        </div>
+      </div>
     </AppLayout>
   )
 }
