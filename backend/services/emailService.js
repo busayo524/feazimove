@@ -181,15 +181,11 @@ async function sendRegistrationLink(to, fullName, token, role) {
   const roleLabel = role === 'driver' ? 'Driver' : 'Rider'
 
   const body = `
-    <!-- Volt green accent block -->
     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
       <tr>
-        <td style="background:#ccff00;border-radius:10px;padding:18px 22px;">
-          <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#0a1f15;text-transform:uppercase;letter-spacing:0.1em;">
+        <td style="padding:6px 0;">
+          <p style="margin:0;font-size:26px;font-weight:900;color:#0a1f15;letter-spacing:-0.3px;">
             Account Verified ✅
-          </p>
-          <p style="margin:0;font-size:20px;font-weight:900;color:#0a1f15;line-height:1.3;">
-            Complete your ${roleLabel} profile
           </p>
         </td>
       </tr>
