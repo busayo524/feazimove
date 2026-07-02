@@ -46,8 +46,8 @@ const audience = [
     img: drvImg,
     imgPos: 'center center',
     tag: 'Drivers',
-    title: 'Independent drivers',
-    body: 'Earn consistently by picking up verified passengers already heading your way. More trips, less dead miles.',
+    title: 'Car Owners/Drivers',
+    body: 'Earn on every commute — to and from work — with verified riders heading your way.',
   },
   {
     img: urbImg,
@@ -392,7 +392,7 @@ export default function HomePage() {
               maxWidth: 480,
               marginBottom: 16,
             }}>
-              FeaziMove is a scheduled ride-sharing platform that matches commuters with independent car owners/drivers along shared routes, making movement feasible, affordable & easy.{' '}
+              FeaziMove is a scheduled ride-sharing platform that matches commuters with car owners/drivers along shared routes, making movement feasible, affordable & easy.{' '}
               <span style={{ whiteSpace: 'nowrap' }}>The Feazi Way.</span>
             </p>
 
