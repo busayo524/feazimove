@@ -7,7 +7,7 @@ import {
   BarChart3, Map, MapPin, Tag,
 } from 'lucide-react'
 
-const SB_BG = '#0a0a0a', SB_BORDER = 'rgba(255,255,255,0.08)'
+const SB_BG = '#1a2400', SB_BORDER = 'rgba(255,255,255,0.08)' // very deep lime neon
 const SB_TEXT = '#cbd5c0', SB_MUTED = '#6b8a55', SB_HOVER = 'rgba(255,255,255,0.08)'
 const NEON = '#ccff00', NT = '#0a0a0a'
 const BG = '#f6f7f9', TEXT = '#1a1a1a' // soft grey page plane — white cards sit on it

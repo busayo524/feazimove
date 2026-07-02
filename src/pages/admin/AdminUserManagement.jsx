@@ -181,7 +181,7 @@ export default function AdminUserManagement() {
           <table style={{ width:'100%', borderCollapse:'collapse', fontSize:14 }}>
             <thead>
               <tr style={{ background:CARD, textAlign:'left' }}>
-                {['User','Role','Trips','Joined','Status',''].map(h => (
+                {['User','Role','Joined','Status',''].map(h => (
                   <th key={h} style={{ padding:'12px 16px', fontSize:11, color:MUTED, fontWeight:700,
                     textTransform:'uppercase', letterSpacing:'0.05em', whiteSpace:'nowrap' }}>{h}</th>
                 ))}
@@ -216,10 +216,6 @@ export default function AdminUserManagement() {
                         {u.role}
                       </span>
                     </td>
-
-                    {/* Trips */}
-                    <td style={{ padding:'12px 16px', color:MUTED, fontSize:13 }}>{u.tripCount}</td>
-
                     {/* Joined */}
                     <td style={{ padding:'12px 16px', color:MUTED, fontSize:13, whiteSpace:'nowrap' }}>
                       {new Date(u.joinedAt).toLocaleDateString()}

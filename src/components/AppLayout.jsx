@@ -12,7 +12,7 @@ import {
 const NEON='#ccff00', NT='#0a0a0a', BG='#f6f7f9', BORDER='#e5e7eb', TEXT='#1a2800'
 
 // Sidebar-specific palette
-const SB_BG      = '#0a0a0a'          // sidebar background
+const SB_BG      = '#1a2400'          // sidebar background — very deep lime neon
 const SB_BORDER  = 'rgba(255,255,255,0.08)'
 const SB_TEXT    = '#e8f5d0'          // inactive label
 const SB_MUTED   = '#7aad40'          // subdued text
