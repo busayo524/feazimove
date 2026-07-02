@@ -287,7 +287,7 @@ export default function AdminUserDetail() {
               <div key={doc.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
                 padding:'12px 16px', borderRadius:10, border:`1px solid ${BORDER}`, background:BG }}>
                 <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                  <FileText size={15} color={GREEN}/>
+                  <div style={{ width:28, height:28, borderRadius:8, background:'#f3fbd3', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><FileText size={15} color="#3f6212"/></div>
                   <div>
                     <p style={{ margin:0, fontWeight:600, fontSize:14, color:TEXT }}>
                       {DOC_LABELS[doc.doc_type] || doc.doc_type}
