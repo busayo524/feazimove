@@ -696,16 +696,17 @@ export default function HomePage() {
                 pointerEvents: 'none',
               }} />
 
-              {/* Phone outer shell */}
+              {/* Phone outer shell — larger, bleeding past the band top and bottom */}
               <div style={{
-                width: 260, flexShrink: 0,
+                width: 310, flexShrink: 0,
                 background: '#111111',
-                borderRadius: 44,
+                borderRadius: 48,
                 border: '8px solid #222222',
                 boxShadow: '0 60px 120px rgba(0,0,0,0.8), 0 -12px 60px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.07)',
                 overflow: 'hidden',
                 position: 'relative', zIndex: 10,
-                transform: 'rotate(-5deg) translateY(-20px)',
+                transform: 'rotate(-5deg)',
+                marginTop: -70, marginBottom: -70,
               }}>
                 {/* Status bar */}
                 <div style={{ background: '#f7f7f7', padding: '8px 16px 4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -719,9 +720,9 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                {/* Real app screenshot — actual product UI, not a mockup */}
+                {/* Real app screenshot — full rider dashboard page, no cropping */}
                 <img src={appScreenshotHero} alt="FeaziMove app — Schedule Ride screen"
-                  style={{ display: 'block', width: '100%', height: 420, objectFit: 'cover', objectPosition: 'top' }} />
+                  style={{ display: 'block', width: '100%', height: 'auto' }} />
               </div>
             </div>
 
