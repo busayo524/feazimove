@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import AppLayout from '../../components/AppLayout'
 import { useAuth } from '../../context/AuthContext'
 import { api } from '../../services/api'
+import { useMyAvatar } from '../../hooks/useMyAvatar'
 import {
   TrendingUp, Wallet, ArrowDownLeft, Star, Car,
   Clock, CheckCircle, Calendar
@@ -9,7 +10,7 @@ import {
 
 const NEON='#ccff00', NT='#0a0a0a'
 const OLIVE='#243800', MOSS='#4C6900'
-const CARD='#ffffff', BORDER='#d4e5a8', TEXT='#1a2800', MUTED='#4C6900', BG='#f0f5e0'
+const CARD='#ffffff', BORDER='#e9ecef', TEXT='#1a2800', MUTED='#4C6900', BG='#f6f7f9'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function fmt(n){ return '₦' + Number(n||0).toLocaleString() }
@@ -74,7 +75,7 @@ export default function Earnings(){
   const [withdrawError, setWithdrawError] = useState('')
   const [withdrawSuccess, setWithdrawSuccess] = useState('')
 
-  const avatarUrl = user?.id ? localStorage.getItem(`feazi_avatar_${user.id}`) : null
+  const [avatarUrl] = useMyAvatar(user?.id)
   const initials  = `${user?.firstName?.[0]||''}${user?.lastName?.[0]||''}`.toUpperCase() || 'D'
   const fullName  = `${user?.firstName||''} ${user?.lastName||''}`.trim() || user?.name || 'Driver'
 
@@ -193,15 +194,15 @@ export default function Earnings(){
       </div>
 
       {/* ── Quick stats grid ── */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:16 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) minmax(0,1fr)', gap:10, marginBottom:16 }}>
         {PROFILE_STATS.map(s=>(
-          <div key={s.label} style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, padding:'14px 16px', boxShadow:'0 2px 8px rgba(36,56,0,0.05)', display:'flex', alignItems:'center', gap:12 }}>
+          <div key={s.label} style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, padding:'14px 16px', boxShadow:'0 2px 8px rgba(36,56,0,0.05)', display:'flex', alignItems:'center', gap:12, minWidth:0, overflow:'hidden' }}>
             <div style={{ width:34, height:34, borderRadius:10, background:NEON, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
               {s.icon}
             </div>
-            <div>
+            <div style={{ minWidth:0 }}>
               <p style={{ fontSize:11, color:MUTED, fontWeight:600 }}>{s.label}</p>
-              <p style={{ fontSize:16, fontWeight:900, color:TEXT, marginTop:1 }}>{s.value}</p>
+              <p style={{ fontSize:16, fontWeight:900, color:TEXT, marginTop:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{s.value}</p>
             </div>
           </div>
         ))}
@@ -241,7 +242,7 @@ export default function Earnings(){
                   Cancel
                 </button>
                 <button type="submit" disabled={withdrawing}
-                  style={{ flex:1, padding:'11px', borderRadius:10, border:'none', background:OLIVE, color:NEON, fontWeight:700, fontSize:14, cursor:withdrawing?'not-allowed':'pointer', fontFamily:'inherit', opacity:withdrawing?0.7:1 }}>
+                  style={{ flex:1, padding:'11px', borderRadius:10, border:'none', background:NEON, color:OLIVE, fontWeight:700, fontSize:14, cursor:withdrawing?'not-allowed':'pointer', fontFamily:'inherit', opacity:withdrawing?0.7:1 }}>
                   {withdrawing ? 'Requesting…' : 'Request'}
                 </button>
               </div>
@@ -319,15 +320,15 @@ export default function Earnings(){
         <p style={{ color:OLIVE, fontWeight:900, fontSize:'clamp(2rem,6vw,3rem)', letterSpacing:'-0.03em', lineHeight:1, marginBottom:16 }}>
           {fmt(periodAmount)}
         </p>
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,minmax(0,1fr))', gap:12 }}>
           {[
             ['Trips completed', tripCount],
             ['Avg per trip', fmt(avgPerTrip)],
             ['Rating', `⭐ ${user?.rating||'4.8'}`],
           ].map(([l,v])=>(
-            <div key={l} style={{ background:'rgba(36,56,0,0.08)', borderRadius:10, padding:'10px 12px' }}>
+            <div key={l} style={{ background:'rgba(36,56,0,0.08)', borderRadius:10, padding:'10px 12px', minWidth:0, overflow:'hidden' }}>
               <p style={{ color:'rgba(36,56,0,0.5)', fontSize:11, marginBottom:3 }}>{l}</p>
-              <p style={{ color:OLIVE, fontWeight:800, fontSize:14 }}>{v}</p>
+              <p style={{ color:OLIVE, fontWeight:800, fontSize:14, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{v}</p>
             </div>
           ))}
         </div>

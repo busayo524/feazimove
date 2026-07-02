@@ -44,7 +44,7 @@ const COORDS = {
 }
 
 const POOL_FARE_KOBO = 45000 // ₦450 — today's flat rate
-const SOLO_FARE_KOBO = 70000 // ₦700 — today's flat rate
+const PACKAGE_FARE_KOBO = 70000 // ₦700 — today's flat rate
 
 ;(async () => {
   try {
@@ -73,11 +73,11 @@ const SOLO_FARE_KOBO = 70000 // ₦700 — today's flat rate
       for (const pickup of pickups) {
         for (const dropoff of dropoffs) {
           const result = await query(
-            `INSERT INTO routes (period, pickup, dropoff, pool_fare_kobo, solo_fare_kobo)
+            `INSERT INTO routes (period, pickup, dropoff, pool_fare_kobo, package_fare_kobo)
              VALUES ($1, $2, $3, $4, $5)
              ON CONFLICT (period, pickup, dropoff) DO NOTHING
              RETURNING id`,
-            [period, pickup, dropoff, POOL_FARE_KOBO, SOLO_FARE_KOBO]
+            [period, pickup, dropoff, POOL_FARE_KOBO, PACKAGE_FARE_KOBO]
           )
           if (result.rows[0]) routesInserted++
         }

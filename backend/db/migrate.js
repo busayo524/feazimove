@@ -82,6 +82,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS vehicle_make   VARCHAR(50);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS vehicle_model  VARCHAR(50);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS plate_number   VARCHAR(20);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS vehicle_year   SMALLINT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS vehicle_color  VARCHAR(30);
 
 -- Admin is a third account type alongside rider/driver — widen the role check
 ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
@@ -193,8 +194,8 @@ CREATE TABLE IF NOT EXISTS routes (
   period          VARCHAR(10)  NOT NULL CHECK (period IN ('morning','evening')),
   pickup          VARCHAR(100) NOT NULL REFERENCES stops(name) ON UPDATE CASCADE ON DELETE RESTRICT,
   dropoff         VARCHAR(100) NOT NULL REFERENCES stops(name) ON UPDATE CASCADE ON DELETE RESTRICT,
-  pool_fare_kobo  BIGINT       NOT NULL,
-  solo_fare_kobo  BIGINT       NOT NULL,
+  pool_fare_kobo     BIGINT    NOT NULL,
+  package_fare_kobo  BIGINT    NOT NULL,
   is_active       BOOLEAN      NOT NULL DEFAULT true,
   updated_by      UUID         REFERENCES users(id) ON DELETE SET NULL,
   updated_at      TIMESTAMPTZ,
@@ -228,6 +229,59 @@ ALTER TABLE rides ADD COLUMN IF NOT EXISTS recipient_name  VARCHAR(100);
 ALTER TABLE rides ADD COLUMN IF NOT EXISTS recipient_phone VARCHAR(20);
 ALTER TABLE rides ADD COLUMN IF NOT EXISTS package_size    VARCHAR(10);
 ALTER TABLE rides ADD COLUMN IF NOT EXISTS notes           VARCHAR(500);
+
+-- One rating per (ride, rater) — supports both directions.
+ALTER TABLE ratings DROP CONSTRAINT IF EXISTS ratings_ride_rater_unique;
+ALTER TABLE ratings ADD CONSTRAINT ratings_ride_rater_unique UNIQUE (ride_id, rater_id);
+
+-- Real, server-visible profile photo — settable by any user.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_path VARCHAR(255);
+
+-- Payment status tracking on wallet top-ups (pending → completed/failed).
+-- Existing rows default to 'completed' so history stays intact.
+ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'completed';
+
+-- Optional handoff note each side can leave when booking/going live —
+-- carried onto the matched ride and shown to the other party once
+-- they're actually paired together (not before).
+ALTER TABLE rider_bookings ADD COLUMN IF NOT EXISTS comment VARCHAR(200);
+ALTER TABLE driver_availability ADD COLUMN IF NOT EXISTS comment VARCHAR(200);
+ALTER TABLE rides ADD COLUMN IF NOT EXISTS rider_comment VARCHAR(200);
+ALTER TABLE rides ADD COLUMN IF NOT EXISTS driver_comment VARCHAR(200);
+
+-- Single-row table holding the platform's cut of every fare (admin-tunable,
+-- read live at ride-completion time — never retroactive on past payouts).
+CREATE TABLE IF NOT EXISTS platform_settings (
+  id                    SMALLINT     PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  platform_fee_percent  NUMERIC(5,2) NOT NULL DEFAULT 20.00 CHECK (platform_fee_percent BETWEEN 0 AND 100),
+  updated_by            UUID         REFERENCES users(id) ON DELETE SET NULL,
+  updated_at            TIMESTAMPTZ
+);
+INSERT INTO platform_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
+
+-- Admin action audit trail — feeds the dashboard "Recent Activity" panel
+-- alongside events derived live from rides/users/payouts.
+CREATE TABLE IF NOT EXISTS activity_log (
+  id         UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id   UUID         REFERENCES users(id) ON DELETE SET NULL,
+  action     VARCHAR(60)  NOT NULL,
+  category   VARCHAR(20)  NOT NULL,
+  detail     VARCHAR(300),
+  created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_activity_created ON activity_log(created_at DESC);
+
+-- Solo-ride fare is no longer admin-priced — it's pool fare × the matched
+-- driver's seats, computed at match time (see /driver/confirm-route).
+-- This column now only prices package deliveries ("Move an Item"), so it's
+-- renamed to reflect that — admins still set it the same way as before.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='routes' AND column_name='solo_fare_kobo')
+     AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='routes' AND column_name='package_fare_kobo') THEN
+    ALTER TABLE routes RENAME COLUMN solo_fare_kobo TO package_fare_kobo;
+  END IF;
+END $$;
 `
 
 ;(async () => {

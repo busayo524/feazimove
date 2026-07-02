@@ -4,7 +4,7 @@ import { useStopCoords } from '../hooks/useStopCoords'
 
 const NEON='#ccff00'
 const OLIVE='#243800', MOSS='#4C6900'
-const CARD='#ffffff', BORDER='#d4e5a8', TEXT='#1a2800', MUTED='#4C6900', BG='#f0f5e0'
+const CARD='#ffffff', BORDER='#e9ecef', TEXT='#1a2800', MUTED='#4C6900', BG='#f6f7f9'
 
 // Static pickup/dropoff route preview — Mapbox Static Images API, just an <img>,
 // no JS SDK or live tracking. Same pattern used on the rider's Book Ride page.
@@ -38,7 +38,7 @@ export default function RouteMap({ pickup, dropoff }) {
             </div>
           ) : (
             <img
-              src={`https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-l+ccff00(${pCoord.lng},${pCoord.lat}),pin-l+243800(${dCoord.lng},${dCoord.lat})/auto/700x300@2x?access_token=${token}&padding=80,60,60,60`}
+              src={`https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-l+ccff00(${pCoord.lng},${pCoord.lat}),pin-l+243800(${dCoord.lng},${dCoord.lat})/auto/700x300@2x?access_token=${token}&padding=80,60,60,60&attribution=false&logo=false`}
               alt={`Route from ${pickup} to ${dropoff}`}
               width="100%"
               height="280"

@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Menu, X, Sun, Moon, ChevronDown, Users, Car, Clock, Package, Briefcase, TrendingUp, MapPin, BookOpen, Wallet } from 'lucide-react'
+import { Link, useLocation } from 'react-router-dom'
+import { Menu, X, Sun, Moon, ChevronDown, Users, Car, Clock, Package, Briefcase, TrendingUp, MapPin, BookOpen } from 'lucide-react'
 import Logo from './Logo'
 import { useTheme } from '../context/ThemeContext'
-import { useAuth } from '../context/AuthContext'
-import { api } from '../services/api'
 
 const FOREST = '#15803d'
 const NEON   = '#ccff00'
@@ -14,7 +12,7 @@ const RIDE_ITEMS = [
   { icon: <Users size={18} color="#15803d"/>,   label: 'FeaziPool',        sub: 'Share a route, split the cost',        href: '/services', bg: '#dcfce7' },
   { icon: <Car size={18} color="#1d4ed8"/>,      label: 'Solo Ride',        sub: 'Private, direct trips',                href: '/services', bg: '#dbeafe' },
   { icon: <Clock size={18} color="#b45309"/>,    label: 'Schedule a Ride',  sub: 'Book in advance, travel on your time', href: '/services', bg: '#fef3c7' },
-  { icon: <Package size={18} color="#7c3aed"/>,  label: 'FeaziSend',        sub: 'Fast & reliable package delivery',     href: '/services', bg: '#ede9fe' },
+  { icon: <Package size={18} color="#7c3aed"/>,  label: 'FeaziMove',        sub: 'Fast & reliable moving',               href: '/services', bg: '#ede9fe' },
 ]
 
 const DRIVE_ITEMS = [
@@ -77,24 +75,11 @@ function Dropdown({ items, onClose, isDark }) {
 
 export default function Navbar() {
   const { toggle, isDark } = useTheme()
-  const { user } = useAuth()
   const location = useLocation()
-  const navigate = useNavigate()
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
   const [dropdown, setDropdown] = useState(null) // 'ride' | 'drive' | null
   const closeTimer = useRef(null)
-  const [walletBalance, setWalletBalance] = useState(null)
-
-  useEffect(() => {
-    if (!user) { setWalletBalance(null); return }
-    api.get('/wallet/balance')
-      .then(res => setWalletBalance(res.data?.balance ?? 0))
-      .catch(() => setWalletBalance(0))
-  }, [user])
-
-  const avatarUrl = user?.id ? localStorage.getItem(`feazi_avatar_${user.id}`) : null
-  const initials  = user ? `${user.firstName?.[0]||''}${user.lastName?.[0]||''}`.toUpperCase() || 'U' : ''
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40)
@@ -231,100 +216,49 @@ export default function Navbar() {
 
         {/* Desktop right actions */}
         <div className="nav-desktop-actions" style={{ flexShrink: 0, marginLeft: 24, display:'flex', alignItems:'center', gap:12 }}>
-          {/* Theme toggle — only when signed out */}
-          {!user && (
-            <button onClick={toggle} aria-label="Toggle theme" style={{
-              width:34, height:34, borderRadius:10, border:'1px solid',
-              borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)',
-              background:'transparent', display:'flex', alignItems:'center', justifyContent:'center',
-              cursor:'pointer', transition:'all 0.2s',
-              color: isDark ? 'rgba(255,255,255,0.6)' : '#3a3a3a',
-            }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = FOREST; e.currentTarget.style.color = FOREST }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'; e.currentTarget.style.color = isDark ? 'rgba(255,255,255,0.6)' : '#3a3a3a' }}>
-              {isDark ? <Sun size={15}/> : <Moon size={15}/>}
-            </button>
-          )}
+          <button onClick={toggle} aria-label="Toggle theme" style={{
+            width:34, height:34, borderRadius:10, border:'1px solid',
+            borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)',
+            background:'transparent', display:'flex', alignItems:'center', justifyContent:'center',
+            cursor:'pointer', transition:'all 0.2s',
+            color: isDark ? 'rgba(255,255,255,0.6)' : '#3a3a3a',
+          }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = FOREST; e.currentTarget.style.color = FOREST }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'; e.currentTarget.style.color = isDark ? 'rgba(255,255,255,0.6)' : '#3a3a3a' }}>
+            {isDark ? <Sun size={15}/> : <Moon size={15}/>}
+          </button>
 
-          {user ? (
-            /* ── Signed-in state ── */
-            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-              {/* Wallet pill */}
-              <button onClick={() => navigate(user.role === 'driver' ? '/driver' : '/wallet')}
-                style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:50, background:NEON, border:'none', cursor:'pointer' }}>
-                <Wallet size={13} color={NT} strokeWidth={2.5}/>
-                <span style={{ fontWeight:800, fontSize:13, color:NT }}>
-                  {walletBalance === null ? '—' : `₦${walletBalance.toLocaleString()}`}
-                </span>
-              </button>
-              {/* Avatar → goes to dashboard */}
-              <button onClick={() => navigate(user.role === 'driver' ? '/driver' : '/book')}
-                style={{ width:36, height:36, borderRadius:'50%', background:'#0a0a0a', border:`2px solid ${NEON}`, overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', padding:0 }}>
-                {avatarUrl
-                  ? <img src={avatarUrl} alt="avatar" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
-                  : <span style={{ color:NEON, fontWeight:800, fontSize:13 }}>{initials}</span>
-                }
-              </button>
-            </div>
-          ) : (
-            /* ── Signed-out state ── */
-            <>
-              <Link to="/login" style={{ padding:'9px 20px', borderRadius:50, background:'transparent', border:`1.5px solid ${isDark?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.15)'}`, color: isDark?'#fff':NT, fontSize:13, fontWeight:700, textDecoration:'none', transition:'all 0.15s' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = FOREST; e.currentTarget.style.color = FOREST }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = isDark?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.15)'; e.currentTarget.style.color = isDark?'#fff':NT }}>
-                Log in
-              </Link>
-              <Link to="/register" style={{
-                display:'inline-flex', alignItems:'center', gap:6, padding:'9px 20px', borderRadius:50,
-                background: NEON, color: NT, fontSize:13, fontWeight:700,
-                transition:'background 0.2s, transform 0.15s', textDecoration:'none',
-              }}
-                onMouseEnter={e => { e.currentTarget.style.background='#d4ff1a'; e.currentTarget.style.transform='translateY(-1px)' }}
-                onMouseLeave={e => { e.currentTarget.style.background=NEON; e.currentTarget.style.transform='translateY(0)' }}>
-                Create account
-              </Link>
-            </>
-          )}
+          <Link to="/login" style={{ padding:'9px 20px', borderRadius:50, background:'transparent', border:`1.5px solid ${isDark?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.15)'}`, color: isDark?'#fff':NT, fontSize:13, fontWeight:700, textDecoration:'none', transition:'all 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = FOREST; e.currentTarget.style.color = FOREST }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = isDark?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.15)'; e.currentTarget.style.color = isDark?'#fff':NT }}>
+            Log in
+          </Link>
+          <Link to="/register" style={{
+            display:'inline-flex', alignItems:'center', gap:6, padding:'9px 20px', borderRadius:50,
+            background: NEON, color: NT, fontSize:13, fontWeight:700,
+            transition:'background 0.2s, transform 0.15s', textDecoration:'none',
+          }}
+            onMouseEnter={e => { e.currentTarget.style.background='#d4ff1a'; e.currentTarget.style.transform='translateY(-1px)' }}
+            onMouseLeave={e => { e.currentTarget.style.background=NEON; e.currentTarget.style.transform='translateY(0)' }}>
+            Create account
+          </Link>
         </div>
 
         {/* Mobile right — pushed to far right */}
         <div className="nav-mobile-right" style={{ marginLeft: 'auto', display: 'none', alignItems: 'center', gap: 10 }}>
-          {user ? (
-            /* Signed in: show wallet + avatar only, no toggle/hamburger */
-            <>
-              <button onClick={() => navigate(user.role === 'driver' ? '/driver' : '/wallet')}
-                style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 12px', borderRadius:50, background:NEON, border:'none', cursor:'pointer' }}>
-                <Wallet size={13} color={NT} strokeWidth={2.5}/>
-                <span style={{ fontWeight:800, fontSize:12, color:NT }}>
-                  {walletBalance === null ? '—' : `₦${walletBalance.toLocaleString()}`}
-                </span>
-              </button>
-              <button onClick={() => navigate(user.role === 'driver' ? '/driver' : '/book')}
-                style={{ width:34, height:34, borderRadius:'50%', background:'#0a0a0a', border:`2px solid ${NEON}`, overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', padding:0 }}>
-                {avatarUrl
-                  ? <img src={avatarUrl} alt="avatar" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
-                  : <span style={{ color:NEON, fontWeight:800, fontSize:12 }}>{initials}</span>
-                }
-              </button>
-            </>
-          ) : (
-            /* Signed out: show theme toggle + hamburger */
-            <>
-              <button onClick={toggle} aria-label="Toggle theme" style={{
-                width:34, height:34, borderRadius:10, border:'1px solid',
-                borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)',
-                background:'transparent', display:'flex', alignItems:'center', justifyContent:'center',
-                cursor:'pointer', color: isDark ? 'rgba(255,255,255,0.6)' : '#3a3a3a',
-              }}>
-                {isDark ? <Sun size={15}/> : <Moon size={15}/>}
-              </button>
-              <button onClick={() => setOpen(!open)}
-                style={{ color: isDark ? '#fff' : '#1a1a1a', background:'none', border:'none', cursor:'pointer', padding: 4 }}
-                aria-label={open ? 'Close menu' : 'Open menu'}>
-                {open ? <X size={22}/> : <Menu size={22}/>}
-              </button>
-            </>
-          )}
+          <button onClick={toggle} aria-label="Toggle theme" style={{
+            width:34, height:34, borderRadius:10, border:'1px solid',
+            borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)',
+            background:'transparent', display:'flex', alignItems:'center', justifyContent:'center',
+            cursor:'pointer', color: isDark ? 'rgba(255,255,255,0.6)' : '#3a3a3a',
+          }}>
+            {isDark ? <Sun size={15}/> : <Moon size={15}/>}
+          </button>
+          <button onClick={() => setOpen(!open)}
+            style={{ color: isDark ? '#fff' : '#1a1a1a', background:'none', border:'none', cursor:'pointer', padding: 4 }}
+            aria-label={open ? 'Close menu' : 'Open menu'}>
+            {open ? <X size={22}/> : <Menu size={22}/>}
+          </button>
         </div>
       </nav>
 
@@ -349,23 +283,8 @@ export default function Navbar() {
             ))}
           </ul>
           <div style={{ padding:'16px 24px 28px', display:'flex', flexDirection:'column', gap:10 }}>
-            {user ? (
-              <>
-                <button onClick={() => { navigate(user.role === 'driver' ? '/wallet' : '/wallet'); setOpen(false) }}
-                  style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'13px', borderRadius:50, background:NEON, color:NT, fontSize:15, fontWeight:700, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
-                  <Wallet size={16}/> Wallet · {walletBalance === null ? '—' : `₦${walletBalance.toLocaleString()}`}
-                </button>
-                <button onClick={() => { navigate(user.role === 'driver' ? '/driver' : '/book'); setOpen(false) }}
-                  style={{ display:'flex', justifyContent:'center', padding:'13px', borderRadius:50, border: isDark?'1.5px solid rgba(255,255,255,0.2)':'1.5px solid rgba(0,0,0,0.15)', color: isDark?'#fff':'#1a1a1a', fontSize:15, fontWeight:700, background:'transparent', cursor:'pointer', fontFamily:'inherit' }}>
-                  Go to Dashboard
-                </button>
-              </>
-            ) : (
-              <>
-                <Link to="/login" style={{ display:'flex', justifyContent:'center', padding:'13px', borderRadius:50, border: isDark?'1.5px solid rgba(255,255,255,0.2)':'1.5px solid rgba(0,0,0,0.15)', color: isDark?'#fff':'#1a1a1a', fontSize:15, fontWeight:700, textDecoration:'none' }}>Log in</Link>
-                <Link to="/register" style={{ display:'flex', justifyContent:'center', padding:'13px', borderRadius:50, background:NEON, color:NT, fontSize:15, fontWeight:700, textDecoration:'none' }}>Create account</Link>
-              </>
-            )}
+            <Link to="/login" style={{ display:'flex', justifyContent:'center', padding:'13px', borderRadius:50, border: isDark?'1.5px solid rgba(255,255,255,0.2)':'1.5px solid rgba(0,0,0,0.15)', color: isDark?'#fff':'#1a1a1a', fontSize:15, fontWeight:700, textDecoration:'none' }}>Log in</Link>
+            <Link to="/register" style={{ display:'flex', justifyContent:'center', padding:'13px', borderRadius:50, background:NEON, color:NT, fontSize:15, fontWeight:700, textDecoration:'none' }}>Create account</Link>
           </div>
         </div>
       )}

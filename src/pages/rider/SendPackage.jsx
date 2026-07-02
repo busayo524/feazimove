@@ -7,7 +7,7 @@ import { useRoutes } from '../../hooks/useRoutes'
 
 const NEON='#ccff00', NT='#0a0a0a'
 const OLIVE='#243800', MOSS='#4C6900'
-const CARD='#ffffff', BORDER='#d4e5a8', TEXT='#1a2800', MUTED='#4C6900'
+const CARD='#ffffff', BORDER='#e9ecef', TEXT='#1a2800', MUTED='#4C6900'
 
 const SIZES=[
   {id:'sm',label:'Small',desc:'Documents, phones, small items'},

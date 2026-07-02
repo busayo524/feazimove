@@ -44,7 +44,7 @@ export default function Footer() {
             <Logo forceVariant="green" />
 
             <p className="mt-4 text-sm leading-relaxed mb-5" style={{ color: 'rgba(245,245,240,0.55)', maxWidth: '260px' }}>
-              Making mobility feasible, affordable, and easy across African cities — the Feazi Way.
+              Making Mobility Feasible. Making Everyday Life Easy.
             </p>
             <div className="space-y-2 text-sm mb-6" style={{ color: 'rgba(245,245,240,0.5)' }}>
               <a href="mailto:support@feazimove.com"
@@ -118,10 +118,7 @@ export default function Footer() {
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-8"
           style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
           <p className="text-sm" style={{ color: 'rgba(245,245,240,0.35)' }}>
-            © {new Date().getFullYear()} FeaziMove. All rights reserved.
-          </p>
-          <p className="text-sm font-semibold" style={{ color: '#ccff00' }}>
-            Making Mobility Feasible. Making Everyday Life Easy.
+            © {new Date().getFullYear()} FeaziMove Technology Ltd. All rights reserved.
           </p>
         </div>
       </div>

@@ -1,4 +1,6 @@
 const express   = require('express')
+const fs        = require('fs')
+const path      = require('path')
 const bcrypt    = require('bcryptjs')
 const jwt       = require('jsonwebtoken')
 const rateLimit = require('express-rate-limit')
@@ -9,7 +11,7 @@ const axios     = require('axios')
 const { query } = require('../db')
 const { requireAuth }  = require('../middleware/auth')
 const { validate }     = require('../middleware/validate')
-const { upload, DOC_FIELDS } = require('../middleware/upload')
+const { upload, DOC_FIELDS, UPLOAD_DIR } = require('../middleware/upload')
 const { generateOtp, sendOtpEmail, sendRegistrationLink, sendWelcomeEmail } = require('../services/emailService')
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
@@ -834,6 +836,35 @@ router.post('/avatar',
       if (!req.file) return res.status(422).json({ message: 'No image uploaded.' })
       await query('UPDATE users SET avatar_path = $1 WHERE id = $2', [req.file.filename, req.user.id])
       res.json({ message: 'Profile photo updated.' })
+    } catch (err) { next(err) }
+  }
+)
+
+// ── My own profile photo — lets the app show it back on any device/browser,
+// not just the one it was uploaded from (that only has the localStorage copy).
+router.get('/avatar',
+  requireAuth,
+  async (req, res, next) => {
+    try {
+      // Prefer the real profile photo set from the Profile page; fall back
+      // to whatever the registration wizard collected, same as /rides/avatar.
+      const userRes = await query('SELECT avatar_path FROM users WHERE id = $1', [req.user.id])
+      let filename = userRes.rows[0]?.avatar_path
+
+      if (!filename) {
+        const doc = await query(
+          `SELECT file_path FROM user_documents
+            WHERE user_id = $1 AND doc_type IN ('selfie', 'profilePhoto')
+            ORDER BY uploaded_at DESC LIMIT 1`,
+          [req.user.id]
+        )
+        filename = doc.rows[0]?.file_path
+      }
+      if (!filename) return res.status(404).json({ message: 'No photo on file.' })
+
+      const filePath = path.join(UPLOAD_DIR, path.basename(filename))
+      if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'File not found on disk.' })
+      res.sendFile(filePath)
     } catch (err) { next(err) }
   }
 )

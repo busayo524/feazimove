@@ -18,7 +18,7 @@ router.get('/', async (req, res, next) => {
       return res.status(422).json({ message: 'period must be morning or evening.' })
     }
     const result = await query(
-      `SELECT pickup, dropoff, pool_fare_kobo, solo_fare_kobo
+      `SELECT pickup, dropoff, pool_fare_kobo, package_fare_kobo
        FROM routes WHERE period = $1 AND is_active = true
        ORDER BY pickup, dropoff`,
       [period]
@@ -26,7 +26,7 @@ router.get('/', async (req, res, next) => {
     res.json({
       routes: result.rows.map(r => ({
         pickup: r.pickup, dropoff: r.dropoff,
-        poolFareKobo: Number(r.pool_fare_kobo), soloFareKobo: Number(r.solo_fare_kobo),
+        poolFareKobo: Number(r.pool_fare_kobo), packageFareKobo: Number(r.package_fare_kobo),
       })),
     })
   } catch (err) { next(err) }

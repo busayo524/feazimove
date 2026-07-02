@@ -353,4 +353,79 @@ async function sendWelcomeEmail(to, fullName, role) {
   })
 }
 
-module.exports = { generateOtp, sendOtpEmail, sendRegistrationLink, sendWelcomeEmail }
+// ── Credentials welcome email — admin-created accounts ───────────────────────
+// Sent when an admin creates a user directly: welcomes them and delivers their
+// login details with the temporary password they must change on first login.
+async function sendAccountCredentialsEmail(to, fullName, role, tempPassword) {
+  const firstName = (fullName || '').split(' ')[0] || 'there'
+  const roleLabel = role === 'driver' ? 'Driver' : role === 'admin' ? 'Administrator' : 'Rider'
+  const APP_URL   = process.env.APP_URL || 'http://localhost:5173'
+  const loginLink = `${APP_URL}/login`
+
+  const body = `
+    <!-- Hero block -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:32px;">
+      <tr>
+        <td style="border-bottom:4px solid #ccff00;padding-bottom:22px;">
+          <p style="margin:0 0 6px;font-size:24px;font-weight:900;color:#0a1f15;font-family:Arial,sans-serif;">
+            Welcome to FeaziMove, ${firstName}!
+          </p>
+          <p style="margin:0;font-size:15px;color:#555;line-height:1.6;">
+            A FeaziMove <strong>${roleLabel}</strong> account has been created for you.
+          </p>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin:0 0 20px;font-size:15px;color:#222;">Hello ${firstName},</p>
+
+    <p style="margin:0 0 20px;font-size:15px;color:#333;line-height:1.8;">
+      We are pleased to have you on board. Your account is active and ready to use —
+      sign in with the credentials below.
+    </p>
+
+    <!-- Credentials block -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+      <tr>
+        <td style="background:#f6f7f9;border:1px solid #e9ecef;border-radius:10px;padding:20px 22px;">
+          <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.08em;">Email</p>
+          <p style="margin:0 0 14px;font-size:16px;font-weight:700;color:#0a1f15;">${to}</p>
+          <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.08em;">Temporary Password</p>
+          <p style="margin:0;font-size:18px;font-weight:900;color:#0a1f15;font-family:'Courier New',monospace;letter-spacing:1px;">${tempPassword}</p>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin:0 0 24px;font-size:14px;color:#333;line-height:1.8;">
+      For your security, you will be asked to <strong>set a new password</strong> the first time you sign in.
+      Never share your password with anyone — FeaziMove staff will never ask for it.
+    </p>
+
+    <!-- CTA Button -->
+    <table cellpadding="0" cellspacing="0" style="margin:0 0 32px;">
+      <tr>
+        <td style="background:#ccff00;border-radius:50px;">
+          <a href="${loginLink}" style="display:inline-block;padding:15px 40px;font-size:16px;font-weight:900;color:#0a1f15;text-decoration:none;letter-spacing:-0.2px;">
+            Sign In to FeaziMove →
+          </a>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin:0 0 6px;font-size:15px;color:#333;">Warm regards,</p>
+    <p style="margin:0 0 4px;font-size:15px;font-weight:700;color:#0a1f15;">The FeaziMove Team</p>
+    <p style="margin:0;font-size:13px;color:#666;">
+      FeaziMove Technologies Ltd. | Lagos, Nigeria<br/>
+      📧 <a href="mailto:support@feazimove.com" style="color:#2a6048;">support@feazimove.com</a>
+      &nbsp;|&nbsp; 🌐 <a href="https://feazimove.com" style="color:#2a6048;">www.feazimove.com</a>
+    </p>
+  `
+
+  await sendEmail({
+    to,
+    subject: `Welcome to FeaziMove — Your ${roleLabel} account is ready`,
+    html: emailShell('#2a6048', body),
+  })
+}
+
+module.exports = { generateOtp, sendOtpEmail, sendRegistrationLink, sendWelcomeEmail, sendAccountCredentialsEmail }

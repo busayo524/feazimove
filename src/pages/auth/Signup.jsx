@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Eye, EyeOff, AlertCircle, RefreshCw, CheckCircle2, ArrowRight } from 'lucide-react'
-import { useGoogleLogin } from '@react-oauth/google'
 import { api } from '../../services/api'
 import faviconImg from '../../assets/favicon.png'
 import PhoneInput from '../../components/PhoneInput'
@@ -183,10 +182,12 @@ export default function Signup() {
     setVerifying(true); setOtpErr('')
     try {
       const res = await api.post('/auth/verify-otp', { userId, otp })
+      const regPrefill = { name: form.name, email: form.email, phone: form.phone, password: form.password, confirm: form.confirm }
+      sessionStorage.setItem('feazi_reg_prefill', JSON.stringify(regPrefill))
       navigate(`/register/${res.data.role || role}`, {
         state: {
           registrationToken: res.data.registrationToken,
-          prefill: { name: form.name, email: form.email, phone: form.phone, password: form.password, confirm: form.confirm },
+          prefill: regPrefill,
         },
         replace: true,
       })
@@ -212,39 +213,6 @@ export default function Signup() {
     } catch { setOtpErr('Could not resend. Please try again.') }
     finally  { setResending(false) }
   }
-
-  const [googleLoading, setGoogleLoading] = useState(false)
-
-  const googleLogin = useGoogleLogin({
-    flow: 'implicit',
-    onSuccess: async (tokenResponse) => {
-      setGoogleLoading(true); setFormErr('')
-      try {
-        // Exchange access token for user info then send id_token to backend
-        const infoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-        })
-        const info = await infoRes.json()
-        const res = await api.post('/auth/google-access', {
-          accessToken: tokenResponse.access_token,
-          email: info.email, name: info.name, googleId: info.sub,
-          emailVerified: info.email_verified,
-          role,
-        })
-        if (res.data.isNew) {
-          navigate(`/register/${res.data.role || role}`, {
-            state: { registrationToken: res.data.registrationToken, prefill: res.data.prefill },
-            replace: true,
-          })
-        } else {
-          navigate(res.data.user?.role === 'driver' ? '/driver' : '/book', { replace: true })
-        }
-      } catch (err) {
-        setFormErr(err.data?.message || 'Google sign-in failed. Please try again.')
-      } finally { setGoogleLoading(false) }
-    },
-    onError: () => setFormErr('Google sign-in was cancelled or failed.'),
-  })
 
   const otpFull = digits.every(Boolean)
   const pw      = strength(form.password)
@@ -434,29 +402,6 @@ export default function Signup() {
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}>
               {sending ? <><Spinner /> Sending code…</> : 'Continue'}
-            </button>
-
-            {/* OR divider */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '4px 0' }}>
-              <div style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
-              <span style={{ fontSize: 13, color: '#9ca3af', fontWeight: 500 }}>OR</span>
-              <div style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
-            </div>
-
-            {/* Google button */}
-            <button type="button" onClick={() => googleLogin()} disabled={googleLoading} style={{
-              width: '100%', padding: '14px 16px', borderRadius: 10, fontSize: 15, fontWeight: 600,
-              background: '#fff', color: '#3c4043',
-              border: '1.5px solid #dadce0', cursor: googleLoading ? 'not-allowed' : 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-              transition: 'box-shadow 0.2s, border-color 0.2s', fontFamily: 'inherit',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-            }}
-              onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.14)'; e.currentTarget.style.borderColor = '#bbb' }}
-              onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)'; e.currentTarget.style.borderColor = '#dadce0' }}
-            >
-              {googleLoading ? <Spinner dark /> : <GoogleIcon />}
-              {googleLoading ? 'Signing in…' : 'Continue with Google'}
             </button>
           </form>
         </div>

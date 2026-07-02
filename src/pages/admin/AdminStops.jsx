@@ -35,8 +35,8 @@ export default function AdminStops() {
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8, flexWrap:'wrap', gap:10 }}>
         <p style={{ color:MUTED, fontSize:14 }}>The catalog of named locations riders and drivers can select.</p>
         <button onClick={() => setShowAdd(true)}
-          style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 18px', borderRadius:10, background:OLIVE, border:'none',
-            color:NEON, fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+          style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 18px', borderRadius:10, background:NEON, border:'none',
+            color:OLIVE, fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
           <Plus size={15}/> Add Stop
         </button>
       </div>
@@ -54,7 +54,7 @@ export default function AdminStops() {
       {!stops ? (
         <p style={{ color:MUTED }}>Loading…</p>
       ) : (
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }} className="admin-stops-grid">
+        <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) minmax(0,1fr)', gap:16 }} className="admin-stops-grid">
           {[['Mainland', mainland], ['Island', island]].map(([label, list]) => (
             <div key={label} style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, overflow:'hidden' }}>
               <p style={{ fontWeight:800, fontSize:14, color:TEXT, padding:'14px 18px', borderBottom:`1px solid ${BORDER}`, background:BG }}>
@@ -133,7 +133,7 @@ function AddStopModal({ onClose, onCreated }) {
           <input type="number" min="0" value={chainPosition} onChange={e => setChainPosition(e.target.value)} required
             style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, marginBottom:14, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}/>
 
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:14 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) minmax(0,1fr)', gap:10, marginBottom:14 }}>
             <div>
               <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Latitude</label>
               <input type="number" step="0.0001" value={lat} onChange={e => setLat(e.target.value)} placeholder="optional"
@@ -149,7 +149,7 @@ function AddStopModal({ onClose, onCreated }) {
           {error && <p style={{ fontSize:13, color:'#ef4444', marginBottom:12 }}>{error}</p>}
 
           <button type="submit" disabled={busy}
-            style={{ width:'100%', padding:'11px', borderRadius:10, background:OLIVE, color:NEON, border:'none', fontWeight:700, fontSize:14, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit', opacity:busy?0.7:1 }}>
+            style={{ width:'100%', padding:'11px', borderRadius:10, background:NEON, color:OLIVE, border:'none', fontWeight:700, fontSize:14, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit', opacity:busy?0.7:1 }}>
             {busy ? 'Creating…' : 'Create Stop'}
           </button>
         </form>

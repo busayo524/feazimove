@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { MapPin, ChevronDown, Check, Clock } from 'lucide-react'
 
 const OLIVE='#243800', MOSS='#4C6900'
-const CARD='#ffffff', BORDER='#d4e5a8', TEXT='#1a2800', MUTED='#4C6900', BG='#f0f5e0'
+const CARD='#ffffff', BORDER='#e9ecef', TEXT='#1a2800', MUTED='#4C6900', BG='#f6f7f9'
 
 export const MORNING_SLOTS = [
   '5:00 AM','5:30 AM','6:00 AM','6:30 AM','7:00 AM',
@@ -11,13 +11,45 @@ export const MORNING_SLOTS = [
 export const EVENING_SLOTS = [
   '3:00 PM','3:30 PM','4:00 PM','4:30 PM','5:00 PM',
   '5:30 PM','6:00 PM','6:30 PM','7:00 PM','7:30 PM','8:00 PM',
+  '8:30 PM','9:00 PM','9:30 PM','10:00 PM',
 ]
+
+// Decides whether an open dropdown should drop down or flip upward, and how
+// tall it can safely be, based on the trigger's actual position on screen —
+// so the list never gets cut off or pushed past the viewport edge.
+export function usePanelPlacement(open, triggerRef) {
+  const [placement, setPlacement] = useState({ openUpward: false, maxHeight: 260 })
+
+  useEffect(() => {
+    if (!open || !triggerRef.current) return
+    function measure() {
+      const rect = triggerRef.current.getBoundingClientRect()
+      const margin = 12
+      const spaceBelow = window.innerHeight - rect.bottom - margin
+      const spaceAbove = rect.top - margin
+      const openUpward = spaceBelow < 180 && spaceAbove > spaceBelow
+      const maxHeight = Math.max(140, Math.min(280, (openUpward ? spaceAbove : spaceBelow)))
+      setPlacement({ openUpward, maxHeight })
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    window.addEventListener('scroll', measure, true)
+    return () => {
+      window.removeEventListener('resize', measure)
+      window.removeEventListener('scroll', measure, true)
+    }
+  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  return placement
+}
 
 // Pickup/drop-off picker sourced from GET /routes — shared by Book Ride and
 // Move an Item so both use the exact same route structure.
-export function LocationDropdown({ label, options, value, onChange, placeholder }){
+export function LocationDropdown({ label, options, value, onChange, placeholder, forceUpward }){
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
+  const { openUpward: autoUpward, maxHeight } = usePanelPlacement(open, ref)
+  const openUpward = forceUpward || autoUpward
 
   useEffect(()=>{
     function handleClick(e){ if(ref.current && !ref.current.contains(e.target)) setOpen(false) }
@@ -48,9 +80,12 @@ export function LocationDropdown({ label, options, value, onChange, placeholder 
 
         {open&&(
           <div style={{
-            position:'absolute',top:'calc(100% + 6px)',left:0,right:0,zIndex:100,
+            position:'absolute',
+            ...(openUpward ? { bottom:'calc(100% + 6px)' } : { top:'calc(100% + 6px)' }),
+            left:0,right:0,zIndex:100,
             background:CARD,border:`1.5px solid ${BORDER}`,borderRadius:12,
-            boxShadow:'0 8px 24px rgba(36,56,0,0.12)',overflow:'hidden',
+            boxShadow:'0 8px 24px rgba(36,56,0,0.12)',
+            maxHeight,overflowY:'auto',
           }}>
             {options.map((opt,i)=>(
               <button key={opt} type="button"
@@ -84,6 +119,7 @@ export function LocationDropdown({ label, options, value, onChange, placeholder 
 export function TimeDropdown({ slots, value, onChange }){
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
+  const { openUpward, maxHeight } = usePanelPlacement(open, ref)
 
   useEffect(()=>{
     function handleClick(e){ if(ref.current && !ref.current.contains(e.target)) setOpen(false) }
@@ -110,10 +146,12 @@ export function TimeDropdown({ slots, value, onChange }){
 
       {open&&(
         <div style={{
-          position:'absolute',top:'calc(100% + 6px)',left:0,right:0,zIndex:100,
+          position:'absolute',
+          ...(openUpward ? { bottom:'calc(100% + 6px)' } : { top:'calc(100% + 6px)' }),
+          left:0,right:0,zIndex:100,
           background:CARD,border:`1.5px solid ${BORDER}`,borderRadius:12,
           boxShadow:'0 8px 24px rgba(36,56,0,0.12)',
-          maxHeight:220,overflowY:'auto',
+          maxHeight,overflowY:'auto',
         }}>
           {slots.map((s,i)=>(
             <button key={s} type="button"

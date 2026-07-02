@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext'
 import { api } from '../../services/api'
 import faviconImg from '../../assets/favicon.png'
 import PhoneInput from '../../components/PhoneInput'
+import { dataUrlToFile } from '../../utils/dataUrlToFile'
 
 /* ── helpers ──────────────────────────────────────────────────────────── */
 function validatePhone(p) {
@@ -406,11 +407,7 @@ export default function Register() {
   function handleSelfieDataUrl(dataUrl) {
     setSelfiePreview(dataUrl)
     setShowCamera(false)
-    // Convert dataUrl to a File-like blob for any backend upload
-    fetch(dataUrl).then(r => r.blob()).then(blob => {
-      const file = new File([blob], 'selfie.jpg', { type: 'image/jpeg' })
-      setFile('selfie', file)
-    })
+    setFile('selfie', dataUrlToFile(dataUrl, 'selfie.jpg'))
   }
 
   function handleSelfie(file) {
@@ -517,7 +514,9 @@ export default function Register() {
   }
   function v2Rider() {
     const e = {}
-    if (!selfiePreview) e.selfie = 'Please take a selfie photo to use as your profile picture.'
+    // Check the actual upload file, not just the preview — the preview can
+    // exist even when the File conversion failed, and only the file is sent.
+    if (!files.selfie) e.selfie = 'Please take a selfie photo to use as your profile picture.'
     if (!form.idType) e.idType = 'Select an ID type.'
     if (!form.idNumber) {
       e.idNumber = 'Enter your ID number.'
@@ -930,7 +929,7 @@ export default function Register() {
                         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                           <button type="button"
                             onClick={() => setShowCamera(true)}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, background: '#243800', border: 'none', color: '#ccff00', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, background: '#ccff00', border: 'none', color: '#243800', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                             <Camera size={13}/> Retake with camera
                           </button>
                           {isDesktop && (
@@ -952,7 +951,7 @@ export default function Register() {
                         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                           <button type="button"
                             onClick={() => setShowCamera(true)}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, background: '#243800', border: 'none', color: '#ccff00', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(36,56,0,0.2)' }}>
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, background: '#ccff00', border: 'none', color: '#243800', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(36,56,0,0.2)' }}>
                             <Camera size={15}/> Open Camera
                           </button>
                           {isDesktop && (

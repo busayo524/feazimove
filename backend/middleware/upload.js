@@ -30,7 +30,7 @@ const upload = multer({
 
 // Every document field the registration wizard may send — unknown fields are ignored
 const DOC_FIELDS = [
-  'selfie', 'idDoc', 'driverLicense', 'vehicleReg', 'insurance',
+  'selfie', 'idDoc', 'otherIdDoc', 'driverLicense', 'vehicleReg', 'insurance',
   'profilePhoto', 'carFront', 'carSide', 'roadworthiness', 'utilityBill',
 ].map(name => ({ name, maxCount: 1 }))
 

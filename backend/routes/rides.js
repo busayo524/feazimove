@@ -46,7 +46,7 @@ router.get('/avatar/:userId',
       if (!filename) {
         const doc = await query(
           `SELECT file_path FROM user_documents
-            WHERE user_id = $1 AND doc_type = 'profilePhoto'
+            WHERE user_id = $1 AND doc_type IN ('selfie', 'profilePhoto')
             ORDER BY uploaded_at DESC LIMIT 1`,
           [userId]
         )

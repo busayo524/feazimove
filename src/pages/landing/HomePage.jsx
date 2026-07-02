@@ -15,6 +15,7 @@ import urbImg from '../../assets/urban residents.jpg'
 import feaziSendImg from '../../assets/feazisend.png'
 import feaziPoolImg from '../../assets/feazipool.png'
 import feaziBizImg  from '../../assets/feazibiz.png'
+import appScreenshotHero from '../../assets/app-screenshot-hero.png'
 
 function HeroScene({ className = '' }) {
   return <img src={accessAccountSvg} alt="Access account illustration" className={className} style={{ width:'100%', display:'block' }} />
@@ -493,7 +494,7 @@ export default function HomePage() {
 
 
       {/* ══════════════════════════════════════════════════════════════════
-          SPLIT PANEL — FeaziPool / FeaziSend (Rank Reserve/Flex style)
+          SPLIT PANEL — FeaziPool / FeaziMove (Rank Reserve/Flex style)
       ═══════════════════════════════════════════════════════════════════ */}
       <section className="py-24" style={{ background: 'var(--bg-subtle)' }}>
         <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-14">
@@ -511,7 +512,7 @@ export default function HomePage() {
                   <p className="label mb-3" style={{ color:'var(--lime-text)', letterSpacing:'0.16em' }}>POOL</p>
                   <h3 className="font-black mb-2" style={{ fontSize:'clamp(1.8rem,2.5vw,2.4rem)', letterSpacing:'-0.04em', color:'var(--lime-text)', lineHeight:1 }}>FeaziPool</h3>
                   <p className="text-sm leading-relaxed mb-4" style={{ color:'var(--text-muted)' }}>
-                    Share your route with commuters heading your way. Same trip, up to 20% cheaper — no surge, ever.
+                    Share your route with commuters heading your way. Same trip, up to 30% cheaper — no surge, ever.
                   </p>
                 </div>
                 <Link to="/services#feazipool" className="inline-flex items-center gap-2 font-bold text-sm" style={{ color:'var(--lime-text)' }}
@@ -524,23 +525,23 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* FeaziSend */}
+            {/* FeaziMove */}
             <div className="rounded-2xl flex flex-col overflow-hidden" style={{ background:'#e8e8e4', border:'1px solid rgba(0,0,0,0.08)', minHeight:480 }}>
               <div className="flex flex-col justify-between p-8 flex-1">
                 <div>
-                  <p className="label mb-3" style={{ color:'#555', letterSpacing:'0.16em' }}>SEND</p>
-                  <h3 className="font-black mb-2" style={{ fontSize:'clamp(1.8rem,2.5vw,2.4rem)', letterSpacing:'-0.04em', color:'#0f0f0f', lineHeight:1 }}>FeaziSend</h3>
+                  <p className="label mb-3" style={{ color:'#555', letterSpacing:'0.16em' }}>MOVE</p>
+                  <h3 className="font-black mb-2" style={{ fontSize:'clamp(1.8rem,2.5vw,2.4rem)', letterSpacing:'-0.04em', color:'#0f0f0f', lineHeight:1 }}>FeaziMove</h3>
                   <p className="text-sm leading-relaxed mb-4" style={{ color:'#444' }}>
-                    Send and move items, from groceries to full apartment. Pool your delivery space with others moving items in the same direction.
+                    Move items from groceries to full apartment. Pool your delivery space with others moving items in the same direction.
                   </p>
                 </div>
                 <Link to="/services#feazisend" className="inline-flex items-center gap-2 font-bold text-sm" style={{ color:'#0f0f0f' }}
                   onMouseEnter={e => e.currentTarget.style.gap='10px'} onMouseLeave={e => e.currentTarget.style.gap='8px'}>
-                  Explore FeaziSend <ArrowRight size={14} />
+                  Explore FeaziMove <ArrowRight size={14} />
                 </Link>
               </div>
               <div style={{ height:280, background:'rgba(255,255,255,0.04)', overflow:'hidden' }}>
-                <img src={feaziSendImg} alt="FeaziSend" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top', display:'block' }} />
+                <img src={feaziSendImg} alt="FeaziMove" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top', display:'block' }} />
               </div>
             </div>
 
@@ -560,7 +561,7 @@ export default function HomePage() {
                 </Link>
               </div>
               <div style={{ height:280, background:'var(--bg)', overflow:'hidden' }}>
-                <img src={feaziBizImg} alt="FeaziBiz" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top', display:'block' }} />
+                <img src={feaziBizImg} alt="FeaziBiz" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 14%', display:'block' }} />
               </div>
             </div>
 
@@ -638,7 +639,7 @@ export default function HomePage() {
       {/* ── App Download CTA ─────────────────────────────────────────────── */}
       <section style={{ background: 'var(--bg-subtle)', padding: '80px 0', overflow: 'visible' }}>
         <div style={{ width: '100%' }}>
-          <div className="grid lg:grid-cols-2 gap-0" style={{ background: '#2c4a2c', minHeight: 360, overflow: 'visible', position: 'relative' }}>
+          <div className="grid lg:grid-cols-2 gap-0" style={{ background: '#0a0a0a', minHeight: 360, overflow: 'visible', position: 'relative' }}>
 
             {/* Left: text + buttons */}
             <div className="app-dl-left" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 'clamp(40px,5vw,80px) clamp(28px,5vw,80px)' }}>
@@ -652,7 +653,7 @@ export default function HomePage() {
               </h2>
 
               <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 16, lineHeight: 1.75, marginBottom: 40, maxWidth: 400 }}>
-                Book pooled rides, send packages, and manage your commute — all in one place. Launching soon in Lagos.
+                Book pooled rides, move items, and manage your commute — all in one place. Launching soon in Lagos.
               </p>
 
               <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
@@ -718,101 +719,9 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                {/* Mini map strip */}
-                <div style={{ position: 'relative', height: 80, background: '#e8f0e8', overflow: 'hidden' }}>
-                  {/* Road lines */}
-                  <div style={{ position: 'absolute', top: 20, left: 0, right: 0, height: 24, background: '#d0d8d0' }} />
-                  <div style={{ position: 'absolute', top: 28, left: 0, right: 0, height: 2, background: 'rgba(255,255,255,0.7)', borderStyle: 'dashed' }} />
-                  <div style={{ position: 'absolute', top: '35%', left: '15%', width: '40%', height: 20, background: '#d0d8d0', transform: 'rotate(45deg)' }} />
-                  {/* Buildings */}
-                  {[[10,40,18,30],[35,30,22,40],[65,35,16,35],[82,25,20,44]].map(([l,b,w,h],i)=>(
-                    <div key={i} style={{position:'absolute',bottom:b,left:`${l}%`,width:w,height:h,background:'#b8c8b8',borderRadius:2}}/>
-                  ))}
-                  {/* Pin */}
-                  <div style={{ position: 'absolute', top: '30%', left: '55%', width: 16, height: 16, background: '#ccff00', borderRadius: '50% 50% 50% 0', transform: 'rotate(-45deg)', boxShadow: '0 2px 6px rgba(0,0,0,0.3)' }} />
-                  {/* Route line */}
-                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'linear-gradient(to bottom, transparent 60%, rgba(247,247,247,0.95) 100%)' }} />
-                </div>
-
-                {/* Screen content */}
-                <div style={{ background: '#f7f7f7', padding: '14px 14px 0' }}>
-
-                  {/* Header row */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                    <div>
-                      <p style={{ fontSize: 9, color: '#888', marginBottom: 1 }}>Good morning 👋</p>
-                      <p style={{ fontSize: 13, fontWeight: 900, color: '#0a0a0a', letterSpacing: '-0.03em' }}>Oluwabusayo</p>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#e0e0e0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                      </div>
-                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#ccff00', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 11, color: '#0a0a0a' }}>O</div>
-                    </div>
-                  </div>
-
-                  {/* Search bar */}
-                  <div style={{ background: '#0a0a0a', borderRadius: 12, padding: '9px 12px', display: 'flex', alignItems: 'center', gap: 7, marginBottom: 14 }}>
-                    <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#ccff00', flexShrink: 0 }}/>
-                    <span style={{ fontSize: 9, color: '#888' }}>Where are you going?</span>
-                  </div>
-
-                  {/* Choose a service */}
-                  <p style={{ fontSize: 7.5, fontWeight: 800, color: 'var(--text-faint)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>Choose a service</p>
-                  <div style={{ display: 'flex', gap: 7, marginBottom: 12 }}>
-                    {[
-                      { icon: '🚌', name: 'FeaziPool', sub: 'Save 30%', active: true },
-                      { icon: '📦', name: 'FeaziSend', sub: 'Same-day', active: false },
-                      { icon: '💼', name: 'FeaziBiz', sub: 'For teams', active: false },
-                    ].map(({ icon, name, sub, active }) => (
-                      <div key={name} style={{
-                        flex: 1, background: active ? '#0a0a0a' : 'white',
-                        borderRadius: 12, padding: '10px 4px',
-                        textAlign: 'center',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                        border: active ? '1.5px solid #ccff00' : '1px solid #eee',
-                      }}>
-                        <div style={{ fontSize: 16, marginBottom: 3 }}>{icon}</div>
-                        <div style={{ fontSize: 8, fontWeight: 800, color: active ? '#ccff00' : '#0a0a0a', lineHeight: 1.2 }}>{name}</div>
-                        <div style={{ fontSize: 7, color: active ? 'rgba(204,255,0,0.6)' : '#aaa', marginTop: 2 }}>{sub}</div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Quick links */}
-                  <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-                    {[['🕐','History'],['📍','Saved'],['💳','Wallet']].map(([icon,label]) => (
-                      <div key={label} style={{ flex:1, background:'white', borderRadius:10, padding:'7px 4px', textAlign:'center', boxShadow:'0 1px 4px rgba(0,0,0,0.05)', border:'1px solid #f0f0f0' }}>
-                        <span style={{ fontSize: 11 }}>{icon}</span>
-                        <p style={{ fontSize: 7, color: 'var(--text-muted)', marginTop: 2, fontWeight: 600 }}>{label}</p>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Wallet card */}
-                  <div style={{ background: '#0a0a0a', borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(204,255,0,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ fontSize: 13 }}>💳</span>
-                      </div>
-                      <div>
-                        <p style={{ fontSize: 8, color: '#888', marginBottom: 1 }}>Feazi Wallet</p>
-                        <p style={{ fontSize: 15, fontWeight: 900, color: '#ffffff', letterSpacing: '-0.04em' }}>₦4,200</p>
-                      </div>
-                    </div>
-                    <div style={{ background: '#ccff00', borderRadius: 20, padding: '5px 10px', fontSize: 8, fontWeight: 800, color: '#0a0a0a' }}>Top up +</div>
-                  </div>
-                </div>
-
-                {/* Bottom nav */}
-                <div style={{ background: '#f7f7f7', padding: '10px 8px 14px', display: 'flex', justifyContent: 'space-around', borderTop: '1px solid #eee' }}>
-                  {[['🏠','Home'],['⚡','Activity'],['📋','Trips'],['👤','Account']].map(([icon, label], i) => (
-                    <div key={label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                      <span style={{ fontSize: 14, opacity: i === 0 ? 1 : 0.35 }}>{icon}</span>
-                      <span style={{ fontSize: 6.5, fontWeight: i === 0 ? 800 : 500, color: i === 0 ? '#0a0a0a' : '#aaa' }}>{label}</span>
-                    </div>
-                  ))}
-                </div>
+                {/* Real app screenshot — actual product UI, not a mockup */}
+                <img src={appScreenshotHero} alt="FeaziMove app — Schedule Ride screen"
+                  style={{ display: 'block', width: '100%', height: 420, objectFit: 'cover', objectPosition: 'top' }} />
               </div>
             </div>
 
@@ -833,7 +742,7 @@ export default function HomePage() {
           </div>
 
           {/* Right: 2×2 social grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+          <div className="social-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 24 }}>
             {/* Facebook */}
             <a href="https://facebook.com/feazimove" target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
               <div style={{ background: C.cardBg, borderRadius: 16, padding: '28px 24px', border: `1px solid ${C.cardBorder}`, transition: 'box-shadow 0.2s', cursor: 'pointer' }}
@@ -907,6 +816,8 @@ export default function HomePage() {
       <style>{`
         .app-dl-left { padding: 64px 80px; }
         @media (max-width: 1023px) { .app-dl-left { padding: 40px 28px; } }
+        @media (max-width: 768px) { .connect-grid { grid-template-columns: 1fr !important; gap: 36px !important; } }
+        @media (max-width: 480px) { .social-grid { grid-template-columns: 1fr !important; } }
         @media (max-width: 639px)  { .app-dl-left { padding: 32px 20px; } }
       `}</style>
     </LandingLayout>

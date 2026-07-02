@@ -76,7 +76,7 @@ export default function AdminSettings() {
           )}
 
           <button type="submit" disabled={busy}
-            style={{ width:'100%', padding:'12px', borderRadius:10, background:OLIVE, color:NEON, border:'none', fontWeight:700, fontSize:14, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit', opacity:busy?0.7:1 }}>
+            style={{ width:'100%', padding:'12px', borderRadius:10, background:NEON, color:OLIVE, border:'none', fontWeight:700, fontSize:14, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit', opacity:busy?0.7:1 }}>
             {busy ? 'Updating…' : 'Update Password'}
           </button>
         </form>

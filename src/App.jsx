@@ -1,9 +1,6 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import { GoogleOAuthProvider } from '@react-oauth/google'
 import { AuthProvider, useAuth } from './context/AuthContext'
-
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 
 class ErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { error: null } }
@@ -67,7 +64,6 @@ import AdminReports       from './pages/admin/AdminReports'
 import AdminRoutesPage    from './pages/admin/AdminRoutes'
 import AdminStops         from './pages/admin/AdminStops'
 import AdminPricing       from './pages/admin/AdminPricing'
-import AdminUsers             from './pages/admin/AdminUsers'
 import AdminUserDetail        from './pages/admin/AdminUserDetail'
 import AdminUserManagement    from './pages/admin/AdminUserManagement'
 import AdminSettings          from './pages/admin/AdminSettings'
@@ -96,7 +92,6 @@ function ProtectedRoute({ children, requiredRole }) {
 export default function App() {
   return (
     <ErrorBoundary>
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
     <BrowserRouter>
       <AuthProvider>
         <Routes>
@@ -150,7 +145,8 @@ export default function App() {
           <Route path="/admin/pricing"        element={<ProtectedRoute requiredRole="admin"><AdminPricing /></ProtectedRoute>} />
           <Route path="/admin/alerts"         element={<ProtectedRoute requiredRole="admin"><AdminAlerts /></ProtectedRoute>} />
           <Route path="/admin/reports"        element={<ProtectedRoute requiredRole="admin"><AdminReports /></ProtectedRoute>} />
-          <Route path="/admin/users"             element={<ProtectedRoute requiredRole="admin"><AdminUsers /></ProtectedRoute>} />
+          {/* Old Users page merged into User Management */}
+          <Route path="/admin/users"             element={<Navigate to="/admin/user-management" replace />} />
           <Route path="/admin/users/:id"         element={<ProtectedRoute requiredRole="admin"><AdminUserDetail /></ProtectedRoute>} />
           <Route path="/admin/user-management"   element={<ProtectedRoute requiredRole="admin"><AdminUserManagement /></ProtectedRoute>} />
           <Route path="/admin/settings"       element={<ProtectedRoute requiredRole="admin"><AdminSettings /></ProtectedRoute>} />
@@ -159,7 +155,6 @@ export default function App() {
         </Routes>
       </AuthProvider>
     </BrowserRouter>
-    </GoogleOAuthProvider>
     </ErrorBoundary>
   )
 }

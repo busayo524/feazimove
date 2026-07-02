@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { api } from '../services/api'
+import { useIdleLogout, sessionIsStale, ACTIVITY_KEY, IDLE_LOGOUT_FLAG } from '../hooks/useIdleLogout'
 
 const AuthContext = createContext(null)
 
@@ -22,6 +23,15 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const token = localStorage.getItem('fm_token')
     if (!token) { setLoading(false); return }
+    // Session sat idle past the limit while the app was closed — don't restore it
+    if (sessionIsStale()) {
+      localStorage.removeItem('fm_token')
+      localStorage.removeItem('fm_user')
+      localStorage.removeItem(ACTIVITY_KEY)
+      sessionStorage.setItem(IDLE_LOGOUT_FLAG, '1')
+      setLoading(false)
+      return
+    }
     api.get('/auth/me')
       .then(res => setUser(normalizeUser(res.data.user)))
       .catch(() => {
@@ -74,8 +84,12 @@ export function AuthProvider({ children }) {
   const logout = useCallback(() => {
     localStorage.removeItem('fm_token')
     localStorage.removeItem('fm_user')
+    localStorage.removeItem(ACTIVITY_KEY)
     setUser(null)
   }, [])
+
+  // Auto-logout after 45 minutes of inactivity
+  useIdleLogout(user, logout)
 
   const updateUser = useCallback((updates) => {
     setUser(prev => {

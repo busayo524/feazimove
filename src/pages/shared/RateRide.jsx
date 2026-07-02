@@ -1,43 +1,91 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/AppLayout'
-import { Star, CheckCircle } from 'lucide-react'
+import { useAuth } from '../../context/AuthContext'
+import { api } from '../../services/api'
+import { Star, AlertCircle } from 'lucide-react'
 
-const NEON='#ccff00', NT='#0a0a0a', NL='#f9ffe0', NB='#e8ff80'
+const NEON='#ccff00', NT='#0a0a0a'
 const CARD='#ffffff', BORDER='#e8eaed', TEXT='#111827', MUTED='#6b7280'
 
-const TAGS=['Great conversation','Safe driving','Clean vehicle','Punctual','Smooth ride','Professional']
-
 export default function RateRide(){
+  const { rideId } = useParams()
+  const navigate = useNavigate()
+  const { user } = useAuth()
+
+  const [ride, setRide] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+
   const [stars,setStars]=useState(0)
   const [hover,setHover]=useState(0)
-  const [tags,setTags]=useState([])
-  const [comment,setComment]=useState('')
   const [submitted,setSubmitted]=useState(false)
   const [submitting,setSubmitting]=useState(false)
+  const [submitError,setSubmitError]=useState('')
 
-  function toggleTag(t){setTags(ts=>ts.includes(t)?ts.filter(x=>x!==t):[...ts,t])}
-  function sanitize(v){return v.replace(/[<>"]/g,'').slice(0,300)}
+  useEffect(() => {
+    api.get(`/rides/${rideId}`)
+      .then(res => setRide(res.data.ride))
+      .catch(err => setLoadError(err.data?.message || 'Could not load this ride.'))
+      .finally(() => setLoading(false))
+  }, [rideId])
 
-  function handleSubmit(e){
+  function homeRoute(){ return user?.role === 'driver' ? '/driver' : '/book' }
+
+  async function handleSubmit(e){
     e.preventDefault()
-    if(!stars)return
+    if(!stars || submitting)return
     setSubmitting(true)
-    setTimeout(()=>{setSubmitting(false);setSubmitted(true)},1200)
+    setSubmitError('')
+    try {
+      await api.post(`/rides/${rideId}/rate`, { stars })
+      setSubmitted(true)
+    } catch(err) {
+      setSubmitError(err.data?.message || 'Could not submit your rating.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
-  if(submitted){
+  if (loading) {
+    return (
+      <AppLayout title="Rate Ride">
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:300 }}>
+          <div style={{ width:28, height:28, border:`3px solid ${NEON}`, borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.8s linear infinite' }}/>
+          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+        </div>
+      </AppLayout>
+    )
+  }
+
+  if (loadError || !ride) {
+    return (
+      <AppLayout title="Rate Ride">
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:300, textAlign:'center', padding:24 }}>
+          <AlertCircle size={32} color="#ef4444" style={{ marginBottom:12 }}/>
+          <p style={{ color:TEXT, fontWeight:700 }}>{loadError || 'Ride not found.'}</p>
+        </div>
+      </AppLayout>
+    )
+  }
+
+  // Who we're rating depends on which side of the ride the current user is on.
+  const isRider = ride.myRole === 'rider'
+  const other = isRider ? ride.driver : ride.rider
+  const otherLabel = isRider ? 'driver' : 'rider'
+
+  if (ride.alreadyRated || submitted) {
     return(
       <AppLayout title="Rate Ride">
         <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',minHeight:400,textAlign:'center',padding:24}}>
-          <div style={{width:80,height:80,borderRadius:'50%',background:NT,display:'flex',alignItems:'center',justifyContent:'center',marginBottom:20}}>
-            <CheckCircle size={40} color={NEON}/>
-          </div>
           <h2 style={{fontSize:24,fontWeight:900,color:TEXT,letterSpacing:'-0.02em',marginBottom:8}}>Thanks for your feedback!</h2>
-          <p style={{color:MUTED,fontSize:15,marginBottom:10}}>You rated your trip</p>
-          <div style={{display:'flex',gap:4,justifyContent:'center',marginBottom:32}}>
-            {[1,2,3,4,5].map(s=><Star key={s} size={28} fill={s<=stars?'#f59e0b':'none'} color={s<=stars?'#f59e0b':BORDER}/>)}
-          </div>
-          <button onClick={()=>{setSubmitted(false);setStars(0);setTags([]);setComment('')}} style={{padding:'13px 32px',borderRadius:50,background:NT,color:NEON,fontWeight:700,fontSize:15,border:'none',cursor:'pointer'}}>
+          <p style={{color:MUTED,fontSize:15,marginBottom:10}}>{submitted ? `You rated your ${otherLabel}` : `You already rated this ${otherLabel}`}</p>
+          {submitted && (
+            <div style={{display:'flex',gap:4,justifyContent:'center',marginBottom:32}}>
+              {[1,2,3,4,5].map(s=><Star key={s} size={28} fill={s<=stars?'#f59e0b':'none'} color={s<=stars?'#f59e0b':BORDER}/>)}
+            </div>
+          )}
+          <button onClick={()=>navigate(homeRoute())} style={{padding:'13px 32px',borderRadius:50,background:NEON,color:NT,fontWeight:700,fontSize:15,border:'none',cursor:'pointer'}}>
             Done
           </button>
         </div>
@@ -45,29 +93,27 @@ export default function RateRide(){
     )
   }
 
-  const driver={name:'Adewale Okafor',from:'Ikeja GRA',to:'Victoria Island',amount:2800,date:'Today, 9:14 AM'}
-
   return(
     <AppLayout title="Rate Ride">
       {/* Trip summary */}
-      <div style={{background:NT,borderRadius:16,padding:20,marginBottom:16}}>
+      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,padding:20,marginBottom:16,boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
         <div style={{display:'flex',alignItems:'center',gap:14}}>
           <div style={{width:52,height:52,borderRadius:14,background:NEON,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-            <span style={{color:NT,fontWeight:800,fontSize:22}}>{driver.name[0]}</span>
+            <span style={{color:NT,fontWeight:800,fontSize:22}}>{other?.name?.[0] || '?'}</span>
           </div>
-          <div style={{flex:1}}>
-            <p style={{fontWeight:700,fontSize:15,color:'#fff'}}>{driver.name}</p>
-            <p style={{fontSize:13,color:'rgba(255,255,255,0.5)',marginTop:2}}>{driver.from} → {driver.to}</p>
-            <p style={{fontSize:12,color:'rgba(255,255,255,0.35)',marginTop:1}}>{driver.date}</p>
+          <div style={{flex:1,minWidth:0}}>
+            <p style={{fontWeight:700,fontSize:15,color:TEXT}}>{other?.name || `Your ${otherLabel}`}</p>
+            <p style={{fontSize:13,color:MUTED,marginTop:2}}>{ride.pickup} → {ride.destination}</p>
+            <p style={{fontSize:12,color:MUTED,marginTop:1}}>{ride.date}</p>
           </div>
-          <p style={{fontWeight:900,fontSize:18,color:NT,background:NEON,padding:'4px 12px',borderRadius:10}}>₦{driver.amount.toLocaleString()}</p>
+          <p style={{fontWeight:900,fontSize:18,color:NT,background:NEON,padding:'4px 12px',borderRadius:10,flexShrink:0}}>₦{ride.fare.toLocaleString()}</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit}>
         {/* Stars */}
         <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,padding:24,marginBottom:16,boxShadow:'0 1px 3px rgba(0,0,0,0.04)',textAlign:'center'}}>
-          <p style={{fontWeight:700,fontSize:15,color:TEXT,marginBottom:6}}>How was your ride?</p>
+          <p style={{fontWeight:700,fontSize:15,color:TEXT,marginBottom:6}}>How was your {isRider ? 'ride' : 'rider'}?</p>
           <p style={{fontSize:13,color:MUTED,marginBottom:20}}>Tap a star to rate</p>
           <div style={{display:'flex',justifyContent:'center',gap:10,marginBottom:12}}>
             {[1,2,3,4,5].map(s=>(
@@ -79,27 +125,14 @@ export default function RateRide(){
           {stars>0&&<p style={{fontWeight:700,fontSize:15,color:NT,background:NEON,display:'inline-block',padding:'4px 16px',borderRadius:20}}>{['','Poor','Fair','Good','Great','Excellent!'][stars]}</p>}
         </div>
 
-        {/* Tags */}
-        {stars>=4&&(
-          <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,padding:20,marginBottom:16,boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
-            <p style={{fontWeight:700,fontSize:14,color:TEXT,marginBottom:14}}>What stood out?</p>
-            <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
-              {TAGS.map(t=>(
-                <button key={t} type="button" onClick={()=>toggleTag(t)} style={{padding:'8px 14px',borderRadius:50,fontSize:13,fontWeight:600,border:`1.5px solid ${tags.includes(t)?NEON:BORDER}`,background:tags.includes(t)?NT:CARD,color:tags.includes(t)?NEON:MUTED,cursor:'pointer',transition:'all 0.15s'}}>
-                  {tags.includes(t)?'✓ ':''}{t}
-                </button>
-              ))}
-            </div>
+        {submitError && (
+          <div style={{display:'flex',alignItems:'flex-start',gap:10,padding:'12px 14px',background:'#fef2f2',border:'1px solid #fca5a5',borderRadius:12,marginBottom:16}}>
+            <AlertCircle size={16} color="#ef4444" style={{flexShrink:0,marginTop:1}}/>
+            <p style={{fontSize:13,color:'#ef4444'}}>{submitError}</p>
           </div>
         )}
 
-        {/* Comment */}
-        <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,padding:20,marginBottom:20,boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
-          <label style={{display:'block',fontWeight:700,fontSize:14,color:TEXT,marginBottom:10}}>Additional comments (optional)</label>
-          <textarea value={comment} onChange={e=>setComment(sanitize(e.target.value))} placeholder="Share more about your experience…" rows={4} style={{width:'100%',padding:'12px 14px',borderRadius:12,fontSize:14,border:`1.5px solid ${BORDER}`,outline:'none',color:TEXT,background:CARD,fontFamily:'inherit',resize:'vertical',boxSizing:'border-box'}} onFocus={e=>e.target.style.borderColor=NEON} onBlur={e=>e.target.style.borderColor=BORDER}/>
-        </div>
-
-        <button type="submit" disabled={!stars||submitting} style={{width:'100%',padding:'15px',borderRadius:50,background:!stars?'#e5e7eb':submitting?'#ccc':NT,color:!stars?MUTED:NEON,fontWeight:700,fontSize:15,border:'none',cursor:!stars||submitting?'not-allowed':'pointer',transition:'background 0.2s'}}>
+        <button type="submit" disabled={!stars||submitting} style={{width:'100%',padding:'15px',borderRadius:50,background:!stars||submitting?'#e5e7eb':NEON,color:!stars||submitting?MUTED:NT,fontWeight:700,fontSize:15,border:'none',cursor:!stars||submitting?'not-allowed':'pointer',transition:'background 0.2s'}}>
           {submitting?'Submitting…':'Submit Rating'}
         </button>
       </form>

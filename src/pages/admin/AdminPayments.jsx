@@ -78,7 +78,7 @@ export default function AdminPayments() {
                 <div style={{ display:'flex', alignItems:'center', gap:14 }}>
                   <p style={{ fontWeight:800, fontSize:15, color:TEXT }}>₦{p.amount.toLocaleString()}</p>
                   <button onClick={() => handlePayout(p.id, 'approve')} disabled={busyId===p.id}
-                    style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 12px', borderRadius:8, border:'none', background:OLIVE, color:NEON, fontWeight:700, fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
+                    style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 12px', borderRadius:8, border:'none', background:NEON, color:OLIVE, fontWeight:700, fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
                     <CheckCircle2 size={13}/> Approve
                   </button>
                   <button onClick={() => handlePayout(p.id, 'reject')} disabled={busyId===p.id}

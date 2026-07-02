@@ -43,7 +43,7 @@ export default function AdminRides() {
           {[[true,'Live'],[false,'All Rides']].map(([val,label]) => (
             <button key={label} onClick={() => setLiveOnly(val)}
               style={{ padding:'7px 16px', borderRadius:8, border:'none', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
-                background: liveOnly===val ? OLIVE : 'transparent', color: liveOnly===val ? NEON : MUTED }}>
+                background: liveOnly===val ? NEON : 'transparent', color: liveOnly===val ? OLIVE : MUTED }}>
               {label}
             </button>
           ))}

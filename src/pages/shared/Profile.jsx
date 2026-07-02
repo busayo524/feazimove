@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/AppLayout'
 import { useAuth } from '../../context/AuthContext'
 import { api } from '../../services/api'
-import { User, Phone, Mail, Shield, Bell, ChevronRight, LogOut, Camera, CheckCircle, X, RefreshCw, Car, MapPin } from 'lucide-react'
+import { useMyAvatar } from '../../hooks/useMyAvatar'
+import { dataUrlToFile } from '../../utils/dataUrlToFile'
+import { User, Phone, Mail, Shield, Bell, ChevronRight, LogOut, Camera, CheckCircle, X, RefreshCw, Car, MapPin, AlertCircle } from 'lucide-react'
 
 const NEON='#ccff00', NT='#0a0a0a'
 const OLIVE='#243800', MOSS='#4C6900'
-const CARD='#ffffff', BORDER='#d4e5a8', TEXT='#1a2800', MUTED='#4C6900', BG='#f0f5e0'
+const CARD='#ffffff', BORDER='#e9ecef', TEXT='#1a2800', MUTED='#4C6900', BG='#f6f7f9'
 
 function sanitize(v){return String(v).replace(/[<>"]/g,'').slice(0,100)}
 
@@ -257,6 +259,74 @@ function PhotoPicker({ onDone, onClose }){
   )
 }
 
+// ── Change Password Modal ─────────────────────────────────────────────────────
+function ChangePasswordModal({ onClose }){
+  const [currentPassword,setCurrentPassword]=useState('')
+  const [newPassword,setNewPassword]=useState('')
+  const [confirm,setConfirm]=useState('')
+  const [error,setError]=useState('')
+  const [success,setSuccess]=useState(false)
+  const [busy,setBusy]=useState(false)
+
+  async function handleSubmit(e){
+    e.preventDefault()
+    setError('')
+    if(newPassword!==confirm){setError('Passwords do not match.');return}
+    setBusy(true)
+    try{
+      await api.post('/auth/change-password',{currentPassword,newPassword})
+      setSuccess(true)
+      setCurrentPassword('');setNewPassword('');setConfirm('')
+    }catch(err){
+      setError(err.data?.message||'Could not update password.')
+    }finally{setBusy(false)}
+  }
+
+  return(
+    <div style={{position:'fixed',inset:0,zIndex:1000,background:'rgba(0,0,0,0.6)',display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+      <div style={{background:CARD,borderRadius:24,padding:28,maxWidth:380,width:'100%',boxShadow:'0 20px 50px rgba(0,0,0,0.3)'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6}}>
+          <p style={{fontWeight:800,fontSize:17,color:TEXT}}>Change Password</p>
+          <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',color:MUTED,padding:4}}><X size={18}/></button>
+        </div>
+        <p style={{fontSize:12,color:MUTED,marginBottom:18}}>Use at least 8 characters, one uppercase letter, and one number.</p>
+
+        <form onSubmit={handleSubmit}>
+          <label style={{display:'block',fontSize:13,fontWeight:600,color:TEXT,marginBottom:6}}>Current Password</label>
+          <input type="password" value={currentPassword} onChange={e=>setCurrentPassword(e.target.value)} required
+            style={{width:'100%',padding:'10px 12px',borderRadius:10,border:`1.5px solid ${BORDER}`,fontSize:14,marginBottom:14,fontFamily:'inherit',boxSizing:'border-box',background:CARD,color:TEXT}}/>
+
+          <label style={{display:'block',fontSize:13,fontWeight:600,color:TEXT,marginBottom:6}}>New Password</label>
+          <input type="password" value={newPassword} onChange={e=>setNewPassword(e.target.value)} required
+            style={{width:'100%',padding:'10px 12px',borderRadius:10,border:`1.5px solid ${BORDER}`,fontSize:14,marginBottom:14,fontFamily:'inherit',boxSizing:'border-box',background:CARD,color:TEXT}}/>
+
+          <label style={{display:'block',fontSize:13,fontWeight:600,color:TEXT,marginBottom:6}}>Confirm New Password</label>
+          <input type="password" value={confirm} onChange={e=>setConfirm(e.target.value)} required
+            style={{width:'100%',padding:'10px 12px',borderRadius:10,border:`1.5px solid ${BORDER}`,fontSize:14,marginBottom:16,fontFamily:'inherit',boxSizing:'border-box',background:CARD,color:TEXT}}/>
+
+          {error&&(
+            <div style={{display:'flex',gap:8,padding:'10px 14px',background:'#fef2f2',border:'1px solid #fca5a5',borderRadius:10,marginBottom:14}}>
+              <AlertCircle size={14} color="#ef4444" style={{flexShrink:0,marginTop:1}}/>
+              <p style={{fontSize:13,color:'#ef4444'}}>{error}</p>
+            </div>
+          )}
+          {success&&(
+            <div style={{display:'flex',gap:8,padding:'10px 14px',background:'#dcfce7',border:'1px solid #86efac',borderRadius:10,marginBottom:14}}>
+              <CheckCircle size={14} color="#15803d" style={{flexShrink:0,marginTop:1}}/>
+              <p style={{fontSize:13,color:'#15803d'}}>Password updated.</p>
+            </div>
+          )}
+
+          <button type="submit" disabled={busy}
+            style={{width:'100%',padding:'13px',borderRadius:50,background:busy?BORDER:NEON,color:busy?MUTED:OLIVE,fontWeight:800,fontSize:15,border:'none',cursor:busy?'not-allowed':'pointer',fontFamily:'inherit'}}>
+            {busy?'Updating…':'Update Password'}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 // ── Main Profile Component ────────────────────────────────────────────────────
 export default function Profile(){
   const {user,logout,updateUser,addRole,switchRole}=useAuth()
@@ -265,8 +335,9 @@ export default function Profile(){
   const [saved,setSaved]=useState(false)
   const [form,setForm]=useState({firstName:user?.firstName||'',lastName:user?.lastName||''})
   const [saving,setSaving]=useState(false)
-  const [avatarUrl,setAvatarUrl]=useState(()=>user?.id?localStorage.getItem(`feazi_avatar_${user.id}`):null)
+  const [avatarUrl,setAvatarUrl]=useMyAvatar(user?.id)
   const [showPicker,setShowPicker]=useState(false)
+  const [showPasswordModal,setShowPasswordModal]=useState(false)
 
   function set(k,v){setForm(f=>({...f,[k]:sanitize(v)}))}
 
@@ -279,9 +350,8 @@ export default function Profile(){
     // riders/drivers, unlike the localStorage copy above which only ever
     // showed up on this same browser.
     try {
-      const blob = await (await fetch(dataUrl)).blob()
       const formData = new FormData()
-      formData.append('avatar', blob, 'avatar.jpg')
+      formData.append('avatar', dataUrlToFile(dataUrl, 'avatar.jpg'))
       await api.post('/auth/avatar', formData)
     } catch {}
   }
@@ -298,20 +368,21 @@ export default function Profile(){
   const fullName=`${user?.firstName||''} ${user?.lastName||''}`.trim()||'User'
   const MENU=[
     {icon:<Bell size={17}/>,label:'Notifications',desc:'Push & SMS preferences'},
-    {icon:<Shield size={17}/>,label:'Privacy & Security',desc:'Change password, 2FA'},
+    {icon:<Shield size={17}/>,label:'Privacy & Security',desc:'Change password, 2FA',onClick:()=>setShowPasswordModal(true)},
   ]
 
   return(
     <AppLayout title="Profile">
       {showPicker&&<PhotoPicker onDone={handleAvatarDone} onClose={()=>setShowPicker(false)}/>}
+      {showPasswordModal&&<ChangePasswordModal onClose={()=>setShowPasswordModal(false)}/>}
 
       {/* Avatar card */}
       <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:20,padding:24,marginBottom:16,display:'flex',alignItems:'center',gap:20,boxShadow:'0 2px 8px rgba(36,56,0,0.06)'}}>
         <div style={{position:'relative',flexShrink:0}}>
-          <div style={{width:72,height:72,borderRadius:'50%',background:OLIVE,display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
+          <div style={{width:72,height:72,borderRadius:'50%',background:NEON,display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
             {avatarUrl
               ?<img src={avatarUrl} alt="Profile" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
-              :<span style={{color:NEON,fontWeight:900,fontSize:28,letterSpacing:'-0.03em'}}>{initials}</span>
+              :<span style={{color:OLIVE,fontWeight:900,fontSize:28,letterSpacing:'-0.03em'}}>{initials}</span>
             }
           </div>
           <button onClick={()=>setShowPicker(true)}
@@ -373,7 +444,7 @@ export default function Profile(){
       {/* Settings */}
       <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,overflow:'hidden',marginBottom:16,boxShadow:'0 2px 8px rgba(36,56,0,0.06)'}}>
         {MENU.map((item,i)=>(
-          <button key={item.label}
+          <button key={item.label} onClick={item.onClick}
             style={{width:'100%',display:'flex',alignItems:'center',gap:14,padding:'15px 20px',borderBottom:i<MENU.length-1?`1px solid ${BORDER}`:'none',background:CARD,border:'none',cursor:'pointer',textAlign:'left',transition:'background 0.15s',fontFamily:'inherit'}}
             onMouseEnter={e=>e.currentTarget.style.background=BG}
             onMouseLeave={e=>e.currentTarget.style.background=CARD}>

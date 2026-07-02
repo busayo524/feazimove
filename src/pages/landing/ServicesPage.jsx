@@ -43,12 +43,11 @@ const features = [
     id: 'send',
     tag: 'Delivery',
     icon: '⚡',
-    title: 'Send, deliver, done',
-    desc: 'Ship packages with drivers already heading your way. Affordable, same-day, trackable end-to-end.',
+    title: 'Moving an Item? done!',
+    desc: 'Move items by sharing delivery space with others moving your way. Affordable, same-day, trackable end-to-end.',
     cta: 'Learn more',
     img: heavyBox,
     flip: false,
-    bg: '#f2f2ef',
   },
 ]
 
@@ -63,7 +62,7 @@ const apartSlides = [
     img: apart2,
     num: '02',
     title: 'Real-Time Tracking',
-    body: 'Track your ride from pickup to drop-off. Share your live journey with loved ones and arrive with total peace of mind — always.',
+    body: 'Track your ride from pickup to drop-off and arrive with total peace of mind — always.',
   },
   {
     img: apart3,
@@ -74,8 +73,8 @@ const apartSlides = [
   {
     img: apart4,
     num: '04',
-    title: 'Feazi Package Delivery',
-    body: 'Send parcels with drivers already on route. Fast, affordable, same-day delivery across the city — no extra vehicle needed.',
+    title: 'Feazi Move',
+    body: 'From groceries to full apartment. Fast, affordable, same-day moving across the city — no extra vehicle needed.',
   },
 ]
 
@@ -89,7 +88,6 @@ const services = [
     price: 'From ₦1000',
     color: '#0f0f0f',
     colorDim: 'rgba(204,255,0,0.18)',
-    bg: '#f2f2ef',
     features: ['Up to 60% cheaper than solo rides', 'Door-to-door service', 'AC vehicles', 'Verified co-riders', 'Real-time tracking', 'Auto wallet deduction'],
     illustration: React.createElement('img', { src: busStopPana, alt: 'FeaziPool', style: { width: '100%', maxWidth: 520, display: 'block', margin: '0 auto' } }),
   },
@@ -102,7 +100,6 @@ const services = [
     price: 'From ₦1000',
     color: '#0f0f0f',
     colorDim: 'rgba(204,255,0,0.18)',
-    bg: '#f2f2ef',
     features: ['Real-time package tracking', 'Proof of delivery photos', 'Small to large parcels', 'Same-day delivery'],
     illustration: React.createElement('img', { src: messengerPana, alt: 'FeaziSend', style: { width: '100%', maxWidth: 520, display: 'block', margin: '0 auto' } }),
   },
@@ -115,7 +112,6 @@ const services = [
     price: 'Custom pricing',
     color: '#0f0f0f',
     colorDim: 'rgba(204,255,0,0.15)',
-    bg: '#f2f2ef',
     features: ['Bulk ride booking', 'Team management dashboard', 'Monthly invoicing', 'Analytics & reports', 'Priority driver assignment', 'Dedicated account manager'],
     illustration: React.createElement('img', { src: teamPage, alt: 'FeaziBiz', style: { width: '100%', maxWidth: 520, display: 'block', margin: '0 auto' } }),
   },
@@ -175,7 +171,7 @@ export default function ServicesPage() {
       </section>
 
       {/* Service tab switcher */}
-      <section className="py-20" style={{ background: service.bg || 'var(--bg-subtle)' }}>
+      <section className="py-20" style={{ background: 'var(--bg-subtle)' }}>
         <div className="max-w-6xl mx-auto px-5 sm:px-8">
           <div className="text-center mb-10">
             <div className="pill mb-4 mx-auto">Our Products</div>
@@ -192,7 +188,7 @@ export default function ServicesPage() {
               </button>
             ))}
           </div>
-          <div style={{ background: service.bg || '#ffffff', borderRadius: 24, padding: 'clamp(32px,5vw,56px)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: '48px', alignItems: 'center' }}>
+          <div style={{ background: 'var(--bg-card)', borderRadius: 24, padding: 'clamp(32px,5vw,56px)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: '48px', alignItems: 'center' }}>
             <div>
               <div style={{ width: 56, height: 56, borderRadius: 16, background: service.colorDim, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
                 <service.icon size={26} style={{ color: '#0f0f0f' }} />
@@ -202,7 +198,7 @@ export default function ServicesPage() {
               <p style={{ fontSize: '1rem', color: C.textSoft, lineHeight: 1.8, marginBottom: 28 }}>{service.desc}</p>
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 32px', display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {service.features.map(f => (
-                  <li key={f} style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: '0.95rem', color: '#333' }}>
+                  <li key={f} style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: '0.95rem', color: 'var(--text-muted)' }}>
                     <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'rgba(204,255,0,0.35)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       <Check size={12} strokeWidth={3} color="#0f0f0f" />
                     </span>
@@ -212,8 +208,8 @@ export default function ServicesPage() {
               </ul>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
                 <div>
-                  <div style={{ fontSize: '0.8rem', color: '#888', marginBottom: 4 }}>Starting at</div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '1.6rem', color: '#0f0f0f' }}>{service.price}</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-faint)', marginBottom: 4 }}>Starting at</div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '1.6rem', color: 'var(--text)' }}>{service.price}</div>
                 </div>
                 <Link to="/signup" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#0f0f0f', color: '#ffffff', fontWeight: 700, fontSize: '0.95rem', padding: '14px 28px', borderRadius: 50, textDecoration: 'none' }}>Get started <ArrowRight size={16} /></Link>
               </div>

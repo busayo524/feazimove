@@ -98,7 +98,7 @@ export default function AdminDriverDetail() {
           {/* Info */}
           <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, padding:18 }}>
             <p style={{ fontWeight:800, fontSize:15, color:TEXT, marginBottom:14 }}>Driver Information</p>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, fontSize:13 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) minmax(0,1fr)', gap:14, fontSize:13 }}>
               <Info label="Email" value={driver.email}/>
               <Info label="Phone" value={driver.phone}/>
               <Info label="Joined" value={new Date(driver.joinedAt).toLocaleDateString()}/>
@@ -108,9 +108,10 @@ export default function AdminDriverDetail() {
           {/* Vehicle */}
           <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, padding:18 }}>
             <p style={{ fontWeight:800, fontSize:15, color:TEXT, marginBottom:14 }}>Vehicle</p>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, fontSize:13 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) minmax(0,1fr)', gap:14, fontSize:13 }}>
               <Info label="Type" value={driver.vehicleType}/>
               <Info label="Make / Model" value={[driver.vehicleMake, driver.vehicleModel].filter(Boolean).join(' ')}/>
+              <Info label="Color" value={driver.vehicleColor}/>
               <Info label="Plate Number" value={driver.plateNumber}/>
               <Info label="Year" value={driver.vehicleYear}/>
             </div>
@@ -162,9 +163,9 @@ export default function AdminDriverDetail() {
 
 function Info({ label, value }) {
   return (
-    <div>
+    <div style={{ minWidth:0 }}>
       <p style={{ color:MUTED, fontSize:11, marginBottom:2 }}>{label}</p>
-      <p style={{ color:TEXT, fontWeight:600 }}>{value || '—'}</p>
+      <p style={{ color:TEXT, fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{value || '—'}</p>
     </div>
   )
 }

@@ -3,18 +3,19 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import faviconImg from '../assets/favicon.png'
 import {
-  LayoutGrid, Users, Car, Navigation, UserCog, LogOut, Menu, X, Settings, Wallet, AlertTriangle,
+  LayoutGrid, Users, Car, Navigation, LogOut, Menu, X, Settings, Wallet, AlertTriangle,
   BarChart3, Map, MapPin, Tag,
 } from 'lucide-react'
 
 const SB_BG = '#0a0a0a', SB_BORDER = 'rgba(255,255,255,0.08)'
 const SB_TEXT = '#cbd5c0', SB_MUTED = '#6b8a55', SB_HOVER = 'rgba(255,255,255,0.08)'
 const NEON = '#ccff00', NT = '#0a0a0a'
-const BG = '#f5f7f2', TEXT = '#1a1a1a'
+const BG = '#f6f7f9', TEXT = '#1a1a1a' // soft grey page plane — white cards sit on it
+const NAV_ACTIVE_BG = 'rgba(204,255,0,0.08)' // faint wash behind the active item
 
 const NAV = [
   { to: '/admin',          icon: <LayoutGrid size={18}/>,    label: 'Dashboard', end: true },
-  { to: '/admin/users',    icon: <Users size={18}/>,         label: 'Users' },
+  { to: '/admin/user-management', icon: <Users size={18}/>,  label: 'User Management' },
   { to: '/admin/riders',   icon: <Users size={18}/>,         label: 'Riders' },
   { to: '/admin/drivers',  icon: <Car size={18}/>,           label: 'Drivers' },
   { to: '/admin/rides',    icon: <Navigation size={18}/>,    label: 'Rides' },
@@ -24,7 +25,6 @@ const NAV = [
   { to: '/admin/pricing',  icon: <Tag size={18}/>,           label: 'Pricing' },
   { to: '/admin/alerts',   icon: <AlertTriangle size={18}/>, label: 'Alerts' },
   { to: '/admin/reports',  icon: <BarChart3 size={18}/>,     label: 'Reports' },
-  { to: '/admin/user-management', icon: <UserCog size={18}/>, label: 'User Management' },
   { to: '/admin/settings', icon: <Settings size={18}/>,      label: 'Settings' },
 ]
 
@@ -32,6 +32,7 @@ export default function AdminLayout({ children, title }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
+  const today = new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' })
 
   function handleLogout() {
     logout()
@@ -56,8 +57,8 @@ export default function AdminLayout({ children, title }) {
             style={({ isActive }) => ({
               display:'flex', alignItems:'center', gap:12, padding:'11px 14px', borderRadius:10,
               marginBottom:4, textDecoration:'none', fontWeight:600, fontSize:14, transition:'all 0.15s',
-              background: isActive ? NEON : 'transparent',
-              color: isActive ? NT : SB_TEXT,
+              background: isActive ? NAV_ACTIVE_BG : 'transparent',
+              color: isActive ? NEON : SB_TEXT,
             })}
             onMouseEnter={e => { if (!e.currentTarget.style.background.includes('204')) e.currentTarget.style.background = SB_HOVER }}
             onMouseLeave={e => { if (!e.currentTarget.style.background.includes('204')) e.currentTarget.style.background = 'transparent' }}>
@@ -104,11 +105,15 @@ export default function AdminLayout({ children, title }) {
               className="admin-mobile-menu-btn" aria-label="Toggle menu">
               <Menu size={22}/>
             </button>
-            <h1 style={{ fontWeight:800, fontSize:18, color:TEXT, margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', minWidth:0 }}>{title}</h1>
+            <p style={{ fontSize:14, color:TEXT, margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', minWidth:0 }}>{today}</p>
           </div>
+          <p style={{ fontSize:13, color:'#6b7280', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+            {user?.email || user?.name}
+          </p>
         </header>
 
-        <main style={{ flex:1, padding:24, maxWidth:1200, width:'100%', margin:'0 auto', boxSizing:'border-box' }}>
+        <main style={{ flex:1, padding:24, width:'100%', boxSizing:'border-box' }}>
+          <h1 style={{ fontWeight:800, fontSize:26, color:TEXT, letterSpacing:'-0.02em', margin:'4px 0 6px' }}>{title}</h1>
           {children}
         </main>
       </div>

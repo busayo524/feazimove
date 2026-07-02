@@ -1,6 +1,7 @@
 const express  = require('express')
-const { body } = require('express-validator')
+const { body, param } = require('express-validator')
 const crypto   = require('crypto')
+const axios    = require('axios')
 const { query } = require('../db')
 const { requireAuth } = require('../middleware/auth')
 const { validate }    = require('../middleware/validate')
@@ -20,8 +21,8 @@ router.get('/balance', async (req, res, next) => {
 router.get('/transactions', async (req, res, next) => {
   try {
     const result = await query(
-      `SELECT id, type, amount_kobo, description, created_at
-        FROM wallet_transactions WHERE user_id = $1
+      `SELECT id, type, amount_kobo, description, status, created_at
+        FROM wallet_transactions WHERE user_id = $1 AND status != 'pending'
         ORDER BY created_at DESC LIMIT 50`,
       [req.user.id]
     )
@@ -31,68 +32,133 @@ router.get('/transactions', async (req, res, next) => {
         type:        t.type,
         amount:      Math.round(t.amount_kobo / 100),
         description: t.description,
+        status:      t.status,
         date:        new Date(t.created_at).toLocaleDateString('en-NG', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
       })),
     })
   } catch (err) { next(err) }
 })
 
-// ── Initiate Flutterwave top-up ───────────────────────────────────────────────
+// ── Initiate wallet top-up via Paystack ───────────────────────────────────────
+// Returns a Paystack checkout URL. When the user completes payment, Paystack
+// fires a webhook → /wallet/webhook/paystack which credits the wallet.
 router.post('/fund',
   [body('amount').isInt({ min: 100, max: 500000 })],
   validate,
   async (req, res, next) => {
     try {
+      if (!process.env.PAYSTACK_SECRET_KEY) {
+        return res.status(503).json({ message: 'Payment gateway not configured. Please contact support.' })
+      }
+
       const { amount } = req.body
       const reference = `FM-${crypto.randomUUID()}`
 
-      // Get user details for Flutterwave
-      const userRes = await query('SELECT name, phone FROM users WHERE id = $1', [req.user.id])
+      const userRes = await query('SELECT name, email FROM users WHERE id = $1', [req.user.id])
       const user = userRes.rows[0]
+      if (!user.email) {
+        return res.status(422).json({ message: 'Please add an email to your profile before funding your wallet.' })
+      }
 
-      // Store pending transaction (verified on webhook)
+      // Record as pending — upgraded to 'completed' by the webhook after payment
       await query(
-        'INSERT INTO wallet_transactions (user_id, type, amount_kobo, description, reference) VALUES ($1, $2, $3, $4, $5)',
-        [req.user.id, 'credit', amount * 100, 'Wallet top-up via Flutterwave', reference]
+        'INSERT INTO wallet_transactions (user_id, type, amount_kobo, description, reference, status) VALUES ($1, $2, $3, $4, $5, $6)',
+        [req.user.id, 'credit', amount * 100, 'Wallet top-up', reference, 'pending']
       )
 
-      // Build Flutterwave payment link
-      // In production: call Flutterwave API to create a hosted payment link
-      const paymentUrl = `https://checkout.flutterwave.com/v3/hosted/pay?public_key=${process.env.FLW_PUBLIC_KEY}&amount=${amount}&currency=NGN&payment_options=card,ussd,bank_transfer&customer[phone_number]=${encodeURIComponent(user.phone)}&customer[name]=${encodeURIComponent(user.name)}&tx_ref=${reference}&redirect_url=${encodeURIComponent(process.env.FLW_REDIRECT_URL)}`
+      // Initialize Paystack transaction — Paystack also takes amount in kobo
+      const psRes = await axios.post(
+        'https://api.paystack.co/transaction/initialize',
+        {
+          email: user.email,
+          amount: amount * 100,
+          reference,
+          callback_url: process.env.PAYSTACK_CALLBACK_URL,
+        },
+        { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+      )
 
-      res.json({ paymentUrl, reference })
+      res.json({ paymentUrl: psRes.data.data.authorization_url, reference })
+    } catch (err) {
+      if (err.response) {
+        return res.status(502).json({ message: 'Payment gateway error. Please try again.' })
+      }
+      next(err)
+    }
+  }
+)
+
+// Credits a still-pending transaction and marks it completed. Used by both
+// the webhook and the verify-fallback below — guarded by the 'pending' check
+// in the UPDATE so a transaction is never credited twice.
+async function creditTransaction(reference) {
+  const txRes = await query(
+    "UPDATE wallet_transactions SET status = 'completed' WHERE reference = $1 AND status = 'pending' RETURNING user_id, amount_kobo",
+    [reference]
+  )
+  if (!txRes.rows[0]) return false // already credited or unknown reference
+  const { user_id, amount_kobo } = txRes.rows[0]
+  await query('UPDATE users SET wallet_balance = wallet_balance + $1 WHERE id = $2', [amount_kobo, user_id])
+  return true
+}
+
+// ── Poll payment status — frontend calls this after redirect back from Paystack ──
+// Webhooks can't reach a local dev server, so as a fallback this also asks
+// Paystack directly whether the transaction succeeded, and credits it here
+// if so. In production the webhook will usually win the race, but this keeps
+// the flow working without a public webhook URL.
+router.get('/fund/status/:reference',
+  [param('reference').trim().notEmpty()],
+  validate,
+  async (req, res, next) => {
+    try {
+      const result = await query(
+        'SELECT status, amount_kobo FROM wallet_transactions WHERE reference = $1 AND user_id = $2',
+        [req.params.reference, req.user.id]
+      )
+      if (!result.rows[0]) return res.status(404).json({ message: 'Transaction not found.' })
+      let t = result.rows[0]
+
+      if (t.status === 'pending' && process.env.PAYSTACK_SECRET_KEY) {
+        try {
+          const verifyRes = await axios.get(
+            `https://api.paystack.co/transaction/verify/${encodeURIComponent(req.params.reference)}`,
+            { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+          )
+          if (verifyRes.data.data.status === 'success') {
+            await creditTransaction(req.params.reference)
+            t = { ...t, status: 'completed' }
+          }
+        } catch { /* Paystack unreachable or not yet recorded — keep polling */ }
+      }
+
+      res.json({ status: t.status, amount: Math.round(t.amount_kobo / 100) })
     } catch (err) { next(err) }
   }
 )
 
-// ── Flutterwave webhook — verify and credit wallet ────────────────────────────
-// This endpoint is called by Flutterwave, NOT by the frontend
-router.post('/webhook/flutterwave', async (req, res, next) => {
+// ── Paystack webhook — verify and credit wallet ───────────────────────────────
+// Called by Paystack, NOT by the frontend. Signature is an HMAC SHA512 of the
+// raw request body using our secret key (req.rawBody is captured in server.js).
+router.post('/webhook/paystack', async (req, res, next) => {
   try {
-    // Verify webhook signature
-    const signature = req.headers['verif-hash']
-    if (signature !== process.env.FLW_WEBHOOK_SECRET) {
+    if (!process.env.PAYSTACK_SECRET_KEY) return res.sendStatus(401)
+
+    const expectedSignature = crypto
+      .createHmac('sha512', process.env.PAYSTACK_SECRET_KEY)
+      .update(req.rawBody)
+      .digest('hex')
+
+    if (req.headers['x-paystack-signature'] !== expectedSignature) {
       return res.status(401).json({ message: 'Invalid webhook signature.' })
     }
 
     const { event, data } = req.body
-    if (event !== 'charge.completed' || data.status !== 'successful') {
-      return res.sendStatus(200) // Acknowledge non-success events
+    if (event !== 'charge.success') {
+      return res.sendStatus(200) // Acknowledge non-success events silently
     }
 
-    const reference = data.tx_ref
-    // Find matching pending transaction
-    const txRes = await query(
-      'SELECT id, user_id, amount_kobo FROM wallet_transactions WHERE reference = $1 AND type = $2',
-      [reference, 'credit']
-    )
-
-    if (!txRes.rows[0]) return res.sendStatus(200) // Unknown reference — ignore
-
-    const { user_id, amount_kobo } = txRes.rows[0]
-
-    // Credit wallet atomically
-    await query('UPDATE users SET wallet_balance = wallet_balance + $1 WHERE id = $2', [amount_kobo, user_id])
+    await creditTransaction(data.reference) // no-op if already credited via the verify-fallback
 
     res.sendStatus(200)
   } catch (err) { next(err) }
@@ -107,7 +173,7 @@ router.post('/withdraw',
       const amountKobo = req.body.amount * 100
 
       const userRes = await query('SELECT wallet_balance FROM users WHERE id = $1', [req.user.id])
-      if (userRes.rows[0].wallet_balance < amountKobo) {
+      if (Number(userRes.rows[0].wallet_balance) < amountKobo) {
         return res.status(402).json({ message: 'Insufficient wallet balance.' })
       }
 

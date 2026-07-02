@@ -8,6 +8,7 @@ const { query } = require('../db')
 const { requireAuth, requireRole } = require('../middleware/auth')
 const { validate } = require('../middleware/validate')
 const { UPLOAD_DIR } = require('../middleware/upload')
+const { sendAccountCredentialsEmail } = require('../services/emailService')
 
 const router = express.Router()
 const SALT_ROUNDS = 12
@@ -15,6 +16,14 @@ const SALT_ROUNDS = 12
 router.use(requireAuth, requireRole('admin'))
 
 function fmt(kobo) { return Math.round((kobo || 0) / 100) }
+
+// Fire-and-forget audit write — a logging failure must never break the action
+function logActivity(actorId, action, category, detail) {
+  query(
+    'INSERT INTO activity_log (actor_id, action, category, detail) VALUES ($1, $2, $3, $4)',
+    [actorId, action, category, detail || null]
+  ).catch(err => console.error('activity_log write failed:', err.message))
+}
 
 // ── Dashboard metrics ──────────────────────────────────────────────────────────
 router.get('/stats', async (req, res, next) => {
@@ -43,6 +52,139 @@ router.get('/stats', async (req, res, next) => {
       pendingRequests: parseInt(pendingTrips.rows[0].c, 10),
       totalWalletBalance: fmt(walletTotal.rows[0].s),
       completedTrips:  parseInt(completedTotal.rows[0].c, 10),
+    })
+  } catch (err) { next(err) }
+})
+
+// ── Dashboard — everything the overview page needs in one round trip ──────────
+router.get('/dashboard', async (req, res, next) => {
+  try {
+    const [
+      activeRiders, activeDrivers, onlineDrivers, pendingApprovals,
+      tripsToday, ongoingTrips, pendingTrips, completedTotal,
+      walletTotal, revenueTotal, feeRes,
+      trend, statusDist, ridesPerDay, topRoutes,
+      recentRides, topDrivers, activity,
+    ] = await Promise.all([
+      query("SELECT COUNT(*) c FROM users WHERE can_ride = true AND is_active = true"),
+      query("SELECT COUNT(*) c FROM users WHERE can_drive = true AND is_active = true"),
+      query("SELECT COUNT(*) c FROM users WHERE can_drive = true AND is_active = true AND is_online = true"),
+      query("SELECT COUNT(*) c FROM users WHERE is_pending = true AND role <> 'admin'"),
+      query("SELECT COUNT(*) c FROM rides WHERE created_at >= CURRENT_DATE"),
+      query("SELECT COUNT(*) c FROM rides WHERE status IN ('driver_assigned','arrived_pickup','in_transit')"),
+      query("SELECT COUNT(*) c FROM rides WHERE status = 'pending'"),
+      query("SELECT COUNT(*) c FROM rides WHERE status = 'completed'"),
+      query("SELECT COALESCE(SUM(wallet_balance),0) s FROM users"),
+      query("SELECT COALESCE(SUM(fare_kobo),0) s FROM rides WHERE status = 'completed'"),
+      query('SELECT platform_fee_percent FROM platform_settings WHERE id = 1'),
+      // Completed-fare volume per month, last 6 months, zero-filled
+      query(
+        `SELECT to_char(m.month, 'Mon') AS label,
+                COALESCE(SUM(r.fare_kobo), 0) AS total, COUNT(r.id) AS trips
+         FROM generate_series(date_trunc('month', NOW()) - INTERVAL '5 months',
+                              date_trunc('month', NOW()), '1 month') AS m(month)
+         LEFT JOIN rides r ON date_trunc('month', r.completed_at) = m.month AND r.status = 'completed'
+         GROUP BY m.month ORDER BY m.month`
+      ),
+      query(
+        `SELECT CASE
+           WHEN status = 'completed' THEN 'completed'
+           WHEN status = 'pending'   THEN 'pending'
+           WHEN status IN ('driver_assigned','arrived_pickup','in_transit') THEN 'ongoing'
+           ELSE 'cancelled' END AS bucket, COUNT(*) c
+         FROM rides GROUP BY bucket`
+      ),
+      // Trips per day, last 7 days, zero-filled
+      query(
+        `SELECT to_char(d.day, 'Dy') AS label, COUNT(r.id) AS trips
+         FROM generate_series(CURRENT_DATE - INTERVAL '6 days', CURRENT_DATE, '1 day') AS d(day)
+         LEFT JOIN rides r ON r.created_at::date = d.day::date
+         GROUP BY d.day ORDER BY d.day`
+      ),
+      query(
+        `SELECT pickup, destination, COUNT(*) AS cnt
+         FROM rides GROUP BY pickup, destination ORDER BY cnt DESC LIMIT 5`
+      ),
+      query(
+        `SELECT r.id, r.pickup, r.destination, r.fare_kobo, r.status, r.created_at, ur.name AS rider_name
+         FROM rides r LEFT JOIN users ur ON r.rider_id = ur.id
+         ORDER BY r.created_at DESC LIMIT 5`
+      ),
+      query(
+        `SELECT u.id, u.name, u.is_online, u.rating, u.vehicle_make, u.vehicle_model,
+                (SELECT COUNT(*) FROM rides r WHERE r.driver_id = u.id AND r.status = 'completed') AS trips
+         FROM users u WHERE u.can_drive = true AND u.is_active = true
+         ORDER BY trips DESC, u.created_at ASC LIMIT 4`
+      ),
+      // Unified activity feed: audit-logged admin actions + events derived
+      // live from operational tables (so history shows even for old data)
+      query(
+        `SELECT * FROM (
+           SELECT a.action, a.category, COALESCE(u.name, 'System') AS actor, a.detail, a.created_at
+           FROM activity_log a LEFT JOIN users u ON a.actor_id = u.id
+           UNION ALL
+           SELECT 'Ride Requested', 'ride', COALESCE(ur.name, 'Rider'),
+                  r.pickup || ' → ' || r.destination, r.created_at
+           FROM rides r LEFT JOIN users ur ON r.rider_id = ur.id
+           UNION ALL
+           SELECT 'Ride Completed', 'ride', COALESCE(ud.name, 'Driver'),
+                  r.pickup || ' → ' || r.destination, r.completed_at
+           FROM rides r LEFT JOIN users ud ON r.driver_id = ud.id
+           WHERE r.status = 'completed' AND r.completed_at IS NOT NULL
+           UNION ALL
+           SELECT CASE WHEN u.role = 'driver' THEN 'New Driver Registered'
+                       ELSE 'New Rider Registered' END, 'user', u.name, NULL, u.created_at
+           FROM users u WHERE u.role <> 'admin'
+           UNION ALL
+           SELECT 'Payout Requested', 'payment', u.name,
+                  '₦' || ROUND(p.amount_kobo / 100.0)::text, p.requested_at
+           FROM payout_requests p JOIN users u ON p.driver_id = u.id
+           UNION ALL
+           SELECT CASE WHEN t.type = 'credit' THEN 'Wallet Credited' ELSE 'Wallet Debited' END,
+                  'payment', u.name, '₦' || ROUND(t.amount_kobo / 100.0)::text || ' — ' || t.description, t.created_at
+           FROM wallet_transactions t JOIN users u ON t.user_id = u.id
+         ) ev ORDER BY created_at DESC LIMIT 12`
+      ),
+    ])
+
+    const feePercent = Number(feeRes.rows[0]?.platform_fee_percent ?? 20)
+    const totalRevenue = fmt(revenueTotal.rows[0].s)
+
+    res.json({
+      stats: {
+        totalRevenue,
+        platformRevenue: Math.round(totalRevenue * feePercent / 100),
+        activeRiders:     parseInt(activeRiders.rows[0].c, 10),
+        pendingApprovals: parseInt(pendingApprovals.rows[0].c, 10),
+        activeDrivers:    parseInt(activeDrivers.rows[0].c, 10),
+        driversOnline:    parseInt(onlineDrivers.rows[0].c, 10),
+        tripsToday:       parseInt(tripsToday.rows[0].c, 10),
+        ongoingTrips:     parseInt(ongoingTrips.rows[0].c, 10),
+        pendingRequests:  parseInt(pendingTrips.rows[0].c, 10),
+        completedTrips:   parseInt(completedTotal.rows[0].c, 10),
+        totalWalletBalance: fmt(walletTotal.rows[0].s),
+      },
+      revenueTrend: trend.rows.map(r => ({
+        label: r.label.trim(), revenue: fmt(r.total), trips: parseInt(r.trips, 10),
+      })),
+      statusDist: statusDist.rows.map(r => ({ status: r.bucket, count: parseInt(r.c, 10) })),
+      ridesPerDay: ridesPerDay.rows.map(r => ({ label: r.label.trim(), trips: parseInt(r.trips, 10) })),
+      topRoutes: topRoutes.rows.map(r => ({
+        route: `${r.pickup} → ${r.destination}`, count: parseInt(r.cnt, 10),
+      })),
+      recentRides: recentRides.rows.map(r => ({
+        id: r.id, pickup: r.pickup, destination: r.destination,
+        riderName: r.rider_name, fare: fmt(r.fare_kobo), status: r.status, createdAt: r.created_at,
+      })),
+      topDrivers: topDrivers.rows.map(d => ({
+        id: d.id, name: d.name, isOnline: d.is_online,
+        rating: d.rating ? parseFloat(d.rating) : null,
+        vehicle: [d.vehicle_make, d.vehicle_model].filter(Boolean).join(' ') || null,
+        trips: parseInt(d.trips, 10),
+      })),
+      recentActivity: activity.rows.map(a => ({
+        action: a.action, category: a.category, actor: a.actor, detail: a.detail, at: a.created_at,
+      })),
     })
   } catch (err) { next(err) }
 })
@@ -310,16 +452,20 @@ router.get('/users/:id',
   }
 )
 
-// ── Create a new admin/staff user ─────────────────────────────────────────────
+// ── Create a new user (rider, driver, or admin) ───────────────────────────────
+// Account is active immediately with a temporary password; a welcome email
+// delivers the credentials and first login forces a password change.
 router.post('/users',
   [
     body('name').trim().isLength({ min: 2, max: 100 }).escape(),
     body('email').isEmail().normalizeEmail(),
+    body('role').optional().isIn(['rider', 'driver', 'admin']),
   ],
   validate,
   async (req, res, next) => {
     try {
       const { name, email } = req.body
+      const role = req.body.role || 'admin'
 
       const existing = await query('SELECT id FROM users WHERE email = $1', [email])
       if (existing.rows[0]) {
@@ -332,13 +478,26 @@ router.post('/users',
       const result = await query(
         `INSERT INTO users (name, email, password_hash, role, active_role,
            is_active, is_pending, email_verified, force_password_change, can_ride, can_drive)
-         VALUES ($1, $2, $3, 'admin', 'admin', true, false, true, true, false, false)
+         VALUES ($1, $2, $3, $4, $4, true, false, true, true, $5, $6)
          RETURNING id, name, email, created_at`,
-        [name, email, passwordHash]
+        [name, email, passwordHash, role, role === 'rider', role === 'driver']
       )
 
+      const roleLabel = role === 'driver' ? 'Driver' : role === 'admin' ? 'Admin User' : 'Rider'
+      logActivity(req.user.id, `${roleLabel} Created`, 'user', name)
+
+      // Deliver credentials by email; creation still succeeds if SMTP is down —
+      // the password is returned once below so the admin can share it manually.
+      let emailSent = true
+      try {
+        await sendAccountCredentialsEmail(email, name, role, password)
+      } catch (err) {
+        emailSent = false
+        console.error('Credentials email failed:', err.message)
+      }
+
       // Returned once — never stored or logged elsewhere
-      res.status(201).json({ user: result.rows[0], temporaryPassword: password })
+      res.status(201).json({ user: result.rows[0], temporaryPassword: password, emailSent })
     } catch (err) { next(err) }
   }
 )
@@ -349,9 +508,9 @@ router.patch('/users/:id/approve',
   validate,
   async (req, res, next) => {
     try {
-      const userRes = await query('SELECT id, role FROM users WHERE id = $1', [req.params.id])
+      const userRes = await query('SELECT id, role, name FROM users WHERE id = $1', [req.params.id])
       if (!userRes.rows[0]) return res.status(404).json({ message: 'User not found.' })
-      const { role } = userRes.rows[0]
+      const { role, name } = userRes.rows[0]
       await query(
         `UPDATE users
          SET is_active = true, is_pending = false,
@@ -360,6 +519,7 @@ router.patch('/users/:id/approve',
          WHERE id = $1`,
         [req.params.id]
       )
+      logActivity(req.user.id, role === 'driver' ? 'Driver Approved' : 'Rider Approved', 'user', name)
       res.json({ message: 'User approved and activated.' })
     } catch (err) { next(err) }
   }
@@ -372,10 +532,11 @@ router.patch('/users/:id/reject',
   async (req, res, next) => {
     try {
       const result = await query(
-        'UPDATE users SET is_active = false, is_pending = false WHERE id = $1 RETURNING id',
+        'UPDATE users SET is_active = false, is_pending = false WHERE id = $1 RETURNING id, name',
         [req.params.id]
       )
       if (!result.rows[0]) return res.status(404).json({ message: 'User not found.' })
+      logActivity(req.user.id, 'Registration Rejected', 'user', result.rows[0].name)
       res.json({ message: 'User registration rejected.' })
     } catch (err) { next(err) }
   }
@@ -391,10 +552,11 @@ router.patch('/users/:id/status',
         return res.status(400).json({ message: 'You cannot change your own account status.' })
       }
       const result = await query(
-        'UPDATE users SET is_active = $1 WHERE id = $2 RETURNING id',
+        'UPDATE users SET is_active = $1 WHERE id = $2 RETURNING id, name',
         [req.body.isActive, req.params.id]
       )
       if (!result.rows[0]) return res.status(404).json({ message: 'User not found.' })
+      logActivity(req.user.id, req.body.isActive ? 'User Reactivated' : 'User Suspended', 'user', result.rows[0].name)
       res.json({ message: req.body.isActive ? 'User reactivated.' : 'User suspended.' })
     } catch (err) { next(err) }
   }
@@ -462,10 +624,11 @@ router.post('/payouts/:id/approve',
     try {
       const result = await query(
         `UPDATE payout_requests SET status = 'approved', processed_at = NOW(), processed_by = $1
-         WHERE id = $2 AND status = 'pending' RETURNING id`,
+         WHERE id = $2 AND status = 'pending' RETURNING id, amount_kobo`,
         [req.user.id, req.params.id]
       )
       if (!result.rows[0]) return res.status(409).json({ message: 'This request is no longer pending.' })
+      logActivity(req.user.id, 'Payout Approved', 'payment', `₦${fmt(result.rows[0].amount_kobo).toLocaleString()}`)
       res.json({ message: 'Payout approved.' })
     } catch (err) { next(err) }
   }
@@ -490,6 +653,7 @@ router.post('/payouts/:id/reject',
         [payout.rows[0].driver_id, 'credit', payout.rows[0].amount_kobo, 'Withdrawal request rejected — refunded']
       )
 
+      logActivity(req.user.id, 'Payout Rejected', 'payment', `₦${fmt(payout.rows[0].amount_kobo).toLocaleString()} refunded`)
       res.json({ message: 'Payout rejected and refunded to driver wallet.' })
     } catch (err) { next(err) }
   }
@@ -720,6 +884,7 @@ router.post('/stops',
          VALUES ($1, $2, $3, $4, $5) RETURNING id`,
         [name, group, chainPosition, lat || null, lng || null]
       )
+      logActivity(req.user.id, 'Stop Added', 'route', name)
       res.status(201).json({ id: result.rows[0].id })
     } catch (err) {
       if (err.code === '23505') return res.status(409).json({ message: 'A stop with that name or chain position already exists.' })
@@ -800,6 +965,7 @@ router.post('/routes-pricing',
          VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING id`,
         [period, pickup, dropoff, poolFareKobo, packageFareKobo, req.user.id]
       )
+      logActivity(req.user.id, 'Route Created', 'route', `${pickup} → ${dropoff} (${period})`)
       res.status(201).json({ id: result.rows[0].id })
     } catch (err) {
       if (err.code === '23503') return res.status(422).json({ message: 'Pickup or dropoff is not a known stop.' })
@@ -830,6 +996,7 @@ router.patch('/routes-pricing/:id',
         [poolFareKobo ?? null, packageFareKobo ?? null, isActive ?? null, req.user.id, req.params.id]
       )
       if (!result.rows[0]) return res.status(404).json({ message: 'Route not found.' })
+      logActivity(req.user.id, 'Route Pricing Updated', 'route', null)
       res.json({ message: 'Route updated.' })
     } catch (err) { next(err) }
   }
@@ -853,6 +1020,7 @@ router.patch('/platform-fee',
         `UPDATE platform_settings SET platform_fee_percent = $1, updated_by = $2, updated_at = NOW() WHERE id = 1`,
         [feePercent, req.user.id]
       )
+      logActivity(req.user.id, 'Platform Fee Updated', 'admin', `${feePercent}%`)
       res.json({ feePercent, message: 'Platform fee updated.' })
     } catch (err) { next(err) }
   }

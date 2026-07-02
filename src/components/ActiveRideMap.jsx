@@ -6,7 +6,7 @@ import { api } from '../services/api'
 import { fetchDrivingRoute } from '../utils/mapboxDirections'
 
 const NEON='#ccff00', OLIVE='#243800'
-const CARD='#ffffff', BORDER='#d4e5a8', MUTED='#4C6900'
+const CARD='#ffffff', BORDER='#e9ecef', MUTED='#4C6900'
 
 function lerp(a, b, t) { return a + (b - a) * t }
 
@@ -15,7 +15,7 @@ function easeInOut(t) { return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t }
 // Shows the pickup → dropoff route, the driver's real live device location,
 // and the rider's real reported location (falling back to the static pickup
 // stop until the rider's device has shared a position).
-export default function ActiveRideMap({ pickup, dropoff, riderLocation, status }) {
+export default function ActiveRideMap({ pickup, dropoff, riderLocation, status, onEtaChange }) {
   const containerRef = useRef(null)
   const mapRef        = useRef(null)
   const driverMarkerRef = useRef(null)
@@ -208,10 +208,11 @@ export default function ActiveRideMap({ pickup, dropoff, riderLocation, status }
     if (!from || !to) return
 
     const token = import.meta.env.VITE_MAPBOX_TOKEN
-    fetchDrivingRoute(from, to, token).then(routeCoords => {
-      if (!routeCoords) return
+    fetchDrivingRoute(from, to, token).then(result => {
+      if (!result) return
       const src = mapRef.current?.getSource('route')
-      if (src) src.setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: routeCoords } })
+      if (src) src.setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: result.coordinates } })
+      onEtaChange?.(result.durationSeconds)
     })
   }, [mapLoaded, status, coords?.lng, coords?.lat, riderRefPoint?.lat, riderRefPoint?.lng, dCoord]) // eslint-disable-line react-hooks/exhaustive-deps
 

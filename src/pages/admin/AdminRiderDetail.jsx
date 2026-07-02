@@ -90,7 +90,7 @@ export default function AdminRiderDetail() {
           {/* Info */}
           <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, padding:18 }}>
             <p style={{ fontWeight:800, fontSize:15, color:TEXT, marginBottom:14 }}>Rider Information</p>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, fontSize:13 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) minmax(0,1fr)', gap:14, fontSize:13 }}>
               <Info label="Email" value={rider.email}/>
               <Info label="Phone" value={rider.phone}/>
               <Info label="ID Type" value={rider.idType}/>
@@ -145,9 +145,9 @@ export default function AdminRiderDetail() {
 
 function Info({ label, value }) {
   return (
-    <div>
+    <div style={{ minWidth:0 }}>
       <p style={{ color:MUTED, fontSize:11, marginBottom:2 }}>{label}</p>
-      <p style={{ color:TEXT, fontWeight:600 }}>{value || '—'}</p>
+      <p style={{ color:TEXT, fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{value || '—'}</p>
     </div>
   )
 }

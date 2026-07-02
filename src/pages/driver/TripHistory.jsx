@@ -4,7 +4,7 @@ import { MapPin, Star } from 'lucide-react'
 
 const NEON='#ccff00', NT='#0a0a0a'
 const OLIVE='#243800', MOSS='#4C6900'
-const CARD='#ffffff', BORDER='#d4e5a8', TEXT='#1a2800', MUTED='#4C6900', BG='#f0f5e0'
+const CARD='#ffffff', BORDER='#e9ecef', TEXT='#1a2800', MUTED='#4C6900', BG='#f6f7f9'
 
 const TRIPS=[
   {id:'t1',from:'Ikeja',to:'VI',fare:3200,date:'Today, 9:10 AM',status:'completed',rating:5},
@@ -32,10 +32,10 @@ export default function DriverTripHistory(){
   return(
     <AppLayout title="Trip History">
       {/* Stats */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,marginBottom:20}}>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:12,marginBottom:20}}>
         {[['Completed',completed.length],['Cancelled',TRIPS.filter(t=>t.status==='cancelled').length],['Earned','₦'+earned.toLocaleString()]].map(([l,v])=>(
-          <div key={l} style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:14,padding:'18px 12px',textAlign:'center',boxShadow:'0 2px 8px rgba(36,56,0,0.06)'}}>
-            <p style={{fontWeight:900,fontSize:'clamp(1.1rem,3vw,1.5rem)',color:OLIVE,letterSpacing:'-0.03em'}}>{v}</p>
+          <div key={l} style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:14,padding:'18px 8px',textAlign:'center',boxShadow:'0 2px 8px rgba(36,56,0,0.06)',minWidth:0,overflow:'hidden'}}>
+            <p style={{fontWeight:900,fontSize:'clamp(0.9rem,4vw,1.5rem)',color:OLIVE,letterSpacing:'-0.03em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{v}</p>
             <p style={{fontSize:11,color:MUTED,fontWeight:600,marginTop:2}}>{l}</p>
           </div>
         ))}

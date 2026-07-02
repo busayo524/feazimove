@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
 import { api } from '../../services/api'
-import { ArrowLeft, Star, Ban, CheckCircle2, XCircle, FileText, AlertCircle, Car } from 'lucide-react'
+import { ArrowLeft, Ban, CheckCircle2, XCircle, FileText, AlertCircle, Car } from 'lucide-react'
 
 const CARD = '#ffffff', BORDER = '#e5e7eb', TEXT = '#1a1a1a', MUTED = '#6b7280', BG = '#f5f7f2'
 const GREEN = '#2a6048', NEON = '#ccff00', OLIVE = '#243800'
@@ -85,7 +85,7 @@ function ProfilePhoto({ userId, hasAvatar, initials }) {
   }, [userId, hasAvatar])
 
   return (
-    <div style={{ width:72, height:72, borderRadius:'50%', background:GREEN, color:'#fff',
+    <div style={{ width:72, height:72, borderRadius:'50%', background:NEON, color:OLIVE,
       display:'flex', alignItems:'center', justifyContent:'center',
       overflow:'hidden', fontWeight:800, fontSize:26, flexShrink:0 }}>
       {src
@@ -168,10 +168,10 @@ export default function AdminUserDetail() {
   return (
     <AdminLayout title="User Detail">
       {/* Back */}
-      <button onClick={() => navigate('/admin/users')}
+      <button onClick={() => navigate('/admin/user-management')}
         style={{ display:'flex', alignItems:'center', gap:6, background:'none', border:'none',
           cursor:'pointer', color:MUTED, fontWeight:600, fontSize:14, fontFamily:'inherit', padding:0, marginBottom:20 }}>
-        <ArrowLeft size={16}/> Back to Users
+        <ArrowLeft size={16}/> Back to User Management
       </button>
 
       {/* Profile card + action buttons */}
@@ -201,12 +201,6 @@ export default function AdminUserDetail() {
               <span style={{ fontSize:12, fontWeight:700, padding:'4px 12px', borderRadius:20,
                 background:s.bg, color:s.fg, border:`1px solid ${s.fg}33` }}>{s.label}</span>
               <span style={{ fontSize:12, fontWeight:600, color:MUTED, textTransform:'capitalize' }}>{user.role}</span>
-              {user.rating != null && (
-                <div style={{ display:'flex', alignItems:'center', gap:4 }}>
-                  <Star size={13} color='#f59e0b' fill='#f59e0b'/>
-                  <span style={{ fontSize:13, fontWeight:700, color:TEXT }}>{Number(user.rating).toFixed(1)}</span>
-                </div>
-              )}
             </div>
           </div>
           <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
@@ -304,7 +298,7 @@ export default function AdminUserDetail() {
                   </div>
                 </div>
                 <button onClick={() => viewDocument(doc.id)}
-                  style={{ padding:'7px 16px', borderRadius:8, background:GREEN, color:'#fff',
+                  style={{ padding:'7px 16px', borderRadius:8, background:NEON, color:OLIVE,
                     border:'none', fontWeight:600, fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
                   View
                 </button>

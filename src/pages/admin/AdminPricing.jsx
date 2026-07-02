@@ -45,6 +45,53 @@ function FareCell({ route, field, onSave }) {
   )
 }
 
+function PlatformFeeControl() {
+  const [feePercent, setFeePercent] = useState(null)
+  const [value, setValue] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    api.get('/admin/platform-fee')
+      .then(res => { setFeePercent(res.data.feePercent); setValue(String(res.data.feePercent)) })
+      .catch(() => setError('Could not load fee.'))
+  }, [])
+
+  async function save() {
+    const num = parseFloat(value)
+    if (Number.isNaN(num) || num < 0 || num > 100 || num === feePercent) return
+    setSaving(true); setError(''); setSaved(false)
+    try {
+      await api.patch('/admin/platform-fee', { feePercent: num })
+      setFeePercent(num)
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch (err) {
+      setError(err.data?.message || 'Could not update fee.')
+    } finally { setSaving(false) }
+  }
+
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
+      <span style={{ fontSize:12, fontWeight:700, color:MUTED, textTransform:'uppercase', letterSpacing:'0.04em' }}>Platform Fee</span>
+      <div style={{ display:'flex', alignItems:'center', gap:4, background:CARD, border:`1.5px solid ${BORDER}`, borderRadius:10, padding:'6px 10px' }}>
+        <input type="number" min="0" max="100" step="0.5" value={value}
+          onChange={e => setValue(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') save() }}
+          style={{ width:48, border:'none', outline:'none', fontSize:14, fontWeight:700, color:TEXT, fontFamily:'inherit', background:'transparent' }}/>
+        <span style={{ fontSize:13, color:MUTED }}>%</span>
+      </div>
+      <button onClick={save} disabled={saving || feePercent === null}
+        style={{ padding:'8px 14px', borderRadius:10, background:NEON, border:'none', color:OLIVE, fontWeight:700, fontSize:13, cursor:saving?'not-allowed':'pointer', fontFamily:'inherit', opacity:saving?0.7:1 }}>
+        {saving ? 'Saving…' : 'Save'}
+      </button>
+      {saved && <Check size={16} color="#15803d"/>}
+      {error && <span style={{ fontSize:12, color:'#ef4444' }}>{error}</span>}
+    </div>
+  )
+}
+
 export default function AdminPricing() {
   const [period, setPeriod] = useState('morning')
   const [routes, setRoutes] = useState(null)
@@ -78,11 +125,15 @@ export default function AdminPricing() {
 
   return (
     <AdminLayout title="Pricing">
+      <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:14 }}>
+        <PlatformFeeControl/>
+      </div>
+
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8, flexWrap:'wrap', gap:10 }}>
         <p style={{ color:MUTED, fontSize:14 }}>Click a fare to edit it. Changes apply to new bookings only — fares already quoted to a rider are locked in.</p>
         <button onClick={() => setShowAdd(true)}
-          style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 18px', borderRadius:10, background:OLIVE, border:'none',
-            color:NEON, fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit', flexShrink:0 }}>
+          style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 18px', borderRadius:10, background:NEON, border:'none',
+            color:OLIVE, fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit', flexShrink:0 }}>
           <Plus size={15}/> Add Route
         </button>
       </div>
@@ -91,7 +142,7 @@ export default function AdminPricing() {
         {['morning', 'evening'].map(p => (
           <button key={p} onClick={() => setPeriod(p)}
             style={{ padding:'7px 18px', borderRadius:8, border:'none', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit', textTransform:'capitalize',
-              background: period===p ? OLIVE : 'transparent', color: period===p ? NEON : MUTED }}>
+              background: period===p ? NEON : 'transparent', color: period===p ? OLIVE : MUTED }}>
             {p}
           </button>
         ))}
@@ -109,7 +160,7 @@ export default function AdminPricing() {
         <table style={{ width:'100%', borderCollapse:'collapse', fontSize:14 }}>
           <thead>
             <tr style={{ background:BG, textAlign:'left' }}>
-              {['Route','Pool Fare','Solo Fare','Last Updated','Status',''].map(h => (
+              {['Route','Pool Fare','Package Fare','Last Updated','Status',''].map(h => (
                 <th key={h} style={{ padding:'12px 16px', fontSize:12, color:MUTED, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.04em' }}>{h}</th>
               ))}
             </tr>
@@ -123,7 +174,7 @@ export default function AdminPricing() {
               <tr key={r.id} style={{ borderTop:`1px solid ${BORDER}`, opacity: r.isActive ? 1 : 0.5 }}>
                 <td style={{ padding:'12px 16px', fontWeight:600, color:TEXT }}>{r.pickup} → {r.dropoff}</td>
                 <td style={{ padding:'8px 16px' }}><FareCell route={r} field="poolFareKobo" onSave={handleSave}/></td>
-                <td style={{ padding:'8px 16px' }}><FareCell route={r} field="soloFareKobo" onSave={handleSave}/></td>
+                <td style={{ padding:'8px 16px' }}><FareCell route={r} field="packageFareKobo" onSave={handleSave}/></td>
                 <td style={{ padding:'12px 16px', color:MUTED, fontSize:12 }}>
                   {r.updatedAt ? `${r.updatedByName || 'Admin'} · ${new Date(r.updatedAt).toLocaleDateString()}` : '—'}
                 </td>
@@ -151,12 +202,32 @@ export default function AdminPricing() {
   )
 }
 
+const NEW_STOP = '__new__'
+
+function NewStopFields({ name, onName, group, onGroup, label }) {
+  return (
+    <div style={{ display:'flex', gap:8, marginBottom:14 }}>
+      <input value={name} onChange={e => onName(e.target.value)} required placeholder={`New ${label} name`}
+        style={{ flex:2, padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}/>
+      <select value={group} onChange={e => onGroup(e.target.value)}
+        style={{ flex:1, padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}>
+        <option value="mainland">Mainland</option>
+        <option value="island">Island</option>
+      </select>
+    </div>
+  )
+}
+
 function AddRouteModal({ period, onClose, onCreated }) {
   const [stops, setStops] = useState([])
   const [pickup, setPickup] = useState('')
   const [dropoff, setDropoff] = useState('')
+  const [newPickupName, setNewPickupName] = useState('')
+  const [newPickupGroup, setNewPickupGroup] = useState('mainland')
+  const [newDropoffName, setNewDropoffName] = useState('')
+  const [newDropoffGroup, setNewDropoffGroup] = useState('mainland')
   const [poolFareKobo, setPoolFareKobo] = useState('')
-  const [soloFareKobo, setSoloFareKobo] = useState('')
+  const [packageFareKobo, setPackageFareKobo] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
@@ -168,10 +239,21 @@ function AddRouteModal({ period, onClose, onCreated }) {
     e.preventDefault()
     setBusy(true); setError('')
     try {
+      // chain_position is unique per group, so track counts locally in case
+      // both pickup and dropoff are new stops in the same group this submit.
+      const groupCounts = { mainland: stops.filter(s => s.group === 'mainland').length, island: stops.filter(s => s.group === 'island').length }
+      async function resolveStop(value, name, group) {
+        if (value !== NEW_STOP) return value
+        await api.post('/admin/stops', { name: name.trim(), group, chainPosition: groupCounts[group] })
+        groupCounts[group] += 1
+        return name.trim()
+      }
+      const finalPickup = await resolveStop(pickup, newPickupName, newPickupGroup)
+      const finalDropoff = await resolveStop(dropoff, newDropoffName, newDropoffGroup)
       await api.post('/admin/routes-pricing', {
-        period, pickup, dropoff,
+        period, pickup: finalPickup, dropoff: finalDropoff,
         poolFareKobo: parseInt(poolFareKobo, 10) * 100,
-        soloFareKobo: parseInt(soloFareKobo, 10) * 100,
+        packageFareKobo: parseInt(packageFareKobo, 10) * 100,
       })
       onCreated()
       onClose()
@@ -194,24 +276,32 @@ function AddRouteModal({ period, onClose, onCreated }) {
             style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, marginBottom:14, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}>
             <option value="">Select…</option>
             {stops.map(s => <option key={s.id} value={s.name}>{s.name} ({s.group})</option>)}
+            <option value={NEW_STOP}>+ Add new location…</option>
           </select>
+          {pickup === NEW_STOP && (
+            <NewStopFields label="pickup" name={newPickupName} onName={setNewPickupName} group={newPickupGroup} onGroup={setNewPickupGroup}/>
+          )}
 
           <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Dropoff</label>
           <select value={dropoff} onChange={e => setDropoff(e.target.value)} required
             style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, marginBottom:14, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}>
             <option value="">Select…</option>
             {stops.map(s => <option key={s.id} value={s.name}>{s.name} ({s.group})</option>)}
+            <option value={NEW_STOP}>+ Add new location…</option>
           </select>
+          {dropoff === NEW_STOP && (
+            <NewStopFields label="dropoff" name={newDropoffName} onName={setNewDropoffName} group={newDropoffGroup} onGroup={setNewDropoffGroup}/>
+          )}
 
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:14 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) minmax(0,1fr)', gap:10, marginBottom:14 }}>
             <div>
               <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Pool Fare (₦)</label>
               <input type="number" min="0" value={poolFareKobo} onChange={e => setPoolFareKobo(e.target.value)} required
                 style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}/>
             </div>
             <div>
-              <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Solo Fare (₦)</label>
-              <input type="number" min="0" value={soloFareKobo} onChange={e => setSoloFareKobo(e.target.value)} required
+              <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Package Fare (₦)</label>
+              <input type="number" min="0" value={packageFareKobo} onChange={e => setPackageFareKobo(e.target.value)} required
                 style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}/>
             </div>
           </div>
@@ -219,7 +309,7 @@ function AddRouteModal({ period, onClose, onCreated }) {
           {error && <p style={{ fontSize:13, color:'#ef4444', marginBottom:12 }}>{error}</p>}
 
           <button type="submit" disabled={busy}
-            style={{ width:'100%', padding:'11px', borderRadius:10, background:OLIVE, color:NEON, border:'none', fontWeight:700, fontSize:14, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit', opacity:busy?0.7:1 }}>
+            style={{ width:'100%', padding:'11px', borderRadius:10, background:NEON, color:OLIVE, border:'none', fontWeight:700, fontSize:14, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit', opacity:busy?0.7:1 }}>
             {busy ? 'Creating…' : 'Create Route'}
           </button>
         </form>
