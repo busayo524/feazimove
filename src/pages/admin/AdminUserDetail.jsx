@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
 import { api } from '../../services/api'
-import { ArrowLeft, Ban, CheckCircle2, XCircle, FileText, AlertCircle, Car } from 'lucide-react'
+import { ArrowLeft, Ban, CheckCircle2, XCircle, FileText, AlertCircle, Car, Trash2 } from 'lucide-react'
 
 const CARD = '#ffffff', BORDER = '#e5e7eb', TEXT = '#1a1a1a', MUTED = '#6b7280', BG = '#f5f7f2'
 const GREEN = '#2a6048', NEON = '#ccff00', OLIVE = '#243800'
@@ -127,6 +127,18 @@ export default function AdminUserDetail() {
       load()
     } catch (err) { alert(err.data?.message || 'Could not update status.') }
     finally { setBusy(false); setAction('') }
+  }
+
+  async function deleteUser() {
+    if (!window.confirm(`Permanently delete ${user.name} and all their data? This cannot be undone.`)) return
+    setBusy(true); setAction('delete')
+    try {
+      await api.delete(`/admin/users/${id}`)
+      navigate('/admin/user-management', { replace: true })
+    } catch (err) {
+      alert(err.data?.message || 'Could not delete user.')
+      setBusy(false); setAction('')
+    }
   }
 
   async function viewDocument(docId) {
@@ -304,6 +316,24 @@ export default function AdminUserDetail() {
           </div>
         )}
       </Section>
+
+      {/* Danger zone — permanent deletion */}
+      <div style={{ background:'#fef2f2', border:'1px solid #fecdca', borderRadius:14, padding:'20px 24px',
+        marginTop:20, display:'flex', alignItems:'center', justifyContent:'space-between', gap:16, flexWrap:'wrap' }}>
+        <div style={{ flex:'1 1 300px', minWidth:0 }}>
+          <p style={{ margin:'0 0 4px', fontWeight:800, fontSize:14, color:'#b42318' }}>Delete this user</p>
+          <p style={{ margin:0, fontSize:13, color:'#912018', lineHeight:1.6 }}>
+            Permanently removes {user.name} and all their data — wallet, documents, messages and bookings are
+            erased; ride history is anonymized. This cannot be undone.
+          </p>
+        </div>
+        <button onClick={deleteUser} disabled={busy}
+          style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 20px', borderRadius:10,
+            background:'#d92d20', color:'#fff', border:'none', fontWeight:700, fontSize:13,
+            cursor:busy?'not-allowed':'pointer', fontFamily:'inherit', opacity:busy?0.7:1, flexShrink:0 }}>
+          <Trash2 size={15}/> {action === 'delete' ? 'Deleting…' : 'Delete User'}
+        </button>
+      </div>
 
     </AdminLayout>
   )

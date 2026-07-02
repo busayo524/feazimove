@@ -4,7 +4,7 @@ const fs       = require('fs')
 const bcrypt   = require('bcryptjs')
 const crypto   = require('crypto')
 const { body, param } = require('express-validator')
-const { query } = require('../db')
+const { query, pool } = require('../db')
 const { requireAuth, requireRole } = require('../middleware/auth')
 const { validate } = require('../middleware/validate')
 const { UPLOAD_DIR } = require('../middleware/upload')
@@ -561,6 +561,57 @@ router.patch('/users/:id/status',
       logActivity(req.user.id, req.body.isActive ? 'User Reactivated' : 'User Suspended', 'user', result.rows[0].name)
       res.json({ message: req.body.isActive ? 'User reactivated.' : 'User suspended.' })
     } catch (err) { next(err) }
+  }
+)
+
+// ── Permanently delete a user and every trace of their data ──────────────────
+// Cascades wipe wallet transactions, OTPs, documents, payout requests,
+// availability and bookings; rides/ratings are anonymized (ids nulled).
+// ride_messages.sender_id is NOT NULL, so those rows are deleted explicitly
+// first — otherwise the FK's SET NULL would violate the constraint and error.
+router.delete('/users/:id',
+  [param('id').isUUID()],
+  validate,
+  async (req, res, next) => {
+    if (req.params.id === req.user.id) {
+      return res.status(400).json({ message: 'You cannot delete your own account.' })
+    }
+    const client = await pool.connect()
+    try {
+      const userRes = await client.query(
+        'SELECT id, name, avatar_path FROM users WHERE id = $1', [req.params.id]
+      )
+      const user = userRes.rows[0]
+      if (!user) {
+        client.release()
+        return res.status(404).json({ message: 'User not found.' })
+      }
+
+      // Collect file names before the rows cascade away
+      const docsRes = await client.query(
+        'SELECT file_path FROM user_documents WHERE user_id = $1', [req.params.id]
+      )
+      const files = docsRes.rows.map(d => d.file_path)
+      if (user.avatar_path) files.push(user.avatar_path)
+
+      await client.query('BEGIN')
+      await client.query('DELETE FROM ride_messages WHERE sender_id = $1', [req.params.id])
+      await client.query('DELETE FROM users WHERE id = $1', [req.params.id])
+      await client.query('COMMIT')
+
+      // Remove uploaded files from disk — best effort, DB is already clean
+      for (const f of files) {
+        fs.unlink(path.join(UPLOAD_DIR, path.basename(f)), () => {})
+      }
+
+      logActivity(req.user.id, 'User Deleted', 'user', user.name)
+      res.json({ message: 'User and all their data have been permanently deleted.' })
+    } catch (err) {
+      await client.query('ROLLBACK').catch(() => {})
+      next(err)
+    } finally {
+      client.release()
+    }
   }
 )
 
