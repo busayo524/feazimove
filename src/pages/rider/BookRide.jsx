@@ -92,6 +92,8 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, on
               <style>{`@keyframes bookride-spin{to{transform:rotate(360deg)}}`}</style>
             </>
           ) : (
+            <>
+            <p style={{fontSize:11,fontStyle:'italic',color:MUTED,textAlign:'center',margin:'0 0 8px'}}>*Booking should be within 24hrs*</p>
             <button onClick={onBook} disabled={booking} style={{
               width:'100%',padding:'11px',borderRadius:50,
               background:booking?BORDER:NEON,color:booking?MUTED:OLIVE,
@@ -103,6 +105,7 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, on
             }}>
               {booking?'Scheduling…':'Schedule a Ride'}<ArrowRight size={16}/>
             </button>
+            </>
           )}
         </div>
       </div>

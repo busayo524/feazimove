@@ -236,6 +236,8 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, seats, poolFareKobo, sto
               </button>
             </>
           ) : (
+            <>
+            <p style={{fontSize:11,fontStyle:'italic',color:MUTED,textAlign:'center',margin:'0 0 8px'}}>*Booking should be within 24hrs*</p>
             <button onClick={onGoLive} disabled={goingLive} style={{
               width:'100%', padding:'11px', borderRadius:50,
               background:goingLive?BORDER:NEON, color:goingLive?MUTED:OLIVE,
@@ -249,6 +251,7 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, seats, poolFareKobo, sto
                 : <><Wifi size={16}/>Go Live on This Route</>
               }
             </button>
+            </>
           )}
         </div>
       </div>
