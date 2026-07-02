@@ -239,6 +239,12 @@ export default function AdminUserDetail() {
           ['Email',        user.email],
           ['Phone',        user.phone],
           ['Role',         user.role?.charAt(0).toUpperCase() + user.role?.slice(1)],
+          ['City',         user.city || '—'],
+          ['Area',         user.area || '—'],
+          ['Date of Birth', user.dateOfBirth
+            ? new Date(user.dateOfBirth).toLocaleDateString('en-NG', { day:'numeric', month:'long', year:'numeric' })
+            : '—'],
+          ['Gender',       user.gender ? user.gender.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase()) : '—'],
           ['Date Joined',  new Date(user.joinedAt).toLocaleDateString('en-NG', { day:'numeric', month:'long', year:'numeric' })],
           ['Wallet Balance', `₦${(user.walletBalance||0).toLocaleString()}`],
         ]}/>

@@ -569,6 +569,13 @@ export default function Register() {
         formData.append('registrationToken', regToken || '')
         formData.append('role', role)
         formData.append('name', [form.firstName, form.lastName].filter(Boolean).join(' '))
+        if (form.city)   formData.append('city', form.city)
+        if (form.area)   formData.append('area', form.area)
+        if (form.gender) formData.append('gender', form.gender)
+        if (form.dobYear && form.dobMonth && form.dobDay) {
+          formData.append('dateOfBirth',
+            `${form.dobYear}-${String(form.dobMonth).padStart(2, '0')}-${String(form.dobDay).padStart(2, '0')}`)
+        }
         if (role === 'rider') {
           if (form.idType)   formData.append('idType', form.idType)
           if (form.idNumber) formData.append('idNumber', form.idNumber)

@@ -301,6 +301,11 @@ router.post('/register',
     body('registrationToken').notEmpty().isString(),
     body('role').isIn(['rider', 'driver']),
     body('name').optional({ checkFalsy: true }).trim().isLength({ min: 2, max: 100 }).escape(),
+    // Location + demographics from step 1
+    body('city').optional({ checkFalsy: true }).trim().isLength({ max: 60 }).escape(),
+    body('area').optional({ checkFalsy: true }).trim().isLength({ max: 100 }).escape(),
+    body('dateOfBirth').optional({ checkFalsy: true }).isISO8601(),
+    body('gender').optional({ checkFalsy: true }).isIn(['male', 'female', 'prefer_not_to_say']),
     // Rider identity (optional — only rider step 2 sends these)
     body('idType').optional({ checkFalsy: true }).trim().isLength({ max: 40 }).escape(),
     body('idNumber').optional({ checkFalsy: true }).trim().isLength({ max: 40 }).escape(),
@@ -317,6 +322,7 @@ router.post('/register',
     try {
       const {
         registrationToken, role, name,
+        city, area, dateOfBirth, gender,
         idType, idNumber,
         vehicleType, vehicleMake, vehicleModel, plateNumber, vehicleYear, vehicleColor,
       } = req.body
@@ -352,7 +358,11 @@ router.post('/register',
              vehicle_model = COALESCE($7, vehicle_model),
              plate_number  = COALESCE($8, plate_number),
              vehicle_year  = COALESCE($9, vehicle_year),
-             vehicle_color = COALESCE($10, vehicle_color)
+             vehicle_color = COALESCE($10, vehicle_color),
+             city          = COALESCE($11, city),
+             area          = COALESCE($12, area),
+             date_of_birth = COALESCE($13, date_of_birth),
+             gender        = COALESCE($14, gender)
          WHERE id = $1
          RETURNING id, name, email, role`,
         [
@@ -360,6 +370,7 @@ router.post('/register',
           idType || null, idNumber || null,
           vehicleType || null, vehicleMake || null, vehicleModel || null,
           plateNumber || null, vehicleYear || null, vehicleColor || null,
+          city || null, area || null, dateOfBirth || null, gender || null,
         ]
       )
 

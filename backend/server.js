@@ -296,6 +296,12 @@ async function runMigrations() {
     );
     INSERT INTO platform_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
 
+    -- Location + demographics captured on the registration wizard
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS city          VARCHAR(60);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS area          VARCHAR(100);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS date_of_birth DATE;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS gender        VARCHAR(20);
+
     -- Admin action audit trail — feeds the dashboard "Recent Activity" panel
     -- alongside events derived live from rides/users/payouts.
     CREATE TABLE IF NOT EXISTS activity_log (
