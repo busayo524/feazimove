@@ -7,6 +7,29 @@ const { validate } = require('../middleware/validate')
 const router = express.Router()
 router.use(requireAuth, requireRole('driver'))
 
+// ── Riders awaiting a rating — recent completed trips this driver hasn't rated.
+// Feeds the exception-based post-trip rating screen (all rows default 5★).
+router.get('/unrated-rides', async (req, res, next) => {
+  try {
+    const result = await query(
+      `SELECT r.id, r.pickup, r.destination, r.completed_at, u.id AS rider_id, u.name AS rider_name
+       FROM rides r
+       JOIN users u ON r.rider_id = u.id
+       WHERE r.driver_id = $1 AND r.status = 'completed'
+         AND r.completed_at >= NOW() - INTERVAL '7 days'
+         AND NOT EXISTS (SELECT 1 FROM ratings rt WHERE rt.ride_id = r.id AND rt.rater_id = $1)
+       ORDER BY r.completed_at DESC LIMIT 10`,
+      [req.user.id]
+    )
+    res.json({
+      rides: result.rows.map(r => ({
+        rideId: r.id, riderId: r.rider_id, riderName: r.rider_name,
+        pickup: r.pickup, destination: r.destination, completedAt: r.completed_at,
+      })),
+    })
+  } catch (err) { next(err) }
+})
+
 // ── Driver stats ──────────────────────────────────────────────────────────────
 router.get('/stats', async (req, res, next) => {
   try {

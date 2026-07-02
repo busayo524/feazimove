@@ -385,6 +385,36 @@ export default function DriverDashboard() {
   const stage = ride ? (STATUS_TO_STAGE[ride.status] ?? 0) : 0
   const tripDone = ride?.status === 'completed'
 
+  // ── Exception-based post-trip rating: every unrated rider defaults to 5★;
+  // the driver only touches rows that need lowering, then submits once. ──────
+  const [unratedRides, setUnratedRides] = useState(null)
+  const [rateStars, setRateStars] = useState({})
+  const [rateBusy, setRateBusy] = useState(false)
+  const [ratingsSubmitted, setRatingsSubmitted] = useState(false)
+
+  useEffect(() => {
+    if (!tripDone) return
+    api.get('/driver/unrated-rides')
+      .then(res => {
+        setUnratedRides(res.data.rides)
+        setRateStars(Object.fromEntries(res.data.rides.map(r => [r.rideId, 5])))
+      })
+      .catch(() => setUnratedRides([]))
+  }, [tripDone])
+
+  async function submitAllRatings() {
+    if (rateBusy || !unratedRides?.length) return
+    setRateBusy(true)
+    try {
+      await api.post('/rides/rate/batch', {
+        ratings: unratedRides.map(r => ({ rideId: r.rideId, stars: rateStars[r.rideId] || 5 })),
+      })
+      setRatingsSubmitted(true)
+    } catch (err) {
+      alert(err.data?.message || 'Could not submit ratings.')
+    } finally { setRateBusy(false) }
+  }
+
   async function advanceRide() {
     if (!ride || advancing || stage >= NEXT_STATUS.length) return
     setAdvancing(true)
@@ -735,13 +765,71 @@ export default function DriverDashboard() {
           </div>
           <h2 style={{ fontSize:24, fontWeight:900, color:TEXT, marginBottom:8, letterSpacing:'-0.02em' }}>Trip Completed!</h2>
           <p style={{ color:MUTED, fontSize:15, marginBottom:8 }}>Fare collected</p>
-          <p style={{ fontSize:36, fontWeight:900, color:NT, letterSpacing:'-0.03em', marginBottom:32, background:NEON, display:'inline-block', padding:'4px 24px', borderRadius:14 }}>
+          <p style={{ fontSize:36, fontWeight:900, color:NT, letterSpacing:'-0.03em', marginBottom:28, background:NEON, display:'inline-block', padding:'4px 24px', borderRadius:14 }}>
             ₦{ride.fare.toLocaleString()}
           </p>
-          <button onClick={() => navigate(`/rate/${activeRideId}`)}
-            style={{ padding:'13px 32px', borderRadius:50, background:NT, color:NEON, fontWeight:700, fontSize:15, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
-            Rate Your Rider
-          </button>
+
+          {/* Exception-based rider rating — all riders pre-set to 5★; only
+              adjust the ones that were a problem, then submit once. */}
+          {ratingsSubmitted ? (
+            <>
+              <p style={{ color:TEXT, fontWeight:700, fontSize:15, marginBottom:20 }}>✓ Ratings submitted — thank you!</p>
+              <button onClick={backToDailyDrive}
+                style={{ padding:'13px 32px', borderRadius:50, background:NT, color:NEON, fontWeight:700, fontSize:15, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
+                Back to Daily Drive
+              </button>
+            </>
+          ) : unratedRides === null ? (
+            <p style={{ color:MUTED, fontSize:14 }}>Loading riders…</p>
+          ) : unratedRides.length === 0 ? (
+            <button onClick={backToDailyDrive}
+              style={{ padding:'13px 32px', borderRadius:50, background:NT, color:NEON, fontWeight:700, fontSize:15, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
+              Back to Daily Drive
+            </button>
+          ) : (
+            <div style={{ width:'100%', maxWidth:440 }}>
+              <p style={{ fontSize:14, fontWeight:800, color:TEXT, marginBottom:4 }}>Rate your rider{unratedRides.length > 1 ? 's' : ''}</p>
+              <p style={{ fontSize:12.5, color:MUTED, marginBottom:14 }}>
+                Everyone starts at 5 stars — tap a star only if a rider needs a lower rating.
+              </p>
+
+              {unratedRides.map(r => (
+                <div key={r.rideId} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12,
+                  background:CARD, border:`1px solid ${BORDER}`, borderRadius:12, padding:'10px 14px', marginBottom:8 }}>
+                  <div style={{ minWidth:0, textAlign:'left' }}>
+                    <p style={{ fontSize:13.5, fontWeight:700, color:TEXT, margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                      {r.riderName}
+                    </p>
+                    <p style={{ fontSize:11.5, color:MUTED, margin:'2px 0 0', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                      {r.pickup} → {r.destination}
+                    </p>
+                  </div>
+                  <div style={{ display:'flex', gap:2, flexShrink:0 }}>
+                    {[1,2,3,4,5].map(n => (
+                      <button key={n} onClick={() => setRateStars(s => ({ ...s, [r.rideId]: n }))}
+                        aria-label={`${n} star${n > 1 ? 's' : ''}`}
+                        style={{ background:'none', border:'none', cursor:'pointer', padding:2, fontSize:20, lineHeight:1,
+                          color: n <= (rateStars[r.rideId] || 5) ? '#f59e0b' : '#d1d5db' }}>
+                        ★
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              <button onClick={submitAllRatings} disabled={rateBusy}
+                style={{ width:'100%', marginTop:10, padding:'13px', borderRadius:50, background:NEON, color:OLIVE,
+                  fontWeight:800, fontSize:15, border:'none', cursor:rateBusy?'not-allowed':'pointer',
+                  fontFamily:'inherit', opacity:rateBusy?0.7:1 }}>
+                {rateBusy ? 'Submitting…' : `Submit ${unratedRides.length > 1 ? 'All Ratings' : 'Rating'}`}
+              </button>
+              <button onClick={backToDailyDrive}
+                style={{ width:'100%', marginTop:8, padding:'11px', borderRadius:50, background:'transparent', color:MUTED,
+                  fontWeight:600, fontSize:13, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
+                Skip for now
+              </button>
+            </div>
+          )}
         </div>
       )
     }

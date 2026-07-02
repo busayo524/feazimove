@@ -531,6 +531,54 @@ router.post('/:rideId/rate',
   }
 )
 
+// ── Batch rating — the exception-based post-trip screen submits all riders at
+// once (each defaulted to 5★). Same rules as single rating; already-rated or
+// invalid rides are skipped, never failing the whole batch. ──────────────────
+router.post('/rate/batch',
+  [
+    body('ratings').isArray({ min: 1, max: 20 }),
+    body('ratings.*.rideId').isUUID(),
+    body('ratings.*.stars').isInt({ min: 1, max: 5 }),
+    body('ratings.*.comment').optional({ checkFalsy: true }).trim().isLength({ max: 300 }).escape(),
+  ],
+  validate,
+  async (req, res, next) => {
+    try {
+      let saved = 0
+      for (const { rideId, stars, comment } of req.body.ratings) {
+        const ride = await query(
+          `SELECT rider_id, driver_id FROM rides
+            WHERE id = $1 AND status = 'completed' AND (rider_id = $2 OR driver_id = $2)`,
+          [rideId, req.user.id]
+        )
+        if (!ride.rows[0]) continue
+
+        const { rider_id, driver_id } = ride.rows[0]
+        const rateeId = req.user.id === rider_id ? driver_id : rider_id
+        if (!rateeId) continue
+
+        const result = await query(
+          `INSERT INTO ratings (ride_id, rater_id, ratee_id, stars, comment)
+            VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (ride_id, rater_id) DO NOTHING
+            RETURNING id`,
+          [rideId, req.user.id, rateeId, stars, comment || null]
+        )
+        if (!result.rows[0]) continue
+
+        await query(
+          `UPDATE users SET rating = (
+            SELECT ROUND(AVG(stars)::numeric, 2) FROM ratings WHERE ratee_id = $1
+          ) WHERE id = $1`,
+          [rateeId]
+        )
+        saved++
+      }
+      res.json({ saved, message: saved > 0 ? 'Ratings submitted. Thank you!' : 'Nothing new to rate.' })
+    } catch (err) { next(err) }
+  }
+)
+
 function sanitizeRide(row) {
   return {
     id:          row.id,
