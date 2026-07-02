@@ -57,7 +57,7 @@ export default function AdminStops() {
         <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) minmax(0,1fr)', gap:16 }} className="admin-stops-grid">
           {[['Mainland', mainland], ['Island', island]].map(([label, list]) => (
             <div key={label} style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, overflow:'hidden' }}>
-              <p style={{ fontWeight:800, fontSize:14, color:TEXT, padding:'14px 18px', borderBottom:`1px solid ${BORDER}`, background:BG }}>
+              <p style={{ fontWeight:800, fontSize:14, color:TEXT, padding:'14px 18px', borderBottom:`1px solid `, background:CARD }}>
                 {label} ({list.length})
               </p>
               {list.map(s => (

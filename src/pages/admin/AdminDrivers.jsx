@@ -50,7 +50,7 @@ export default function AdminDrivers() {
         <div style={{ overflowX:'auto' }}>
         <table style={{ width:'100%', borderCollapse:'collapse', fontSize:14 }}>
           <thead>
-            <tr style={{ background:BG, textAlign:'left' }}>
+            <tr style={{ background:CARD, textAlign:'left' }}>
               {['Driver','Vehicle','Trips Today','Total Trips','Wallet','Status',''].map(h => (
                 <th key={h} style={{ padding:'12px 16px', fontSize:12, color:MUTED, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.04em' }}>{h}</th>
               ))}
