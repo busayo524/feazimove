@@ -51,16 +51,16 @@ export default function AdminDrivers() {
         <table style={{ width:'100%', borderCollapse:'collapse', fontSize:14 }}>
           <thead>
             <tr style={{ background:CARD, textAlign:'left' }}>
-              {['Driver','Vehicle','Trips Today','Total Trips','Wallet','Status',''].map(h => (
+              {['Driver','Vehicle','Trips Today','Total Trips','Wallet','Rating','Status',''].map(h => (
                 <th key={h} style={{ padding:'12px 16px', fontSize:12, color:MUTED, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.04em' }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} style={{ padding:30, textAlign:'center', color:MUTED }}>Loading…</td></tr>
+              <tr><td colSpan={8} style={{ padding:30, textAlign:'center', color:MUTED }}>Loading…</td></tr>
             ) : drivers.length === 0 ? (
-              <tr><td colSpan={7} style={{ padding:30, textAlign:'center', color:MUTED }}>No drivers found.</td></tr>
+              <tr><td colSpan={8} style={{ padding:30, textAlign:'center', color:MUTED }}>No drivers found.</td></tr>
             ) : drivers.map(d => (
               <tr key={d.id} style={{ borderTop:`1px solid ${BORDER}` }}>
                 <td style={{ padding:'12px 16px' }}>
@@ -73,6 +73,7 @@ export default function AdminDrivers() {
                 <td style={{ padding:'12px 16px', color:TEXT }}>{d.tripsToday}</td>
                 <td style={{ padding:'12px 16px', color:TEXT }}>{d.tripCount}</td>
                 <td style={{ padding:'12px 16px', color:TEXT }}>₦{d.walletBalance.toLocaleString()}</td>
+                <td style={{ padding:'12px 16px', color:TEXT }}>{d.rating ? `⭐ ${d.rating}` : '—'}</td>
                 <td style={{ padding:'12px 16px' }}>
                   <span style={{ display:'inline-flex', alignItems:'center', gap:6, fontSize:12, color: d.isOnline ? '#15803d' : MUTED }}>
                     <span style={{ width:7, height:7, borderRadius:'50%', background: d.isOnline ? '#22c55e' : '#9ca3af' }}/>

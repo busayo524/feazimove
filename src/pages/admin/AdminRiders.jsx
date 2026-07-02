@@ -73,7 +73,7 @@ export default function AdminRiders() {
                 <td style={{ padding:'12px 16px', color:TEXT }}>{r.rating ? `⭐ ${r.rating}` : '—'}</td>
                 <td style={{ padding:'12px 16px' }}>
                   <span style={{ fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:20,
-                    background: r.isActive ? '#dcfce7' : '#fef2f2', color: r.isActive ? '#15803d' : '#ef4444' }}>
+                    background: r.isActive ? '#f3fbd3' : '#fef2f2', color: r.isActive ? '#3f6212' : '#ef4444', border: r.isActive ? '1px solid #dff0a8' : '1px solid #fecdca' }}>
                     {r.isActive ? 'Active' : 'Suspended'}
                   </span>
                 </td>
