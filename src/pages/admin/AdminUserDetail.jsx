@@ -21,15 +21,6 @@ const DOC_LABELS = {
   utilityBill:    'Utility Bill',
 }
 
-const RIDE_STATUS_COLOR = {
-  completed:       { bg:'#dcfce7', fg:'#15803d' },
-  cancelled:       { bg:'#fef2f2', fg:'#dc2626' },
-  driver_assigned: { bg:'#dbeafe', fg:'#1e40af' },
-  in_transit:      { bg:'#f0fdf4', fg:'#166534' },
-  arrived_pickup:  { bg:'#fefce8', fg:'#854d0e' },
-  pending:         { bg:BG,        fg:MUTED       },
-}
-
 function userStatus(u) {
   if (u.isPending) return 'pending'
   if (u.isActive)  return 'approved'
@@ -308,44 +299,6 @@ export default function AdminUserDetail() {
         )}
       </Section>
 
-      {/* Recent trips */}
-      <Section title="Recent Trips">
-        {!user.recentRides?.length ? (
-          <p style={{ color:MUTED, fontSize:14, margin:0 }}>No trips recorded yet.</p>
-        ) : (
-          <div style={{ overflowX:'auto' }}>
-            <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
-              <thead>
-                <tr>
-                  {['Route','Type','Fare','Status','Date'].map(h => (
-                    <th key={h} style={{ padding:'8px 12px', color:MUTED, fontWeight:700, fontSize:11,
-                      textTransform:'uppercase', letterSpacing:'0.05em', borderBottom:`1px solid ${BORDER}`, textAlign:'left' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {user.recentRides.map(r => {
-                  const rc = RIDE_STATUS_COLOR[r.status] || RIDE_STATUS_COLOR.pending
-                  return (
-                    <tr key={r.id} style={{ borderBottom:`1px solid ${BORDER}` }}>
-                      <td style={{ padding:'10px 12px', color:TEXT, fontWeight:600 }}>{r.pickup} → {r.destination}</td>
-                      <td style={{ padding:'10px 12px', color:MUTED, textTransform:'capitalize' }}>{r.type}</td>
-                      <td style={{ padding:'10px 12px', color:TEXT }}>₦{r.fare.toLocaleString()}</td>
-                      <td style={{ padding:'10px 12px' }}>
-                        <span style={{ fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:20,
-                          background:rc.bg, color:rc.fg, textTransform:'capitalize', whiteSpace:'nowrap' }}>
-                          {r.status.replace(/_/g,' ')}
-                        </span>
-                      </td>
-                      <td style={{ padding:'10px 12px', color:MUTED }}>{r.date}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Section>
     </AdminLayout>
   )
 }
