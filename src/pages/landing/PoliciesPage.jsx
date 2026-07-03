@@ -75,7 +75,7 @@ const POLICIES = [
           <LI><B>"Fare"</B> means the amount payable by a Rider for a Trip as displayed on the Platform at the time of booking.</LI>
           <LI><B>"Wallet"</B> means the in-app digital wallet associated with a User's account for making and receiving payments.</LI>
           <LI><B>"FeaziBiz"</B> means our business and corporate mobility service for organisations.</LI>
-          <LI><B>"FeaziSend"</B> means our goods and package delivery service.</LI>
+          <LI><B>"FeaziMove"</B> means our goods and package delivery service.</LI>
         </UL>
 
         <H3>3. Eligibility</H3>
@@ -768,7 +768,7 @@ const POLICIES = [
 
         <H3>7. Special Bookings</H3>
         <P>7.1 <B>FeaziBiz Corporate Bookings:</B> Cancellation terms for corporate accounts may differ from these standard terms. Please refer to your FeaziBiz Service Agreement.</P>
-        <P>7.2 <B>FeaziSend Deliveries:</B> Package delivery bookings may only be cancelled before a Driver accepts the delivery request. Once accepted, standard cancellation tiers apply. If goods have been collected, no refund is applicable until the goods are returned in their original condition.</P>
+        <P>7.2 <B>FeaziMove Deliveries:</B> Package delivery bookings may only be cancelled before a Driver accepts the delivery request. Once accepted, standard cancellation tiers apply. If goods have been collected, no refund is applicable until the goods are returned in their original condition.</P>
       </>
     ),
   },

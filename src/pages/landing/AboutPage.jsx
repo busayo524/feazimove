@@ -107,7 +107,7 @@ export default function AboutPage() {
               { num: '01', title: 'High Transport Costs',  body: 'Solo rides are expensive. By pooling commuters heading the same way, we cut costs by up to 60% per trip — every day.' },
               { num: '02', title: 'Unreliable Movement',   body: 'Most transport has no scheduling, tracking, or accountability. FeaziMove brings structure, safety, and predictability.' },
               { num: '03', title: 'Urban Emissions',       body: 'Fewer vehicles on the road means lower carbon output. Every shared ride is a step toward a cleaner African city.' },
-              { num: '04', title: 'Logistics Gaps',        body: 'Small businesses and individuals have no affordable, trackable way to move goods across the city. FeaziSend fills that gap by piggybacking deliveries on existing commuter routes.' },
+              { num: '04', title: 'Logistics Gaps',        body: 'Small businesses and individuals have no affordable, trackable way to move goods across the city. FeaziMove fills that gap by piggybacking deliveries on existing commuter routes.' },
               { num: '05', title: 'Driver Income Instability', body: 'Independent drivers earn inconsistently with no guaranteed trips. FeaziMove gives drivers a steady stream of matched rides and deliveries — turning their daily route into reliable income.' },
             ].map(({ num, title, body }) => (
               <div key={num} className="card" style={{ padding: 'clamp(24px,4vw,40px) clamp(20px,4vw,36px)', display: 'flex', flexDirection: 'column', gap: 16 }}>

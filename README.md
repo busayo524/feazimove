@@ -42,7 +42,7 @@ feazimove/
     │   ├── Stats.jsx                 ← Key metrics
     │   ├── HowItWorks.jsx            ← 4-step explainer
     │   ├── Features.jsx              ← Feature grid
-    │   ├── Services.jsx              ← FeaziPool / FeaziSend / FeaziBiz
+    │   ├── Services.jsx              ← FeaziPool / FeaziMove / FeaziBiz
     │   ├── About.jsx                 ← About + FEAZI values
     │   ├── Testimonials.jsx          ← Reviews carousel
     │   ├── DownloadCTA.jsx           ← App download section

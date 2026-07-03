@@ -16,7 +16,7 @@ const services = [
   {
     id: 'send',
     icon: Package,
-    title: 'FeaziSend',
+    title: 'FeaziMove',
     tagline: 'Same-Route Delivery',
     desc: 'Send packages and goods with drivers already heading in that direction. Affordable, fast, and trackable end-to-end.',
     price: 'From ₦600',

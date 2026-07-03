@@ -264,7 +264,7 @@ export default function Earnings(){
             { id:1, label:'Trip: Ikeja → Victoria Island',  amount:2800, time:'Today, 9:14 AM',      type:'credit' },
             { id:2, label:'Trip: Gbagada → CMS',             amount:1900, time:'Today, 7:30 AM',      type:'credit' },
             { id:3, label:'Trip: Ojodu → Ikeja GRA',         amount:1200, time:'Yesterday, 5:00 PM',  type:'credit' },
-            { id:4, label:'FeaziSend: Package delivery',     amount:2400, time:'Yesterday, 2:30 PM',  type:'credit' },
+            { id:4, label:'FeaziMove: Package delivery',     amount:2400, time:'Yesterday, 2:30 PM',  type:'credit' },
             { id:5, label:'Trip: Magodo → Victoria Island',  amount:3200, time:'Jun 21, 8:00 AM',     type:'credit' },
           ].map((t,i,arr)=>(
             <div key={t.id} style={{ display:'flex', alignItems:'center', gap:14, padding:'13px 20px', borderBottom:i<arr.length-1?`1px solid ${BORDER}`:'none', transition:'background 0.15s' }}
