@@ -100,7 +100,7 @@ const services = [
     price: 'From ₦1000',
     color: '#0f0f0f',
     colorDim: 'rgba(204,255,0,0.18)',
-    features: ['Real-time package tracking', 'Proof of delivery photos', 'Small to large parcels', 'Same-day delivery'],
+    features: ['Real-time tracking', 'Proof of delivery photos', 'Small to large parcels', 'Same-day delivery'],
     illustration: React.createElement('img', { src: messengerPana, alt: 'FeaziMove', style: { width: '100%', maxWidth: 520, display: 'block', margin: '0 auto' } }),
   },
   {
