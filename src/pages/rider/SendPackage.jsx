@@ -33,57 +33,59 @@ function periodForSlot(slot){
 
 // Full-page "Launching Soon" takeover — the booking form stays mounted and
 // visible (blurred) underneath, but the feature is gated until launch.
+// Floaters sit in the four corners (not around the headline column) so they
+// never collide with the badge/title text on narrow phone screens, and the
+// whole thing scales down via clamp()/media queries instead of fixed px.
 function LaunchingSoonOverlay(){
   const floaters=[
-    {emoji:'📦', top:'12%', left:'8%',  delay:'0s',    size:34},
-    {emoji:'🛋️', top:'20%', right:'10%', delay:'0.8s', size:40},
-    {emoji:'🛍️', bottom:'28%', left:'12%', delay:'1.4s', size:30},
-    {emoji:'📦', bottom:'34%', right:'14%', delay:'2s',  size:26},
+    {emoji:'📦', cls:'ls-fl ls-fl-tl', delay:'0s'},
+    {emoji:'🛋️', cls:'ls-fl ls-fl-tr', delay:'0.8s'},
+    {emoji:'🛍️', cls:'ls-fl ls-fl-bl', delay:'1.4s'},
+    {emoji:'📦', cls:'ls-fl ls-fl-br', delay:'2s'},
   ]
   return (
-    <div style={{position:'absolute',inset:0,zIndex:10,display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden',borderRadius:20,animation:'lsFade 0.5s ease-out both'}}>
+    <div className="ls-overlay" style={{position:'absolute',inset:0,zIndex:10,display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden',borderRadius:20,animation:'lsFade 0.5s ease-out both'}}>
       {/* Moving.png backdrop — slightly transparent so the page peeks through */}
       <div style={{position:'absolute',inset:0,backgroundImage:`url(${movingImg})`,backgroundSize:'cover',backgroundPosition:'center',opacity:0.88}}/>
       {/* Dark wash so the text stays readable over the photo */}
       <div style={{position:'absolute',inset:0,background:'linear-gradient(180deg, rgba(10,18,0,0.40) 0%, rgba(10,18,0,0.55) 55%, rgba(10,18,0,0.78) 100%)'}}/>
 
-      {/* Floating packages drifting gently */}
+      {/* Floating packages drifting gently, tucked into the corners */}
       {floaters.map((f,i)=>(
-        <span key={i} aria-hidden="true" style={{
-          position:'absolute',top:f.top,bottom:f.bottom,left:f.left,right:f.right,
-          fontSize:f.size,opacity:0.85,animation:`lsFloat 4.5s ease-in-out ${f.delay} infinite`,
+        <span key={i} aria-hidden="true" className={f.cls} style={{
+          position:'absolute',animation:`lsFloat 4.5s ease-in-out ${f.delay} infinite`,
           filter:'drop-shadow(0 6px 12px rgba(0,0,0,0.45))',
         }}>{f.emoji}</span>
       ))}
 
       {/* Centre content */}
-      <div style={{position:'relative',textAlign:'center',padding:'0 28px',maxWidth:680,animation:'lsRise 0.8s cubic-bezier(.22,1,.36,1) 0.15s both'}}>
-        <span style={{
-          display:'inline-flex',alignItems:'center',gap:8,padding:'7px 18px',borderRadius:50,
-          background:NEON,color:OLIVE,fontWeight:900,fontSize:12,letterSpacing:'0.14em',
-          textTransform:'uppercase',marginBottom:22,boxShadow:'0 0 30px rgba(204,255,0,0.5)',
+      <div className="ls-content" style={{position:'relative',textAlign:'center',maxWidth:680,animation:'lsRise 0.8s cubic-bezier(.22,1,.36,1) 0.15s both'}}>
+        <span className="ls-badge" style={{
+          display:'inline-flex',alignItems:'center',gap:8,borderRadius:50,
+          background:NEON,color:OLIVE,fontWeight:900,letterSpacing:'0.14em',
+          textTransform:'uppercase',boxShadow:'0 0 30px rgba(204,255,0,0.5)',
           animation:'lsBadge 2.2s ease-in-out infinite',
         }}>
           <Package size={14}/> Coming to FeaziMove
         </span>
 
-        <h2 style={{
-          fontSize:'clamp(2.4rem,6vw,4rem)',fontWeight:900,color:'#ffffff',
-          letterSpacing:'-0.03em',lineHeight:1.05,marginBottom:18,
+        <h2 className="ls-title" style={{
+          fontWeight:900,color:'#ffffff',
+          letterSpacing:'-0.03em',lineHeight:1.05,
           animation:'lsGlow 2.8s ease-in-out infinite',
         }}>
           Launching <span style={{color:NEON}}>Soon!!!</span>
         </h2>
 
-        <div style={{width:64,height:3,background:NEON,borderRadius:2,margin:'0 auto 18px',boxShadow:'0 0 14px rgba(204,255,0,0.8)'}}/>
+        <div className="ls-rule" style={{background:NEON,borderRadius:2,margin:'0 auto',boxShadow:'0 0 14px rgba(204,255,0,0.8)'}}/>
 
-        <p style={{fontSize:'clamp(1.05rem,2.2vw,1.35rem)',color:'rgba(255,255,255,0.92)',fontWeight:600,lineHeight:1.6,marginBottom:34}}>
+        <p className="ls-sub" style={{color:'rgba(255,255,255,0.92)',fontWeight:600,lineHeight:1.6}}>
           Move an Item - from groceries to full apartments.
         </p>
 
         {/* Little delivery truck driving across a dashed road */}
-        <div style={{position:'relative',height:40,borderBottom:'2px dashed rgba(204,255,0,0.45)',overflow:'hidden'}}>
-          <span aria-hidden="true" style={{position:'absolute',bottom:2,left:0,fontSize:28,animation:'lsDrive 5s linear infinite'}}>
+        <div className="ls-road" style={{position:'relative',borderBottom:'2px dashed rgba(204,255,0,0.45)',overflow:'hidden'}}>
+          <span aria-hidden="true" className="ls-truck" style={{position:'absolute',bottom:2,left:0,animation:'lsDrive 5s linear infinite'}}>
             <span style={{display:'inline-block',transform:'scaleX(-1)'}}>🚚</span>
           </span>
         </div>
@@ -96,6 +98,30 @@ function LaunchingSoonOverlay(){
         @keyframes lsGlow  { 0%,100% { text-shadow:0 0 24px rgba(204,255,0,0.25) } 50% { text-shadow:0 0 46px rgba(204,255,0,0.65) } }
         @keyframes lsBadge { 0%,100% { transform:scale(1) } 50% { transform:scale(1.06) } }
         @keyframes lsDrive { 0% { left:-12% } 100% { left:104% } }
+
+        .ls-stage   { min-height: 420px; height: min(78vh, 720px); height: min(78dvh, 720px); }
+        @media (max-width: 480px) { .ls-stage { min-height: 380px; height: min(72vh, 640px); height: min(72dvh, 640px); } }
+
+        .ls-content { padding: 0 clamp(16px, 6vw, 28px); }
+        .ls-badge   { padding: clamp(5px,1.4vw,7px) clamp(12px,3vw,18px); font-size: clamp(9px,2.6vw,12px); margin-bottom: clamp(14px,4vw,22px); }
+        .ls-title   { font-size: clamp(1.7rem, 8vw, 4rem); margin-bottom: clamp(10px,3vw,18px); }
+        .ls-rule    { width: 48px; height: 3px; margin-bottom: clamp(12px,3vw,18px); }
+        .ls-sub     { font-size: clamp(0.88rem, 3.6vw, 1.35rem); margin-bottom: clamp(20px,5vw,34px); }
+        .ls-road    { height: clamp(28px,7vw,40px); }
+        .ls-truck   { font-size: clamp(20px,5vw,28px); }
+
+        /* Corner floaters — clamp() keeps them clear of the text column and
+           shrinks/fades them on small screens instead of overlapping content */
+        .ls-fl        { font-size: clamp(18px, 6vw, 40px); opacity: 0.85; }
+        .ls-fl-tl     { top: clamp(4%, 3vw, 12%);    left: clamp(3%, 3vw, 8%); }
+        .ls-fl-tr     { top: clamp(3%, 2vw, 8%);     right: clamp(3%, 3vw, 10%); font-size: clamp(16px, 5vw, 40px); }
+        .ls-fl-bl     { bottom: clamp(22%, 6vw, 28%); left: clamp(3%, 3vw, 12%); }
+        .ls-fl-br     { bottom: clamp(28%, 7vw, 34%); right: clamp(3%, 3vw, 14%); font-size: clamp(14px, 4vw, 26px); }
+
+        @media (max-width: 480px) {
+          .ls-fl-tr { opacity: 0.55; }
+          .ls-fl-br { display: none; }
+        }
       `}</style>
     </div>
   )
@@ -249,7 +275,7 @@ export default function SendPackage(){
 
   return(
     <AppLayout title="Move an Item">
-      <div style={{position:'relative',height:'calc(100vh - 175px)',minHeight:480,borderRadius:20,overflow:'hidden'}}>
+      <div className="ls-stage" style={{position:'relative',borderRadius:20,overflow:'hidden'}}>
         <LaunchingSoonOverlay/>
         {/* Existing page, kept intact but frozen behind the launch overlay */}
         <div aria-hidden="true" style={{height:'100%',overflow:'hidden',filter:'blur(3px)',pointerEvents:'none',userSelect:'none'}}>
