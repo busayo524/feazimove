@@ -1116,4 +1116,33 @@ router.patch('/platform-fee',
   }
 )
 
+// ── "Move an Item" launch waitlist — who tapped Join on the Launching Soon page ─
+router.get('/move-waitlist', async (req, res, next) => {
+  try {
+    const result = await query(
+      `SELECT w.id, w.user_id, w.name, w.email, w.phone, w.joined_at,
+              u.can_drive, u.city, u.area
+       FROM move_waitlist w
+       LEFT JOIN users u ON u.id = w.user_id
+       ORDER BY w.joined_at DESC`
+    )
+    const today = result.rows.filter(r => new Date(r.joined_at) >= new Date(new Date().toDateString())).length
+    res.json({
+      total: result.rows.length,
+      joinedToday: today,
+      entries: result.rows.map(r => ({
+        id:       r.id,
+        userId:   r.user_id,
+        name:     r.name,
+        email:    r.email,
+        phone:    r.phone,
+        city:     r.city || null,
+        area:     r.area || null,
+        isDriver: r.can_drive === true,
+        joinedAt: r.joined_at,
+      })),
+    })
+  } catch (err) { next(err) }
+})
+
 module.exports = router

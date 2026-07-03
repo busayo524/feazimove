@@ -313,6 +313,19 @@ async function runMigrations() {
       created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS idx_activity_created ON activity_log(created_at DESC);
+
+    -- "Move an Item" pre-launch waitlist — one row per user who tapped Join.
+    -- Contact details are snapshotted at join time so the list survives later
+    -- profile edits/deletions intact for the launch campaign.
+    CREATE TABLE IF NOT EXISTS move_waitlist (
+      id         UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id    UUID         UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name       VARCHAR(100) NOT NULL,
+      email      VARCHAR(254),
+      phone      VARCHAR(20),
+      joined_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_move_waitlist_joined ON move_waitlist(joined_at DESC);
   `
   try {
     await pool.query(migrations)

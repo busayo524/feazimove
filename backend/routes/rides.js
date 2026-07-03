@@ -579,6 +579,32 @@ router.post('/rate/batch',
   }
 )
 
+// ── "Move an Item" launch waitlist ────────────────────────────────────────────
+// One tap from the Launching Soon overlay — contact details come from the
+// authenticated account, never from the request body, so nothing user-supplied
+// is trusted and the entry can't be spoofed for someone else.
+
+// Has the current user already joined?
+router.get('/move-waitlist/me', async (req, res, next) => {
+  try {
+    const result = await query('SELECT 1 FROM move_waitlist WHERE user_id = $1', [req.user.id])
+    res.json({ joined: !!result.rows[0] })
+  } catch (err) { next(err) }
+})
+
+// Join — idempotent, snapshots name/email/phone at join time
+router.post('/move-waitlist', async (req, res, next) => {
+  try {
+    await query(
+      `INSERT INTO move_waitlist (user_id, name, email, phone)
+       SELECT id, name, email, phone FROM users WHERE id = $1
+       ON CONFLICT (user_id) DO NOTHING`,
+      [req.user.id]
+    )
+    res.status(201).json({ joined: true, message: "You're on the list! We'll notify you at launch." })
+  } catch (err) { next(err) }
+})
+
 function sanitizeRide(row) {
   return {
     id:          row.id,

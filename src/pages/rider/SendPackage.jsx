@@ -37,6 +37,29 @@ function periodForSlot(slot){
 // never collide with the badge/title text on narrow phone screens, and the
 // whole thing scales down via clamp()/media queries instead of fixed px.
 function LaunchingSoonOverlay(){
+  // idle → joining → joined; contact details come from the logged-in account
+  // server-side, so joining is a single tap with no form.
+  const [waitlist,setWaitlist]=useState('idle')
+
+  useEffect(()=>{
+    let cancelled=false
+    api.get('/rides/move-waitlist/me')
+      .then(res=>{ if(!cancelled && res.data.joined) setWaitlist('joined') })
+      .catch(()=>{})
+    return ()=>{ cancelled=true }
+  },[])
+
+  async function joinWaitlist(){
+    if(waitlist!=='idle')return
+    setWaitlist('joining')
+    try {
+      await api.post('/rides/move-waitlist')
+      setWaitlist('joined')
+    } catch {
+      setWaitlist('idle')
+    }
+  }
+
   const floaters=[
     {emoji:'📦', cls:'ls-fl ls-fl-tl', delay:'0s'},
     {emoji:'🛋️', cls:'ls-fl ls-fl-tr', delay:'0.8s'},
@@ -83,12 +106,42 @@ function LaunchingSoonOverlay(){
           Move an Item - from groceries to full apartments.
         </p>
 
+        <p className="ls-tagline" style={{color:NEON,fontWeight:800,letterSpacing:'0.04em',textShadow:'0 0 18px rgba(204,255,0,0.4)'}}>
+          Share Moving Space, Split the cost
+        </p>
+
         {/* Little delivery truck driving across a dashed road */}
         <div className="ls-road" style={{position:'relative',borderBottom:'2px dashed rgba(204,255,0,0.45)',overflow:'hidden'}}>
           <span aria-hidden="true" className="ls-truck" style={{position:'absolute',bottom:2,left:0,animation:'lsDrive 5s linear infinite'}}>
             <span style={{display:'inline-block',transform:'scaleX(-1)'}}>🚚</span>
           </span>
         </div>
+
+        {/* One-tap waitlist — morphs into a celebration once joined */}
+        {waitlist==='joined' ? (
+          <div className="ls-joined" style={{
+            display:'inline-flex',alignItems:'center',gap:10,borderRadius:50,
+            background:'rgba(204,255,0,0.14)',border:`1.5px solid ${NEON}`,color:NEON,
+            fontWeight:800,boxShadow:'0 0 26px rgba(204,255,0,0.35)',
+            animation:'lsPop 0.45s cubic-bezier(.34,1.56,.64,1) both',
+          }}>
+            <span style={{fontSize:'1.2em'}}>🎉</span> You're on the list! We'll notify you at launch.
+          </div>
+        ) : (
+          <button onClick={joinWaitlist} disabled={waitlist==='joining'} className="ls-cta" style={{
+            display:'inline-flex',alignItems:'center',gap:10,borderRadius:50,border:'none',
+            background:NEON,color:NT,fontWeight:900,letterSpacing:'0.02em',
+            cursor:waitlist==='joining'?'wait':'pointer',fontFamily:'inherit',
+            boxShadow:'0 0 30px rgba(204,255,0,0.45), 0 8px 24px rgba(0,0,0,0.35)',
+            animation:'lsBadge 2.2s ease-in-out infinite',transition:'transform 0.15s',
+          }}
+            onMouseEnter={e=>e.currentTarget.style.transform='scale(1.05)'}
+            onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'}>
+            {waitlist==='joining'
+              ? <><span className="ls-spin"/> Saving your spot…</>
+              : <>Join the Waitlist <ArrowRight size={17}/></>}
+          </button>
+        )}
       </div>
 
       <style>{`
@@ -98,6 +151,14 @@ function LaunchingSoonOverlay(){
         @keyframes lsGlow  { 0%,100% { text-shadow:0 0 24px rgba(204,255,0,0.25) } 50% { text-shadow:0 0 46px rgba(204,255,0,0.65) } }
         @keyframes lsBadge { 0%,100% { transform:scale(1) } 50% { transform:scale(1.06) } }
         @keyframes lsDrive { 0% { left:-12% } 100% { left:104% } }
+        @keyframes lsPop   { from { opacity:0; transform:scale(0.6) } to { opacity:1; transform:scale(1) } }
+        @keyframes lsSpin  { to { transform:rotate(360deg) } }
+
+        .ls-spin {
+          width:15px; height:15px; border-radius:50%; display:inline-block;
+          border:2.5px solid rgba(10,10,10,0.25); border-top-color:#0a0a0a;
+          animation: lsSpin 0.8s linear infinite;
+        }
 
         .ls-stage   { min-height: 420px; height: min(78vh, 720px); height: min(78dvh, 720px); }
         @media (max-width: 480px) { .ls-stage { min-height: 380px; height: min(72vh, 640px); height: min(72dvh, 640px); } }
@@ -106,9 +167,12 @@ function LaunchingSoonOverlay(){
         .ls-badge   { padding: clamp(5px,1.4vw,7px) clamp(12px,3vw,18px); font-size: clamp(9px,2.6vw,12px); margin-bottom: clamp(14px,4vw,22px); }
         .ls-title   { font-size: clamp(1.7rem, 8vw, 4rem); margin-bottom: clamp(10px,3vw,18px); }
         .ls-rule    { width: 48px; height: 3px; margin-bottom: clamp(12px,3vw,18px); }
-        .ls-sub     { font-size: clamp(0.88rem, 3.6vw, 1.35rem); margin-bottom: clamp(20px,5vw,34px); }
-        .ls-road    { height: clamp(28px,7vw,40px); }
+        .ls-sub     { font-size: clamp(0.88rem, 3.6vw, 1.35rem); margin-bottom: clamp(8px,2vw,12px); }
+        .ls-tagline { font-size: clamp(0.8rem, 3.2vw, 1.05rem); margin-bottom: clamp(16px,4vw,28px); }
+        .ls-road    { height: clamp(28px,7vw,40px); margin-bottom: clamp(18px,4.5vw,26px); }
         .ls-truck   { font-size: clamp(20px,5vw,28px); }
+        .ls-cta     { padding: clamp(11px,2.8vw,14px) clamp(22px,6vw,34px); font-size: clamp(0.85rem,3.4vw,1rem); }
+        .ls-joined  { padding: clamp(10px,2.6vw,13px) clamp(16px,4.5vw,26px); font-size: clamp(0.78rem,3vw,0.95rem); }
 
         /* Corner floaters — clamp() keeps them clear of the text column and
            shrinks/fades them on small screens instead of overlapping content */

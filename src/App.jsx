@@ -60,6 +60,7 @@ import AdminDriverDetail  from './pages/admin/AdminDriverDetail'
 import AdminRides         from './pages/admin/AdminRides'
 import AdminPayments      from './pages/admin/AdminPayments'
 import AdminAlerts        from './pages/admin/AdminAlerts'
+import AdminMoveWaitlist  from './pages/admin/AdminMoveWaitlist'
 import AdminReports       from './pages/admin/AdminReports'
 import AdminRoutesPage    from './pages/admin/AdminRoutes'
 import AdminStops         from './pages/admin/AdminStops'
@@ -144,6 +145,7 @@ export default function App() {
           <Route path="/admin/stops"          element={<ProtectedRoute requiredRole="admin"><AdminStops /></ProtectedRoute>} />
           <Route path="/admin/pricing"        element={<ProtectedRoute requiredRole="admin"><AdminPricing /></ProtectedRoute>} />
           <Route path="/admin/alerts"         element={<ProtectedRoute requiredRole="admin"><AdminAlerts /></ProtectedRoute>} />
+          <Route path="/admin/move-waitlist"  element={<ProtectedRoute requiredRole="admin"><AdminMoveWaitlist /></ProtectedRoute>} />
           <Route path="/admin/reports"        element={<ProtectedRoute requiredRole="admin"><AdminReports /></ProtectedRoute>} />
           {/* Old Users page merged into User Management */}
           <Route path="/admin/users"             element={<Navigate to="/admin/user-management" replace />} />
