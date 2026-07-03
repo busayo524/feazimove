@@ -11,7 +11,7 @@ import cityDriver    from '../../assets/city-driver.svg'
 import takeaway      from '../../assets/takeaway.svg'
 import heavyBox      from '../../assets/heavy-box-pana.svg'
 import teamPage      from '../../assets/team-page.svg'
-import messengerPana from '../../assets/messenger-pana.svg'
+import movingImg     from '../../assets/Moving.png'
 import busStopPana   from '../../assets/bus-stop-pana.svg'
 import apart1 from '../../assets/setus_Apart1.jpg'
 import apart2 from '../../assets/setus_Apart2.jpg'
@@ -101,7 +101,7 @@ const services = [
     color: '#0f0f0f',
     colorDim: 'rgba(204,255,0,0.18)',
     features: ['Real-time tracking', 'Proof of delivery photos', 'Small to large parcels', 'Same-day delivery'],
-    illustration: React.createElement('img', { src: messengerPana, alt: 'FeaziMove', style: { width: '100%', maxWidth: 520, display: 'block', margin: '0 auto' } }),
+    illustration: React.createElement('img', { src: movingImg, alt: 'FeaziMove', style: { width: '100%', maxWidth: 520, display: 'block', margin: '0 auto', borderRadius: 20 } }),
   },
   {
     id: 'biz',
