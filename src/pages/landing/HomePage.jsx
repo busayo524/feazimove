@@ -535,7 +535,7 @@ export default function HomePage() {
                     Move items from groceries to full apartment. Pool your delivery space with others moving items in the same direction.
                   </p>
                 </div>
-                <Link to="/services#feazisend" className="inline-flex items-center gap-2 font-bold text-sm" style={{ color:'#0f0f0f' }}
+                <Link to="/services" className="inline-flex items-center gap-2 font-bold text-sm" style={{ color:'#0f0f0f' }}
                   onMouseEnter={e => e.currentTarget.style.gap='10px'} onMouseLeave={e => e.currentTarget.style.gap='8px'}>
                   Explore FeaziMove <ArrowRight size={14} />
                 </Link>
