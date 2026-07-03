@@ -119,7 +119,7 @@ const stats = [
   { value: 'Free',  label: 'To register' },
 ]
 
-const logos = ['FeaziPool', 'FeaziSend', 'FeaziBiz', 'FeaziMove', 'FeaziPool', 'FeaziSend', 'FeaziBiz', 'FeaziMove']
+const logos = ['FeaziPool', 'FeaziMove', 'FeaziBiz', 'FeaziPool', 'FeaziMove', 'FeaziBiz']
 
 /* ── Hero animated illustration panel ──────────────────────────────────── */
 function HeroAnimationPanel() {
