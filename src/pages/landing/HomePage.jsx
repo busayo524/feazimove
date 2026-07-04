@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, ArrowUpRight } from 'lucide-react'
 import LandingLayout from '../../components/LandingLayout'
+import InstallAppButton from '../../components/InstallAppButton'
 import { useTheme } from '../../context/ThemeContext'
 import heroBg from '../../assets/car picture group.jpg'
 import { UrbanBoardingScene } from '../../components/illustrations/PeopleIllustration'
@@ -428,6 +429,7 @@ export default function HomePage() {
               >
                 How it works <ArrowUpRight size={15} />
               </Link>
+              <InstallAppButton />
             </div>
 
             {/* Trust pills */}
