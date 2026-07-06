@@ -17,7 +17,12 @@ const adminRoutes  = require('./routes/admin')
 const routesCatalog = require('./routes/routes')
 
 const app  = express()
-const PORT = process.env.PORT || 4000
+// Catalyst AppSail assigns the listen port via X_ZOHO_CATALYST_LISTEN_PORT
+const PORT = process.env.X_ZOHO_CATALYST_LISTEN_PORT || process.env.PORT || 4000
+
+// Behind AppSail's load balancer the client IP arrives in X-Forwarded-For —
+// without this, every user shares one rate-limit bucket (proxy's IP).
+if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1)
 
 // ── Auto-migrate on startup ──────────────────────────────────────────────────
 // Safely adds any missing columns / tables without dropping existing data.
