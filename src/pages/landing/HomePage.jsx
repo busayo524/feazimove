@@ -113,13 +113,6 @@ function WhoItsFor() {
 }
 
 /* ─── data ─────────────────────────────────────────────────────────────── */
-const stats = [
-  { value: 'Soon',  label: 'Launching in Lagos' },
-  { value: '30%',   label: 'Projected savings' },
-  { value: '3+',    label: 'Routes at launch' },
-  { value: 'Free',  label: 'To register' },
-]
-
 const logos = ['FeaziPool', 'FeaziMove', 'FeaziBiz', 'FeaziPool', 'FeaziMove', 'FeaziBiz']
 
 /* ── Hero animated illustration panel ──────────────────────────────────── */
@@ -402,39 +395,12 @@ export default function HomePage() {
 
             {/* CTAs */}
             <div className="flex flex-wrap items-center gap-4 mb-12">
-              <Link to="/register" style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                background: '#ccff00', color: '#0a0a0a',
-                padding: '15px 32px', borderRadius: 50,
-                fontWeight: 800, fontSize: 15, textDecoration: 'none',
-                letterSpacing: '-0.01em',
-                boxShadow: '0 0 32px rgba(204,255,0,0.3)',
-                transition: 'transform 0.2s, box-shadow 0.2s',
-              }}
-                onMouseEnter={e => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 0 48px rgba(204,255,0,0.5)' }}
-                onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='0 0 32px rgba(204,255,0,0.3)' }}
-              >
-                Start for free <ArrowRight size={16} />
-              </Link>
-              <Link to="/how-it-works" style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                color: 'rgba(255,255,255,0.85)',
-                padding: '15px 24px', borderRadius: 50,
-                fontWeight: 700, fontSize: 15, textDecoration: 'none',
-                border: '1.5px solid rgba(255,255,255,0.25)',
-                transition: 'border-color 0.2s, color 0.2s',
-              }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor='rgba(204,255,0,0.6)'; e.currentTarget.style.color='#ccff00' }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor='rgba(255,255,255,0.25)'; e.currentTarget.style.color='rgba(255,255,255,0.85)' }}
-              >
-                How it works <ArrowUpRight size={15} />
-              </Link>
               <InstallAppButton />
             </div>
 
             {/* Trust pills */}
             <div className="flex flex-wrap gap-6">
-              {['No surge pricing', 'Verified drivers', 'Instant matching'].map(t => (
+              {['Verified drivers', 'Verified riders', 'Instant matching', 'No surge ever'].map(t => (
                 <span key={t} style={{
                   display: 'flex', alignItems: 'center', gap: 8,
                   fontSize: 13, fontWeight: 600,
@@ -450,43 +416,6 @@ export default function HomePage() {
         {/* Bottom fade — to black so stats bar connects cleanly */}
         <div className="absolute bottom-0 left-0 right-0 h-36 pointer-events-none"
           style={{ background: 'linear-gradient(to top, #1e2a1e 0%, transparent 100%)' }} />
-      </section>
-
-      {/* ══════════════════════════════════════════════════════════════════
-          STATS BAR
-      ═══════════════════════════════════════════════════════════════════ */}
-      <section style={{ background: 'rgba(15,30,15,0.72)', backdropFilter: 'blur(8px)', position:'relative', overflow:'hidden' }}>
-        {/* Dot grid — right */}
-        <div style={{
-          position:'absolute', top:'50%', right:'2%', transform:'translateY(-50%)',
-          display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:8,
-          opacity:0.12, pointerEvents:'none',
-        }}>
-          {Array.from({length:25}).map((_,i)=>(
-            <div key={i} style={{width:4,height:4,borderRadius:'50%',background:'#ccff00'}}/>
-          ))}
-        </div>
-        {/* Dot grid — left */}
-        <div style={{
-          position:'absolute', top:'50%', left:'2%', transform:'translateY(-50%)',
-          display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:8,
-          opacity:0.12, pointerEvents:'none',
-        }}>
-          {Array.from({length:25}).map((_,i)=>(
-            <div key={i} style={{width:4,height:4,borderRadius:'50%',background:'#ccff00'}}/>
-          ))}
-        </div>
-        <div className="max-w-7xl mx-auto px-6 sm:px-10 grid grid-cols-2 md:grid-cols-4 gap-8 text-center" style={{ paddingTop: 48, paddingBottom: 56 }}>
-          {stats.map(({ value, label }) => (
-            <div key={label}>
-              <p className="font-black text-4xl md:text-5xl mb-1"
-                style={{ color: '#ccff00', letterSpacing: '-0.04em' }}>
-                {value}
-              </p>
-              <p className="text-sm" style={{ color: 'rgba(255,255,255,0.45)' }}>{label}</p>
-            </div>
-          ))}
-        </div>
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════
@@ -610,9 +539,6 @@ export default function HomePage() {
                 We're launching soon in Lagos. Register now to get early access, priority matching, and exclusive launch pricing — before we go public.
               </p>
               <div className="flex flex-wrap gap-4">
-                <Link to="/signup" className="btn-lime">
-                  Join the waitlist <ArrowRight size={16} />
-                </Link>
                 <Link to="/how-it-works" className="btn-ghost">
                   How it works <ArrowUpRight size={15} />
                 </Link>

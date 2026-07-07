@@ -34,7 +34,7 @@ export default function Logo({ size = 'md', linkTo = '/', forceVariant }) {
         }}
       />
       <span style={{
-        fontFamily: "'Inter','Helvetica Neue',Arial,sans-serif",
+        fontFamily: "'IBM Plex Sans Condensed','Inter','Helvetica Neue',Arial,sans-serif",
         fontSize: fs,
         fontStyle: 'normal',
         letterSpacing: '-0.01em',
@@ -42,7 +42,7 @@ export default function Logo({ size = 'md', linkTo = '/', forceVariant }) {
         color: textColor,
       }}>
         <span style={{ fontWeight: 500 }}>Feazi</span>
-        <span style={{ fontWeight: 900 }}>Move</span>
+        <span style={{ fontWeight: 700 }}>Move</span>
       </span>
     </div>
   )
