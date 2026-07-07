@@ -93,7 +93,9 @@ function ProtectedRoute({ children, requiredRole }) {
 export default function App() {
   return (
     <ErrorBoundary>
-    <BrowserRouter>
+    {/* basename follows Vite's `base` so the same code works at the domain
+        root (feazimove.com) and under Catalyst's /app/ development path */}
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <AuthProvider>
         <Routes>
           {/* Marketing pages */}

@@ -2,7 +2,12 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// '/' for the real domain; '/app/' for Catalyst's development URL
+// (build with DEPLOY_BASE=/app/ for the dev-URL package)
+const BASE = process.env.DEPLOY_BASE || '/'
+
 export default defineConfig({
+  base: BASE,
   plugins: [
     react(),
     VitePWA({
@@ -16,9 +21,10 @@ export default defineConfig({
         background_color: '#0a0a0a',
         display: 'standalone',
         orientation: 'portrait',
-        // Installed app opens straight into the product, not the marketing site
-        start_url: '/login',
-        scope: '/',
+        // Installed app opens straight into the product, not the marketing site.
+        // Relative to the manifest URL, so it resolves correctly under any base.
+        start_url: 'login',
+        scope: BASE,
         icons: [
           { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
           { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
@@ -29,7 +35,7 @@ export default defineConfig({
         // Precache only the app shell (JS/CSS/HTML/fonts) — images are runtime-cached
         // instead so installing the app doesn't download every marketing photo.
         globPatterns: ['**/*.{js,css,html,woff2}', 'pwa-*.png', 'favicon.png'],
-        navigateFallback: '/index.html',
+        navigateFallback: BASE + 'index.html',
         // API requests must never be answered by the SPA shell
         navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
