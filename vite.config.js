@@ -21,9 +21,10 @@ export default defineConfig({
         background_color: '#0a0a0a',
         display: 'standalone',
         orientation: 'portrait',
-        // Installed app opens straight into the product, not the marketing site.
-        // Relative to the manifest URL, so it resolves correctly under any base.
-        start_url: 'login',
+        // Installed app opens at the app root — the only path guaranteed to
+        // exist server-side (Catalyst static hosting has no SPA fallback, so
+        // deep-link start_urls like 'login' 404 on first launch, e.g. on iOS).
+        start_url: '.',
         scope: BASE,
         // Relative srcs resolve against the manifest URL, so icons work at the
         // domain root and under Catalyst's /app/ path alike.
