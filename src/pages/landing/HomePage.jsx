@@ -5,6 +5,7 @@ import LandingLayout from '../../components/LandingLayout'
 import InstallAppButton from '../../components/InstallAppButton'
 import { useTheme } from '../../context/ThemeContext'
 import heroBg from '../../assets/car picture group.jpg'
+import heroBgMobile from '../../assets/hero-mobile.jpg'
 import { UrbanBoardingScene } from '../../components/illustrations/PeopleIllustration'
 import accessAccountSvg from '../../assets/access-account.svg'
 import messengerPana from '../../assets/messenger-pana.svg'
@@ -310,15 +311,15 @@ export default function HomePage() {
           backgroundRepeat: 'no-repeat',
         }}
       >
-        {/* Portrait phones see only a narrow slice of this wide photo — aim the
-            crop at the back-seat rider and the laughing passenger instead of
-            the dead centre, and ease the left-dark gradient that mutes them. */}
+        {/* Phones get a dedicated 9:16 portrait crop of the same photo —
+            both rider faces framed properly instead of a sliver of the
+            wide landscape shot. */}
         <style>{`
           @media (max-width: 768px) {
-            /* Portrait slice is ~35% of the photo's width; both rear-girl and
-               right-guy faces only fit with the window pushed nearly to the
-               right edge (they span 55%..92% of the image width). */
-            .home-hero { background-position: 86% 32% !important; }
+            .home-hero {
+              background-image: url(${heroBgMobile}) !important;
+              background-position: center 25% !important;
+            }
           }
         `}</style>
         {/* Multi-layer overlay: dark on left for text legibility, opens up on right */}
