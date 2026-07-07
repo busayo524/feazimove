@@ -47,7 +47,7 @@ const audience = [
   {
     img: drvImg,
     imgPos: 'center center',
-    tag: 'Drivers',
+    tag: 'Car Owners',
     title: 'Car Owners/Drivers',
     body: 'Earn on every commute — to and from work — with verified riders heading your way.',
   },
