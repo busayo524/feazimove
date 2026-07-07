@@ -315,7 +315,10 @@ export default function HomePage() {
             the dead centre, and ease the left-dark gradient that mutes them. */}
         <style>{`
           @media (max-width: 768px) {
-            .home-hero { background-position: 68% 30% !important; }
+            /* Portrait slice is ~35% of the photo's width; both rear-girl and
+               right-guy faces only fit with the window pushed nearly to the
+               right edge (they span 55%..92% of the image width). */
+            .home-hero { background-position: 86% 32% !important; }
           }
         `}</style>
         {/* Multi-layer overlay: dark on left for text legibility, opens up on right */}
