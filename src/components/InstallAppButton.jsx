@@ -67,16 +67,17 @@ export default function InstallAppButton() {
     <>
       <button onClick={handleClick} disabled={installed} style={{
         display: 'inline-flex', alignItems: 'center', gap: 8,
-        color: installed ? NEON : 'rgba(255,255,255,0.85)',
-        padding: '15px 24px', borderRadius: 50,
-        fontWeight: 700, fontSize: 15,
-        background: 'transparent',
-        border: `1.5px solid ${installed ? 'rgba(204,255,0,0.6)' : 'rgba(255,255,255,0.25)'}`,
+        color: '#0a0a0a',
+        padding: '15px 32px', borderRadius: 50,
+        fontWeight: 800, fontSize: 15, letterSpacing: '-0.01em',
+        background: NEON,
+        border: 'none',
+        boxShadow: '0 0 32px rgba(204,255,0,0.3)',
         cursor: installed ? 'default' : 'pointer', fontFamily: 'inherit',
-        transition: 'border-color 0.2s, color 0.2s',
+        transition: 'transform 0.2s, box-shadow 0.2s',
       }}
-        onMouseEnter={e => { if (!installed) { e.currentTarget.style.borderColor = 'rgba(204,255,0,0.6)'; e.currentTarget.style.color = NEON } }}
-        onMouseLeave={e => { if (!installed) { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)'; e.currentTarget.style.color = 'rgba(255,255,255,0.85)' } }}
+        onMouseEnter={e => { if (!installed) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 0 48px rgba(204,255,0,0.5)' } }}
+        onMouseLeave={e => { if (!installed) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 0 32px rgba(204,255,0,0.3)' } }}
       >
         {installed
           ? <><CheckCircle2 size={16} /> App installed</>
