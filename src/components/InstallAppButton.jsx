@@ -86,48 +86,53 @@ export default function InstallAppButton() {
       {/* Install instructions sheet (iOS + browsers without the prompt) */}
       {showSheet && (
         <div onClick={() => setShowSheet(false)} style={{
-          position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.65)',
+          position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(10,10,10,0.55)',
+          backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
         }}>
           <div onClick={e => e.stopPropagation()} style={{
-            background: '#111a00', border: '1px solid rgba(204,255,0,0.25)', borderRadius: 20,
-            padding: '28px 26px', maxWidth: 400, width: '100%', position: 'relative',
-            boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+            background: '#ffffff', borderRadius: 24,
+            padding: '30px 28px 28px', maxWidth: 410, width: '100%', position: 'relative',
+            boxShadow: '0 24px 80px rgba(0,0,0,0.35)',
           }}>
             <button onClick={() => setShowSheet(false)} aria-label="Close" style={{
-              position: 'absolute', top: 14, right: 14, background: 'none', border: 'none',
-              color: 'rgba(255,255,255,0.6)', cursor: 'pointer', padding: 4,
-            }}><X size={18} /></button>
+              position: 'absolute', top: 16, right: 16, width: 32, height: 32, borderRadius: '50%',
+              background: '#f3f4f6', border: 'none', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', color: '#6b7280', cursor: 'pointer', padding: 0,
+            }}><X size={16} /></button>
 
-            <div style={{ width: 52, height: 52, borderRadius: 14, background: NEON, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 18 }}>
-              <Smartphone size={26} color="#0a0a0a" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18 }}>
+              <div style={{ width: 50, height: 50, borderRadius: 14, background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Smartphone size={24} color={NEON} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: 19, fontWeight: 900, color: '#0f0f0f', letterSpacing: '-0.02em', margin: 0 }}>
+                  Install FeaziMove
+                </h3>
+                <p style={{ fontSize: 12.5, color: '#6b7280', margin: '2px 0 0' }}>Free · No app store needed</p>
+              </div>
             </div>
-            <h3 style={{ fontSize: 20, fontWeight: 900, color: '#fff', marginBottom: 6, letterSpacing: '-0.02em' }}>
-              Install FeaziMove
-            </h3>
-            <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.65)', lineHeight: 1.6, marginBottom: 20 }}>
-              Add FeaziMove to your home screen for a full-screen app experience — no app store needed.
+
+            <p style={{ fontSize: 14, color: '#4b5563', lineHeight: 1.65, marginBottom: 22 }}>
+              Add FeaziMove to your home screen and use it like any other app — full screen, with its own icon.
             </p>
 
-            {ios ? (
-              <ol style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {[
-                  { icon: <Share size={16} color={NEON} />, text: <>Tap the <strong style={{ color: '#fff' }}>Share</strong> button in Safari's toolbar</> },
-                  { icon: <SquarePlus size={16} color={NEON} />, text: <>Scroll down and tap <strong style={{ color: '#fff' }}>Add to Home Screen</strong></> },
-                  { icon: <CheckCircle2 size={16} color={NEON} />, text: <>Tap <strong style={{ color: '#fff' }}>Add</strong> — FeaziMove appears on your home screen</> },
-                ].map((s, i) => (
-                  <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                    <span style={{ width: 30, height: 30, borderRadius: 9, background: 'rgba(204,255,0,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{s.icon}</span>
-                    <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.85)', lineHeight: 1.55, margin: '5px 0 0' }}>{s.text}</p>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.85)', lineHeight: 1.7, margin: 0 }}>
-                Open <strong style={{ color: NEON }}>feazimove.com</strong> in <strong style={{ color: '#fff' }}>Chrome</strong> on your phone,
-                then choose <strong style={{ color: '#fff' }}>Install app</strong> (or "Add to Home screen") from the ⋮ menu.
-              </p>
-            )}
+            <ol style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {(ios ? [
+                { icon: <Share size={15} color="#0a0a0a" />, text: <>Tap the <strong>Share</strong> button in Safari's toolbar</> },
+                { icon: <SquarePlus size={15} color="#0a0a0a" />, text: <>Scroll down and tap <strong>Add to Home Screen</strong></> },
+                { icon: <CheckCircle2 size={15} color="#0a0a0a" />, text: <>Tap <strong>Add</strong> — FeaziMove appears on your home screen</> },
+              ] : [
+                { icon: <Smartphone size={15} color="#0a0a0a" />, text: <>Open <strong>this website</strong> in Chrome on your phone</> },
+                { icon: <SquarePlus size={15} color="#0a0a0a" />, text: <>Tap the <strong>⋮ menu</strong>, then <strong>Add to Home screen</strong> or <strong>Install app</strong></> },
+                { icon: <CheckCircle2 size={15} color="#0a0a0a" />, text: <>Confirm — FeaziMove appears on your home screen</> },
+              ]).map((s, i) => (
+                <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '11px 12px', borderRadius: 12, background: i % 2 ? '#ffffff' : '#f8faf5' }}>
+                  <span style={{ width: 32, height: 32, borderRadius: 10, background: NEON, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{s.icon}</span>
+                  <p style={{ fontSize: 13.5, color: '#1f2937', lineHeight: 1.5, margin: 0 }}>{s.text}</p>
+                </li>
+              ))}
+            </ol>
           </div>
         </div>
       )}

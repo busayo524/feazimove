@@ -25,10 +25,12 @@ export default defineConfig({
         // Relative to the manifest URL, so it resolves correctly under any base.
         start_url: 'login',
         scope: BASE,
+        // Relative srcs resolve against the manifest URL, so icons work at the
+        // domain root and under Catalyst's /app/ path alike.
         icons: [
-          { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/pwa-maskable-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'pwa-maskable-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
