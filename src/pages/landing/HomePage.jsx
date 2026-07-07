@@ -302,7 +302,7 @@ export default function HomePage() {
           HERO — full-screen photo background
       ═══════════════════════════════════════════════════════════════════ */}
       <section
-        className="relative min-h-screen flex flex-col justify-center overflow-hidden"
+        className="relative min-h-screen flex flex-col justify-center overflow-hidden home-hero"
         style={{
           backgroundImage: `url(${heroBg})`,
           backgroundSize: 'cover',
@@ -310,6 +310,14 @@ export default function HomePage() {
           backgroundRepeat: 'no-repeat',
         }}
       >
+        {/* Portrait phones see only a narrow slice of this wide photo — aim the
+            crop at the back-seat rider and the laughing passenger instead of
+            the dead centre, and ease the left-dark gradient that mutes them. */}
+        <style>{`
+          @media (max-width: 768px) {
+            .home-hero { background-position: 68% 30% !important; }
+          }
+        `}</style>
         {/* Multi-layer overlay: dark on left for text legibility, opens up on right */}
         <div style={{
           position: 'absolute', inset: 0, pointerEvents: 'none',
