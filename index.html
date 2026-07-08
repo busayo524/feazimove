@@ -2,6 +2,16 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      // Canonical-origin guard: if served from the bare domain (or plain HTTP),
+      // hop to the secure www origin the API trusts — preserves the full path.
+      (function () {
+        var h = location.hostname
+        if (h === 'feazimove.com' || (h === 'www.feazimove.com' && location.protocol === 'http:')) {
+          location.replace('https://www.feazimove.com' + location.pathname + location.search + location.hash)
+        }
+      })()
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <!-- Security Headers via meta tags -->
