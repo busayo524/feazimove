@@ -3,6 +3,18 @@
  * Security: helmet, CORS allowlist, rate limiting, no stack traces in prod
  */
 require('dotenv').config()
+
+// ── Fail fast on missing/placeholder critical env vars ──────────────────────
+// Without JWT_SECRET the server would sign unverifiable tokens; without
+// DATABASE_URL every query fails at request time instead of at boot.
+for (const key of ['JWT_SECRET', 'DATABASE_URL']) {
+  const val = process.env[key]
+  if (!val || val.includes('replace_with') || val.includes('USER:PASSWORD')) {
+    console.error(`FATAL: ${key} is not set — configure it in .env or the AppSail environment`)
+    process.exit(1)
+  }
+}
+
 const express    = require('express')
 const helmet     = require('helmet')
 const cors       = require('cors')
