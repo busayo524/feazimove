@@ -366,6 +366,13 @@ app.use(helmet({
 }))
 
 // ── CORS — only allow frontend origin ────────────────────────────────────────
+// On Catalyst AppSail, Zoho's edge injects Access-Control-Allow-* headers for
+// the project's authorized domains. If the app adds its own, browsers see a
+// duplicated Access-Control-Allow-Origin and block EVERY request — so on
+// Catalyst the edge must be the only CORS layer. FORCE_APP_CORS=1 restores
+// app-level CORS (e.g. if the edge behavior ever changes).
+const ON_CATALYST = !!process.env.X_ZOHO_CATALYST_LISTEN_PORT
+
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173')
   .split(',')
   .map(o => o.trim())
@@ -373,18 +380,20 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173')
 // In development also always allow localhost variants
 const DEV_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3000']
 
-app.use(cors({
-  origin: (origin, cb) => {
-    // Allow requests with no origin (mobile apps, curl, Postman)
-    if (!origin) return cb(null, true)
-    const allowed = [...ALLOWED_ORIGINS, ...(process.env.NODE_ENV !== 'production' ? DEV_ORIGINS : [])]
-    if (allowed.includes(origin)) return cb(null, true)
-    cb(new Error(`CORS: origin ${origin} not allowed`))
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}))
+if (!ON_CATALYST || process.env.FORCE_APP_CORS === '1') {
+  app.use(cors({
+    origin: (origin, cb) => {
+      // Allow requests with no origin (mobile apps, curl, Postman)
+      if (!origin) return cb(null, true)
+      const allowed = [...ALLOWED_ORIGINS, ...(process.env.NODE_ENV !== 'production' ? DEV_ORIGINS : [])]
+      if (allowed.includes(origin)) return cb(null, true)
+      cb(new Error(`CORS: origin ${origin} not allowed`))
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  }))
+}
 
 // Capture the raw body alongside the parsed one — needed to verify the
 // Paystack webhook signature (HMAC over the exact bytes Paystack sent).
