@@ -1,26 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Menu, X, Sun, Moon, ChevronDown, Users, Car, Clock, Package, Briefcase, TrendingUp, MapPin, BookOpen } from 'lucide-react'
+import { Menu, X, Sun, Moon, ChevronDown, Users, Clock, Package, Briefcase, TrendingUp, MapPin, BookOpen } from 'lucide-react'
 import Logo from './Logo'
 import { useTheme } from '../context/ThemeContext'
 
 const FOREST = '#15803d'
 const NEON   = '#ccff00'
 const NT     = '#0a0a0a'
-
-const RIDE_ITEMS = [
-  { icon: <Users size={18} color="#15803d"/>,   label: 'FeaziPool',        sub: 'Share a route, split the cost',        href: '/services', bg: '#dcfce7' },
-  { icon: <Car size={18} color="#1d4ed8"/>,      label: 'Solo Ride',        sub: 'Private, direct trips',                href: '/services', bg: '#dbeafe' },
-  { icon: <Clock size={18} color="#b45309"/>,    label: 'Schedule a Ride',  sub: 'Book in advance, travel on your time', href: '/services', bg: '#fef3c7' },
-  { icon: <Package size={18} color="#7c3aed"/>,  label: 'FeaziMove',        sub: 'Fast & reliable moving',               href: '/services', bg: '#ede9fe' },
-]
-
-const DRIVE_ITEMS = [
-  { icon: <Car size={18} color="#15803d"/>,        label: 'Become a Driver',      sub: 'Earn money driving with FeaziMove',   href: '/how-it-works', bg: '#dcfce7' },
-  { icon: <TrendingUp size={18} color="#0369a1"/>, label: 'Earnings Potential',   sub: 'See how much you can make',           href: '/how-it-works', bg: '#e0f2fe' },
-  { icon: <Briefcase size={18} color="#b45309"/>,  label: 'Driver Requirements',  sub: 'What you need to get started',        href: '/how-it-works', bg: '#fef3c7' },
-  { icon: <MapPin size={18} color="#be185d"/>,     label: 'FeaziBiz Deliveries',  sub: 'Business logistics & bulk delivery',  href: '/services',     bg: '#fce7f3' },
-]
 
 const LEARN_ITEMS = [
   { icon: <Users size={18} color="#15803d"/>,       label: 'How FeaziMove Works',  sub: 'Understand how pooled rides & delivery work', href: '/how-it-works', bg: '#dcfce7' },
@@ -124,50 +110,32 @@ export default function Navbar() {
         {/* Desktop nav links */}
         <ul className="nav-desktop-links" style={{ listStyle:'none', margin:0, padding:0, flex: 1, display:'flex', alignItems:'center' }}>
 
-          {/* Ride dropdown */}
-          <li style={{ position:'relative' }}
-            onMouseEnter={() => openDrop('ride')}
-            onMouseLeave={scheduledClose}>
-            <button style={{
-              display:'flex', alignItems:'center', gap:5, padding:'8px 14px',
-              background:'none', border:'none', cursor:'pointer', borderRadius:8,
+          {/* Ride — straight to rider signup */}
+          <li>
+            <Link to="/signup?role=rider" style={{
+              display:'block', padding:'8px 14px', borderRadius:8,
               fontWeight: 600, fontSize: 14,
-              color: dropdown === 'ride' ? FOREST : (isDark ? '#fff' : NT),
-              transition:'color 0.15s',
+              color: isDark ? '#fff' : NT,
+              textDecoration:'none', transition:'color 0.15s',
             }}
               onMouseEnter={e => e.currentTarget.style.color = FOREST}
-              onMouseLeave={e => e.currentTarget.style.color = dropdown === 'ride' ? FOREST : (isDark ? '#fff' : NT)}>
+              onMouseLeave={e => e.currentTarget.style.color = isDark ? '#fff' : NT}>
               Ride
-              <ChevronDown size={14} style={{ transition:'transform 0.2s', transform: dropdown === 'ride' ? 'rotate(180deg)' : 'rotate(0deg)' }}/>
-            </button>
-            {dropdown === 'ride' && (
-              <div onMouseEnter={cancelClose} onMouseLeave={scheduledClose}>
-                <Dropdown items={RIDE_ITEMS} onClose={() => setDropdown(null)} isDark={isDark}/>
-              </div>
-            )}
+            </Link>
           </li>
 
-          {/* Drive dropdown */}
-          <li style={{ position:'relative' }}
-            onMouseEnter={() => openDrop('drive')}
-            onMouseLeave={scheduledClose}>
-            <button style={{
-              display:'flex', alignItems:'center', gap:5, padding:'8px 14px',
-              background:'none', border:'none', cursor:'pointer', borderRadius:8,
+          {/* Drive — straight to driver signup */}
+          <li>
+            <Link to="/signup?role=driver" style={{
+              display:'block', padding:'8px 14px', borderRadius:8,
               fontWeight: 600, fontSize: 14,
-              color: dropdown === 'drive' ? FOREST : (isDark ? '#fff' : NT),
-              transition:'color 0.15s',
+              color: isDark ? '#fff' : NT,
+              textDecoration:'none', transition:'color 0.15s',
             }}
               onMouseEnter={e => e.currentTarget.style.color = FOREST}
-              onMouseLeave={e => e.currentTarget.style.color = dropdown === 'drive' ? FOREST : (isDark ? '#fff' : NT)}>
+              onMouseLeave={e => e.currentTarget.style.color = isDark ? '#fff' : NT}>
               Drive
-              <ChevronDown size={14} style={{ transition:'transform 0.2s', transform: dropdown === 'drive' ? 'rotate(180deg)' : 'rotate(0deg)' }}/>
-            </button>
-            {dropdown === 'drive' && (
-              <div onMouseEnter={cancelClose} onMouseLeave={scheduledClose}>
-                <Dropdown items={DRIVE_ITEMS} onClose={() => setDropdown(null)} isDark={isDark}/>
-              </div>
-            )}
+            </Link>
           </li>
 
           {/* Learn dropdown */}
@@ -267,8 +235,8 @@ export default function Navbar() {
         <div className="nav-mobile-drawer" style={{ background: isDark?'rgba(12,12,12,0.98)':'rgba(255,255,255,0.98)', backdropFilter:'blur(20px)', borderTop: isDark?'1px solid rgba(255,255,255,0.08)':'1px solid rgba(0,0,0,0.08)', maxHeight:'80vh', overflowY:'auto' }}>
           <ul style={{ margin:0, padding:'8px 24px 4px', listStyle:'none' }}>
             {[
-              { label:'Ride', href:'/services' },
-              { label:'Drive', href:'/services#driver' },
+              { label:'Ride', href:'/signup?role=rider' },
+              { label:'Drive', href:'/signup?role=driver' },
               { label:'How It Works', href:'/how-it-works' },
               { label:'Safety', href:'/safety' },
               ...SIMPLE_LINKS,
