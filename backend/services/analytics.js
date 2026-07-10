@@ -3,31 +3,65 @@
  * Frontend tracking can drop events (dead battery, lost signal, closed tab);
  * these fire from the backend at the moment the database change commits.
  *
- * Every helper is fire-and-forget and silently no-ops without a token —
- * analytics must never fail a request.
+ * Talks to Mixpanel's HTTP API directly with Node's built-in https module —
+ * no SDK dependency. Every helper is fire-and-forget and silently no-ops
+ * without a token; analytics must never fail a request.
  */
+const https = require('https')
+
 const MIXPANEL_TOKEN = process.env.MIXPANEL_TOKEN
 
-let mp = null
-if (MIXPANEL_TOKEN) {
-  try { mp = require('mixpanel').init(MIXPANEL_TOKEN) }
-  catch (err) { console.error('Mixpanel init failed:', err.message) }
+// POST base64-encoded JSON to a Mixpanel ingestion endpoint, fire-and-forget
+function send(path, payload) {
+  try {
+    const body = 'data=' + encodeURIComponent(Buffer.from(JSON.stringify(payload)).toString('base64'))
+    const req = https.request({
+      hostname: 'api.mixpanel.com',
+      path,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Length': Buffer.byteLength(body),
+      },
+      timeout: 5000,
+    }, res => res.resume())
+    req.on('error', () => { /* analytics must never break a request */ })
+    req.on('timeout', () => req.destroy())
+    req.write(body)
+    req.end()
+  } catch { /* ignore */ }
 }
 
 // distinctId = users.id — the same id the frontend passes to mixpanel.identify()
 function track(distinctId, event, props = {}) {
-  if (!mp || !distinctId) return
-  try { mp.track(event, { distinct_id: distinctId, ...props }) } catch { /* ignore */ }
+  if (!MIXPANEL_TOKEN || !distinctId) return
+  send('/track?ip=0', {
+    event,
+    properties: {
+      token: MIXPANEL_TOKEN,
+      distinct_id: String(distinctId),
+      time: Math.floor(Date.now() / 1000),
+      ...props,
+    },
+  })
 }
 
 function setProfile(distinctId, props) {
-  if (!mp || !distinctId) return
-  try { mp.people.set(distinctId, props) } catch { /* ignore */ }
+  if (!MIXPANEL_TOKEN || !distinctId) return
+  send('/engage#profile-set', {
+    $token: MIXPANEL_TOKEN,
+    $distinct_id: String(distinctId),
+    $set: props,
+  })
 }
 
 function incrementProfile(distinctId, props) {
-  if (!mp || !distinctId) return
-  try { mp.people.increment(distinctId, props) } catch { /* ignore */ }
+  if (!MIXPANEL_TOKEN || !distinctId) return
+  send('/engage#profile-numerical-add', {
+    $token: MIXPANEL_TOKEN,
+    $distinct_id: String(distinctId),
+    $add: props,
+  })
 }
 
 // "Advance" if booked the night before, "Last_Minute" if booked on travel day.
