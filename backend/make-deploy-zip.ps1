@@ -20,10 +20,12 @@ robocopy $backend $stage /MIR /XF .env *.zip make-deploy-zip.ps1 /NFL /NDL /NJH 
 $local = Get-Content (Join-Path $backend '.env') | ForEach-Object {
   if ($_ -match '^NODE_ENV=') { 'NODE_ENV=production' } else { $_ }
 }
-@(
+$lines = @(
   '# Fallback config bundled for Catalyst AppSail.'
   '# Env vars set in the AppSail Configuration UI always take precedence.'
-) + $local | Set-Content (Join-Path $stage '.env') -Encoding utf8NoBOM
+) + $local
+# UTF8 without BOM — works on both Windows PowerShell 5.1 and pwsh 7
+[System.IO.File]::WriteAllLines((Join-Path $stage '.env'), $lines, (New-Object System.Text.UTF8Encoding($false)))
 
 if (Test-Path $zip) { Remove-Item $zip -Force }
 Add-Type -AssemblyName System.IO.Compression.FileSystem
