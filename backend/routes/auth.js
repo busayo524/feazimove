@@ -881,4 +881,43 @@ router.get('/avatar',
   }
 )
 
+// ── Storage self-test — authenticated diagnostic for the file-storage layer.
+// Exercises every File Store step and reports which one fails, since
+// production error responses are (rightly) opaque.
+router.get('/storage-selftest', requireAuth, async (req, res) => {
+  const steps = { onCatalyst: !!process.env.X_ZOHO_CATALYST_LISTEN_PORT }
+  try {
+    const catalyst = require('zcatalyst-sdk-node')
+    steps.sdkLoaded = true
+    let app
+    try { app = catalyst.initialize(req, { scope: 'admin' }); steps.init = 'admin' }
+    catch (e) { steps.adminInitError = e.message; app = catalyst.initialize(req); steps.init = 'default' }
+    const store = app.filestore()
+    const folders = await store.getAllFolders()
+    steps.folders = (folders || []).map(f => ({ id: String(f.id), name: f.folder_name || f.name }))
+    let folder = (folders || []).find(f => (f.folder_name || f.name) === 'feazimove-uploads')
+    if (!folder) {
+      try { folder = await store.createFolder('feazimove-uploads'); steps.createdFolder = 'string-arg' }
+      catch (e1) {
+        steps.createStringError = e1.message
+        folder = await store.createFolder({ folder_name: 'feazimove-uploads' })
+        steps.createdFolder = 'object-arg'
+      }
+    }
+    steps.folderId = String(folder.id)
+    const { Readable } = require('stream')
+    const up = await store.folder(folder.id).uploadFile({ code: Readable.from(Buffer.from('selftest')), name: `selftest-${Date.now()}.txt` })
+    steps.uploadedFileId = String(up.id)
+    const data = await store.folder(folder.id).downloadFile(up.id)
+    steps.downloadedBytes = Buffer.isBuffer(data) ? data.length : (typeof data === 'object' && data.pipe ? 'stream' : String(data).length)
+    await store.folder(folder.id).deleteFile(up.id)
+    steps.cleanup = 'ok'
+    res.json({ ok: true, steps })
+  } catch (err) {
+    steps.error = err.message
+    steps.stack = (err.stack || '').split('\n').slice(0, 5)
+    res.status(500).json({ ok: false, steps })
+  }
+})
+
 module.exports = router

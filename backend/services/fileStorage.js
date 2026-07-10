@@ -19,14 +19,21 @@ const ON_CATALYST = !!process.env.X_ZOHO_CATALYST_LISTEN_PORT
 
 let cachedFolderId = null
 
-async function getFolder(req) {
+function initCatalyst(req) {
   const catalyst = require('zcatalyst-sdk-node')
-  const app   = catalyst.initialize(req)
-  const store = app.filestore()
+  // Requests from the public internet carry no Zoho user session, so the SDK
+  // must act with the app's own project credentials (admin scope). Fall back
+  // to default init for environments where admin scope isn't applicable.
+  try { return catalyst.initialize(req, { scope: 'admin' }) }
+  catch { return catalyst.initialize(req) }
+}
+
+async function getFolder(req) {
+  const store = initCatalyst(req).filestore()
   if (cachedFolderId) return store.folder(cachedFolderId)
 
   const folders = await store.getAllFolders()
-  let folder = (folders || []).find(f => f.folder_name === FOLDER_NAME)
+  let folder = (folders || []).find(f => (f.folder_name || f.name) === FOLDER_NAME)
   if (!folder) {
     try { folder = await store.createFolder(FOLDER_NAME) }
     catch { folder = await store.createFolder({ folder_name: FOLDER_NAME }) }
@@ -44,9 +51,14 @@ function genFilename(originalname) {
 async function saveUpload(req, file) {
   const filename = genFilename(file.originalname)
   if (ON_CATALYST) {
-    const folder = await getFolder(req)
-    const uploaded = await folder.uploadFile({ code: Readable.from(file.buffer), name: filename })
-    return `fs:${uploaded.id}:${filename}`
+    try {
+      const folder = await getFolder(req)
+      const uploaded = await folder.uploadFile({ code: Readable.from(file.buffer), name: filename })
+      return `fs:${uploaded.id}:${filename}`
+    } catch (err) {
+      console.error('fileStorage upload failed:', err.message, err.stack)
+      throw err
+    }
   }
   fs.mkdirSync(UPLOAD_DIR, { recursive: true })
   fs.writeFileSync(path.join(UPLOAD_DIR, filename), file.buffer)
