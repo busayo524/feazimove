@@ -173,8 +173,8 @@ export default function BookRide(){
     setBookingId(null)
     setBookError(null)
     try {
+      track('search_route', { pickup_zone: pickup, dropoff_zone: dropoff, service })
       const res = await api.post('/rides/book-intent', { period, timeSlot, pickup, dropoff, service, comment })
-      track('Ride Booked', { service, period })
       setBookingId(res.data.bookingId)
     } catch(err) {
       setBookError(err.data?.message || 'Could not register your booking. Please try again.')

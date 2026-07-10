@@ -314,11 +314,11 @@ export default function SendPackage(){
     setQuotedFare(null)
     setBookError(null)
     try {
+      track('search_route', { pickup_zone: pickup, dropoff_zone: dropoff, service: 'send' })
       const res = await api.post('/rides/book-intent', {
         period: periodForSlot(timeSlot), timeSlot, pickup, dropoff, service:'send',
         recipientName: recipient, recipientPhone, packageSize: size, notes,
       })
-      track('Package Send Requested', { size })
       setBookingId(res.data.bookingId)
       setQuotedFare(res.data.quotedFare)
     } catch(err) {

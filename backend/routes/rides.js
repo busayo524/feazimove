@@ -6,6 +6,7 @@ const { query } = require('../db')
 const { requireAuth, requireRole } = require('../middleware/auth')
 const { validate } = require('../middleware/validate')
 const { sendStored } = require('../services/fileStorage')
+const analytics = require('../services/analytics')
 
 const router = express.Router()
 
@@ -108,6 +109,9 @@ router.post('/book-intent',
       )
       const route = routeRes.rows[0]
       if (!route) {
+        analytics.track(req.user.id, 'reservation_failed', {
+          route_name: `${pickup}_to_${dropoff}`, reason: 'no_route_available',
+        })
         return res.status(422).json({ message: 'That route is not currently available.' })
       }
       const quotedFareKobo = service === 'pool' ? route.pool_fare_kobo
@@ -121,6 +125,9 @@ router.post('/book-intent',
         // BIGINT columns come back from pg as strings — compare as Numbers,
         // not strings, or "400000" < "45000" lexicographically (wrongly) true.
         if (Number(walletRes.rows[0].wallet_balance) < Number(quotedFareKobo)) {
+          analytics.track(req.user.id, 'reservation_failed', {
+            route_name: `${pickup}_to_${dropoff}`, reason: 'insufficient_funds',
+          })
           return res.status(402).json({
             message: `Insufficient wallet balance. This ride costs ₦${Math.round(quotedFareKobo / 100)}. Please top up your wallet first.`,
             requiredAmount: Math.round(quotedFareKobo / 100),
@@ -144,6 +151,14 @@ router.post('/book-intent',
         [req.user.id, period, timeSlot, pickup, dropoff, service, quotedFareKobo,
          recipientName || null, recipientPhone || null, packageSize || null, notes || null, comment || null]
       )
+
+      analytics.track(req.user.id, 'reserve_seat', {
+        route_name: `${pickup}_to_${dropoff}`,
+        departure_time_slot: timeSlot,
+        period, service,
+        booking_window: analytics.bookingWindow(timeSlot),
+      })
+      analytics.setProfile(req.user.id, { primary_route: `${pickup}_to_${dropoff}` })
 
       res.status(201).json({
         bookingId: result.rows[0].id,
@@ -364,7 +379,8 @@ router.patch('/:rideId/status',
   async (req, res, next) => {
     try {
       const { status } = req.body
-      const extra = status === 'completed' ? ', completed_at = NOW()' : ''
+      const extra = status === 'completed' ? ', completed_at = NOW()'
+        : status === 'in_transit' ? ', in_transit_at = NOW()' : ''
       // Only allow the correct next step from the current status, regardless
       // of which side (driver or rider) is the one confirming it.
       const result = await query(
@@ -376,11 +392,19 @@ router.patch('/:rideId/status',
               ($1 = 'in_transit' AND status = 'arrived_pickup') OR
               ($1 = 'completed' AND status = 'in_transit')
             )
-          RETURNING id, fare_kobo, rider_id, driver_id`,
+          RETURNING id, fare_kobo, rider_id, driver_id, pickup, destination, in_transit_at, completed_at`,
         [status, req.params.rideId, req.user.id]
       )
 
       if (!result.rows[0]) return res.status(409).json({ message: 'Could not update this ride — it may already be past this stage.' })
+
+      const ride = result.rows[0]
+      const routeName = `${ride.pickup}_to_${ride.destination}`
+      if (status === 'in_transit') {
+        analytics.track(ride.rider_id, 'board_shuttle', {
+          shuttle_id: ride.id, route_name: routeName, driver_id: ride.driver_id,
+        })
+      }
 
       // On completion: deduct from rider, credit driver — use the ride's
       // actual driver_id/rider_id, not req.user.id, since either side may
@@ -406,6 +430,23 @@ router.patch('/:rideId/status',
           'INSERT INTO wallet_transactions (user_id, type, amount_kobo, description) VALUES ($1, $2, $3, $4)',
           [driver_id, 'credit', driverShareKobo, `Ride earnings — ${result.rows[0].id.slice(0,8)}`]
         )
+
+        // Server-side analytics — the authoritative trip + revenue events
+        const travelMinutes = ride.in_transit_at && ride.completed_at
+          ? Math.round((new Date(ride.completed_at) - new Date(ride.in_transit_at)) / 60000)
+          : undefined
+        analytics.track(rider_id, 'trip_completed', {
+          route_name: routeName, trip_id: ride.id,
+          total_travel_time_minutes: travelMinutes,
+        })
+        analytics.track(rider_id, 'wallet_deducted', {
+          fare_amount: Math.round(fare_kobo / 100), trip_id: ride.id,
+        })
+        analytics.incrementProfile(rider_id, { lifetime_trips_completed: 1 })
+        const balances = await query('SELECT id, wallet_balance FROM users WHERE id = ANY($1)', [[rider_id, driver_id]])
+        for (const u of balances.rows) {
+          analytics.setProfile(u.id, { current_wallet_balance: Math.round(u.wallet_balance / 100) })
+        }
       }
 
       res.json({ message: 'Status updated.' })

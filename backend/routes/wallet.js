@@ -5,6 +5,7 @@ const axios    = require('axios')
 const { query } = require('../db')
 const { requireAuth } = require('../middleware/auth')
 const { validate }    = require('../middleware/validate')
+const analytics = require('../services/analytics')
 
 const router = express.Router()
 router.use(requireAuth)
@@ -91,14 +92,27 @@ router.post('/fund',
 // Credits a still-pending transaction and marks it completed. Used by both
 // the webhook and the verify-fallback below — guarded by the 'pending' check
 // in the UPDATE so a transaction is never credited twice.
-async function creditTransaction(reference) {
+async function creditTransaction(reference, paymentMethod) {
   const txRes = await query(
     "UPDATE wallet_transactions SET status = 'completed' WHERE reference = $1 AND status = 'pending' RETURNING user_id, amount_kobo",
     [reference]
   )
   if (!txRes.rows[0]) return false // already credited or unknown reference
   const { user_id, amount_kobo } = txRes.rows[0]
-  await query('UPDATE users SET wallet_balance = wallet_balance + $1 WHERE id = $2', [amount_kobo, user_id])
+  const balRes = await query(
+    'UPDATE users SET wallet_balance = wallet_balance + $1 WHERE id = $2 RETURNING wallet_balance',
+    [amount_kobo, user_id]
+  )
+
+  // Server-side revenue event — fires only on verified payment confirmation
+  analytics.track(user_id, 'fund_wallet', {
+    amount_loaded: Math.round(amount_kobo / 100),
+    payment_gateway: 'Paystack',
+    payment_method: paymentMethod || 'unknown',
+  })
+  analytics.setProfile(user_id, {
+    current_wallet_balance: Math.round(balRes.rows[0].wallet_balance / 100),
+  })
   return true
 }
 
@@ -126,7 +140,7 @@ router.get('/fund/status/:reference',
             { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
           )
           if (verifyRes.data.data.status === 'success') {
-            await creditTransaction(req.params.reference)
+            await creditTransaction(req.params.reference, verifyRes.data.data.channel)
             t = { ...t, status: 'completed' }
           }
         } catch { /* Paystack unreachable or not yet recorded — keep polling */ }
@@ -158,7 +172,7 @@ router.post('/webhook/paystack', async (req, res, next) => {
       return res.sendStatus(200) // Acknowledge non-success events silently
     }
 
-    await creditTransaction(data.reference) // no-op if already credited via the verify-fallback
+    await creditTransaction(data.reference, data.channel) // no-op if already credited via the verify-fallback
 
     res.sendStatus(200)
   } catch (err) { next(err) }

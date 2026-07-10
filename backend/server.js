@@ -132,6 +132,9 @@ async function runMigrations() {
     -- Pre-existing installs created wallet_transactions without status
     ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'completed';
 
+    -- Timestamp when the rider actually boarded (status -> in_transit) — used for trip duration analytics
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS in_transit_at TIMESTAMPTZ;
+
     CREATE TABLE IF NOT EXISTS ratings (
       id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       ride_id    UUID REFERENCES rides(id) ON DELETE CASCADE,

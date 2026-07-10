@@ -17,6 +17,20 @@ export function initAnalytics() {
       persistence: 'localStorage',
     })
     ready = true
+
+    // pwa_installed profile flag — running in standalone mode means the app
+    // was launched from the home screen; 'appinstalled' fires at install time
+    try {
+      const standalone = window.matchMedia('(display-mode: standalone)').matches
+        || window.navigator.standalone === true
+      if (standalone) mixpanel.people.set({ pwa_installed: true })
+      window.addEventListener('appinstalled', () => {
+        try {
+          mixpanel.track('pwa_installed')
+          mixpanel.people.set({ pwa_installed: true })
+        } catch { /* ignore */ }
+      })
+    } catch { /* ignore */ }
   } catch { /* analytics must never break the app */ }
 }
 

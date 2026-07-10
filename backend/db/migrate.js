@@ -241,6 +241,9 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_path VARCHAR(255);
 -- Existing rows default to 'completed' so history stays intact.
 ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'completed';
 
+-- Timestamp when the rider actually boarded (status -> in_transit) — used for trip duration analytics
+ALTER TABLE rides ADD COLUMN IF NOT EXISTS in_transit_at TIMESTAMPTZ;
+
 -- Optional handoff note each side can leave when booking/going live —
 -- carried onto the matched ride and shown to the other party once
 -- they're actually paired together (not before).
