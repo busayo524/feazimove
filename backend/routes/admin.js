@@ -8,7 +8,7 @@ const { query, pool } = require('../db')
 const { requireAuth, requireRole } = require('../middleware/auth')
 const { validate } = require('../middleware/validate')
 const { UPLOAD_DIR } = require('../middleware/upload')
-const { sendAccountCredentialsEmail } = require('../services/emailService')
+const { sendAccountCredentialsEmail, sendWelcomeEmail } = require('../services/emailService')
 
 const router = express.Router()
 const SALT_ROUNDS = 12
@@ -547,9 +547,9 @@ router.patch('/users/:id/approve',
   validate,
   async (req, res, next) => {
     try {
-      const userRes = await query('SELECT id, role, name FROM users WHERE id = $1', [req.params.id])
+      const userRes = await query('SELECT id, role, name, email FROM users WHERE id = $1', [req.params.id])
       if (!userRes.rows[0]) return res.status(404).json({ message: 'User not found.' })
-      const { role, name } = userRes.rows[0]
+      const { role, name, email } = userRes.rows[0]
       await query(
         `UPDATE users
          SET is_active = true, is_pending = false,
@@ -559,6 +559,11 @@ router.patch('/users/:id/approve',
         [req.params.id]
       )
       logActivity(req.user.id, role === 'driver' ? 'Driver Approved' : 'Rider Approved', 'user', name)
+      // Fire-and-forget — approval must succeed even if the mail server is down
+      if (email) {
+        sendWelcomeEmail(email, name, role).catch(err =>
+          console.error(`Welcome email to ${email} failed:`, err.message))
+      }
       res.json({ message: 'User approved and activated.' })
     } catch (err) { next(err) }
   }

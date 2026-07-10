@@ -125,8 +125,12 @@ async function runMigrations() {
       amount_kobo  BIGINT       NOT NULL,
       description  VARCHAR(200) NOT NULL,
       reference    VARCHAR(100) UNIQUE,
+      status       VARCHAR(20)  NOT NULL DEFAULT 'completed',
       created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW()
     );
+
+    -- Pre-existing installs created wallet_transactions without status
+    ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'completed';
 
     CREATE TABLE IF NOT EXISTS ratings (
       id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),

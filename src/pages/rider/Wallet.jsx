@@ -133,9 +133,9 @@ export default function Wallet() {
             </button>
           ))}
         </div>
-        <form onSubmit={handleFund} style={{ display: 'flex', gap: 10 }}>
-          <input value={amount} onChange={e => setAmount(sanitize(e.target.value))} placeholder="Enter amount (₦)"
-            style={{ flex: 1, padding: '12px 16px', borderRadius: 10, fontSize: 15, border: `1.5px solid ${BORDER}`, outline: 'none', background: CARD, color: TEXT, fontFamily: 'inherit' }}
+        <form onSubmit={handleFund} style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <input value={amount} onChange={e => setAmount(sanitize(e.target.value))} placeholder="Enter amount (₦)" inputMode="numeric"
+            style={{ flex: 1, minWidth: 140, padding: '12px 16px', borderRadius: 10, fontSize: 15, border: `1.5px solid ${BORDER}`, outline: 'none', background: CARD, color: TEXT, fontFamily: 'inherit' }}
             onFocus={e => e.target.style.borderColor = MOSS}
             onBlur={e => e.target.style.borderColor = BORDER} />
           <button type="submit" disabled={funding}

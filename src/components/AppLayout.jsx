@@ -165,7 +165,9 @@ export default function AppLayout({ children, title }){
       )}
 
       {/* Main */}
-      <div style={{ flex:1, marginLeft:240, display:'flex', flexDirection:'column', minHeight:'100vh' }} className="main-content">
+      {/* minWidth:0 — flex items otherwise refuse to shrink below their
+          content's intrinsic width, pushing the page wider than the phone */}
+      <div style={{ flex:1, minWidth:0, marginLeft:240, display:'flex', flexDirection:'column', minHeight:'100vh' }} className="main-content">
         {/* Top bar — fixed (not sticky) so it's guaranteed to stay pinned
             regardless of scroll context quirks */}
         <header style={{ position:'fixed', top:0, left:240, right:0, zIndex:30, background:'rgba(255,255,255,0.96)', backdropFilter:'blur(10px)', borderBottom:`1px solid ${BORDER}`, padding:'0 24px', height:60, display:'flex', alignItems:'center', justifyContent:'space-between' }} className="app-header">
@@ -205,7 +207,7 @@ export default function AppLayout({ children, title }){
       <style>{`
         @media (max-width: 768px) {
           .desktop-sidebar { display: none !important; }
-          .main-content { margin-left: 0 !important; }
+          .main-content { margin-left: 0 !important; max-width: 100vw; overflow-x: hidden; }
           .mobile-menu-btn { display: flex !important; }
           .app-header { left: 0 !important; }
         }
