@@ -11,7 +11,8 @@ const axios     = require('axios')
 const { query } = require('../db')
 const { requireAuth }  = require('../middleware/auth')
 const { validate }     = require('../middleware/validate')
-const { upload, DOC_FIELDS, UPLOAD_DIR } = require('../middleware/upload')
+const { upload, DOC_FIELDS } = require('../middleware/upload')
+const { saveUpload, sendStored } = require('../services/fileStorage')
 const { generateOtp, sendOtpEmail, sendRegistrationLink, sendWelcomeEmail } = require('../services/emailService')
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
@@ -381,9 +382,10 @@ router.post('/register',
       for (const [docType, fileArr] of Object.entries(uploaded)) {
         const file = fileArr[0]
         if (!file) continue
+        const storageKey = await saveUpload(req, file)
         await query(
           'INSERT INTO user_documents (user_id, doc_type, file_path) VALUES ($1, $2, $3)',
-          [user.id, docType, file.filename]
+          [user.id, docType, storageKey]
         )
       }
 
@@ -845,7 +847,8 @@ router.post('/avatar',
   async (req, res, next) => {
     try {
       if (!req.file) return res.status(422).json({ message: 'No image uploaded.' })
-      await query('UPDATE users SET avatar_path = $1 WHERE id = $2', [req.file.filename, req.user.id])
+      const storageKey = await saveUpload(req, req.file)
+      await query('UPDATE users SET avatar_path = $1 WHERE id = $2', [storageKey, req.user.id])
       res.json({ message: 'Profile photo updated.' })
     } catch (err) { next(err) }
   }
@@ -873,9 +876,7 @@ router.get('/avatar',
       }
       if (!filename) return res.status(404).json({ message: 'No photo on file.' })
 
-      const filePath = path.join(UPLOAD_DIR, path.basename(filename))
-      if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'File not found on disk.' })
-      res.sendFile(filePath)
+      await sendStored(req, res, filename)
     } catch (err) { next(err) }
   }
 )

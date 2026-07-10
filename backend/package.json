@@ -22,7 +22,8 @@
     "multer": "^2.2.0",
     "nodemailer": "^9.0.1",
     "pg": "^8.11.3",
-    "uuid": "^9.0.0"
+    "uuid": "^9.0.0",
+    "zcatalyst-sdk-node": "^3.4.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"

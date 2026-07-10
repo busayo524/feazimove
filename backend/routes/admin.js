@@ -7,7 +7,7 @@ const { body, param } = require('express-validator')
 const { query, pool } = require('../db')
 const { requireAuth, requireRole } = require('../middleware/auth')
 const { validate } = require('../middleware/validate')
-const { UPLOAD_DIR } = require('../middleware/upload')
+const { sendStored, deleteStored } = require('../services/fileStorage')
 const { sendAccountCredentialsEmail, sendWelcomeEmail } = require('../services/emailService')
 
 const router = express.Router()
@@ -351,9 +351,7 @@ router.get('/documents/:docId',
       const doc = result.rows[0]
       if (!doc) return res.status(404).json({ message: 'Document not found.' })
 
-      const filePath = path.join(UPLOAD_DIR, path.basename(doc.file_path)) // basename — defeats path traversal
-      if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'File not found on disk.' })
-      res.sendFile(filePath)
+      await sendStored(req, res, doc.file_path)
     } catch (err) { next(err) }
   }
 )
@@ -377,9 +375,7 @@ router.get('/avatar/:userId',
       }
       if (!filename) return res.status(404).json({ message: 'No photo on file.' })
 
-      const filePath = path.join(UPLOAD_DIR, path.basename(filename))
-      if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'File not found on disk.' })
-      res.sendFile(filePath)
+      await sendStored(req, res, filename)
     } catch (err) { next(err) }
   }
 )
@@ -641,9 +637,9 @@ router.delete('/users/:id',
       await client.query('DELETE FROM users WHERE id = $1', [req.params.id])
       await client.query('COMMIT')
 
-      // Remove uploaded files from disk — best effort, DB is already clean
+      // Remove uploaded files from storage — best effort, DB is already clean
       for (const f of files) {
-        fs.unlink(path.join(UPLOAD_DIR, path.basename(f)), () => {})
+        deleteStored(req, f).catch(() => {})
       }
 
       logActivity(req.user.id, 'User Deleted', 'user', user.name)

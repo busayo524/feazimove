@@ -5,7 +5,7 @@ const { body, param } = require('express-validator')
 const { query } = require('../db')
 const { requireAuth, requireRole } = require('../middleware/auth')
 const { validate } = require('../middleware/validate')
-const { UPLOAD_DIR } = require('../middleware/upload')
+const { sendStored } = require('../services/fileStorage')
 
 const router = express.Router()
 
@@ -54,9 +54,7 @@ router.get('/avatar/:userId',
       }
       if (!filename) return res.status(404).json({ message: 'No photo on file.' })
 
-      const filePath = path.join(UPLOAD_DIR, path.basename(filename))
-      if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'File not found on disk.' })
-      res.sendFile(filePath)
+      await sendStored(req, res, filename)
     } catch (err) { next(err) }
   }
 )

@@ -1,0 +1,84 @@
+/**
+ * Durable file storage for uploads (KYC documents, avatars).
+ *
+ * On Catalyst AppSail files are stored in Catalyst File Store so they survive
+ * redeploys (local disk is wiped on every deployment). During local
+ * development files go to backend/uploads/ on disk as before.
+ *
+ * Storage keys stored in the DB (user_documents.file_path, users.avatar_path):
+ *   'fs:<fileId>:<filename>'  → Catalyst File Store
+ *   anything else             → legacy file on local disk / bundled uploads/
+ */
+const fs   = require('fs')
+const path = require('path')
+const { Readable } = require('stream')
+
+const UPLOAD_DIR  = path.join(__dirname, '..', 'uploads')
+const FOLDER_NAME = 'feazimove-uploads'
+const ON_CATALYST = !!process.env.X_ZOHO_CATALYST_LISTEN_PORT
+
+let cachedFolderId = null
+
+async function getFolder(req) {
+  const catalyst = require('zcatalyst-sdk-node')
+  const app   = catalyst.initialize(req)
+  const store = app.filestore()
+  if (cachedFolderId) return store.folder(cachedFolderId)
+
+  const folders = await store.getAllFolders()
+  let folder = (folders || []).find(f => f.folder_name === FOLDER_NAME)
+  if (!folder) {
+    try { folder = await store.createFolder(FOLDER_NAME) }
+    catch { folder = await store.createFolder({ folder_name: FOLDER_NAME }) }
+  }
+  cachedFolderId = folder.id
+  return store.folder(folder.id)
+}
+
+function genFilename(originalname) {
+  const ext = path.extname(originalname || '').slice(0, 10)
+  return `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`
+}
+
+// Persist a multer memory-storage file; returns the storage key for the DB.
+async function saveUpload(req, file) {
+  const filename = genFilename(file.originalname)
+  if (ON_CATALYST) {
+    const folder = await getFolder(req)
+    const uploaded = await folder.uploadFile({ code: Readable.from(file.buffer), name: filename })
+    return `fs:${uploaded.id}:${filename}`
+  }
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true })
+  fs.writeFileSync(path.join(UPLOAD_DIR, filename), file.buffer)
+  return filename
+}
+
+// Stream a stored file to the response, whatever backend it lives in.
+async function sendStored(req, res, key) {
+  if (String(key).startsWith('fs:')) {
+    const [, fileId, ...nameParts] = String(key).split(':')
+    const folder = await getFolder(req)
+    const data = await folder.downloadFile(fileId)
+    res.type(path.extname(nameParts.join(':')) || 'bin')
+    if (data && typeof data.pipe === 'function') return data.pipe(res)
+    return res.send(Buffer.isBuffer(data) ? data : Buffer.from(data))
+  }
+  const filePath = path.join(UPLOAD_DIR, path.basename(key)) // basename — defeats path traversal
+  if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'File not found.' })
+  res.sendFile(filePath)
+}
+
+// Best-effort delete — callers must not fail if the file is already gone.
+async function deleteStored(req, key) {
+  try {
+    if (String(key).startsWith('fs:')) {
+      const [, fileId] = String(key).split(':')
+      const folder = await getFolder(req)
+      await folder.deleteFile(fileId)
+    } else {
+      fs.unlinkSync(path.join(UPLOAD_DIR, path.basename(key)))
+    }
+  } catch { /* already gone or store unreachable — DB is the source of truth */ }
+}
+
+module.exports = { saveUpload, sendStored, deleteStored }
