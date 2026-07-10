@@ -10,8 +10,8 @@
  *   anything else             → legacy file on local disk / bundled uploads/
  */
 const fs   = require('fs')
+const os   = require('os')
 const path = require('path')
-const { Readable } = require('stream')
 
 const UPLOAD_DIR  = path.join(__dirname, '..', 'uploads')
 const FOLDER_NAME = 'feazimove_uploads' // File Store allows only alphanumerics + underscore
@@ -50,16 +50,22 @@ function genFilename(originalname) {
 }
 
 // Persist a multer memory-storage file; returns the storage key for the DB.
+// The SDK's multipart upload requires a real file stream (in-memory streams
+// are rejected as "wrong format"), so the buffer takes a brief trip via tmp.
 async function saveUpload(req, file) {
   const filename = genFilename(file.originalname)
   if (ON_CATALYST) {
+    const tmpPath = path.join(os.tmpdir(), filename)
     try {
       const folder = await getFolder(req)
-      const uploaded = await folder.uploadFile({ code: Readable.from(file.buffer), name: filename })
+      fs.writeFileSync(tmpPath, file.buffer)
+      const uploaded = await folder.uploadFile({ code: fs.createReadStream(tmpPath), name: filename })
       return `fs:${uploaded.id}:${filename}`
     } catch (err) {
       console.error('fileStorage upload failed:', err.message, err.stack)
       throw err
+    } finally {
+      fs.unlink(tmpPath, () => {})
     }
   }
   fs.mkdirSync(UPLOAD_DIR, { recursive: true })

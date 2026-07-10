@@ -900,8 +900,12 @@ router.get('/storage-selftest', requireAuth, async (req, res) => {
     let folder = (folders || []).find(f => dts(f).folder_name === 'feazimove_uploads')
     if (!folder) { folder = await store.createFolder('feazimove_uploads'); steps.createdFolder = true }
     steps.folderId = String(dts(folder).id)
-    const { Readable } = require('stream')
-    const up = await folder.uploadFile({ code: Readable.from(Buffer.from('selftest')), name: `selftest-${Date.now()}.txt` })
+    const os = require('os')
+    const tmpName = `selftest-${Date.now()}.txt`
+    const tmpPath = path.join(os.tmpdir(), tmpName)
+    fs.writeFileSync(tmpPath, 'selftest')
+    const up = await folder.uploadFile({ code: fs.createReadStream(tmpPath), name: tmpName })
+    fs.unlink(tmpPath, () => {})
     steps.uploadedFileId = String(up.id)
     const data = await folder.downloadFile(up.id)
     steps.downloadedBytes = Buffer.isBuffer(data) ? data.length : (typeof data === 'object' && data.pipe ? 'stream' : String(data).length)
