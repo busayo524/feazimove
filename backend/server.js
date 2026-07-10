@@ -435,7 +435,9 @@ app.use('/api/admin',  adminRoutes)
 app.use('/api/routes', routesCatalog)
 
 // ── Health check (public, no sensitive info) ─────────────────────────────────
-app.get('/health', (_, res) => res.json({ status: 'ok' }))
+// version identifies the running build so Dev→Prod promotions can be verified
+const BUILD_VERSION = require('./package.json').version
+app.get('/health', (_, res) => res.json({ status: 'ok', version: BUILD_VERSION }))
 
 // ── 404 handler ──────────────────────────────────────────────────────────────
 app.use((_, res) => res.status(404).json({ message: 'Not found' }))
