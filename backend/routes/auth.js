@@ -379,6 +379,7 @@ router.post('/register',
 
       // Persist any uploaded documents (ID, selfie, vehicle docs, etc.)
       const uploaded = req.files || {}
+      let facePhotoKey = null
       for (const [docType, fileArr] of Object.entries(uploaded)) {
         const file = fileArr[0]
         if (!file) continue
@@ -387,6 +388,13 @@ router.post('/register',
           'INSERT INTO user_documents (user_id, doc_type, file_path) VALUES ($1, $2, $3)',
           [user.id, docType, storageKey]
         )
+        // The face photo doubles as the profile picture (selfie preferred)
+        if (docType === 'selfie' || (docType === 'profilePhoto' && !facePhotoKey)) {
+          facePhotoKey = storageKey
+        }
+      }
+      if (facePhotoKey) {
+        await query('UPDATE users SET avatar_path = $1 WHERE id = $2', [facePhotoKey, user.id])
       }
 
       // Return pending — no JWT yet. User must wait for admin approval.
