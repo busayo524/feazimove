@@ -1172,8 +1172,8 @@ export default function Register() {
                         style={{ marginTop: 2, accentColor: NEON, width: 16, height: 16, flexShrink: 0, cursor: 'pointer' }} />
                       <span style={{ fontSize: 13, color: '#444', lineHeight: 1.65 }}>
                         I agree to FeaziMove's{' '}
-                        <a href="/policies?tab=terms&from=register" target="_blank" rel="noopener noreferrer" style={{ color: G, fontWeight: 600 }}>Terms of Service</a> and{' '}
-                        <a href="/policies?tab=privacy&from=register" target="_blank" rel="noopener noreferrer" style={{ color: G, fontWeight: 600 }}>Privacy Policy</a>.
+                        <a href={`${import.meta.env.BASE_URL}policies?tab=terms&from=register`} target="_blank" rel="noopener noreferrer" style={{ color: G, fontWeight: 600 }}>Terms of Service</a> and{' '}
+                        <a href={`${import.meta.env.BASE_URL}policies?tab=privacy&from=register`} target="_blank" rel="noopener noreferrer" style={{ color: G, fontWeight: 600 }}>Privacy Policy</a>.
                         I confirm that all information provided is accurate and truthful.
                       </span>
                     </label>
