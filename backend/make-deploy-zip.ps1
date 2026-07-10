@@ -13,16 +13,17 @@ $zip     = Join-Path $backend 'feazimove-backend-PRODUCTION.zip'
 if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
 robocopy $backend $stage /MIR /XF .env *.zip make-deploy-zip.ps1 /NFL /NDL /NJH /NJS | Out-Null
 
-# Fallback env for Catalyst — non-secret URLs + Paystack keys from local .env
-$local = Get-Content (Join-Path $backend '.env')
-$payKeys = $local | Where-Object { $_ -match '^PAYSTACK_(PUBLIC|SECRET)_KEY=' }
+# Fallback env for Catalyst — the full local .env with NODE_ENV forced to
+# production. Needed because Catalyst promotions can leave the AppSail
+# environment without its configured variables (Dev config replaces Prod's),
+# which crash-loops the app at the startup guard.
+$local = Get-Content (Join-Path $backend '.env') | ForEach-Object {
+  if ($_ -match '^NODE_ENV=') { 'NODE_ENV=production' } else { $_ }
+}
 @(
   '# Fallback config bundled for Catalyst AppSail.'
   '# Env vars set in the AppSail Configuration UI always take precedence.'
-  'NODE_ENV=production'
-  'APP_URL=https://www.feazimove.com/app'
-  'PAYSTACK_CALLBACK_URL=https://www.feazimove.com/app/wallet?funded=1'
-) + $payKeys | Set-Content (Join-Path $stage '.env') -Encoding utf8NoBOM
+) + $local | Set-Content (Join-Path $stage '.env') -Encoding utf8NoBOM
 
 if (Test-Path $zip) { Remove-Item $zip -Force }
 Add-Type -AssemblyName System.IO.Compression.FileSystem
