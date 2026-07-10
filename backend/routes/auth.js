@@ -893,24 +893,19 @@ router.get('/storage-selftest', requireAuth, async (req, res) => {
     try { app = catalyst.initialize(req, { scope: 'admin' }); steps.init = 'admin' }
     catch (e) { steps.adminInitError = e.message; app = catalyst.initialize(req); steps.init = 'default' }
     const store = app.filestore()
+    // Folder objects are class instances — real details live behind toJSON()
+    const dts = f => (f && typeof f.toJSON === 'function' ? f.toJSON() : f) || {}
     const folders = await store.getAllFolders()
-    steps.folders = (folders || []).map(f => ({ id: String(f.id), name: f.folder_name || f.name }))
-    let folder = (folders || []).find(f => (f.folder_name || f.name) === 'feazimove_uploads')
-    if (!folder) {
-      try { folder = await store.createFolder('feazimove_uploads'); steps.createdFolder = 'string-arg' }
-      catch (e1) {
-        steps.createStringError = e1.message
-        folder = await store.createFolder({ folder_name: 'feazimove_uploads' })
-        steps.createdFolder = 'object-arg'
-      }
-    }
-    steps.folderId = String(folder.id)
+    steps.folders = (folders || []).map(f => ({ id: String(dts(f).id), name: dts(f).folder_name }))
+    let folder = (folders || []).find(f => dts(f).folder_name === 'feazimove_uploads')
+    if (!folder) { folder = await store.createFolder('feazimove_uploads'); steps.createdFolder = true }
+    steps.folderId = String(dts(folder).id)
     const { Readable } = require('stream')
-    const up = await store.folder(folder.id).uploadFile({ code: Readable.from(Buffer.from('selftest')), name: `selftest-${Date.now()}.txt` })
+    const up = await folder.uploadFile({ code: Readable.from(Buffer.from('selftest')), name: `selftest-${Date.now()}.txt` })
     steps.uploadedFileId = String(up.id)
-    const data = await store.folder(folder.id).downloadFile(up.id)
+    const data = await folder.downloadFile(up.id)
     steps.downloadedBytes = Buffer.isBuffer(data) ? data.length : (typeof data === 'object' && data.pipe ? 'stream' : String(data).length)
-    await store.folder(folder.id).deleteFile(up.id)
+    await folder.deleteFile(up.id)
     steps.cleanup = 'ok'
     res.json({ ok: true, steps })
   } catch (err) {

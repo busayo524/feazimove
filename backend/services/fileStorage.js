@@ -28,15 +28,20 @@ function initCatalyst(req) {
   catch { return catalyst.initialize(req) }
 }
 
+// SDK returns Folder class instances — details live behind toJSON()
+function folderDetails(f) {
+  return (f && typeof f.toJSON === 'function' ? f.toJSON() : f) || {}
+}
+
 async function getFolder(req) {
   const store = initCatalyst(req).filestore()
   if (cachedFolderId) return store.folder(cachedFolderId)
 
   const folders = await store.getAllFolders()
-  let folder = (folders || []).find(f => (f.folder_name || f.name) === FOLDER_NAME)
+  let folder = (folders || []).find(f => folderDetails(f).folder_name === FOLDER_NAME)
   if (!folder) folder = await store.createFolder(FOLDER_NAME)
-  cachedFolderId = folder.id
-  return store.folder(folder.id)
+  cachedFolderId = Number(folderDetails(folder).id)
+  return folder
 }
 
 function genFilename(originalname) {
