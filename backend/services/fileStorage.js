@@ -14,7 +14,7 @@ const path = require('path')
 const { Readable } = require('stream')
 
 const UPLOAD_DIR  = path.join(__dirname, '..', 'uploads')
-const FOLDER_NAME = 'feazimove-uploads'
+const FOLDER_NAME = 'feazimove_uploads' // File Store allows only alphanumerics + underscore
 const ON_CATALYST = !!process.env.X_ZOHO_CATALYST_LISTEN_PORT
 
 let cachedFolderId = null
@@ -34,10 +34,7 @@ async function getFolder(req) {
 
   const folders = await store.getAllFolders()
   let folder = (folders || []).find(f => (f.folder_name || f.name) === FOLDER_NAME)
-  if (!folder) {
-    try { folder = await store.createFolder(FOLDER_NAME) }
-    catch { folder = await store.createFolder({ folder_name: FOLDER_NAME }) }
-  }
+  if (!folder) folder = await store.createFolder(FOLDER_NAME)
   cachedFolderId = folder.id
   return store.folder(folder.id)
 }

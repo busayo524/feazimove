@@ -895,12 +895,12 @@ router.get('/storage-selftest', requireAuth, async (req, res) => {
     const store = app.filestore()
     const folders = await store.getAllFolders()
     steps.folders = (folders || []).map(f => ({ id: String(f.id), name: f.folder_name || f.name }))
-    let folder = (folders || []).find(f => (f.folder_name || f.name) === 'feazimove-uploads')
+    let folder = (folders || []).find(f => (f.folder_name || f.name) === 'feazimove_uploads')
     if (!folder) {
-      try { folder = await store.createFolder('feazimove-uploads'); steps.createdFolder = 'string-arg' }
+      try { folder = await store.createFolder('feazimove_uploads'); steps.createdFolder = 'string-arg' }
       catch (e1) {
         steps.createStringError = e1.message
-        folder = await store.createFolder({ folder_name: 'feazimove-uploads' })
+        folder = await store.createFolder({ folder_name: 'feazimove_uploads' })
         steps.createdFolder = 'object-arg'
       }
     }
