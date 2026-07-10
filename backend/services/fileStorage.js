@@ -40,7 +40,9 @@ async function getFolder(req) {
   const folders = await store.getAllFolders()
   let folder = (folders || []).find(f => folderDetails(f).folder_name === FOLDER_NAME)
   if (!folder) folder = await store.createFolder(FOLDER_NAME)
-  cachedFolderId = Number(folderDetails(folder).id)
+  // Catalyst ids exceed Number.MAX_SAFE_INTEGER — must stay strings or the
+  // low digits silently round off and every later request 404s
+  cachedFolderId = String(folderDetails(folder).id)
   return folder
 }
 
