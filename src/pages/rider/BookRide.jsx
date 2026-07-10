@@ -4,6 +4,7 @@ import RideTracker from '../../components/RideTracker'
 import { LocationDropdown, TimeDropdown, MORNING_SLOTS, EVENING_SLOTS } from '../../components/RouteDropdowns'
 import { MapPin, ArrowRight, Users, Navigation, Sun, Moon, X, Clock } from 'lucide-react'
 import { api } from '../../services/api'
+import { track } from '../../services/analytics'
 import { useStopCoords } from '../../hooks/useStopCoords'
 import { useRoutes } from '../../hooks/useRoutes'
 
@@ -173,6 +174,7 @@ export default function BookRide(){
     setBookError(null)
     try {
       const res = await api.post('/rides/book-intent', { period, timeSlot, pickup, dropoff, service, comment })
+      track('Ride Booked', { service, period })
       setBookingId(res.data.bookingId)
     } catch(err) {
       setBookError(err.data?.message || 'Could not register your booking. Please try again.')

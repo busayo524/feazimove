@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { api } from '../services/api'
+import { identifyUser, resetAnalytics, track } from '../services/analytics'
 import { useIdleLogout, sessionIsStale, ACTIVITY_KEY, IDLE_LOGOUT_FLAG } from '../hooks/useIdleLogout'
 
 const AuthContext = createContext(null)
@@ -33,7 +34,11 @@ export function AuthProvider({ children }) {
       return
     }
     api.get('/auth/me')
-      .then(res => setUser(normalizeUser(res.data.user)))
+      .then(res => {
+        const restored = normalizeUser(res.data.user)
+        setUser(restored)
+        identifyUser(restored)
+      })
       .catch(() => {
         localStorage.removeItem('fm_token')
         localStorage.removeItem('fm_user')
@@ -48,6 +53,8 @@ export function AuthProvider({ children }) {
     localStorage.setItem('fm_token', token)
     localStorage.setItem('fm_user', JSON.stringify(normalized))
     setUser(normalized)
+    identifyUser(normalized)
+    track('Logged In', { role: normalized.activeRole || normalized.role })
     return normalized
   }, [])
 
@@ -86,6 +93,7 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('fm_user')
     localStorage.removeItem(ACTIVITY_KEY)
     setUser(null)
+    resetAnalytics()
   }, [])
 
   // Auto-logout after 45 minutes of inactivity

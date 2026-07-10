@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Eye, EyeOff, AlertCircle, RefreshCw, CheckCircle2, ArrowRight } from 'lucide-react'
 import { api } from '../../services/api'
+import { track } from '../../services/analytics'
 import faviconImg from '../../assets/favicon.png'
 import PhoneInput from '../../components/PhoneInput'
 
@@ -133,6 +134,7 @@ export default function Signup() {
         name: form.name, email: form.email, phone: form.phone,
         password: form.password, confirmPassword: form.confirm, role,
       })
+      track('Signup Started', { role })
       setUserId(res.data.userId)
       setMaskedEmail(res.data.maskedEmail || maskEmail(form.email))
       setTimeLeft(OTP_SECS)
@@ -182,6 +184,7 @@ export default function Signup() {
     setVerifying(true); setOtpErr('')
     try {
       const res = await api.post('/auth/verify-otp', { userId, otp })
+      track('OTP Verified', { role })
       const regPrefill = { name: form.name, email: form.email, phone: form.phone, password: form.password, confirm: form.confirm }
       sessionStorage.setItem('feazi_reg_prefill', JSON.stringify(regPrefill))
       navigate(`/register/${res.data.role || role}`, {

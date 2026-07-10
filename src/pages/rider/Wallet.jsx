@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import AppLayout from '../../components/AppLayout'
 import { useAuth } from '../../context/AuthContext'
 import { api } from '../../services/api'
+import { track } from '../../services/analytics'
 import { ArrowDownLeft, ArrowUpRight, Plus, RefreshCw, AlertCircle } from 'lucide-react'
 
 const NEON='#ccff00', OLIVE='#243800', MOSS='#4C6900'
@@ -55,6 +56,7 @@ export default function Wallet() {
         if (res.data.status === 'completed') {
           clearInterval(interval)
           sessionStorage.removeItem('fm_pending_ref')
+          track('Wallet Topup Completed', { amount: res.data.amount })
           await fetchWallet()
           setSuccessMsg(`₦${res.data.amount.toLocaleString()} added to your wallet!`)
           setPolling(false)
@@ -90,6 +92,7 @@ export default function Wallet() {
     setFundError('')
     try {
       const res = await api.post('/wallet/fund', { amount: num })
+      track('Wallet Topup Started', { amount: num })
       sessionStorage.setItem('fm_pending_ref', res.data.reference)
       window.location.href = res.data.paymentUrl
     } catch (err) {

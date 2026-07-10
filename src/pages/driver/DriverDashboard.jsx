@@ -12,6 +12,7 @@ import ChatModal from '../../components/ChatModal'
 import PersonAvatar from '../../components/PersonAvatar'
 import { useAuth } from '../../context/AuthContext'
 import { api } from '../../services/api'
+import { track } from '../../services/analytics'
 import { useStopCoords } from '../../hooks/useStopCoords'
 import { useUnreadChat } from '../../hooks/useUnreadChat'
 import { usePanelPlacement, MORNING_SLOTS, EVENING_SLOTS } from '../../components/RouteDropdowns'
@@ -510,6 +511,7 @@ export default function DriverDashboard() {
       const res = await api.post('/driver/go-live', {
         period, timeSlot, pickup, dropoff, seats: parseInt(seats, 10), comment,
       })
+      track('Driver Went Live', { period, timeSlot })
       setAvailabilityId(res.data.availabilityId)
       setCurrentPickup(pickup)
       setCountdown(180)

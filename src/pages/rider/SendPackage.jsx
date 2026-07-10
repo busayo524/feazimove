@@ -3,6 +3,7 @@ import AppLayout from '../../components/AppLayout'
 import { LocationDropdown, TimeDropdown } from '../../components/RouteDropdowns'
 import { Package, ArrowRight, Phone, Star } from 'lucide-react'
 import { api } from '../../services/api'
+import { track } from '../../services/analytics'
 import { useRoutes } from '../../hooks/useRoutes'
 import movingImg from '../../assets/Moving.png'
 
@@ -317,6 +318,7 @@ export default function SendPackage(){
         period: periodForSlot(timeSlot), timeSlot, pickup, dropoff, service:'send',
         recipientName: recipient, recipientPhone, packageSize: size, notes,
       })
+      track('Package Send Requested', { size })
       setBookingId(res.data.bookingId)
       setQuotedFare(res.data.quotedFare)
     } catch(err) {

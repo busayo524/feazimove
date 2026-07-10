@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { api } from '../../services/api'
+import { track } from '../../services/analytics'
 import faviconImg from '../../assets/favicon.png'
 import PhoneInput from '../../components/PhoneInput'
 import { dataUrlToFile } from '../../utils/dataUrlToFile'
@@ -593,6 +594,7 @@ export default function Register() {
         user = await register(formData)
       }
       sessionStorage.removeItem('feazi_reg_prefill')
+      track('Registration Submitted', { role: urlRole })
       // Registration is now pending admin approval — no token returned
       if (user?.pending) {
         navigate('/register/pending')
