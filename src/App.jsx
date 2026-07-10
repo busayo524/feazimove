@@ -1,6 +1,7 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { StandaloneGate, StandaloneSplash } from './components/StandaloneApp'
 
 class ErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { error: null } }
@@ -97,6 +98,10 @@ export default function App() {
         root (feazimove.com) and under Catalyst's /app/ development path */}
     <BrowserRouter basename={import.meta.env.BASE_URL}>
       <AuthProvider>
+        {/* Installed-app behavior: branded splash, then straight to the
+            internal experience — marketing pages redirect to login/dashboard */}
+        <StandaloneGate />
+        <StandaloneSplash />
         <Routes>
           {/* Marketing pages */}
           <Route path="/"             element={<HomePage />} />
