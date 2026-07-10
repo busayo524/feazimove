@@ -1,6 +1,11 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // '/' for the real domain; '/app/' for Catalyst's development URL
 // (build with DEPLOY_BASE=/app/ for the dev-URL package)
@@ -53,6 +58,17 @@ export default defineConfig({
         ],
       },
     }),
+    {
+      // Catalyst serves the "404" page from client-package.json for unknown
+      // paths, but rejects index.html as that page — ship a copy named
+      // 404.html so deep links (/app/login etc.) load the app shell instead
+      // of Catalyst's "Site Not Found".
+      name: 'spa-404-fallback',
+      closeBundle() {
+        const dist = path.resolve(__dirname, 'dist')
+        fs.copyFileSync(path.join(dist, 'index.html'), path.join(dist, '404.html'))
+      },
+    },
   ],
   server: {
     port: 5173,
