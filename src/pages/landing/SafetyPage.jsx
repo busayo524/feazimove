@@ -275,11 +275,10 @@ export default function SafetyPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20 }}>
             {[
               { num: '01', tip: "Verify the driver's name, photo, and plate number before boarding." },
-              { num: '02', tip: "Share your live trip link with a trusted contact before you move." },
-              { num: '03', tip: "Always wear your seatbelt immediately after entering the vehicle." },
-              { num: '04', tip: "Trust your instincts — ask the driver to stop safely if something feels wrong." },
-              { num: '05', tip: "Rate your trip honestly. Your feedback keeps the community safe." },
-              { num: '06', tip: "Drivers: confirm the passenger's name before starting the trip." },
+              { num: '02', tip: "Always wear your seatbelt immediately after entering the vehicle." },
+              { num: '03', tip: "Trust your instincts — ask the driver to stop safely if something feels wrong." },
+              { num: '04', tip: "Rate your trip honestly. Your feedback keeps the community safe." },
+              { num: '05', tip: "Drivers: confirm the passenger's name before starting the trip." },
             ].map(({ num, tip }) => (
               <div key={num} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 16, padding: '28px 24px', border: '1px solid rgba(255,255,255,0.08)' }}>
                 <p style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '2.2rem', color: '#ccff00', marginBottom: 12, lineHeight: 1 }}>{num}</p>

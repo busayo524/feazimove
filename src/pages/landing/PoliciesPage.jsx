@@ -61,7 +61,7 @@ const POLICIES = [
         <H3>1. About FeaziMove</H3>
         <P>1.1 FeaziMove Technologies Limited ("FeaziMove", "we", "us", or "our") is a technology company incorporated under the laws of the Federal Republic of Nigeria. We operate a smart urban mobility platform that connects commuters, riders, and goods along shared transport routes in African cities.</P>
         <P>1.2 FeaziMove is a technology intermediary. We do not own or operate transport vehicles, and we do not employ drivers. We provide software tools that enable independent transport providers ("Drivers" or "Partners") to offer pooled transport services to users of our platform ("Riders" or "Commuters").</P>
-        <P>1.3 Our registered office is located in Lagos, Nigeria. You may contact us at <A href="mailto:legal@feazimove.com">legal@feazimove.com</A>.</P>
+        <P>1.3 Our registered office is located in Lagos, Nigeria. You may contact us at <A href="mailto:support@feazimove.com">support@feazimove.com</A>.</P>
 
         <H3>2. Definitions</H3>
         <P>In these Terms, the following definitions apply:</P>
@@ -103,7 +103,7 @@ const POLICIES = [
           <LI>Use a strong, unique password and not share it with any third party;</LI>
           <LI>Enable two-factor authentication (2FA) where offered;</LI>
           <LI>Log out of your account on shared or public devices;</LI>
-          <LI>Immediately notify FeaziMove at <A href="mailto:security@feazimove.com">security@feazimove.com</A> if you suspect unauthorised access to your account.</LI>
+          <LI>Immediately notify FeaziMove at <A href="mailto:support@feazimove.com">support@feazimove.com</A> if you suspect unauthorised access to your account.</LI>
         </UL>
         <P>4.3 FeaziMove will never ask you for your password via email, phone, or any channel outside the Platform itself.</P>
         <P>4.4 You may only maintain one personal account on the Platform. Operating multiple accounts to abuse promotions or circumvent restrictions is prohibited and will result in all such accounts being suspended.</P>
@@ -206,7 +206,7 @@ const POLICIES = [
         <P>13.3 Termination does not affect any rights or obligations that arose before the termination date.</P>
 
         <H3>14. Dispute Resolution</H3>
-        <P>14.1 <B>Internal Resolution First:</B> In the event of any dispute, you agree to first contact FeaziMove's support team at <A href="mailto:legal@feazimove.com">legal@feazimove.com</A> and allow us at least <B>30 days</B> to attempt to resolve the matter informally.</P>
+        <P>14.1 <B>Internal Resolution First:</B> In the event of any dispute, you agree to first contact FeaziMove's support team at <A href="mailto:support@feazimove.com">support@feazimove.com</A> and allow us at least <B>30 days</B> to attempt to resolve the matter informally.</P>
         <P>14.2 <B>Arbitration:</B> If a dispute is not resolved informally, both parties agree to submit the dispute to binding arbitration under the rules of the Lagos Court of Arbitration. The arbitration shall be conducted in English in Lagos, Nigeria.</P>
         <P>14.3 <B>No Class Actions:</B> You agree that any dispute resolution shall be conducted on an individual basis and not as a class action, collective action, or representative proceeding.</P>
 
@@ -223,9 +223,7 @@ const POLICIES = [
         <P>17.2 FeaziMove's failure to enforce any provision of these Terms shall not constitute a waiver of our right to enforce that provision in the future.</P>
 
         <H3>18. Contact Information</H3>
-        <P>For all legal enquiries: <A href="mailto:legal@feazimove.com">legal@feazimove.com</A></P>
-        <P>For general support: <A href="mailto:support@feazimove.com">support@feazimove.com</A></P>
-        <P>For urgent safety issues: <A href="mailto:safety@feazimove.com">safety@feazimove.com</A></P>
+        <P>For all enquiries: <A href="mailto:support@feazimove.com">support@feazimove.com</A></P>
       </>
     ),
   },
@@ -460,8 +458,7 @@ const POLICIES = [
         <P>6.1 We encourage all users to report misconduct through the following channels:</P>
         <UL>
           <LI><B>In-App:</B> Via the "Report a Problem" option in your Trip History within 72 hours of the incident;</LI>
-          <LI><B>Email:</B> <A href="mailto:safety@feazimove.com">safety@feazimove.com</A> for safety-related concerns;</LI>
-          <LI><B>Email:</B> <A href="mailto:support@feazimove.com">support@feazimove.com</A> for general misconduct reports.</LI>
+          <LI><B>Email:</B> <A href="mailto:support@feazimove.com">support@feazimove.com</A> for safety concerns and misconduct reports.</LI>
         </UL>
         <P>6.2 All reports are treated with strict confidentiality. We do not disclose the identity of the reporting party to the subject of the report without consent.</P>
         <P>6.3 False or malicious reports made in bad faith are themselves a violation of this Policy.</P>
@@ -475,7 +472,7 @@ const POLICIES = [
           <LI>Permanent deactivation of the account;</LI>
           <LI>Reporting of the incident to relevant law enforcement authorities.</LI>
         </UL>
-        <P>7.3 <B>Appeals:</B> If you believe your account was suspended in error, you may appeal by emailing <A href="mailto:appeals@feazimove.com">appeals@feazimove.com</A> within 14 days of suspension. Appeals are reviewed by a dedicated team and are separate from the original investigating team. We aim to respond to all appeals within 10 business days.</P>
+        <P>7.3 <B>Appeals:</B> If you believe your account was suspended in error, you may appeal by emailing <A href="mailto:support@feazimove.com">support@feazimove.com</A> within 14 days of suspension. Appeals are reviewed by a dedicated team and are separate from the original investigating team. We aim to respond to all appeals within 10 business days.</P>
       </>
     ),
   },
@@ -505,30 +502,7 @@ const POLICIES = [
           <LI><B>Onboarding Training:</B> All new Drivers must complete FeaziMove's digital safety and service standards training before going live on the platform.</LI>
         </UL>
 
-        <H3>2. Ongoing Driver Monitoring</H3>
-        <P>Driver safety is monitored continuously through:</P>
-        <UL>
-          <LI><B>Real-time GPS Tracking:</B> Every active trip is tracked in real time. Significant route deviations trigger automatic alerts to our safety team;</LI>
-          <LI><B>Telematics Monitoring:</B> Where available, in-app trip data is analysed for dangerous driving behaviour including harsh braking, sharp cornering, and speeding;</LI>
-          <LI><B>Passenger Ratings & Feedback:</B> Trip ratings below 3.0 stars or safety-flagged feedback are reviewed within 24 hours;</LI>
-          <LI><B>Annual Document Renewal:</B> Drivers must resubmit current insurance, vehicle registration, and driver's licence annually;</LI>
-          <LI><B>Random Vehicle Spot Checks:</B> FeaziMove or its authorised partners may conduct random physical vehicle inspections.</LI>
-        </UL>
-
-        <H3>3. In-Trip Safety Features</H3>
-        <P><B>3.1 Real-Time Trip Sharing:</B> Every trip can be shared via a live tracking link with a trusted contact. The link shows the vehicle's current location, estimated arrival time, and trip details in real time.</P>
-        <P><B>3.2 Emergency SOS Button:</B> All users have access to an in-app Emergency SOS button that:</P>
-        <UL>
-          <LI>Sends an immediate alert to FeaziMove's 24/7 safety response team;</LI>
-          <LI>Automatically shares the trip's real-time location with pre-set emergency contacts;</LI>
-          <LI>Initiates a call-back from our safety team within 60 seconds;</LI>
-          <LI>In verified emergencies, contacts the Nigerian Emergency Management Agency (NEMA) or local police on your behalf.</LI>
-        </UL>
-        <P><B>3.3 Trip Recording:</B> All trip route data — including timestamps, GPS coordinates, speed, and pickup/drop-off points — is recorded and stored securely for a minimum of 5 years for safety investigation and legal purposes.</P>
-        <P><B>3.4 Driver Identity Verification at Trip Start:</B> Riders are shown the assigned Driver's photo, name, vehicle plate number, and vehicle description before the trip begins. Always verify this information before entering the vehicle.</P>
-        <P><B>3.5 Two-Way Rating System:</B> Post-trip ratings allow both passengers and Drivers to flag safety concerns, which are reviewed by our safety team.</P>
-
-        <H3>4. Passenger Safety Guidelines</H3>
+        <H3>2. Passenger Safety Guidelines</H3>
         <P>We recommend all passengers follow these safety best practices:</P>
         <UL>
           <LI><B>Verify before you board:</B> Confirm the vehicle plate number, Driver's name, and photo match the details in your app before entering;</LI>
@@ -540,7 +514,7 @@ const POLICIES = [
           <LI><B>Keep valuables secure</B> and do not display expensive items openly in the vehicle.</LI>
         </UL>
 
-        <H3>5. Children & Vulnerable Passengers</H3>
+        <H3>3. Children & Vulnerable Passengers</H3>
         <UL>
           <LI>Children under <B>12 years of age</B> must be accompanied by an adult at all times;</LI>
           <LI>Drivers must not accept a booking for an unaccompanied minor;</LI>
@@ -548,13 +522,13 @@ const POLICIES = [
           <LI>Passengers with disabilities or special mobility needs should indicate this at booking using the accessibility options in the app. We will endeavour to match them with an appropriate vehicle.</LI>
         </UL>
 
-        <H3>6. Incident Reporting & Response</H3>
-        <P>6.1 Any accident, near-miss, or safety incident during a FeaziMove trip must be reported:</P>
+        <H3>4. Incident Reporting & Response</H3>
+        <P>4.1 Any accident, near-miss, or safety incident during a FeaziMove trip must be reported:</P>
         <UL>
           <LI>Via the in-app incident report tool within <B>24 hours</B> of the event;</LI>
-          <LI>By emailing <A href="mailto:safety@feazimove.com">safety@feazimove.com</A> with your trip reference and a description of the incident.</LI>
+          <LI>By emailing <A href="mailto:support@feazimove.com">support@feazimove.com</A> with your trip reference and a description of the incident.</LI>
         </UL>
-        <P>6.2 <B>Accident Response:</B> In the event of a road traffic accident involving a FeaziMove trip:</P>
+        <P>4.2 <B>Accident Response:</B> In the event of a road traffic accident involving a FeaziMove trip:</P>
         <UL>
           <LI>Ensure the safety of all persons involved and call emergency services (199 or 112) if required;</LI>
           <LI>Do not move seriously injured persons unless there is an immediate risk to life;</LI>
@@ -562,9 +536,9 @@ const POLICIES = [
           <LI>Do not accept liability or make any admissions on FeaziMove's behalf at the scene;</LI>
           <LI>Preserve all evidence including photographs, witness contacts, and police report reference numbers.</LI>
         </UL>
-        <P>6.3 All reported incidents are investigated by our dedicated safety team. We cooperate fully with the Nigerian Police Force, FRSC, and relevant regulatory bodies in all investigations.</P>
+        <P>4.3 All reported incidents are investigated by our dedicated safety team. We cooperate fully with the Nigerian Police Force, FRSC, and relevant regulatory bodies in all investigations.</P>
 
-        <H3>7. Hygiene & Health Standards</H3>
+        <H3>5. Hygiene & Health Standards</H3>
         <UL>
           <LI>Drivers must maintain a clean vehicle interior at all times — floors, seats, and surfaces must be free of dirt, rubbish, and offensive odours;</LI>
           <LI>Drivers are encouraged to provide hand sanitiser for passengers;</LI>
@@ -572,9 +546,9 @@ const POLICIES = [
           <LI>FeaziMove reserves the right to implement additional health protocols during declared public health emergencies.</LI>
         </UL>
 
-        <H3>8. Safety Team Contact</H3>
+        <H3>6. Safety Team Contact</H3>
         <P>Our 24/7 safety team is available at:</P>
-        <P>Email: <A href="mailto:safety@feazimove.com">safety@feazimove.com</A></P>
+        <P>Email: <A href="mailto:support@feazimove.com">support@feazimove.com</A></P>
         <P>For genuine emergencies, always call 199 or 112 first before contacting FeaziMove.</P>
       </>
     ),
@@ -858,7 +832,7 @@ const POLICIES = [
           <LI>Provide evidence to your bank or payment processor to contest the chargeback;</LI>
           <LI>Apply a chargeback processing fee if the chargeback is found to be unwarranted.</LI>
         </UL>
-        <P>7.3 <B>Escalation Path:</B> If you are dissatisfied with our refund decision, you may escalate to <A href="mailto:legal@feazimove.com">legal@feazimove.com</A>. Legal-team reviews are independent of the initial support team decision. We aim to respond to escalations within <B>10 business days</B>.</P>
+        <P>7.3 <B>Escalation Path:</B> If you are dissatisfied with our refund decision, you may escalate by replying to your refund decision email at <A href="mailto:support@feazimove.com">support@feazimove.com</A>. Escalation reviews are independent of the initial decision. We aim to respond to escalations within <B>10 business days</B>.</P>
 
         <H3>8. Fraud Prevention</H3>
         <P>8.1 FeaziMove monitors all refund requests for patterns of abuse. The following activities are considered refund fraud and will result in permanent account suspension and potential legal action:</P>
@@ -989,16 +963,7 @@ export default function PoliciesPage() {
           <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '1.6rem', color: 'var(--text)', marginBottom: 12 }}>
             Have questions about our policies?
           </h3>
-          <p style={{ color: 'var(--text-muted)', fontSize: '1rem', lineHeight: 1.7, marginBottom: 28 }}>
-            Our legal team is available to answer any questions. We aim to respond to all enquiries within 1 business day.
-          </p>
           <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a
-              href="mailto:legal@feazimove.com"
-              style={{ display: 'inline-block', background: '#0f0f0f', color: '#ccff00', fontWeight: 700, fontSize: '0.95rem', padding: '14px 32px', borderRadius: 999, textDecoration: 'none', letterSpacing: '0.02em' }}
-            >
-              Contact Legal Team
-            </a>
             <a
               href="/contact"
               style={{ display: 'inline-block', background: 'transparent', color: '#0f0f0f', fontWeight: 700, fontSize: '0.95rem', padding: '13px 32px', borderRadius: 999, textDecoration: 'none', border: '1.5px solid #0f0f0f', letterSpacing: '0.02em' }}
