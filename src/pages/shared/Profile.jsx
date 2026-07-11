@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 import { api } from '../../services/api'
 import { useMyAvatar } from '../../hooks/useMyAvatar'
 import { dataUrlToFile } from '../../utils/dataUrlToFile'
+import { compressImage } from '../../utils/compressImage'
 import { User, Phone, Mail, Shield, Bell, ChevronRight, LogOut, Camera, CheckCircle, X, RefreshCw, Car, MapPin, AlertCircle } from 'lucide-react'
 
 const NEON='#ccff00', NT='#0a0a0a'
@@ -247,12 +248,15 @@ function PhotoPicker({ onDone, onClose }){
           </button>
         </div>
         <input ref={fileInputRef} type="file" accept="image/*" style={{display:'none'}}
-          onChange={e=>{
+          onChange={async e=>{
             const file=e.target.files[0]
             if(!file)return
+            // Shrink before making a data URL — keeps the upload small and
+            // stops full-size photos from blowing the localStorage quota
+            const small=await compressImage(file)
             const reader=new FileReader()
             reader.onload=ev=>onDone(ev.target.result)
-            reader.readAsDataURL(file)
+            reader.readAsDataURL(small)
           }}/>
       </div>
     </div>

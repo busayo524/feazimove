@@ -10,6 +10,7 @@ import { track } from '../../services/analytics'
 import faviconImg from '../../assets/favicon.png'
 import PhoneInput from '../../components/PhoneInput'
 import { dataUrlToFile } from '../../utils/dataUrlToFile'
+import { compressImage } from '../../utils/compressImage'
 
 /* ── helpers ──────────────────────────────────────────────────────────── */
 function validatePhone(p) {
@@ -588,9 +589,13 @@ export default function Register() {
           if (form.plateNumber)  formData.append('plateNumber', form.plateNumber)
           if (form.vehicleYear)  formData.append('vehicleYear', form.vehicleYear)
         }
-        Object.entries(files).forEach(([field, file]) => {
-          if (file) formData.append(field, file)
-        })
+        // Shrink photos before upload — phone camera shots are 2–8MB and slow
+        // to send on mobile data; PDFs pass through compressImage untouched
+        const docEntries = Object.entries(files).filter(([, file]) => file)
+        const compressedDocs = await Promise.all(
+          docEntries.map(async ([field, file]) => [field, await compressImage(file)])
+        )
+        compressedDocs.forEach(([field, file]) => formData.append(field, file))
         user = await register(formData)
       }
       sessionStorage.removeItem('feazi_reg_prefill')

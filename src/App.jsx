@@ -18,57 +18,72 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-// ── Marketing / Public pages ──────────────────────────────────────────────────
+// ── Pages ─────────────────────────────────────────────────────────────────────
+// Only the homepage ships in the entry bundle — every other page is a lazy
+// chunk fetched on navigation, so a first-time marketing visitor doesn't
+// download the rider app and admin panel just to read the landing page.
+const lazy = React.lazy
+
+// Marketing / Public
 import HomePage        from './pages/landing/HomePage'
-import HowItWorksPage  from './pages/landing/HowItWorksPage'
-import ServicesPage    from './pages/landing/ServicesPage'
-import AboutPage       from './pages/landing/AboutPage'
-import ContactPage     from './pages/landing/ContactPage'
-import PoliciesPage    from './pages/landing/PoliciesPage'
-import SafetyPage      from './pages/landing/SafetyPage'
+const HowItWorksPage  = lazy(() => import('./pages/landing/HowItWorksPage'))
+const ServicesPage    = lazy(() => import('./pages/landing/ServicesPage'))
+const AboutPage       = lazy(() => import('./pages/landing/AboutPage'))
+const ContactPage     = lazy(() => import('./pages/landing/ContactPage'))
+const PoliciesPage    = lazy(() => import('./pages/landing/PoliciesPage'))
+const SafetyPage      = lazy(() => import('./pages/landing/SafetyPage'))
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
-import Login           from './pages/auth/Login'
-import Signup          from './pages/auth/Signup'
-import VerifyOtp       from './pages/auth/VerifyOtp'
-import EmailSent       from './pages/auth/EmailSent'
-import Register        from './pages/auth/Register'
-import RegisterPending from './pages/auth/RegisterPending'
-import RoleSelect      from './pages/auth/RoleSelect'
-import ForgotPassword  from './pages/auth/ForgotPassword'
+// Auth
+const Login           = lazy(() => import('./pages/auth/Login'))
+const Signup          = lazy(() => import('./pages/auth/Signup'))
+const VerifyOtp       = lazy(() => import('./pages/auth/VerifyOtp'))
+const EmailSent       = lazy(() => import('./pages/auth/EmailSent'))
+const Register        = lazy(() => import('./pages/auth/Register'))
+const RegisterPending = lazy(() => import('./pages/auth/RegisterPending'))
+const RoleSelect      = lazy(() => import('./pages/auth/RoleSelect'))
+const ForgotPassword  = lazy(() => import('./pages/auth/ForgotPassword'))
 
-// ── Rider ─────────────────────────────────────────────────────────────────────
-import BookRide        from './pages/rider/BookRide'
-import TripHistory     from './pages/rider/TripHistory'
-import SendPackage     from './pages/rider/SendPackage'
-import Wallet          from './pages/rider/Wallet'
+// Rider
+const BookRide        = lazy(() => import('./pages/rider/BookRide'))
+const TripHistory     = lazy(() => import('./pages/rider/TripHistory'))
+const SendPackage     = lazy(() => import('./pages/rider/SendPackage'))
+const Wallet          = lazy(() => import('./pages/rider/Wallet'))
 
-// ── Driver ────────────────────────────────────────────────────────────────────
-import DriverDashboard  from './pages/driver/DriverDashboard'
-import Earnings         from './pages/driver/Earnings'
-import DriverTripHistory from './pages/driver/TripHistory'
+// Driver
+const DriverDashboard   = lazy(() => import('./pages/driver/DriverDashboard'))
+const Earnings          = lazy(() => import('./pages/driver/Earnings'))
+const DriverTripHistory = lazy(() => import('./pages/driver/TripHistory'))
 
-// ── Shared ────────────────────────────────────────────────────────────────────
-import RateRide        from './pages/shared/RateRide'
-import Profile         from './pages/shared/Profile'
+// Shared
+const RateRide        = lazy(() => import('./pages/shared/RateRide'))
+const Profile         = lazy(() => import('./pages/shared/Profile'))
 
-// ── Admin ─────────────────────────────────────────────────────────────────────
-import AdminDashboard     from './pages/admin/AdminDashboard'
-import AdminRiders        from './pages/admin/AdminRiders'
-import AdminRiderDetail   from './pages/admin/AdminRiderDetail'
-import AdminDrivers       from './pages/admin/AdminDrivers'
-import AdminDriverDetail  from './pages/admin/AdminDriverDetail'
-import AdminRides         from './pages/admin/AdminRides'
-import AdminPayments      from './pages/admin/AdminPayments'
-import AdminAlerts        from './pages/admin/AdminAlerts'
-import AdminMoveWaitlist  from './pages/admin/AdminMoveWaitlist'
-import AdminReports       from './pages/admin/AdminReports'
-import AdminRoutesPage    from './pages/admin/AdminRoutes'
-import AdminStops         from './pages/admin/AdminStops'
-import AdminPricing       from './pages/admin/AdminPricing'
-import AdminUserDetail        from './pages/admin/AdminUserDetail'
-import AdminUserManagement    from './pages/admin/AdminUserManagement'
-import AdminSettings          from './pages/admin/AdminSettings'
+// Admin
+const AdminDashboard      = lazy(() => import('./pages/admin/AdminDashboard'))
+const AdminRiders         = lazy(() => import('./pages/admin/AdminRiders'))
+const AdminRiderDetail    = lazy(() => import('./pages/admin/AdminRiderDetail'))
+const AdminDrivers        = lazy(() => import('./pages/admin/AdminDrivers'))
+const AdminDriverDetail   = lazy(() => import('./pages/admin/AdminDriverDetail'))
+const AdminRides          = lazy(() => import('./pages/admin/AdminRides'))
+const AdminPayments       = lazy(() => import('./pages/admin/AdminPayments'))
+const AdminAlerts         = lazy(() => import('./pages/admin/AdminAlerts'))
+const AdminMoveWaitlist   = lazy(() => import('./pages/admin/AdminMoveWaitlist'))
+const AdminReports        = lazy(() => import('./pages/admin/AdminReports'))
+const AdminRoutesPage     = lazy(() => import('./pages/admin/AdminRoutes'))
+const AdminStops          = lazy(() => import('./pages/admin/AdminStops'))
+const AdminPricing        = lazy(() => import('./pages/admin/AdminPricing'))
+const AdminUserDetail     = lazy(() => import('./pages/admin/AdminUserDetail'))
+const AdminUserManagement = lazy(() => import('./pages/admin/AdminUserManagement'))
+const AdminSettings       = lazy(() => import('./pages/admin/AdminSettings'))
+
+// Shown while a lazy page chunk downloads
+function PageLoader() {
+  return (
+    <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg)' }}>
+      <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--lime)', borderTopColor: 'transparent' }} />
+    </div>
+  )
+}
 
 function ProtectedRoute({ children, requiredRole }) {
   const { user, loading } = useAuth()
@@ -102,6 +117,7 @@ export default function App() {
             internal experience — marketing pages redirect to login/dashboard */}
         <StandaloneGate />
         <StandaloneSplash />
+        <React.Suspense fallback={<PageLoader />}>
         <Routes>
           {/* Marketing pages */}
           <Route path="/"             element={<HomePage />} />
@@ -162,6 +178,7 @@ export default function App() {
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </React.Suspense>
       </AuthProvider>
     </BrowserRouter>
     </ErrorBoundary>
