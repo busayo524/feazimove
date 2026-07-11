@@ -398,7 +398,7 @@ export default function HomePage() {
               maxWidth: 480,
               marginBottom: 16,
             }}>
-              Matched with a car owner on your route. To work every morning, home every evening.
+              Get matched with a car owner on your route. To work every morning, home every evening.
             </p>
 
             {/* Divider line */}
