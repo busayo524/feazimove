@@ -54,6 +54,8 @@ function genFilename(originalname) {
 // Persist a multer memory-storage file; returns the storage key for the DB.
 // The SDK's multipart upload requires a real file stream (in-memory streams
 // are rejected as "wrong format"), so the buffer takes a brief trip via tmp.
+// The File Store transfer is flaky (streams can end early without an error),
+// so the stored size is verified against the original and retried on mismatch.
 async function saveUpload(req, file) {
   const filename = genFilename(file.originalname)
   if (ON_CATALYST) {
@@ -61,8 +63,16 @@ async function saveUpload(req, file) {
     try {
       const folder = await getFolder(req)
       fs.writeFileSync(tmpPath, file.buffer)
-      const uploaded = await folder.uploadFile({ code: fs.createReadStream(tmpPath), name: filename })
-      return `fs:${uploaded.id}:${filename}`
+      let lastErr
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        const uploaded = await folder.uploadFile({ code: fs.createReadStream(tmpPath), name: filename })
+        const storedSize = Number(uploaded?.file_size ?? (await folder.getFileDetails(uploaded.id))?.file_size)
+        if (storedSize === file.buffer.length) return `fs:${uploaded.id}:${filename}`
+        console.error(`fileStorage upload attempt ${attempt}: stored ${storedSize} of ${file.buffer.length} bytes for ${filename} — retrying`)
+        lastErr = new Error(`File Store stored ${storedSize} of ${file.buffer.length} bytes`)
+        try { await folder.deleteFile(uploaded.id) } catch { /* orphan cleanup is best effort */ }
+      }
+      throw lastErr
     } catch (err) {
       console.error('fileStorage upload failed:', err.message, err.stack)
       throw err
@@ -76,14 +86,29 @@ async function saveUpload(req, file) {
 }
 
 // Stream a stored file to the response, whatever backend it lives in.
+// Downloads from File Store are verified against the file's true size —
+// the transfer can silently stop partway (stream 'end' fires with no error),
+// which used to serve truncated images/PDFs as complete 200 responses.
 async function sendStored(req, res, key) {
   if (String(key).startsWith('fs:')) {
     const [, fileId, ...nameParts] = String(key).split(':')
     const folder = await getFolder(req)
-    const data = await folder.downloadFile(fileId)
+    const details = await folder.getFileDetails(fileId).catch(() => null)
+    if (!details) return res.status(404).json({ message: 'File not found in storage.' })
+    const expected = Number(details.file_size)
+
+    let data
+    for (let attempt = 1; attempt <= 4; attempt++) {
+      data = await folder.downloadFile(fileId)
+      if (!Buffer.isBuffer(data)) data = Buffer.from(data)
+      if (!expected || data.length === expected) break
+      console.error(`fileStorage download attempt ${attempt}: got ${data.length} of ${expected} bytes for file ${fileId}`)
+      data = null
+    }
+    if (!data) return res.status(502).json({ message: 'File download incomplete — please try again.' })
+
     res.type(path.extname(nameParts.join(':')) || 'bin')
-    if (data && typeof data.pipe === 'function') return data.pipe(res)
-    return res.send(Buffer.isBuffer(data) ? data : Buffer.from(data))
+    return res.send(data)
   }
   const filePath = path.join(UPLOAD_DIR, path.basename(key)) // basename — defeats path traversal
   if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'File not found.' })
