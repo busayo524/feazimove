@@ -79,7 +79,7 @@ async function request(method, path, body, options = {}) {
 // count and retried on mismatch) and reassembled here. Small files and older
 // backends without slice support fall back to a plain single fetch.
 const SLICE_SIZE = 128 * 1024
-const SLICE_PARALLEL = 4
+const SLICE_PARALLEL = 8
 
 async function getBlob(path) {
   const token = localStorage.getItem('fm_token')
