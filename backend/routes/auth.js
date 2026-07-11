@@ -927,4 +927,44 @@ router.get('/storage-selftest', requireAuth, async (req, res) => {
   }
 })
 
+// ── Download-integrity probe — reads the caller's own avatar from File Store
+// server-side and reports what the SDK actually returned, to distinguish
+// "SDK gives short buffers" from "Zoho edge truncates the response".
+// ?b64=1 additionally returns the file as base64 JSON so we can test whether
+// a large JSON body survives the edge where a binary body doesn't.
+router.get('/storage-download-debug', requireAuth, async (req, res) => {
+  const out = {}
+  try {
+    const userRes = await query('SELECT avatar_path FROM users WHERE id = $1', [req.user.id])
+    const key = userRes.rows[0]?.avatar_path
+    out.key = key
+    if (!key || !String(key).startsWith('fs:')) return res.json({ ...out, note: 'no File Store avatar' })
+    const [, fileId] = String(key).split(':')
+
+    const catalyst = require('zcatalyst-sdk-node')
+    let app
+    try { app = catalyst.initialize(req, { scope: 'admin' }) } catch { app = catalyst.initialize(req) }
+    const store = app.filestore()
+    const dts = f => (f && typeof f.toJSON === 'function' ? f.toJSON() : f) || {}
+    const folders = await store.getAllFolders()
+    const folder = (folders || []).find(f => dts(f).folder_name === 'feazimove_uploads')
+    if (!folder) return res.json({ ...out, note: 'folder missing' })
+
+    out.details = await folder.getFileDetails(fileId).catch(e => ({ error: e.message }))
+    out.reads = []
+    let last = null
+    for (let i = 0; i < 3; i++) {
+      const data = await folder.downloadFile(fileId)
+      last = Buffer.isBuffer(data) ? data : Buffer.from(data)
+      out.reads.push(last.length)
+    }
+    if (req.query.b64 === '1' && last) out.b64 = last.toString('base64')
+    res.json(out)
+  } catch (err) {
+    out.error = err.message
+    out.stack = (err.stack || '').split('\n').slice(0, 4)
+    res.status(500).json(out)
+  }
+})
+
 module.exports = router
