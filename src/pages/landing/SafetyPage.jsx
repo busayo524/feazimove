@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Shield, Share2, User, MessageCircle, Bell, CheckCircle, Heart, ArrowRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import LandingLayout from '../../components/LandingLayout'
 import { useTheme } from '../../context/ThemeContext'
 
@@ -21,7 +21,6 @@ import safety1Img       from '../../assets/safety1.png'
 import respectImg       from '../../assets/respect for all.jpg'
 import onePersonImg     from '../../assets/oneperson.jpg'
 import discriminateImg  from '../../assets/Discriminate.jpg'
-import liveTripImg      from '../../assets/livetrip.jpg'
 import passengerSafetyImg from '../../assets/passengersafty.jpg'
 
 // ── Inline SVG Illustrations (B&W + lime #ccff00) ─────────────────────────────
@@ -56,27 +55,6 @@ function NoDismissalIllustration() {
   )
 }
 
-function SOSIllustration() {
-  return (
-    <img
-      src={liveTripImg}
-      alt="Live trip tracking"
-      style={{ width: '100%', maxWidth: 340, height: '100%', objectFit: 'cover', borderRadius: 16 }}
-    />
-  )
-}
-
-// ── Feature pills data ──────────────────────────────────────────────────────────
-const FEATURES = [
-  { icon: <Share2 size={16}/>,       label: 'Share your ride' },
-  { icon: <User size={16}/>,         label: 'Trusted contacts' },
-  { icon: <MessageCircle size={16}/>,label: 'Support 24/7' },
-  { icon: <Bell size={16}/>,         label: 'SOS button' },
-  { icon: <CheckCircle size={16}/>,  label: 'ID verification' },
-  { icon: <Heart size={16}/>,        label: 'Trip monitoring' },
-  { icon: <Shield size={16}/>,       label: 'And more' },
-]
-
 // ── Safety standards cards ─────────────────────────────────────────────────────
 const STANDARDS = [
   {
@@ -93,30 +71,6 @@ const STANDARDS = [
     Illustration: NoDismissalIllustration,
     title: 'No discrimination',
     body: 'FeaziMove has a zero-tolerance policy towards discrimination of any kind — based on gender, ethnicity, religion, disability, or any other characteristic.',
-  },
-]
-
-// ── App safety features ────────────────────────────────────────────────────────
-const APP_FEATURES = [
-  {
-    icon: <Share2 size={20} />,
-    title: 'Live Trip Sharing',
-    body: 'Share a live tracking link with trusted contacts so they always know where you are.',
-  },
-  {
-    icon: <Bell size={20} />,
-    title: 'Emergency SOS',
-    body: 'One tap alerts our 24/7 safety team and your emergency contacts simultaneously.',
-  },
-  {
-    icon: <CheckCircle size={20} />,
-    title: 'Driver ID Verification',
-    body: 'See your driver\'s photo, name, plate number, and vehicle before you board — every time.',
-  },
-  {
-    icon: <Shield size={20} />,
-    title: 'Trip Recording',
-    body: 'Every route, timestamp, and GPS point is securely stored for investigation and dispute resolution.',
   },
 ]
 
@@ -145,42 +99,6 @@ export default function SafetyPage() {
   return (
     <LandingLayout>
       <style>{`
-        .safety-pill {
-          display: inline-flex;
-          align-items: center;
-          gap: 10px;
-          padding: 12px 22px;
-          border-radius: 999px;
-          border: 2px solid var(--border-mid);
-          background: transparent;
-          font-weight: 700;
-          font-size: 0.95rem;
-          color: var(--text);
-          cursor: default;
-          transition: all 0.2s;
-          font-family: inherit;
-        }
-        .safety-pill:hover {
-          background: #ccff00;
-          border-color: #ccff00;
-          color: #0f0f0f;
-        }
-        .safety-pill .pill-icon {
-          width: 34px;
-          height: 34px;
-          border-radius: 999px;
-          background: #ccff00;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-          transition: background 0.2s;
-          color: #0f0f0f;
-        }
-        .safety-pill:hover .pill-icon {
-          background: #0f0f0f;
-          color: #ccff00;
-        }
         .seat-card {
           position: relative;
           border-radius: 20px;
@@ -223,17 +141,6 @@ export default function SafetyPage() {
           transition: transform 0.2s;
         }
         .seat-btn:hover { transform: scale(1.05); }
-        .app-feature-row {
-          display: flex;
-          align-items: flex-start;
-          gap: 18px;
-          padding: 22px 0;
-          border-bottom: 1px solid var(--border);
-          cursor: pointer;
-          transition: padding-left 0.2s;
-        }
-        .app-feature-row:hover { padding-left: 6px; }
-        .app-feature-row:last-child { border-bottom: none; }
       `}</style>
 
       {/* ── 1. HERO ───────────────────────────────────────────────────────────── */}
@@ -310,58 +217,7 @@ export default function SafetyPage() {
         </div>
       </section>
 
-      {/* ── 3. HIGH SAFETY STANDARDS IN THE APP ──────────────────────────────── */}
-      <section style={{ background: C.whiteBg, padding: 'clamp(48px,7vw,80px) clamp(20px,6vw,80px)' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(2rem,4vw,3rem)', color: C.text, textAlign: 'center', marginBottom: 60 }}>
-            High safety standards in the app
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: 'clamp(32px,5vw,60px)', alignItems: 'center' }}>
-            {/* Left: phone mockup */}
-            <div style={{ background: C.phoneBg, borderRadius: 24, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 420, position: 'relative', padding: 32 }}>
-              <SOSIllustration />
-              {/* Floating badge */}
-              <div style={{ position: 'absolute', top: 24, right: 24, background: '#ccff00', borderRadius: 12, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Shield size={16} color="#0f0f0f" fill="#0f0f0f"/>
-                <span style={{ fontWeight: 800, fontSize: '0.82rem', color: '#0f0f0f' }}>Safety Active</span>
-              </div>
-            </div>
-            {/* Right: feature list */}
-            <div>
-              {APP_FEATURES.map(({ icon, title, body }) => (
-                <div key={title} className="app-feature-row">
-                  <div style={{ width: 48, height: 48, borderRadius: 14, background: '#ccff00', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    {icon}
-                  </div>
-                  <div>
-                    <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.08rem', color: C.text, marginBottom: 6 }}>{title}</h4>
-                    <p style={{ color: C.textFaint, lineHeight: 1.75, fontSize: '0.95rem' }}>{body}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── 4. MORE FEATURES PILLS ────────────────────────────────────────────── */}
-      <section style={{ background: C.sectionBg, padding: '70px clamp(20px,6vw,80px)' }}>
-        <div style={{ maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
-          <p style={{ fontSize: '0.8rem', fontWeight: 800, letterSpacing: '0.18em', color: C.textSoft, textTransform: 'uppercase', marginBottom: 32 }}>
-            ...and more features
-          </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
-            {FEATURES.map(({ icon, label }) => (
-              <button key={label} className="safety-pill">
-                <span className="pill-icon">{icon}</span>
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── 5. SAFETY FOR BOTH SEATS ──────────────────────────────────────────── */}
+      {/* ── 3. SAFETY FOR BOTH SEATS ──────────────────────────────────────────── */}
       <section style={{ background: C.sectionBg, padding: '0 clamp(20px,6vw,80px) 80px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 40 }}>

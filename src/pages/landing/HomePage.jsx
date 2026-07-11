@@ -398,8 +398,7 @@ export default function HomePage() {
               maxWidth: 480,
               marginBottom: 16,
             }}>
-              FeaziMove is a scheduled ride-sharing platform matching daily commuters with car owners/drivers along shared routes, making movement feasible, affordable & easy -{' '}
-              <span style={{ whiteSpace: 'nowrap', color: '#ccff00' }}>The Feazi Way.</span>
+              Matched with a car owner on your route. To work every morning, home every evening.
             </p>
 
             {/* Divider line */}
