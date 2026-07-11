@@ -252,7 +252,8 @@ async function getUserDetail(userId, ridesClause) {
   const userRes = await query(
     `SELECT id, name, email, phone, role, active_role, can_ride, can_drive,
             wallet_balance, rating, is_active, is_online, created_at,
-            id_type, id_number, vehicle_type, vehicle_make, vehicle_model, plate_number, vehicle_year, vehicle_color
+            id_type, id_number, vehicle_type, vehicle_make, vehicle_model, plate_number, vehicle_year, vehicle_color,
+            bank_name, bank_account_number
      FROM users WHERE id = $1`,
     [userId]
   )
@@ -298,6 +299,7 @@ async function getUserDetail(userId, ridesClause) {
     idType: user.id_type, idNumber: user.id_number,
     vehicleType: user.vehicle_type, vehicleMake: user.vehicle_make, vehicleModel: user.vehicle_model,
     plateNumber: user.plate_number, vehicleYear: user.vehicle_year, vehicleColor: user.vehicle_color,
+    bankName: user.bank_name, bankAccountNumber: user.bank_account_number,
     documents: docsRes.rows.map(d => ({ id: d.id, type: d.doc_type, uploadedAt: d.uploaded_at })),
     rides: ridesRes.rows.map(r => ({
       id: r.id, type: r.type, pickup: r.pickup, destination: r.destination,
@@ -444,7 +446,7 @@ router.get('/users/:id',
                   city, area, date_of_birth, gender,
                   id_type, id_number,
                   vehicle_type, vehicle_make, vehicle_model, plate_number, vehicle_year, vehicle_color,
-                  avatar_path
+                  avatar_path, bank_name, bank_account_number
            FROM users WHERE id = $1`,
           [req.params.id]
         ),
@@ -470,6 +472,7 @@ router.get('/users/:id',
           walletBalance: fmt(u.wallet_balance),
           joinedAt: u.created_at,
           city: u.city, area: u.area, dateOfBirth: u.date_of_birth, gender: u.gender,
+          bankName: u.bank_name, bankAccountNumber: u.bank_account_number,
           idType: u.id_type, idNumber: u.id_number,
           vehicleType: u.vehicle_type, vehicleMake: u.vehicle_make,
           vehicleModel: u.vehicle_model, plateNumber: u.plate_number,

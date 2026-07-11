@@ -257,6 +257,8 @@ export default function AdminUserDetail() {
             ? new Date(user.dateOfBirth).toLocaleDateString('en-NG', { day:'numeric', month:'long', year:'numeric' })
             : '—'],
           ['Gender',       user.gender ? user.gender.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase()) : '—'],
+          ['Bank Name',      user.bankName || '—'],
+          ['Account Number', user.bankAccountNumber || '—'],
           ['Date Joined',  new Date(user.joinedAt).toLocaleDateString('en-NG', { day:'numeric', month:'long', year:'numeric' })],
           ['Wallet Balance', `₦${(user.walletBalance||0).toLocaleString()}`],
         ]}/>

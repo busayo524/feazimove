@@ -6,7 +6,7 @@ import { api } from '../../services/api'
 import { useMyAvatar } from '../../hooks/useMyAvatar'
 import { dataUrlToFile } from '../../utils/dataUrlToFile'
 import { compressImage } from '../../utils/compressImage'
-import { User, Phone, Mail, Shield, Bell, ChevronRight, LogOut, Camera, CheckCircle, X, RefreshCw, Car, MapPin, AlertCircle } from 'lucide-react'
+import { User, Phone, Mail, Shield, Bell, ChevronRight, LogOut, Camera, CheckCircle, X, RefreshCw, Car, MapPin, AlertCircle, Landmark } from 'lucide-react'
 
 const NEON='#ccff00', NT='#0a0a0a'
 const OLIVE='#243800', MOSS='#4C6900'
@@ -337,8 +337,9 @@ export default function Profile(){
   const navigate=useNavigate()
   const [editing,setEditing]=useState(false)
   const [saved,setSaved]=useState(false)
-  const [form,setForm]=useState({firstName:user?.firstName||'',lastName:user?.lastName||''})
+  const [form,setForm]=useState({firstName:user?.firstName||'',lastName:user?.lastName||'',bankName:user?.bankName||'',bankAccountNumber:user?.bankAccountNumber||''})
   const [saving,setSaving]=useState(false)
+  const [saveError,setSaveError]=useState('')
   const [avatarUrl,setAvatarUrl]=useMyAvatar(user?.id)
   const [showPicker,setShowPicker]=useState(false)
   const [showPasswordModal,setShowPasswordModal]=useState(false)
@@ -363,9 +364,20 @@ export default function Profile(){
   async function handleSave(e){
     e.preventDefault()
     if(!form.firstName.trim())return
-    setSaving(true)
-    try{await updateUser(form);setSaved(true);setEditing(false);setTimeout(()=>setSaved(false),2500)}
-    catch{}finally{setSaving(false)}
+    const acct=(form.bankAccountNumber||'').trim()
+    if(acct&&!/^\d{10}$/.test(acct)){setSaveError('Account number must be exactly 10 digits.');return}
+    setSaving(true);setSaveError('')
+    try{
+      // Persist server-side so it shows up in the admin panel, then mirror locally
+      await api.patch('/auth/profile',{
+        name:`${form.firstName} ${form.lastName}`.trim(),
+        bankName:(form.bankName||'').trim(),
+        bankAccountNumber:acct,
+      })
+      updateUser({...form,bankAccountNumber:acct})
+      setSaved(true);setEditing(false);setTimeout(()=>setSaved(false),2500)
+    }catch{setSaveError('Could not save changes. Please try again.')}
+    finally{setSaving(false)}
   }
 
   const initials=`${user?.firstName?.[0]||''}${user?.lastName?.[0]||''}`.toUpperCase()||'U'
@@ -417,7 +429,27 @@ export default function Profile(){
                   onFocus={e=>e.target.style.borderColor=MOSS} onBlur={e=>e.target.style.borderColor=BORDER}/>
               </div>
             ))}
+            <p style={{fontWeight:700,fontSize:13,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em',marginTop:6}}>Bank Account Details</p>
+            <div>
+              <label style={{display:'block',fontSize:13,fontWeight:600,color:TEXT,marginBottom:6}}>Bank Name</label>
+              <input value={form.bankName} onChange={e=>set('bankName',e.target.value)} placeholder="e.g. GTBank"
+                style={{width:'100%',padding:'12px 14px',borderRadius:10,fontSize:15,border:`1.5px solid ${BORDER}`,outline:'none',color:TEXT,background:CARD,fontFamily:'inherit',boxSizing:'border-box'}}
+                onFocus={e=>e.target.style.borderColor=MOSS} onBlur={e=>e.target.style.borderColor=BORDER}/>
+            </div>
+            <div>
+              <label style={{display:'block',fontSize:13,fontWeight:600,color:TEXT,marginBottom:6}}>Account Number</label>
+              <input value={form.bankAccountNumber} inputMode="numeric" maxLength={10} placeholder="10-digit account number"
+                onChange={e=>set('bankAccountNumber',e.target.value.replace(/\D/g,''))}
+                style={{width:'100%',padding:'12px 14px',borderRadius:10,fontSize:15,border:`1.5px solid ${BORDER}`,outline:'none',color:TEXT,background:CARD,fontFamily:'inherit',boxSizing:'border-box'}}
+                onFocus={e=>e.target.style.borderColor=MOSS} onBlur={e=>e.target.style.borderColor=BORDER}/>
+            </div>
           </div>
+          {saveError&&(
+            <div style={{display:'flex',gap:8,padding:'10px 14px',background:'#fef2f2',border:'1px solid #fca5a5',borderRadius:10,marginTop:14}}>
+              <AlertCircle size={14} color="#ef4444" style={{flexShrink:0,marginTop:1}}/>
+              <p style={{fontSize:13,color:'#ef4444'}}>{saveError}</p>
+            </div>
+          )}
           <button type="submit" disabled={saving}
             style={{marginTop:16,width:'100%',padding:'13px',borderRadius:50,background:saving?BORDER:NEON,color:saving?MUTED:OLIVE,fontWeight:800,fontSize:15,border:'none',cursor:saving?'not-allowed':'pointer',fontFamily:'inherit'}}>
             {saving?'Saving…':'Save Changes'}
@@ -432,8 +464,9 @@ export default function Profile(){
         </div>
         {[{icon:<Phone size={16} color={OLIVE}/>,label:'Phone',value:user?.phone||'—'},
           {icon:<Mail size={16} color={OLIVE}/>,label:'Email',value:user?.email||'—'},
-          {icon:<User size={16} color={OLIVE}/>,label:'Role',value:user?.role||'rider',cap:true}].map((item,i)=>(
-          <div key={item.label} style={{display:'flex',alignItems:'center',gap:14,padding:'14px 20px',borderBottom:i<2?`1px solid ${BORDER}`:'none',transition:'background 0.15s'}}
+          {icon:<User size={16} color={OLIVE}/>,label:'Role',value:user?.role||'rider',cap:true},
+          {icon:<Landmark size={16} color={OLIVE}/>,label:'Bank Account',value:user?.bankName?`${user.bankName} · ${user.bankAccountNumber||''}`:'Not added yet — tap Edit to add'}].map((item,i,arr)=>(
+          <div key={item.label} style={{display:'flex',alignItems:'center',gap:14,padding:'14px 20px',borderBottom:i<arr.length-1?`1px solid ${BORDER}`:'none',transition:'background 0.15s'}}
             onMouseEnter={e=>e.currentTarget.style.background=BG}
             onMouseLeave={e=>e.currentTarget.style.background=CARD}>
             <div style={{width:36,height:36,borderRadius:10,background:NEON,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{item.icon}</div>

@@ -135,6 +135,22 @@ async function runMigrations() {
     -- Timestamp when the rider actually boarded (status -> in_transit) — used for trip duration analytics
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS in_transit_at TIMESTAMPTZ;
 
+    -- Payout/refund bank details, editable from the profile page
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS bank_name VARCHAR(100);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS bank_account_number VARCHAR(20);
+
+    -- Backfill: the face photo collected at registration becomes the avatar
+    -- for accounts created before automatic assignment existed (selfie
+    -- preferred). Idempotent — only ever fills blanks.
+    UPDATE users u SET avatar_path = d.file_path
+    FROM (
+      SELECT DISTINCT ON (user_id) user_id, file_path
+        FROM user_documents
+       WHERE doc_type IN ('selfie','profilePhoto')
+       ORDER BY user_id, (doc_type = 'selfie') DESC, uploaded_at DESC
+    ) d
+    WHERE u.id = d.user_id AND u.avatar_path IS NULL;
+
     CREATE TABLE IF NOT EXISTS ratings (
       id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       ride_id    UUID REFERENCES rides(id) ON DELETE CASCADE,

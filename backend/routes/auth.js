@@ -591,7 +591,8 @@ router.post('/login',
 
       const result = await query(
         `SELECT id, name, email, phone, role, password_hash, wallet_balance, rating,
-                can_ride, can_drive, active_role, force_password_change, is_active, is_pending
+                can_ride, can_drive, active_role, force_password_change, is_active, is_pending,
+                bank_name, bank_account_number
          FROM users
          WHERE ${isEmail ? 'email = $1' : 'phone = $1'}`,
         [isEmail ? identifier.toLowerCase().trim() : identifier.trim()]
@@ -634,7 +635,7 @@ router.post('/login',
 router.get('/me', requireAuth, async (req, res, next) => {
   try {
     const result = await query(
-      'SELECT id, name, email, phone, role, wallet_balance, rating, can_ride, can_drive, active_role, force_password_change FROM users WHERE id = $1',
+      'SELECT id, name, email, phone, role, wallet_balance, rating, can_ride, can_drive, active_role, force_password_change, bank_name, bank_account_number FROM users WHERE id = $1',
       [req.user.id]
     )
     if (!result.rows[0]) return res.status(404).json({ message: 'User not found.' })
@@ -675,12 +676,29 @@ router.post('/change-password',
 // ── Update profile ────────────────────────────────────────────────────────────
 router.patch('/profile',
   requireAuth,
-  [body('name').trim().isLength({ min: 2, max: 100 }).escape()],
+  [
+    body('name').optional().trim().isLength({ min: 2, max: 100 }).escape(),
+    body('bankName').optional({ nullable: true }).trim().isLength({ max: 100 }).escape(),
+    body('bankAccountNumber').optional({ nullable: true }).trim()
+      .custom(v => v === '' || /^\d{10}$/.test(v)).withMessage('Account number must be 10 digits.'),
+  ],
   validate,
   async (req, res, next) => {
     try {
-      await query('UPDATE users SET name = $1 WHERE id = $2', [req.body.name, req.user.id])
-      res.json({ message: 'Profile updated.' })
+      const sets = [], vals = []
+      const add = (col, val) => { vals.push(val); sets.push(`${col} = $${vals.length}`) }
+      if (req.body.name !== undefined) add('name', req.body.name)
+      if (req.body.bankName !== undefined) add('bank_name', req.body.bankName || null)
+      if (req.body.bankAccountNumber !== undefined) add('bank_account_number', req.body.bankAccountNumber || null)
+      if (!sets.length) return res.json({ message: 'Nothing to update.' })
+      vals.push(req.user.id)
+      const result = await query(
+        `UPDATE users SET ${sets.join(', ')} WHERE id = $${vals.length}
+         RETURNING id, name, email, phone, role, wallet_balance, rating, can_ride, can_drive,
+                   active_role, force_password_change, bank_name, bank_account_number`,
+        vals
+      )
+      res.json({ message: 'Profile updated.', user: safeUser(result.rows[0]) })
     } catch (err) { next(err) }
   }
 )
@@ -719,6 +737,8 @@ function safeUser(user) {
     walletBalance: Math.round((user.wallet_balance || 0) / 100),
     rating:        user.rating,
     forcePasswordChange: user.force_password_change ?? false,
+    bankName:          user.bank_name || null,
+    bankAccountNumber: user.bank_account_number || null,
   }
 }
 
