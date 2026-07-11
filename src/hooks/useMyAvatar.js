@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { api } from '../services/api'
-import { cachedAvatar, rememberAvatar, isFreshThisSession, blobToDataUrl } from '../utils/avatarCache'
+import { cachedAvatar, rememberAvatar, isFreshThisSession, blobToDataUrl, dedupeFetch } from '../utils/avatarCache'
 
 // Shows the current user's own profile photo. Paints instantly from the
 // cache (memory this session, localStorage across visits), and downloads
@@ -16,8 +16,7 @@ export function useMyAvatar(userId) {
     if (!userId) return
     if (cached && isFreshThisSession(key)) return // already refreshed since login
     let alive = true
-    api.getBlob('/auth/avatar')
-      .then(blobToDataUrl)
+    dedupeFetch(key, () => api.getBlob('/auth/avatar').then(blobToDataUrl))
       .then(dataUrl => { rememberAvatar(key, dataUrl); if (alive) setAvatarUrl(dataUrl) })
       .catch(() => {})
     return () => { alive = false }

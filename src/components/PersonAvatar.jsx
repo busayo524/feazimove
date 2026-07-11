@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { api } from '../services/api'
-import { cachedAvatar, rememberAvatar, isFreshThisSession, blobToDataUrl } from '../utils/avatarCache'
+import { cachedAvatar, rememberAvatar, isFreshThisSession, blobToDataUrl, dedupeFetch } from '../utils/avatarCache'
 
 const CARD='#ffffff', BORDER='#e9ecef', OLIVE='#243800'
 
@@ -21,8 +21,7 @@ export default function PersonAvatar({ userId, name, size = 40, fontSize = 15, r
     setAvatarUrl(cached)
     if (!userId || (cached && isFreshThisSession(key))) return
     let alive = true
-    api.getBlob(`/rides/avatar/${userId}`)
-      .then(blobToDataUrl)
+    dedupeFetch(key, () => api.getBlob(`/rides/avatar/${userId}`).then(blobToDataUrl))
       .then(dataUrl => { rememberAvatar(key, dataUrl, { persist: false }); if (alive) setAvatarUrl(dataUrl) })
       .catch(() => {})
     return () => { alive = false }

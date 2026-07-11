@@ -28,6 +28,16 @@ export function isFreshThisSession(key) {
   return fetchedThisSession.has(key)
 }
 
+// Several components can mount at once (header + profile card) — share one
+// in-flight download per key instead of firing duplicates.
+const inflight = new Map()
+export function dedupeFetch(key, fn) {
+  if (inflight.has(key)) return inflight.get(key)
+  const p = Promise.resolve().then(fn).finally(() => inflight.delete(key))
+  inflight.set(key, p)
+  return p
+}
+
 export function blobToDataUrl(blob) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
