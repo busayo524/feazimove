@@ -73,13 +73,63 @@ async function request(method, path, body, options = {}) {
 
 // Fetches a binary resource (e.g. an uploaded document) with the auth header attached —
 // needed because plain <img>/<a> tags can't send an Authorization header themselves.
+//
+// Catalyst's edge silently truncates response bodies beyond a few hundred KB,
+// so files are downloaded as small ?start/?end slices (each verified by byte
+// count and retried on mismatch) and reassembled here. Small files and older
+// backends without slice support fall back to a plain single fetch.
+const SLICE_SIZE = 128 * 1024
+const SLICE_PARALLEL = 4
+
 async function getBlob(path) {
   const token = localStorage.getItem('fm_token')
-  const res = await fetch(`${BASE_URL}${path}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  })
-  if (!res.ok) throw new Error('Could not load file.')
-  return res.blob()
+  const headers = token ? { Authorization: `Bearer ${token}` } : {}
+  const sep = path.includes('?') ? '&' : '?'
+
+  let size = null
+  try {
+    const infoRes = await fetch(`${BASE_URL}${path}${sep}sizeinfo=1`, { headers })
+    if (infoRes.ok && (infoRes.headers.get('Content-Type') || '').includes('json')) {
+      const info = await infoRes.json()
+      if (Number.isFinite(info.size)) size = info.size
+    }
+  } catch { /* older backend — plain fetch below */ }
+
+  if (size == null) {
+    const res = await fetch(`${BASE_URL}${path}`, { headers })
+    if (!res.ok) throw new Error('Could not load file.')
+    return res.blob()
+  }
+
+  const chunks = []
+  let type = ''
+  for (let batchStart = 0; batchStart < size; batchStart += SLICE_SIZE * SLICE_PARALLEL) {
+    const batch = []
+    for (let s = batchStart; s < Math.min(batchStart + SLICE_SIZE * SLICE_PARALLEL, size); s += SLICE_SIZE) {
+      batch.push(fetchSlice(path, sep, headers, s, Math.min(s + SLICE_SIZE, size)))
+    }
+    for (const part of await Promise.all(batch)) {
+      chunks.push(part.buf)
+      type = part.type || type
+    }
+  }
+  return new Blob(chunks, { type })
+}
+
+async function fetchSlice(path, sep, headers, start, endExcl, attempt = 1) {
+  let buf = null, type = ''
+  try {
+    const res = await fetch(`${BASE_URL}${path}${sep}start=${start}&end=${endExcl - 1}`, { headers })
+    if (res.ok) {
+      type = res.headers.get('Content-Type') || ''
+      buf = await res.arrayBuffer()
+    }
+  } catch { /* network hiccup — retried below */ }
+  if (!buf || buf.byteLength !== endExcl - start) {
+    if (attempt >= 4) throw new Error('Could not load file.')
+    return fetchSlice(path, sep, headers, start, endExcl, attempt + 1)
+  }
+  return { buf, type }
 }
 
 export const api = {

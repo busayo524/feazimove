@@ -85,34 +85,79 @@ async function saveUpload(req, file) {
   return filename
 }
 
-// Stream a stored file to the response, whatever backend it lives in.
-// Downloads from File Store are verified against the file's true size —
-// the transfer can silently stop partway (stream 'end' fires with no error),
-// which used to serve truncated images/PDFs as complete 200 responses.
+// In-memory cache of recently fetched File Store files. A chunked client
+// fetch issues several slice requests in quick succession — this makes them
+// cost one File Store round trip instead of one each.
+const DL_CACHE_TTL = 60 * 1000
+const DL_CACHE_MAX = 30 * 1024 * 1024
+const dlCache = new Map() // fileId → { buf, at }
+
+function cacheGet(id) {
+  const hit = dlCache.get(id)
+  if (!hit || Date.now() - hit.at > DL_CACHE_TTL) { dlCache.delete(id); return null }
+  return hit.buf
+}
+
+function cachePut(id, buf) {
+  if (buf.length > DL_CACHE_MAX) return
+  dlCache.set(id, { buf, at: Date.now() })
+  let total = 0
+  for (const [k, v] of [...dlCache.entries()].reverse()) {
+    total += v.buf.length
+    if (total > DL_CACHE_MAX) dlCache.delete(k)
+  }
+}
+
+// Fetch a File Store file fully, verified against its true size — the
+// transfer can silently stop partway (stream 'end' fires with no error).
+// Returns null if the file doesn't exist, throws if it can't be read whole.
+async function getVerifiedBuffer(req, fileId) {
+  const cached = cacheGet(fileId)
+  if (cached) return cached
+  const folder = await getFolder(req)
+  const details = await folder.getFileDetails(fileId).catch(() => null)
+  if (!details) return null
+  const expected = Number(details.file_size)
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    let data = await folder.downloadFile(fileId)
+    if (!Buffer.isBuffer(data)) data = Buffer.from(data)
+    if (!expected || data.length === expected) { cachePut(fileId, data); return data }
+    console.error(`fileStorage download attempt ${attempt}: got ${data.length} of ${expected} bytes for file ${fileId}`)
+  }
+  throw new Error(`File Store returned incomplete data for ${fileId} on every attempt`)
+}
+
+// Send a stored file to the response, whatever backend it lives in.
+//
+// Catalyst's edge silently truncates response bodies beyond a few hundred KB
+// (verified server-side reads are complete while clients receive random
+// prefixes — Jul 2026). Clients therefore fetch files as small slices:
+//   ?sizeinfo=1        → { size } JSON so the client can plan the slices
+//   ?start=A&end=B     → bytes A..B inclusive of the file
+//   no query           → whole file (fine for small files / legacy callers)
 async function sendStored(req, res, key) {
+  let buf, ext
   if (String(key).startsWith('fs:')) {
     const [, fileId, ...nameParts] = String(key).split(':')
-    const folder = await getFolder(req)
-    const details = await folder.getFileDetails(fileId).catch(() => null)
-    if (!details) return res.status(404).json({ message: 'File not found in storage.' })
-    const expected = Number(details.file_size)
-
-    let data
-    for (let attempt = 1; attempt <= 4; attempt++) {
-      data = await folder.downloadFile(fileId)
-      if (!Buffer.isBuffer(data)) data = Buffer.from(data)
-      if (!expected || data.length === expected) break
-      console.error(`fileStorage download attempt ${attempt}: got ${data.length} of ${expected} bytes for file ${fileId}`)
-      data = null
-    }
-    if (!data) return res.status(502).json({ message: 'File download incomplete — please try again.' })
-
-    res.type(path.extname(nameParts.join(':')) || 'bin')
-    return res.send(data)
+    ext = path.extname(nameParts.join(':'))
+    buf = await getVerifiedBuffer(req, fileId)
+    if (!buf) return res.status(404).json({ message: 'File not found in storage.' })
+  } else {
+    const filePath = path.join(UPLOAD_DIR, path.basename(key)) // basename — defeats path traversal
+    if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'File not found.' })
+    ext = path.extname(filePath)
+    buf = fs.readFileSync(filePath)
   }
-  const filePath = path.join(UPLOAD_DIR, path.basename(key)) // basename — defeats path traversal
-  if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'File not found.' })
-  res.sendFile(filePath)
+
+  if (req.query && req.query.sizeinfo === '1') return res.json({ size: buf.length })
+
+  res.type(ext || 'bin')
+  const start = parseInt(req.query && req.query.start, 10)
+  const end   = parseInt(req.query && req.query.end, 10)
+  if (Number.isInteger(start) && Number.isInteger(end) && start >= 0 && start <= end) {
+    return res.send(buf.slice(start, Math.min(end + 1, buf.length)))
+  }
+  return res.send(buf)
 }
 
 // Best-effort delete — callers must not fail if the file is already gone.
