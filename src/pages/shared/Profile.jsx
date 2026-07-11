@@ -6,6 +6,7 @@ import { api } from '../../services/api'
 import { useMyAvatar } from '../../hooks/useMyAvatar'
 import { dataUrlToFile } from '../../utils/dataUrlToFile'
 import { compressImage } from '../../utils/compressImage'
+import { rememberAvatar } from '../../utils/avatarCache'
 import { User, Phone, Mail, Shield, Bell, ChevronRight, LogOut, Camera, CheckCircle, X, RefreshCw, Car, MapPin, AlertCircle, Landmark } from 'lucide-react'
 
 const NEON='#ccff00', NT='#0a0a0a'
@@ -348,7 +349,7 @@ export default function Profile(){
 
   async function handleAvatarDone(dataUrl){
     if(!user?.id)return
-    localStorage.setItem(`feazi_avatar_${user.id}`,dataUrl)
+    rememberAvatar(`feazi_avatar_${user.id}`,dataUrl) // updates session cache + localStorage
     setAvatarUrl(dataUrl)
     setShowPicker(false)
     // Also persist it server-side — this is what makes it visible to other

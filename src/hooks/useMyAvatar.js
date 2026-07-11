@@ -1,22 +1,26 @@
 import { useState, useEffect } from 'react'
 import { api } from '../services/api'
+import { cachedAvatar, rememberAvatar, isFreshThisSession, blobToDataUrl } from '../utils/avatarCache'
 
-// Shows the current user's own profile photo. Starts from the localStorage
-// copy (if this browser was the one that captured it) for an instant paint,
-// then upgrades to the server-side copy via the authenticated /auth/avatar
-// endpoint so the photo also shows up on other devices/browsers. Falls back
-// to initials (returns null) if neither exists.
+// Shows the current user's own profile photo. Paints instantly from the
+// cache (memory this session, localStorage across visits), and downloads
+// from the server only once per session — the first login on a new device
+// shows initials briefly, every page after that is instant.
 export function useMyAvatar(userId) {
-  const [avatarUrl, setAvatarUrl] = useState(() => userId ? localStorage.getItem(`feazi_avatar_${userId}`) : null)
+  const key = userId ? `feazi_avatar_${userId}` : null
+  const [avatarUrl, setAvatarUrl] = useState(() => key ? cachedAvatar(key) : null)
 
   useEffect(() => {
-    setAvatarUrl(userId ? localStorage.getItem(`feazi_avatar_${userId}`) : null)
+    const cached = key ? cachedAvatar(key) : null
+    setAvatarUrl(cached)
     if (!userId) return
-    let objectUrl
+    if (cached && isFreshThisSession(key)) return // already refreshed since login
+    let alive = true
     api.getBlob('/auth/avatar')
-      .then(blob => { objectUrl = URL.createObjectURL(blob); setAvatarUrl(objectUrl) })
+      .then(blobToDataUrl)
+      .then(dataUrl => { rememberAvatar(key, dataUrl); if (alive) setAvatarUrl(dataUrl) })
       .catch(() => {})
-    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl) }
+    return () => { alive = false }
   }, [userId])
 
   return [avatarUrl, setAvatarUrl]

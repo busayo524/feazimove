@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { api } from '../services/api'
+import { cachedAvatar, rememberAvatar, isFreshThisSession, blobToDataUrl } from '../utils/avatarCache'
 
 const CARD='#ffffff', BORDER='#e9ecef', OLIVE='#243800'
 
@@ -13,13 +14,18 @@ export default function PersonAvatar({ userId, name, size = 40, fontSize = 15, r
   const [avatarUrl, setAvatarUrl] = useState(null)
 
   useEffect(() => {
-    setAvatarUrl(null)
-    if (!userId) return
-    let objectUrl
+    // Other people's photos are cached in memory only (not localStorage) —
+    // instant while navigating, but not persisted on this device.
+    const key = `feazi_ride_avatar_${userId}`
+    const cached = userId ? cachedAvatar(key) : null
+    setAvatarUrl(cached)
+    if (!userId || (cached && isFreshThisSession(key))) return
+    let alive = true
     api.getBlob(`/rides/avatar/${userId}`)
-      .then(blob => { objectUrl = URL.createObjectURL(blob); setAvatarUrl(objectUrl) })
+      .then(blobToDataUrl)
+      .then(dataUrl => { rememberAvatar(key, dataUrl, { persist: false }); if (alive) setAvatarUrl(dataUrl) })
       .catch(() => {})
-    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl) }
+    return () => { alive = false }
   }, [userId])
 
   return (
