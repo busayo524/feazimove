@@ -77,7 +77,8 @@ export default function ChatModal({ rideId, title, onClose }) {
             onChange={e => setText(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') send() }}
             placeholder="Type a message…"
-            style={{ flex:1, padding:'11px 14px', borderRadius:50, border:`1.5px solid ${BORDER}`, fontSize:14, outline:'none', fontFamily:'inherit' }}
+            style={{ flex:1, padding:'11px 14px', borderRadius:50, border:`1.5px solid ${BORDER}`, fontSize:14, outline:'none', fontFamily:'inherit',
+              background:CARD, color:TEXT, colorScheme:'light' }}
           />
           <button onClick={send} disabled={!text.trim() || sending} aria-label="Send"
             style={{ width:42, height:42, borderRadius:'50%', border:'none', background: text.trim() ? NT : BORDER, color:NEON, display:'flex', alignItems:'center', justifyContent:'center', cursor: text.trim() ? 'pointer' : 'not-allowed', flexShrink:0 }}>
