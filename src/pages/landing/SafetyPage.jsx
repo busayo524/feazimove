@@ -141,18 +141,24 @@ export default function SafetyPage() {
           transition: transform 0.2s;
         }
         .seat-btn:hover { transform: scale(1.05); }
+        @media (max-width: 1023px) {
+          .safety-hero-shield { opacity: 0.14 !important; }
+        }
       `}</style>
 
       {/* ── 1. HERO ───────────────────────────────────────────────────────────── */}
       <section style={{ background: C.sectionBg, minHeight: '88vh', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '100px clamp(20px,4vw,60px) 60px' }}>
 
-        {/* Large shield SVG behind text */}
-        <svg viewBox="0 0 400 460" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-52%)', width: 'clamp(280px,42vw,480px)', opacity: 0.9, zIndex: 0, pointerEvents: 'none' }} xmlns="http://www.w3.org/2000/svg">
+        {/* Large shield SVG behind text — fades to a watermark on small
+            screens where it would sit directly under every line of text */}
+        <svg viewBox="0 0 400 460" className="safety-hero-shield" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-52%)', width: 'clamp(280px,42vw,480px)', opacity: 0.9, zIndex: 0, pointerEvents: 'none' }} xmlns="http://www.w3.org/2000/svg">
           <path d="M200 20 L360 80 L360 240 C360 340 200 440 200 440 C200 440 40 340 40 240 L40 80 Z" fill="#ccff00"/>
         </svg>
 
-        {/* Left photo stack */}
-        <div style={{ position: 'absolute', left: 'clamp(10px,5vw,60px)', top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: 16, zIndex: 2 }} className="hidden lg:flex">
+        {/* Left photo stack — no inline display: the hidden/lg:flex classes
+            control visibility (inline display:flex was overriding `hidden`,
+            so the collage rendered on top of the headline on phones) */}
+        <div style={{ position: 'absolute', left: 'clamp(10px,5vw,60px)', top: '50%', transform: 'translateY(-50%)', flexDirection: 'column', gap: 16, zIndex: 2 }} className="hidden lg:flex">
           <div style={{ width: 200, height: 240, borderRadius: 20, overflow: 'hidden', transform: 'rotate(-4deg)', boxShadow: '0 12px 40px rgba(0,0,0,0.18)' }}>
             <img src={safetyImg} alt="Safety" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
           </div>
@@ -161,8 +167,8 @@ export default function SafetyPage() {
           </div>
         </div>
 
-        {/* Right photo stack */}
-        <div style={{ position: 'absolute', right: 'clamp(10px,5vw,60px)', top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: 16, zIndex: 2 }} className="hidden lg:flex">
+        {/* Right photo stack — same: visibility belongs to the classes */}
+        <div style={{ position: 'absolute', right: 'clamp(10px,5vw,60px)', top: '50%', transform: 'translateY(-50%)', flexDirection: 'column', gap: 16, zIndex: 2 }} className="hidden lg:flex">
           <div style={{ width: 200, height: 240, borderRadius: 20, overflow: 'hidden', transform: 'rotate(4deg)', boxShadow: '0 12px 40px rgba(0,0,0,0.18)' }}>
             <img src={safety1Img} alt="Driver safety" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
           </div>

@@ -373,7 +373,7 @@ export default function AdminDashboard() {
       ) : (
         <>
           {/* ── Overview stat cards ─────────────────────────────────────── */}
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(210px,1fr))', gap:16, marginBottom:16 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(210px,1fr))', gap:16, marginBottom:16 }} className="dash-stat-grid">
             <StatCard icon={<TrendingUp size={16}/>} label="Total Revenue" value={naira(data.stats.totalRevenue)}
               sub={`${data.stats.completedTrips} completed trip${data.stats.completedTrips === 1 ? '' : 's'}`}/>
             <StatCard icon={<Users size={16}/>} label="Active Riders" value={data.stats.activeRiders}
@@ -514,7 +514,10 @@ export default function AdminDashboard() {
             ))}
           </Card>
 
-          <style>{`@media (max-width: 900px) { .dash-trend-row { grid-template-columns: 1fr !important; } }`}</style>
+          <style>{`
+            @media (max-width: 900px) { .dash-trend-row { grid-template-columns: 1fr !important; } }
+            @media (max-width: 520px) { .dash-stat-grid { grid-template-columns: 1fr !important; } }
+          `}</style>
         </>
       )}
     </AdminLayout>
