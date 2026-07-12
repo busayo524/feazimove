@@ -12,17 +12,25 @@ function lerp(a, b, t) { return a + (b - a) * t }
 
 function easeInOut(t) { return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t }
 
+function initialsOf(name) {
+  return (name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+}
+
 // Shows the pickup → dropoff route, the driver's real live device location,
 // and the rider's real reported location (falling back to the static pickup
 // stop until the rider's device has shared a position).
-export default function ActiveRideMap({ pickup, dropoff, riderLocation, status, onEtaChange }) {
+// `riders` (optional) — pool mode: one initials-badge pin per rider, so the
+// driver can tell everyone apart on a single shared map.
+export default function ActiveRideMap({ pickup, dropoff, riderLocation, status, onEtaChange, riders }) {
   const containerRef = useRef(null)
   const mapRef        = useRef(null)
   const driverMarkerRef = useRef(null)
   const riderMarkerRef  = useRef(null)
+  const poolMarkersRef  = useRef([])
   const watchIdRef    = useRef(null)
   const lastPushRef   = useRef(0)
   const riderAnimFrameRef = useRef(null)
+  const poolMode = Array.isArray(riders) && riders.length > 0
 
   const [mapReady, setMapReady] = useState(false)
   const [mapLoaded, setMapLoaded] = useState(false)
@@ -134,10 +142,48 @@ export default function ActiveRideMap({ pickup, dropoff, riderLocation, status, 
     }
   }, [coords])
 
+  // ── Pool mode: one initials-badge marker per rider. Riders without a live
+  // position sit at the pickup stop, fanned out slightly so badges at the
+  // same spot stay individually readable. ───────────────────────────────────
+  const ridersKey = poolMode
+    ? riders.map(r => `${r.name}:${r.location ? r.location.lat.toFixed(5) + ',' + r.location.lng.toFixed(5) : 'stop'}`).join('|')
+    : ''
+  useEffect(() => {
+    if (!poolMode || !mapRef.current || !window.mapboxgl || !pCoord) return
+    const mb = window.mapboxgl
+
+    poolMarkersRef.current.forEach(m => m.remove())
+    poolMarkersRef.current = riders.map((r, i) => {
+      const atStop = !r.location
+      // spread stop-waiting riders in a small fan so pins don't stack
+      const offset = atStop ? (i - (riders.length - 1) / 2) * 0.00035 : 0
+      const pos = r.location || { lng: pCoord.lng + offset, lat: pCoord.lat }
+      const el = document.createElement('div')
+      Object.assign(el.style, {
+        width: '34px', height: '42px', display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+        filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.45))', cursor: 'default',
+      })
+      el.innerHTML = `
+        <svg width="34" height="42" viewBox="0 0 28 34">
+          <path fill="${NEON}" stroke="${OLIVE}" stroke-width="1.2"
+            d="M14 1C7.4 1 2 6.4 2 13c0 8.8 12 20 12 20s12-11.2 12-20c0-6.6-5.4-12-12-12z"/>
+          <circle cx="14" cy="13" r="8.6" fill="${OLIVE}"/>
+          <text x="14" y="16.6" text-anchor="middle" font-family="Inter,system-ui,sans-serif"
+            font-size="8.2" font-weight="800" fill="${NEON}">${initialsOf(r.name)}</text>
+        </svg>`
+      return new mb.Marker({ element: el, anchor: 'bottom' })
+        .setLngLat([pos.lng, pos.lat])
+        .setPopup(new mb.Popup({ offset: 24 }).setText(atStop ? `${r.name} — waiting at ${pickup}` : r.name))
+        .addTo(mapRef.current)
+    })
+    return () => { poolMarkersRef.current.forEach(m => m.remove()); poolMarkersRef.current = [] }
+  }, [poolMode, mapLoaded, ridersKey, pCoord]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Place/animate the rider's real reported position (falls back to the
   // static pickup stop until their device has shared a position) ───────────
   const riderRefPoint = riderLocation || pCoord
   useEffect(() => {
+    if (poolMode) return // pool mode renders per-rider initials pins instead
     if (!mapRef.current || !window.mapboxgl || !riderRefPoint) return
     const mb = window.mapboxgl
 

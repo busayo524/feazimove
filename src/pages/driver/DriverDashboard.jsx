@@ -33,6 +33,47 @@ const STATUS_TO_STAGE = {
 }
 const NEXT_STATUS = ['arrived_pickup', 'in_transit', 'completed']
 
+// ── One rider row in the active-pool list ─────────────────────────────────────
+// Its own component so each rider's unread-chat hook is legal (hooks can't
+// run inside a loop in the parent). Stays compact so several riders fit on
+// a phone screen without scrolling past the stage button.
+function PoolRiderCard({ ride, stage, showRoute, onOpenChat }) {
+  const rider = ride.rider || { name: 'Rider', phone: '' }
+  const { hasUnread, markSeen } = useUnreadChat(ride.id)
+  return (
+    <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:12, padding:8, marginBottom:10, boxShadow:'0 1px 3px rgba(0,0,0,0.04)' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom: stage < 2 ? 8 : 0 }}>
+        <PersonAvatar userId={rider.id} name={rider.name} size={32} fontSize={13} radius={9}/>
+        <div style={{ flex:1, minWidth:0 }}>
+          <p style={{ color:TEXT, fontWeight:700, fontSize:13, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{rider.name}</p>
+          {showRoute && (
+            <p style={{ fontSize:11, color:MUTED, marginTop:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{ride.pickup} → {ride.destination}</p>
+          )}
+        </div>
+        <p style={{ fontWeight:800, fontSize:13, color:OLIVE, background:CARD, border:`1.5px solid ${BORDER}`, padding:'2px 8px', borderRadius:8, flexShrink:0, whiteSpace:'nowrap' }}>₦{(ride.fare || 0).toLocaleString()}</p>
+      </div>
+
+      {/* Once the trip is in progress, the riders are already with the
+          driver in person — calling/chatting no longer makes sense. */}
+      {stage < 2 && (
+        <div style={{ display:'flex', gap:10 }}>
+          <a href={rider.phone ? `tel:${rider.phone}` : undefined} aria-disabled={!rider.phone}
+            style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'10px', borderRadius:12, background:CARD, border:`1.5px solid ${BORDER}`, color:TEXT, fontWeight:700, fontSize:13.5, textDecoration:'none', opacity:rider.phone?1:0.5, pointerEvents:rider.phone?'auto':'none' }}>
+            <Phone size={15}/> Call
+          </a>
+          <button onClick={() => { onOpenChat(); markSeen() }}
+            style={{ position:'relative', flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'10px', borderRadius:12, background:CARD, border:`1.5px solid ${BORDER}`, color:TEXT, fontWeight:700, fontSize:13.5, cursor:'pointer', fontFamily:'inherit' }}>
+            <MessageSquare size={15}/> Chat
+            {hasUnread && (
+              <span style={{ position:'absolute', top:6, right:'28%', width:9, height:9, borderRadius:'50%', background:'#ef4444', border:'2px solid '+CARD }}/>
+            )}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function fmtCountdown(secs) {
   const m = Math.floor(secs / 60)
@@ -345,29 +386,36 @@ export default function DriverDashboard() {
   const [isGoingLive, setIsGoingLive]     = useState(false)
   const [confirming, setConfirming]       = useState(false)
 
-  // Active ride — once a route is confirmed, this page turns into the active-ride view
-  const [activeRideId, setActiveRideId] = useState(undefined) // undefined = checking, null = none
-  const [ride, setRide] = useState(null)
+  // Active rides — once a route is confirmed, this page turns into the
+  // active-ride view. A pool trip carries one ride PER matched rider, all
+  // moving through the stages together.
+  const [activeRideIds, setActiveRideIds] = useState(undefined) // undefined = checking, [] = none
+  const [rides, setRides] = useState([])
   const [rideLoading, setRideLoading] = useState(false)
   const [rideError, setRideError] = useState('')
   const [advancing, setAdvancing] = useState(false)
-  const [showRideChat, setShowRideChat] = useState(false)
-  const { hasUnread: hasUnreadChat, markSeen: markChatSeen } = useUnreadChat(activeRideId)
+  const [chatRide, setChatRide] = useState(null) // which rider's chat is open
   const [etaSeconds, setEtaSeconds] = useState(null)
 
-  // Resolve any ride already in progress (e.g. on page reload mid-trip)
+  const ride = rides[0] || null // shared route facts (pickup/dropoff/status leg)
+
+  // Resolve any rides already in progress (e.g. on page reload mid-trip)
   useEffect(() => {
     api.get('/rides/me/active')
-      .then(res => setActiveRideId(res.data.rideId))
-      .catch(() => setActiveRideId(null))
+      .then(res => setActiveRideIds(res.data.rideIds?.length ? res.data.rideIds : (res.data.rideId ? [res.data.rideId] : [])))
+      .catch(() => setActiveRideIds([]))
   }, [])
 
-  async function loadActiveRide(id) {
+  async function loadActiveRides(ids) {
     setRideLoading(true)
     try {
-      const res = await api.get(`/rides/${id}`)
-      setRide(res.data.ride)
-      setRideError('')
+      const loaded = await Promise.all(
+        ids.map(id => api.get(`/rides/${id}`).then(r => r.data.ride).catch(() => null))
+      )
+      const live = loaded.filter(Boolean).filter(r => r.status !== 'cancelled')
+      setRides(live)
+      if (live.length) setRideError('')
+      else setRideError('Could not load this ride.')
     } catch (err) {
       setRideError(err.data?.message || 'Could not load this ride.')
     } finally {
@@ -375,19 +423,21 @@ export default function DriverDashboard() {
     }
   }
 
-  // Poll while the ride is active so the rider's live location (pushed from
-  // their device) stays fresh on this map, not just on the initial load.
+  // Poll while the ride is active so each rider's live location (pushed from
+  // their devices) stays fresh on this map, not just on the initial load.
+  const allDone = rides.length > 0 && rides.every(r => r.status === 'completed')
   useEffect(() => {
-    if (!activeRideId) return
-    loadActiveRide(activeRideId)
+    if (!activeRideIds?.length) return
+    loadActiveRides(activeRideIds)
     const id = setInterval(() => {
-      if (ride?.status !== 'completed') loadActiveRide(activeRideId)
+      if (!allDone) loadActiveRides(activeRideIds)
     }, 8000)
     return () => clearInterval(id)
-  }, [activeRideId, ride?.status]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeRideIds, allDone]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const stage = ride ? (STATUS_TO_STAGE[ride.status] ?? 0) : 0
-  const tripDone = ride?.status === 'completed'
+  // The pool moves in lockstep — the shared stage is the furthest-behind ride
+  const stage = rides.length ? Math.min(...rides.map(r => STATUS_TO_STAGE[r.status] ?? 0)) : 0
+  const tripDone = allDone
 
   // ── Exception-based post-trip rating: every unrated rider defaults to 5★;
   // the driver only touches rows that need lowering, then submits once. ──────
@@ -420,11 +470,20 @@ export default function DriverDashboard() {
   }
 
   async function advanceRide() {
-    if (!ride || advancing || stage >= NEXT_STATUS.length) return
+    if (!rides.length || advancing || stage >= NEXT_STATUS.length) return
     setAdvancing(true)
     try {
-      await api.patch(`/rides/${activeRideId}/status`, { status: NEXT_STATUS[stage] })
-      await loadActiveRide(activeRideId)
+      // Advance every ride that's still at the current stage — the whole
+      // pool moves together (all riders board at the same stop).
+      const toAdvance = rides.filter(r => (STATUS_TO_STAGE[r.status] ?? 0) === stage)
+      const results = await Promise.allSettled(
+        toAdvance.map(r => api.patch(`/rides/${r.id}/status`, { status: NEXT_STATUS[stage] }))
+      )
+      const failed = results.filter(r => r.status === 'rejected')
+      if (failed.length) {
+        setRideError(failed[0].reason?.data?.message || 'Could not update every rider — retrying may help.')
+      }
+      await loadActiveRides(activeRideIds)
     } catch (err) {
       setRideError(err.data?.message || 'Could not update ride status.')
     } finally {
@@ -434,8 +493,8 @@ export default function DriverDashboard() {
 
   // Trip's over (or driver backs out) — return to the default Daily Drive view
   function backToDailyDrive() {
-    setActiveRideId(null)
-    setRide(null)
+    setActiveRideIds([])
+    setRides([])
     setRideError('')
     setMatchPhase('idle')
     setAvailabilityId(null)
@@ -542,7 +601,7 @@ export default function DriverDashboard() {
     try {
       const res = await api.post('/driver/confirm-route', { availabilityId })
       // Turn this same page into the active-ride view instead of navigating away
-      setActiveRideId(res.data.rideId)
+      setActiveRideIds(res.data.rideIds?.length ? res.data.rideIds : [res.data.rideId])
     } catch (err) {
       setGoLiveError(err.data?.message || 'Could not start this route. The rider may no longer be available.')
       setConfirming(false)
@@ -760,7 +819,6 @@ export default function DriverDashboard() {
     }
 
     if (!ride) return null
-    const rider = ride.rider || { name: 'Rider', phone: '' }
 
     if (tripDone) {
       return (
@@ -769,9 +827,11 @@ export default function DriverDashboard() {
             <CheckCircle size={40} color={NEON}/>
           </div>
           <h2 style={{ fontSize:24, fontWeight:900, color:TEXT, marginBottom:8, letterSpacing:'-0.02em' }}>Trip Completed!</h2>
-          <p style={{ color:MUTED, fontSize:15, marginBottom:8 }}>Fare collected</p>
+          <p style={{ color:MUTED, fontSize:15, marginBottom:8 }}>
+            {rides.length > 1 ? `Fares collected — ${rides.length} riders` : 'Fare collected'}
+          </p>
           <p style={{ fontSize:36, fontWeight:900, color:NT, letterSpacing:'-0.03em', marginBottom:28, background:NEON, display:'inline-block', padding:'4px 24px', borderRadius:14 }}>
-            ₦{ride.fare.toLocaleString()}
+            ₦{rides.reduce((sum, r) => sum + (r.fare || 0), 0).toLocaleString()}
           </p>
 
           {/* Exception-based rider rating — all riders pre-set to 5★; only
@@ -841,11 +901,12 @@ export default function DriverDashboard() {
 
     return (
       <>
-        {showRideChat && (
-          <ChatModal rideId={activeRideId} title={rider.name} onClose={() => setShowRideChat(false)}/>
+        {chatRide && (
+          <ChatModal rideId={chatRide.id} title={chatRide.rider?.name || 'Rider'} onClose={() => setChatRide(null)}/>
         )}
 
-        <ActiveRideMap pickup={ride.pickup} dropoff={ride.destination} riderLocation={ride.riderLocation} status={ride.status} onEtaChange={setEtaSeconds}/>
+        <ActiveRideMap pickup={ride.pickup} dropoff={ride.destination} riderLocation={ride.riderLocation} status={ride.status} onEtaChange={setEtaSeconds}
+          riders={rides.map(r => ({ name: r.rider?.name || 'Rider', location: r.riderLocation }))}/>
 
         {rideError && (
           <div style={{ display:'flex', gap:8, padding:'10px 14px', background:'#fef2f2', border:'1px solid #fca5a5', borderRadius:10, marginBottom:16 }}>
@@ -864,35 +925,17 @@ export default function DriverDashboard() {
           )}
         </div>
 
-        {/* Rider card */}
-        <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:12, padding:8, marginBottom:12, boxShadow:'0 1px 3px rgba(0,0,0,0.04)' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
-            <PersonAvatar userId={rider.id} name={rider.name} size={32} fontSize={13} radius={9}/>
-            <div style={{ flex:1, minWidth:0 }}>
-              <p style={{ color:TEXT, fontWeight:700, fontSize:13, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{rider.name}</p>
-              <p style={{ fontSize:11, color:MUTED, marginTop:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{ride.pickup} → {ride.destination}</p>
-            </div>
-            <p style={{ fontWeight:800, fontSize:13, color:OLIVE, background:CARD, border:`1.5px solid ${BORDER}`, padding:'2px 8px', borderRadius:8, flexShrink:0, whiteSpace:'nowrap' }}>₦{ride.fare.toLocaleString()}</p>
-          </div>
-
-          {/* Once the trip is in progress, the rider is already with the
-              driver in person — calling/chatting no longer makes sense. */}
-          {stage < 2 && (
-          <div style={{ display:'flex', gap:10 }}>
-            <a href={rider.phone ? `tel:${rider.phone}` : undefined} aria-disabled={!rider.phone}
-              style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'11px', borderRadius:12, background:CARD, border:`1.5px solid ${BORDER}`, color:TEXT, fontWeight:700, fontSize:14, textDecoration:'none', opacity:rider.phone?1:0.5, pointerEvents:rider.phone?'auto':'none' }}>
-              <Phone size={15}/> Call
-            </a>
-            <button onClick={() => { setShowRideChat(true); markChatSeen() }}
-              style={{ position:'relative', flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'11px', borderRadius:12, background:CARD, border:`1.5px solid ${BORDER}`, color:TEXT, fontWeight:700, fontSize:14, cursor:'pointer', fontFamily:'inherit' }}>
-              <MessageSquare size={15}/> Chat
-              {hasUnreadChat && (
-                <span style={{ position:'absolute', top:6, right:'28%', width:9, height:9, borderRadius:'50%', background:'#ef4444', border:'2px solid '+CARD }}/>
-              )}
-            </button>
-          </div>
-          )}
-        </div>
+        {/* Rider cards — one per matched rider in the pool. Header shows the
+            shared route once; each rider gets their own Call/Chat. */}
+        {rides.length > 1 && (
+          <p style={{ fontSize:12, fontWeight:800, color:MUTED, textTransform:'uppercase', letterSpacing:'0.06em', margin:'0 0 8px 2px' }}>
+            {rides.length} riders in this pool · {ride.pickup} → {ride.destination}
+          </p>
+        )}
+        {rides.map(r => (
+          <PoolRiderCard key={r.id} ride={r} stage={stage} showRoute={rides.length === 1}
+            onOpenChat={() => setChatRide(r)}/>
+        ))}
 
         <button onClick={advanceRide} disabled={advancing}
           style={{ width:'100%', padding:'15px', borderRadius:50, background:NEON, color:OLIVE, fontWeight:700, fontSize:15, border:'none', cursor:advancing?'not-allowed':'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:10, opacity:advancing?0.7:1, boxShadow:advancing?'none':'0 4px 12px rgba(204,255,0,0.3)' }}>
@@ -902,7 +945,7 @@ export default function DriverDashboard() {
     )
   }
 
-  const isActiveRide = !!activeRideId
+  const isActiveRide = !!(activeRideIds && activeRideIds.length)
 
   return (
     <AppLayout title={isActiveRide ? 'Active Ride' : <OnlineToggle online={online} busy={togglingOnline} onToggle={handleToggleOnline}/>}>

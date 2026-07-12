@@ -329,76 +329,89 @@ router.post('/confirm-route',
         return res.status(409).json({ message: 'This route is no longer active.' })
       }
 
-      // Re-derive the oldest still-pending matched rider on this exact route + time
-      // (same matching logic as GET /driver/matches)
-      const match = await query(
+      // Re-derive ALL still-pending matched riders on this exact route + time
+      // (same matching logic as GET /driver/matches). Pool riding: every
+      // matched rider up to the driver's seat count joins this one trip.
+      const matchesRes = await query(
         `SELECT id, rider_id, service, quoted_fare_kobo,
                 recipient_name, recipient_phone, package_size, notes, comment
          FROM rider_bookings
          WHERE period = $1 AND time_slot = $2 AND pickup = $3 AND dropoff = $4
            AND status = 'pending' AND rider_id != $5
-         ORDER BY created_at ASC LIMIT 1`,
-        [a.period, a.time_slot, a.pickup, a.dropoff, req.user.id]
+         ORDER BY created_at ASC LIMIT $6`,
+        [a.period, a.time_slot, a.pickup, a.dropoff, req.user.id, a.seats]
       )
-      if (!match.rows[0]) return res.status(409).json({ message: 'No riders currently matched on this route.' })
-      const m = match.rows[0]
+      if (!matchesRes.rows[0]) return res.status(409).json({ message: 'No riders currently matched on this route.' })
 
-      let fareKobo
-      if (m.service === 'solo') {
-        // Solo fare was never quoted at booking time — it's the route's pool
-        // fare × this specific driver's seats, since a solo rider is buying
-        // out the whole car. Only knowable now that a driver is matched.
-        const routeRes = await query(
-          `SELECT pool_fare_kobo FROM routes
-           WHERE period = $1 AND pickup = $2 AND dropoff = $3 AND is_active = true`,
-          [a.period, a.pickup, a.dropoff]
+      // A solo rider buys out the whole car: if the oldest match is solo, the
+      // trip is theirs alone. Solo bookings queued behind pool riders stay
+      // pending for the next driver — they can't share a car.
+      let bookings = matchesRes.rows
+      if (bookings[0].service === 'solo') bookings = [bookings[0]]
+      else bookings = bookings.filter(b => b.service !== 'solo')
+
+      const rideIds = []
+      for (const m of bookings) {
+        let fareKobo
+        if (m.service === 'solo') {
+          // Solo fare was never quoted at booking time — it's the route's pool
+          // fare × this specific driver's seats, since a solo rider is buying
+          // out the whole car. Only knowable now that a driver is matched.
+          const routeRes = await query(
+            `SELECT pool_fare_kobo FROM routes
+             WHERE period = $1 AND pickup = $2 AND dropoff = $3 AND is_active = true`,
+            [a.period, a.pickup, a.dropoff]
+          )
+          if (!routeRes.rows[0]) return res.status(422).json({ message: 'That route is not currently available.' })
+          fareKobo = Number(routeRes.rows[0].pool_fare_kobo) * a.seats
+
+          // Not checked at book-intent (fare was unknown then) — check now.
+          // BIGINT columns come back from pg as strings — compare as Numbers.
+          const riderRes = await query('SELECT wallet_balance FROM users WHERE id = $1', [m.rider_id])
+          if (Number(riderRes.rows[0].wallet_balance) < fareKobo) {
+            // Don't let an unaffordable rider keep blocking the queue for other drivers
+            await query(`UPDATE rider_bookings SET status = 'cancelled' WHERE id = $1`, [m.id])
+            return res.status(409).json({ message: 'This rider no longer has sufficient funds for this route. Try confirming again to match the next rider.' })
+          }
+        } else {
+          // Pool/package fare was quoted and locked in at book-intent time —
+          // never re-looked-up here, so an admin price edit after booking never
+          // changes what's charged. A null means this booking predates the
+          // quoted-fare column — skip it rather than dropping the whole pool.
+          if (m.quoted_fare_kobo == null) continue
+          fareKobo = m.quoted_fare_kobo
+        }
+        const rideType = m.service === 'send' ? 'send' : 'pool'
+
+        const ride = await query(
+          `INSERT INTO rides
+            (rider_id, driver_id, type, pickup, destination, fare_kobo, status,
+             recipient_name, recipient_phone, package_size, notes, rider_comment, driver_comment)
+           VALUES ($1, $2, $3, $4, $5, $6, 'driver_assigned', $7, $8, $9, $10, $11, $12) RETURNING id`,
+          [m.rider_id, req.user.id, rideType, a.pickup, a.dropoff, fareKobo,
+           m.recipient_name, m.recipient_phone, m.package_size, m.notes, m.comment, a.comment]
         )
-        if (!routeRes.rows[0]) return res.status(422).json({ message: 'That route is not currently available.' })
-        fareKobo = Number(routeRes.rows[0].pool_fare_kobo) * a.seats
+        await query(`UPDATE rider_bookings SET status = 'matched' WHERE id = $1`, [m.id])
 
-        // Not checked at book-intent (fare was unknown then) — check now.
-        // BIGINT columns come back from pg as strings — compare as Numbers.
-        const riderRes = await query('SELECT wallet_balance FROM users WHERE id = $1', [m.rider_id])
-        if (Number(riderRes.rows[0].wallet_balance) < fareKobo) {
-          // Don't let an unaffordable rider keep blocking the queue for other drivers
-          await query(`UPDATE rider_bookings SET status = 'cancelled' WHERE id = $1`, [m.id])
-          return res.status(409).json({ message: 'This rider no longer has sufficient funds for this route. Try confirming again to match the next rider.' })
+        // Seed each ride's chat with each side's handoff note (if they left one)
+        // so it's the opening message instead of a separate static box.
+        const rideId = ride.rows[0].id
+        if (m.comment) {
+          await query('INSERT INTO ride_messages (ride_id, sender_id, body) VALUES ($1, $2, $3)', [rideId, m.rider_id, m.comment])
         }
-      } else {
-        // Pool/package fare was quoted and locked in at book-intent time —
-        // never re-looked-up here, so an admin price edit after booking never
-        // changes what's charged. A null here means this booking predates the
-        // quoted-fare column — reject rather than silently charging nothing.
-        if (m.quoted_fare_kobo == null) {
-          return res.status(409).json({ message: 'This booking is outdated. Please ask the rider to book again.' })
+        if (a.comment) {
+          await query('INSERT INTO ride_messages (ride_id, sender_id, body) VALUES ($1, $2, $3)', [rideId, req.user.id, a.comment])
         }
-        fareKobo = m.quoted_fare_kobo
+        rideIds.push(rideId)
       }
-      const rideType = m.service === 'send' ? 'send' : 'pool'
 
-      const ride = await query(
-        `INSERT INTO rides
-          (rider_id, driver_id, type, pickup, destination, fare_kobo, status,
-           recipient_name, recipient_phone, package_size, notes, rider_comment, driver_comment)
-         VALUES ($1, $2, $3, $4, $5, $6, 'driver_assigned', $7, $8, $9, $10, $11, $12) RETURNING id`,
-        [m.rider_id, req.user.id, rideType, a.pickup, a.dropoff, fareKobo,
-         m.recipient_name, m.recipient_phone, m.package_size, m.notes, m.comment, a.comment]
-      )
+      if (!rideIds.length) {
+        return res.status(409).json({ message: 'These bookings are outdated. Please ask the riders to book again.' })
+      }
 
-      await query(`UPDATE rider_bookings SET status = 'matched' WHERE id = $1`, [m.id])
       await query(`UPDATE driver_availability SET status = 'in_progress' WHERE id = $1`, [availabilityId])
 
-      // Seed the ride's chat with each side's handoff note (if they left one)
-      // so it's the opening message instead of a separate static box.
-      const rideId = ride.rows[0].id
-      if (m.comment) {
-        await query('INSERT INTO ride_messages (ride_id, sender_id, body) VALUES ($1, $2, $3)', [rideId, m.rider_id, m.comment])
-      }
-      if (a.comment) {
-        await query('INSERT INTO ride_messages (ride_id, sender_id, body) VALUES ($1, $2, $3)', [rideId, req.user.id, a.comment])
-      }
-
-      res.status(201).json({ rideId })
+      res.status(201).json({ rideId: rideIds[0], rideIds, matchedCount: rideIds.length })
     } catch (err) { next(err) }
   }
 )

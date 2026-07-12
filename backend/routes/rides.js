@@ -229,14 +229,20 @@ router.get('/history', async (req, res, next) => {
 // ── Get my current active ride (driver or rider) ──────────────────────────────
 router.get('/me/active', async (req, res, next) => {
   try {
+    // A pool driver carries several concurrent rides (one per rider); a rider
+    // only ever has one. rideIds carries the whole pool, rideId stays for
+    // older clients that expect a single value.
     const result = await query(
       `SELECT id FROM rides
         WHERE (rider_id = $1 OR driver_id = $1)
           AND status IN ('pending', 'driver_assigned', 'arrived_pickup', 'in_transit')
-        ORDER BY created_at DESC LIMIT 1`,
+        ORDER BY created_at ASC`,
       [req.user.id]
     )
-    res.json({ rideId: result.rows[0]?.id || null })
+    res.json({
+      rideId: result.rows[0]?.id || null,
+      rideIds: result.rows.map(r => r.id),
+    })
   } catch (err) { next(err) }
 })
 
