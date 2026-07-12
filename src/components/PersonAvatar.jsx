@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { api } from '../services/api'
 import { cachedAvatar, rememberAvatar, isFreshThisSession, blobToDataUrl, dedupeFetch } from '../utils/avatarCache'
 
-const CARD='#ffffff', BORDER='#e9ecef', OLIVE='#243800'
+const NEON='#ccff00', BORDER='#e9ecef', OLIVE='#243800'
 
 // Shows a rider/driver's real uploaded profile photo, fetched via the
 // authenticated /rides/avatar/:userId endpoint (plain <img src> can't send
