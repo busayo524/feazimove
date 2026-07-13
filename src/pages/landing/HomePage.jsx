@@ -62,7 +62,9 @@ const audience = [
 
 function WhoItsFor() {
   return (
-    <section className="section" style={{ background: 'var(--bg-subtle)' }}>
+    // paddingBottom overrides .section's large bottom padding — the services
+    // section right below carries its own top spacing
+    <section className="section" style={{ background: 'var(--bg-subtle)', paddingBottom: 'clamp(32px, 4vw, 48px)' }}>
       <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-14">
         <div className="text-center mb-14">
           <p className="label mb-3">Built for everyone</p>
@@ -438,7 +440,7 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════════════════════════════
           SPLIT PANEL — FeaziPool / FeaziMove (Rank Reserve/Flex style)
       ═══════════════════════════════════════════════════════════════════ */}
-      <section className="py-24" style={{ background: 'var(--bg-subtle)' }}>
+      <section className="pb-24 pt-10" style={{ background: 'var(--bg-subtle)' }}>
         <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-14">
           <div className="mb-12">
             <p className="label mb-2">Our services</p>
