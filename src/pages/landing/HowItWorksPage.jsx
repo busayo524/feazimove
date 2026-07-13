@@ -35,7 +35,7 @@ export default function HowItWorksPage() {
           </p>
         </div>
         <div style={{ maxWidth: 1100, margin: '0 auto', borderRadius: 20, overflow: 'hidden', height: 420 }}>
-          <img src={pressingPhone} alt="FeaziMove app in use" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%', display: 'block' }} />
+          <img loading="lazy" decoding="async" src={pressingPhone} alt="FeaziMove app in use" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%', display: 'block' }} />
         </div>
       </section>
 
@@ -47,7 +47,7 @@ export default function HowItWorksPage() {
             return (
               <div key={num} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '80px', alignItems: 'center', padding: '80px 0', borderBottom: i < steps.length - 1 ? '1px solid var(--border)' : 'none' }}>
                 <div style={{ order: flip ? 2 : 1, background: 'var(--bg-subtle)', borderRadius: 24, padding: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 480 }}>
-                  <img src={img} alt={imgAlt} style={{ width: '100%', maxWidth: 640, display: 'block' }} />
+                  <img loading="lazy" decoding="async" src={img} alt={imgAlt} style={{ width: '100%', maxWidth: 640, display: 'block' }} />
                 </div>
                 <div style={{ order: flip ? 1 : 2 }}>
                   <div style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(90px,12vw,140px)', lineHeight: 0.9, letterSpacing: '-0.04em', color: 'var(--border-mid)', marginBottom: 24 }}>{num}</div>
@@ -88,7 +88,7 @@ export default function HowItWorksPage() {
               </Link>
             </div>
             <div style={{ borderRadius: 16, overflow: 'hidden', minHeight: 360 }}>
-              <img src={driveSchedule} alt="Driver on the road" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              <img loading="lazy" decoding="async" src={driveSchedule} alt="Driver on the road" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
             </div>
           </div>
         </section>
@@ -100,7 +100,7 @@ export default function HowItWorksPage() {
           <div style={{ position: 'absolute', bottom: -80, left: -80, width: 260, height: 260, borderRadius: '50%', background: 'rgba(204,255,0,0.35)', pointerEvents: 'none' }} />
           <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '60px', alignItems: 'center', position: 'relative', zIndex: 1 }}>
             <div style={{ borderRadius: 16, overflow: 'hidden', minHeight: 360 }}>
-              <img src={driveJpg} alt="Rider in the city" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              <img loading="lazy" decoding="async" src={driveJpg} alt="Rider in the city" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
             </div>
             <div>
               <p style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-faint)', marginBottom: 16 }}>For Riders</p>

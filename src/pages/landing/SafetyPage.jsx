@@ -27,7 +27,7 @@ import passengerSafetyImg from '../../assets/passengersafty.jpg'
 
 function RespectIllustration() {
   return (
-    <img
+    <img loading="lazy" decoding="async"
       src={respectImg}
       alt="Respect for all"
       style={{ width: '100%', maxWidth: 260, height: 180, objectFit: 'cover', borderRadius: 12 }}
@@ -37,7 +37,7 @@ function RespectIllustration() {
 
 function OneAccountIllustration() {
   return (
-    <img
+    <img loading="lazy" decoding="async"
       src={onePersonImg}
       alt="One person, one account"
       style={{ width: '100%', maxWidth: 260, height: 180, objectFit: 'cover', borderRadius: 12 }}
@@ -47,7 +47,7 @@ function OneAccountIllustration() {
 
 function NoDismissalIllustration() {
   return (
-    <img
+    <img loading="lazy" decoding="async"
       src={discriminateImg}
       alt="No discrimination"
       style={{ width: '100%', maxWidth: 260, height: 180, objectFit: 'cover', borderRadius: 12 }}
@@ -160,20 +160,20 @@ export default function SafetyPage() {
             so the collage rendered on top of the headline on phones) */}
         <div style={{ position: 'absolute', left: 'clamp(10px,5vw,60px)', top: '50%', transform: 'translateY(-50%)', flexDirection: 'column', gap: 16, zIndex: 2 }} className="hidden lg:flex">
           <div style={{ width: 200, height: 240, borderRadius: 20, overflow: 'hidden', transform: 'rotate(-4deg)', boxShadow: '0 12px 40px rgba(0,0,0,0.18)' }}>
-            <img src={safetyImg} alt="Safety" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
+            <img loading="lazy" decoding="async" src={safetyImg} alt="Safety" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
           </div>
           <div style={{ width: 170, height: 190, borderRadius: 20, overflow: 'hidden', transform: 'rotate(3deg) translateX(20px)', boxShadow: '0 12px 40px rgba(0,0,0,0.15)' }}>
-            <img src={rideImg} alt="Ride" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
+            <img loading="lazy" decoding="async" src={rideImg} alt="Ride" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
           </div>
         </div>
 
         {/* Right photo stack — same: visibility belongs to the classes */}
         <div style={{ position: 'absolute', right: 'clamp(10px,5vw,60px)', top: '50%', transform: 'translateY(-50%)', flexDirection: 'column', gap: 16, zIndex: 2 }} className="hidden lg:flex">
           <div style={{ width: 200, height: 240, borderRadius: 20, overflow: 'hidden', transform: 'rotate(4deg)', boxShadow: '0 12px 40px rgba(0,0,0,0.18)' }}>
-            <img src={safety1Img} alt="Driver safety" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
+            <img loading="lazy" decoding="async" src={safety1Img} alt="Driver safety" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
           </div>
           <div style={{ width: 170, height: 190, borderRadius: 20, overflow: 'hidden', transform: 'rotate(-3deg) translateX(-20px)', boxShadow: '0 12px 40px rgba(0,0,0,0.15)' }}>
-            <img src={africaImg} alt="Africa" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
+            <img loading="lazy" decoding="async" src={africaImg} alt="Africa" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
           </div>
         </div>
 
@@ -236,14 +236,14 @@ export default function SafetyPage() {
           <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
             {/* Passenger safety */}
             <div className="seat-card">
-              <img src={passengerSafetyImg} alt="Passenger safety" />
+              <img loading="lazy" decoding="async" src={passengerSafetyImg} alt="Passenger safety" />
               <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 50%)' }} />
               <Link to="/policies?tab=safety" className="seat-btn">Learn more</Link>
               <span className="seat-label">Passenger safety</span>
             </div>
             {/* Driver safety */}
             <div className="seat-card">
-              <img src={driverWithCarImg} alt="Driver safety" />
+              <img loading="lazy" decoding="async" src={driverWithCarImg} alt="Driver safety" />
               <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 50%)' }} />
               <Link to="/policies?tab=safety" className="seat-btn">Learn more</Link>
               <span className="seat-label">Driver safety</span>
@@ -254,7 +254,7 @@ export default function SafetyPage() {
 
       {/* ── 6. FULL-BLEED QUOTE BANNER ────────────────────────────────────────── */}
       <section style={{ position: 'relative', overflow: 'hidden', minHeight: 420 }}>
-        <img src={safety1Img} alt="Safety commitment" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
+        <img loading="lazy" decoding="async" src={safety1Img} alt="Safety commitment" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.72)' }} />
         {/* Lime blob */}
         <div style={{ position: 'absolute', right: 0, bottom: 0, width: 320, height: 320, background: '#ccff00', borderRadius: '80% 0 0 0', opacity: 0.18 }} />
@@ -299,7 +299,7 @@ export default function SafetyPage() {
       <section style={{ background: C.sectionBg, padding: 'clamp(48px,7vw,80px) clamp(20px,6vw,80px)' }}>
         <div className="grid grid-cols-1 md:grid-cols-2" style={{ maxWidth: 1100, margin: '0 auto', gap: 'clamp(32px,5vw,60px)', alignItems: 'center' }}>
           <div style={{ borderRadius: 24, overflow: 'hidden', aspectRatio: '4/3' }}>
-            <img src={safetyImg} alt="Safety" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
+            <img loading="lazy" decoding="async" src={safetyImg} alt="Safety" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
           </div>
           <div>
             <p style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.18em', color: '#5a9e00', textTransform: 'uppercase', marginBottom: 16 }}>Always on</p>

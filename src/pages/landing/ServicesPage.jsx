@@ -161,7 +161,7 @@ export default function ServicesPage() {
           </div>
           {/* Right: image */}
           <div style={{ borderRadius: 20, overflow: 'hidden', aspectRatio: '4/3' }}>
-            <img
+            <img loading="lazy" decoding="async"
               src={onePlatformImg}
               alt="FeaziMove platform"
               style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
@@ -236,7 +236,7 @@ export default function ServicesPage() {
               </Link>
             </div>
             <div style={{ order: flip ? 1 : 2, display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'var(--bg-raised)', borderRadius: 24, padding: 40, minHeight: 420 }}>
-              <img src={img} alt={title} style={{ width: '100%', maxWidth: 520, display: 'block' }} />
+              <img loading="lazy" decoding="async" src={img} alt={title} style={{ width: '100%', maxWidth: 520, display: 'block' }} />
             </div>
           </div>
         </section>
@@ -256,7 +256,7 @@ export default function ServicesPage() {
               {/* Lime blob behind image — bottom left */}
               <div style={{ position: 'absolute', bottom: 0, left: -20, width: 120, height: 120, borderRadius: '50%', background: '#ccff00', opacity: 0.35, zIndex: 0 }} />
               <div style={{ borderRadius: 24, overflow: 'hidden', aspectRatio: '3/3.5', boxShadow: '0 20px 60px rgba(0,0,0,0.10)', position: 'relative', zIndex: 1 }}>
-                <img src={current.img} alt={current.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'opacity 0.4s ease' }} />
+                <img loading="lazy" decoding="async" src={current.img} alt={current.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'opacity 0.4s ease' }} />
               </div>
             </div>
             <div>

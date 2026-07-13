@@ -20,19 +20,19 @@ import feaziBizImg  from '../../assets/feazibiz.png'
 import appScreenshotHero from '../../assets/app-screenshot-hero.png'
 
 function HeroScene({ className = '' }) {
-  return <img src={accessAccountSvg} alt="Access account illustration" className={className} style={{ width:'100%', display:'block' }} />
+  return <img loading="lazy" decoding="async" src={accessAccountSvg} alt="Access account illustration" className={className} style={{ width:'100%', display:'block' }} />
 }
 
 function DeliveryScene({ className = '' }) {
-  return <img src={messengerPana} alt="Delivery illustration" className={className} style={{ width:'100%', display:'block' }} />
+  return <img loading="lazy" decoding="async" src={messengerPana} alt="Delivery illustration" className={className} style={{ width:'100%', display:'block' }} />
 }
 
 function RideSharingScene({ className = '' }) {
-  return <img src={cityDriverCuate} alt="Ride sharing illustration" className={className} style={{ width:'100%', display:'block' }} />
+  return <img loading="lazy" decoding="async" src={cityDriverCuate} alt="Ride sharing illustration" className={className} style={{ width:'100%', display:'block' }} />
 }
 
 function WalletScene({ className = '' }) {
-  return <img src={walletRafiki} alt="Wallet illustration" className={className} style={{ width:'100%', display:'block' }} />
+  return <img loading="lazy" decoding="async" src={walletRafiki} alt="Wallet illustration" className={className} style={{ width:'100%', display:'block' }} />
 }
 
 /* ─── Who It's For ─────────────────────────────────────────────────────── */
@@ -78,7 +78,7 @@ function WhoItsFor() {
             <div key={tag} className="card overflow-hidden flex flex-col" style={{ padding: 0 }}>
               {/* Image */}
               <div style={{ position: 'relative', height: 300, overflow: 'hidden' }}>
-                <img
+                <img loading="lazy" decoding="async"
                   src={img}
                   alt={title}
                   style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: imgPos || 'center center', display: 'block' }}
@@ -465,7 +465,7 @@ export default function HomePage() {
                 </Link>
               </div>
               <div style={{ height:280, background:'var(--bg-subtle)', overflow:'hidden' }}>
-                <img src={feaziPoolImg} alt="FeaziPool" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top', display:'block' }} />
+                <img loading="lazy" decoding="async" src={feaziPoolImg} alt="FeaziPool" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top', display:'block' }} />
               </div>
             </div>
 
@@ -485,7 +485,7 @@ export default function HomePage() {
                 </Link>
               </div>
               <div style={{ height:280, background:'rgba(255,255,255,0.04)', overflow:'hidden' }}>
-                <img src={feaziSendImg} alt="FeaziMove" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top', display:'block' }} />
+                <img loading="lazy" decoding="async" src={feaziSendImg} alt="FeaziMove" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top', display:'block' }} />
               </div>
             </div>
 
@@ -505,7 +505,7 @@ export default function HomePage() {
                 </Link>
               </div>
               <div style={{ height:280, background:'var(--bg)', overflow:'hidden' }}>
-                <img src={feaziBizImg} alt="FeaziBiz" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 14%', display:'block' }} />
+                <img loading="lazy" decoding="async" src={feaziBizImg} alt="FeaziBiz" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 14%', display:'block' }} />
               </div>
             </div>
 
@@ -662,7 +662,7 @@ export default function HomePage() {
                 </div>
 
                 {/* Real app screenshot — full rider dashboard page, no cropping */}
-                <img src={appScreenshotHero} alt="FeaziMove app — Schedule Ride screen"
+                <img loading="lazy" decoding="async" src={appScreenshotHero} alt="FeaziMove app — Schedule Ride screen"
                   style={{ display: 'block', width: '100%', height: 'auto' }} />
               </div>
             </div>

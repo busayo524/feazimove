@@ -38,7 +38,7 @@ export default function AboutPage() {
     <LandingLayout>
       {/* ── Hero with background image ─────────────────────────────────── */}
       <section style={{ position: 'relative', height: 320, display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
-        <img
+        <img loading="lazy" decoding="async"
           src={aboutBanner}
           alt="About FeaziMove"
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%', transform: 'scale(1.08)', transformOrigin: 'center center' }}
@@ -63,7 +63,7 @@ export default function AboutPage() {
           {/* Image — left */}
           <div style={{ position: 'relative' }}>
             <div style={{ borderRadius: 20, overflow: 'hidden', width: '100%', height: 'clamp(300px,50vw,560px)' }}>
-              <img
+              <img loading="lazy" decoding="async"
                 src={africanMob}
                 alt="FeaziMove community"
                 style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }}
