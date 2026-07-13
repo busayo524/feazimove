@@ -186,6 +186,29 @@ router.patch('/book-intent/:bookingId/cancel',
   }
 )
 
+// ── Latest still-pending booking for this rider — lets the booking screen
+// restore its "Matching you with a driver…" state after a reload, or after a
+// driver cancelled the trip and the booking was returned to the queue. ──────
+// (Declared before GET /:rideId so "book-intent" isn't parsed as a rideId.)
+router.get('/book-intent/mine', async (req, res, next) => {
+  try {
+    const result = await query(
+      `SELECT id, period, time_slot, pickup, dropoff, service
+       FROM rider_bookings
+       WHERE rider_id = $1 AND status = 'pending'
+       ORDER BY created_at DESC LIMIT 1`,
+      [req.user.id]
+    )
+    const b = result.rows[0]
+    res.json({
+      booking: b ? {
+        bookingId: b.id, period: b.period, timeSlot: b.time_slot,
+        pickup: b.pickup, dropoff: b.dropoff, service: b.service,
+      } : null,
+    })
+  } catch (err) { next(err) }
+})
+
 // ── Trip history ──────────────────────────────────────────────────────────────
 // MUST be declared before GET /:rideId — otherwise Express matches "history"
 // as a rideId param, fails UUID validation, and returns 422 instead.
@@ -335,7 +358,9 @@ router.patch('/:rideId/location',
   }
 )
 
-// ── Cancel ride ───────────────────────────────────────────────────────────────
+// ── Cancel ride — allowed any time before the trip actually starts, even
+// after the driver has arrived at pickup. The rider's linked booking is
+// cancelled too so they can't be re-matched by mistake.
 router.patch('/:rideId/cancel',
   [param('rideId').isUUID()],
   validate,
@@ -343,10 +368,13 @@ router.patch('/:rideId/cancel',
     try {
       const result = await query(
         `UPDATE rides SET status = 'cancelled'
-          WHERE id = $1 AND rider_id = $2 AND status IN ('pending', 'driver_assigned')
-          RETURNING id`,
+          WHERE id = $1 AND rider_id = $2 AND status IN ('pending', 'driver_assigned', 'arrived_pickup')
+          RETURNING id, booking_id`,
         [req.params.rideId, req.user.id]
       )
+      if (result.rows[0]?.booking_id) {
+        await query(`UPDATE rider_bookings SET status = 'cancelled' WHERE id = $1`, [result.rows[0].booking_id])
+      }
       if (!result.rows[0]) return res.status(400).json({ message: 'Cannot cancel this ride.' })
       res.json({ message: 'Ride cancelled.' })
     } catch (err) { next(err) }

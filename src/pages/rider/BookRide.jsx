@@ -156,6 +156,27 @@ export default function BookRide(){
     return () => { cancelled = true; clearInterval(id) }
   }, [activeRideId])
 
+  // Restore a still-pending booking after a reload — or after a driver
+  // cancelled the trip and this rider's request went back into the queue —
+  // so the "Matching you with a driver…" modal resumes instead of vanishing.
+  useEffect(() => {
+    if (activeRideId !== null || bookingId) return
+    let cancelled = false
+    api.get('/rides/book-intent/mine')
+      .then(res => {
+        const b = res.data.booking
+        if (cancelled || !b || (b.service !== 'pool' && b.service !== 'solo')) return
+        setPeriod(b.period)
+        setTimeSlot(b.timeSlot)
+        setPickup(b.pickup)
+        setDropoff(b.dropoff)
+        setBookingId(b.bookingId)
+        setShowPreview(true)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [activeRideId]) // eslint-disable-line react-hooks/exhaustive-deps
+
   function switchPeriod(p){
     if(p === period) return
     setPeriod(p)
@@ -229,7 +250,7 @@ export default function BookRide(){
   return(
     <AppLayout title={activeRideId ? 'Track Ride' : 'Schedule Ride'}>
       {activeRideId ? (
-        <RideTracker activeRideId={activeRideId}/>
+        <RideTracker activeRideId={activeRideId} onExit={() => setActiveRideId(null)}/>
       ) : (
         <>
           {showPreview && pickup && dropoff && (

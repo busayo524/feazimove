@@ -415,7 +415,7 @@ export default function DriverDashboard() {
       const live = loaded.filter(Boolean).filter(r => r.status !== 'cancelled')
       setRides(live)
       if (live.length) setRideError('')
-      else setRideError('Could not load this ride.')
+      else setRideError('This trip is no longer active — the rider(s) cancelled before it started.')
     } catch (err) {
       setRideError(err.data?.message || 'Could not load this ride.')
     } finally {
@@ -491,6 +491,25 @@ export default function DriverDashboard() {
     }
   }
 
+  // Driver changed their mind before starting the trip — cancel every
+  // un-started ride; the riders' bookings go straight back into the queue.
+  const [showTripCancelConfirm, setShowTripCancelConfirm] = useState(false)
+  const [cancellingTrip, setCancellingTrip] = useState(false)
+  async function cancelActiveTrip() {
+    if (cancellingTrip) return
+    setCancellingTrip(true)
+    try {
+      await api.post('/driver/cancel-active')
+      setShowTripCancelConfirm(false)
+      backToDailyDrive()
+    } catch (err) {
+      setShowTripCancelConfirm(false)
+      setRideError(err.data?.message || 'Could not cancel this trip.')
+    } finally {
+      setCancellingTrip(false)
+    }
+  }
+
   // Trip's over (or driver backs out) — return to the default Daily Drive view
   function backToDailyDrive() {
     setActiveRideIds([])
@@ -515,19 +534,36 @@ export default function DriverDashboard() {
   )].sort()
   const canGoLive     = timeSlot && pickup && dropoff && seats
 
-  // "Next stop in the chain" is now computed server-side (single source of
-  // truth) — peek at it here just to show the preview in the no-riders UI.
+  // "Next stop in the chain" is computed server-side (single source of
+  // truth) — peek at it to show the preview in the no-riders UI, and in the
+  // matched view once the search has gone quiet with seats still empty.
+  const seatsCount = parseInt(seats, 10) || 0
+  const [matchIdleExpired, setMatchIdleExpired] = useState(false)
+  const [lastNewMatchAt, setLastNewMatchAt] = useState(0)
+  const prevMatchCountRef = useRef(0)
+
   const [nextPickupPreview, setNextPickupPreview] = useState(null)
+  const wantNextPickup = matchPhase === 'no-riders' || (matchPhase === 'matched' && matchIdleExpired)
   useEffect(() => {
-    if (matchPhase !== 'no-riders' || !availabilityId) { setNextPickupPreview(null); return }
+    if (!wantNextPickup || !availabilityId) { setNextPickupPreview(null); return }
     api.get(`/driver/next-pickup?availabilityId=${availabilityId}`)
       .then(res => setNextPickupPreview(res.data.newPickup))
       .catch(() => setNextPickupPreview(null))
-  }, [matchPhase, availabilityId])
+  }, [wantNextPickup, availabilityId])
 
-  // ── Polling effect ────────────────────────────────────────────────────────
+  // 5 minutes with no NEW rider matched (timer resets on every new match) →
+  // surface the "search the next pickup" option in the matched view.
   useEffect(() => {
-    if (matchPhase !== 'matching' || !availabilityId) return
+    setMatchIdleExpired(false)
+    if (matchPhase !== 'matched') return
+    const t = setTimeout(() => setMatchIdleExpired(true), 300_000)
+    return () => clearTimeout(t)
+  }, [matchPhase, lastNewMatchAt])
+
+  // ── Polling effect — runs while searching AND after partial matches, so a
+  // driver with empty seats keeps collecting riders until they confirm ──────
+  useEffect(() => {
+    if ((matchPhase !== 'matching' && matchPhase !== 'matched') || !availabilityId) return
 
     let cancelled = false
 
@@ -535,9 +571,16 @@ export default function DriverDashboard() {
       if (cancelled) return
       try {
         const res = await api.get(`/driver/matches?availabilityId=${availabilityId}`)
-        if (!cancelled && res.data.count > 0) {
-          setMatchedRiders(res.data.matches)
-          setMatchPhase('matched')
+        if (cancelled) return
+        const matches = res.data.matches || []
+        if (matches.length > prevMatchCountRef.current) setLastNewMatchAt(Date.now())
+        prevMatchCountRef.current = matches.length
+        setMatchedRiders(matches)
+        if (matches.length > 0 && matchPhase === 'matching') setMatchPhase('matched')
+        if (matches.length === 0 && matchPhase === 'matched') {
+          // every matched rider withdrew — back to open searching
+          setCountdown(180)
+          setMatchPhase('matching')
         }
       } catch { /* silently continue polling */ }
     }
@@ -545,19 +588,20 @@ export default function DriverDashboard() {
     poll() // immediate first check
     const pollId = setInterval(poll, 8000)
 
-    // Countdown tick
-    const cntId = setInterval(() => setCountdown(c => Math.max(0, c - 1)), 1000)
-
-    // 3-minute timeout → no-riders
-    const timerId = setTimeout(() => {
-      if (!cancelled) setMatchPhase('no-riders')
-    }, 180_000)
+    // Countdown + 3-minute no-riders timeout only apply to the initial search
+    let cntId, timerId
+    if (matchPhase === 'matching') {
+      cntId = setInterval(() => setCountdown(c => Math.max(0, c - 1)), 1000)
+      timerId = setTimeout(() => {
+        if (!cancelled) setMatchPhase('no-riders')
+      }, 180_000)
+    }
 
     return () => {
       cancelled = true
       clearInterval(pollId)
-      clearInterval(cntId)
-      clearTimeout(timerId)
+      if (cntId) clearInterval(cntId)
+      if (timerId) clearTimeout(timerId)
     }
   }, [matchPhase, availabilityId])
 
@@ -587,6 +631,8 @@ export default function DriverDashboard() {
       const res = await api.post('/driver/expand-pickup', { availabilityId })
       if (!res.data.newPickup) { handleGoOffline(); return }
       setCurrentPickup(res.data.newPickup)
+      setMatchedRiders([])
+      prevMatchCountRef.current = 0
       setCountdown(180)
       setMatchPhase('matching')
     } catch {
@@ -773,6 +819,34 @@ export default function DriverDashboard() {
 
           {matchedRiders.map(r => <RiderCard key={r.id} rider={r}/>)}
 
+          {/* Seats still open — the search never stops until the driver
+              confirms. New riders appear in the list above automatically. */}
+          {matchedRiders.length < seatsCount && (
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, padding:'10px 0 4px' }}>
+              <div style={{ width:16, height:16, border:`2.5px solid ${OLIVE}`, borderTopColor:'transparent', borderRadius:'50%', animation:'feazi-spin 0.8s linear infinite' }}/>
+              <span style={{ fontSize:12.5, fontWeight:700, color:OLIVE }}>
+                Matching you to more riders on your route… {matchedRiders.length}/{seatsCount} seats filled
+              </span>
+            </div>
+          )}
+
+          {/* 5 minutes without a new match — offer the next stop in the chain.
+              Unconfirmed matches aren't locked, so they return to the queue. */}
+          {matchedRiders.length < seatsCount && matchIdleExpired && nextPickupPreview && (
+            <div style={{ background:BG, border:`1.5px solid ${BORDER}`, borderRadius:12, padding:'12px 14px', margin:'10px 0 2px' }}>
+              <p style={{ fontSize:12.5, color:MUTED, marginBottom:10, lineHeight:1.5 }}>
+                No new riders in a while. You can start with your current rider{matchedRiders.length !== 1 ? 's' : ''},
+                or search from <strong style={{ color:OLIVE }}>{nextPickupPreview}</strong> instead — current unconfirmed
+                matches will go back to the queue for other drivers.
+              </p>
+              <button onClick={handleExpand}
+                style={{ width:'100%', padding:'10px', borderRadius:10, background:CARD, border:`1.5px solid ${MOSS}`,
+                  color:OLIVE, fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+                Search riders at {nextPickupPreview}
+              </button>
+            </div>
+          )}
+
           {goLiveError && (
             <div style={{ display:'flex', gap:8, padding:'10px 14px', background:'#fef2f2',
               border:'1px solid #fca5a5', borderRadius:10, marginBottom:12 }}>
@@ -944,6 +1018,38 @@ export default function DriverDashboard() {
           style={{ width:'100%', padding:'15px', borderRadius:50, background:NEON, color:OLIVE, fontWeight:700, fontSize:15, border:'none', cursor:advancing?'not-allowed':'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:10, opacity:advancing?0.7:1, boxShadow:advancing?'none':'0 4px 12px rgba(204,255,0,0.3)' }}>
           {advancing ? 'Updating…' : stage===1 ? 'Start Trip' : stage<STAGES.length-1 ? STAGES[stage+1] : 'Complete Trip & Collect Fare'}
         </button>
+
+        {/* Cancelling stays possible right up until the trip starts — riders'
+            requests go back into the queue so they re-match automatically. */}
+        {stage < 2 && (
+          <button onClick={() => setShowTripCancelConfirm(true)}
+            style={{ width:'100%', marginTop:10, padding:'12px', borderRadius:50, background:'transparent', color:'#ef4444', fontWeight:700, fontSize:13.5, border:'1.5px solid #fca5a5', cursor:'pointer', fontFamily:'inherit' }}>
+            Cancel Ride
+          </button>
+        )}
+
+        {showTripCancelConfirm && (
+          <div style={{ position:'fixed', inset:0, zIndex:1100, background:'rgba(0,0,0,0.4)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
+            onClick={() => setShowTripCancelConfirm(false)}>
+            <div onClick={e => e.stopPropagation()}
+              style={{ background:CARD, borderRadius:16, padding:24, maxWidth:340, width:'100%', boxShadow:'0 12px 32px rgba(0,0,0,0.2)', textAlign:'center' }}>
+              <p style={{ fontWeight:800, fontSize:16, color:TEXT, marginBottom:8 }}>Cancel this trip?</p>
+              <p style={{ fontSize:13, color:MUTED, marginBottom:20, lineHeight:1.5 }}>
+                {rides.length > 1 ? `All ${rides.length} riders` : 'Your rider'} will be returned to the queue and matched with another driver. This can't be undone.
+              </p>
+              <div style={{ display:'flex', gap:10 }}>
+                <button onClick={() => setShowTripCancelConfirm(false)}
+                  style={{ flex:1, padding:'11px', borderRadius:10, border:`1.5px solid ${BORDER}`, background:CARD, color:TEXT, fontWeight:700, fontSize:14, cursor:'pointer', fontFamily:'inherit' }}>
+                  Keep Trip
+                </button>
+                <button onClick={cancelActiveTrip} disabled={cancellingTrip}
+                  style={{ flex:1, padding:'11px', borderRadius:10, border:'none', background:'#ef4444', color:'#fff', fontWeight:700, fontSize:14, cursor:cancellingTrip?'not-allowed':'pointer', fontFamily:'inherit', opacity:cancellingTrip?0.7:1 }}>
+                  {cancellingTrip ? 'Cancelling…' : 'Yes, Cancel'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </>
     )
   }

@@ -50,8 +50,10 @@ function fmtEta(seconds) {
 // Live ride/delivery tracking — shared by Book Ride and Move an Item, since
 // both run through the exact same booking → match → confirm-route pipeline
 // and the same real-GPS map logic, just with a different "Done" action.
-export default function RideTracker({ activeRideId }) {
+export default function RideTracker({ activeRideId, onExit }) {
   const navigate = useNavigate()
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
   const [ride, setRide] = useState(null)
   const [rideLoading, setRideLoading] = useState(false)
   const [rideError, setRideError] = useState('')
@@ -87,10 +89,25 @@ export default function RideTracker({ activeRideId }) {
   useEffect(() => {
     loadRide(activeRideId)
     const id = setInterval(() => {
-      if (ride?.status !== 'completed') loadRide(activeRideId)
+      if (ride?.status !== 'completed' && ride?.status !== 'cancelled') loadRide(activeRideId)
     }, 8000)
     return () => clearInterval(id)
   }, [activeRideId, ride?.status]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function cancelRide() {
+    if (cancelling) return
+    setCancelling(true)
+    try {
+      await api.patch(`/rides/${activeRideId}/cancel`)
+      setShowCancelConfirm(false)
+      onExit ? onExit() : navigate('/book')
+    } catch (err) {
+      setShowCancelConfirm(false)
+      setRideError(err.data?.message || 'Could not cancel this ride.')
+    } finally {
+      setCancelling(false)
+    }
+  }
 
   // Advance the trip stage myself — same endpoint the driver uses, so either
   // side can confirm pickup/arrival/completion without waiting on the other.
@@ -398,10 +415,53 @@ export default function RideTracker({ activeRideId }) {
 
   if (!ride) return null
 
+  // Trip cancelled — either by this rider elsewhere or by the driver. If the
+  // driver cancelled, the booking is already back in the queue server-side.
+  if (ride.status === 'cancelled') {
+    return (
+      <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:340, textAlign:'center', padding:24 }}>
+        <div style={{ width:64, height:64, borderRadius:'50%', background:'#fef2f2', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:16 }}>
+          <AlertCircle size={30} color="#ef4444"/>
+        </div>
+        <p style={{ color:TEXT, fontWeight:800, fontSize:17, marginBottom:6 }}>This trip was cancelled</p>
+        <p style={{ color:MUTED, fontSize:13.5, lineHeight:1.6, maxWidth:320, marginBottom:20 }}>
+          If the driver cancelled, your request is already back in the queue and we'll match you with another driver automatically.
+        </p>
+        <button onClick={() => (onExit ? onExit() : navigate('/book'))}
+          style={{ padding:'12px 28px', borderRadius:50, background:NT, color:NEON, fontWeight:700, fontSize:14, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
+          OK
+        </button>
+      </div>
+    )
+  }
+
   const isPackage = ride.type === 'send'
 
   return (
     <>
+      {showCancelConfirm && (
+        <div style={{ position:'fixed', inset:0, zIndex:1100, background:'rgba(0,0,0,0.4)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
+          onClick={() => setShowCancelConfirm(false)}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background:CARD, borderRadius:16, padding:24, maxWidth:340, width:'100%', boxShadow:'0 12px 32px rgba(0,0,0,0.2)', textAlign:'center' }}>
+            <p style={{ fontWeight:800, fontSize:16, color:TEXT, marginBottom:8 }}>Cancel this ride?</p>
+            <p style={{ fontSize:13, color:MUTED, marginBottom:20, lineHeight:1.5 }}>
+              Your driver will be notified and your seat will be released. This can't be undone.
+            </p>
+            <div style={{ display:'flex', gap:10 }}>
+              <button onClick={() => setShowCancelConfirm(false)}
+                style={{ flex:1, padding:'11px', borderRadius:10, border:`1.5px solid ${BORDER}`, background:CARD, color:TEXT, fontWeight:700, fontSize:14, cursor:'pointer', fontFamily:'inherit' }}>
+                Keep Ride
+              </button>
+              <button onClick={cancelRide} disabled={cancelling}
+                style={{ flex:1, padding:'11px', borderRadius:10, border:'none', background:'#ef4444', color:'#fff', fontWeight:700, fontSize:14, cursor:cancelling?'not-allowed':'pointer', fontFamily:'inherit', opacity:cancelling?0.7:1 }}>
+                {cancelling ? 'Cancelling…' : 'Yes, Cancel'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showChat && (
         <ChatModal rideId={activeRideId} title={driver.name} onClose={() => setShowChat(false)}/>
       )}
@@ -552,6 +612,15 @@ export default function RideTracker({ activeRideId }) {
       {ride.status !== 'completed' && (
         <button onClick={advanceRide} disabled={advancing} style={{ width:'100%', padding:'13px', borderRadius:50, marginBottom:8, background:advancing?BORDER:NEON, color:advancing?MUTED:OLIVE, fontWeight:700, fontSize:14, border:'none', cursor:advancing?'not-allowed':'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:10, opacity:advancing?0.7:1, boxShadow:advancing?'none':'0 4px 12px rgba(204,255,0,0.3)', fontFamily:'inherit' }}>
           {advancing ? 'Updating…' : NEXT_STATUS_LABEL[NEXT_STATUS[step <= 1 ? 0 : step - 1]]}
+        </button>
+      )}
+
+      {/* Cancelling stays possible right up until the trip actually starts —
+          even after the driver has arrived at the pickup. */}
+      {step < STATUS_TO_STEP.in_transit && (
+        <button onClick={() => setShowCancelConfirm(true)}
+          style={{ width:'100%', padding:'12px', borderRadius:50, marginBottom:8, background:'transparent', color:'#ef4444', fontWeight:700, fontSize:13.5, border:'1.5px solid #fca5a5', cursor:'pointer', fontFamily:'inherit' }}>
+          Cancel Ride
         </button>
       )}
 

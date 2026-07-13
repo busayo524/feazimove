@@ -386,10 +386,10 @@ router.post('/confirm-route',
         const ride = await query(
           `INSERT INTO rides
             (rider_id, driver_id, type, pickup, destination, fare_kobo, status,
-             recipient_name, recipient_phone, package_size, notes, rider_comment, driver_comment)
-           VALUES ($1, $2, $3, $4, $5, $6, 'driver_assigned', $7, $8, $9, $10, $11, $12) RETURNING id`,
+             recipient_name, recipient_phone, package_size, notes, rider_comment, driver_comment, booking_id)
+           VALUES ($1, $2, $3, $4, $5, $6, 'driver_assigned', $7, $8, $9, $10, $11, $12, $13) RETURNING id`,
           [m.rider_id, req.user.id, rideType, a.pickup, a.dropoff, fareKobo,
-           m.recipient_name, m.recipient_phone, m.package_size, m.notes, m.comment, a.comment]
+           m.recipient_name, m.recipient_phone, m.package_size, m.notes, m.comment, a.comment, m.id]
         )
         await query(`UPDATE rider_bookings SET status = 'matched' WHERE id = $1`, [m.id])
 
@@ -415,6 +415,43 @@ router.post('/confirm-route',
     } catch (err) { next(err) }
   }
 )
+
+// ── Cancel the active (not yet started) route — driver changed their mind ────
+// Every un-started ride is cancelled, and each rider's booking goes BACK to
+// the queue ('pending') so they automatically re-match with the next driver
+// instead of being stranded. Not allowed once any ride is in transit.
+router.post('/cancel-active', async (req, res, next) => {
+  try {
+    const inTransit = await query(
+      `SELECT 1 FROM rides WHERE driver_id = $1 AND status = 'in_transit' LIMIT 1`,
+      [req.user.id]
+    )
+    if (inTransit.rows[0]) {
+      return res.status(409).json({ message: 'The trip is already in progress — it can only be completed now.' })
+    }
+
+    const cancelled = await query(
+      `UPDATE rides SET status = 'cancelled'
+        WHERE driver_id = $1 AND status IN ('pending', 'driver_assigned', 'arrived_pickup')
+        RETURNING booking_id`,
+      [req.user.id]
+    )
+    const bookingIds = cancelled.rows.map(r => r.booking_id).filter(Boolean)
+    if (bookingIds.length) {
+      await query(
+        `UPDATE rider_bookings SET status = 'pending' WHERE id = ANY($1) AND status = 'matched'`,
+        [bookingIds]
+      )
+    }
+    await query(
+      `UPDATE driver_availability SET status = 'cancelled'
+        WHERE driver_id = $1 AND status IN ('waiting', 'active', 'in_progress')`,
+      [req.user.id]
+    )
+
+    res.json({ cancelled: cancelled.rows.length, message: 'Route cancelled — riders returned to the queue.' })
+  } catch (err) { next(err) }
+})
 
 // ── Go offline / cancel session ───────────────────────────────────────────────
 router.post('/go-offline',

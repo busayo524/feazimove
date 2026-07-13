@@ -139,6 +139,10 @@ async function runMigrations() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS bank_name VARCHAR(100);
     ALTER TABLE users ADD COLUMN IF NOT EXISTS bank_account_number VARCHAR(20);
 
+    -- Link each ride to the booking it was matched from, so cancelling a ride
+    -- can precisely requeue or cancel that exact booking
+    ALTER TABLE rides ADD COLUMN IF NOT EXISTS booking_id UUID;
+
     -- Backfill: the face photo collected at registration becomes the avatar
     -- for accounts created before automatic assignment existed (selfie
     -- preferred). Idempotent — only ever fills blanks.
