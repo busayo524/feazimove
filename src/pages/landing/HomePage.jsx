@@ -14,7 +14,7 @@ import cityDriverCuate from '../../assets/city-driver-cuate.svg'
 import wpImg  from '../../assets/Corporate commuters.jpg'
 import drvImg from '../../assets/Female Driver solo.jpg'
 import urbImg from '../../assets/urban residents.jpg'
-import feaziPoolImg from '../../assets/feazipool.png'
+import feaziRideImg from '../../assets/feaziride-card.jpg'
 import feaziHaulImg from '../../assets/professional-moving-feazi.jpg'
 import appScreenshotHero from '../../assets/app-screenshot-hero.png'
 
@@ -464,7 +464,7 @@ export default function HomePage() {
                 </Link>
               </div>
               <div style={{ height:280, background:'var(--bg-subtle)', overflow:'hidden' }}>
-                <img loading="lazy" decoding="async" src={feaziPoolImg} alt="FeaziRide" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top', display:'block' }} />
+                <img loading="lazy" decoding="async" src={feaziRideImg} alt="FeaziRide" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top', display:'block' }} />
               </div>
             </div>
 
