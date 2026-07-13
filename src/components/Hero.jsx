@@ -103,7 +103,7 @@ export default function Hero() {
                     {/* Ride options */}
                     <div className="space-y-2">
                       {[
-                        { icon: Users, label: 'FeaziPool', price: '₦450', time: '4 min', active: true },
+                        { icon: Users, label: 'FeaziRide', price: '₦450', time: '4 min', active: true },
                         { icon: Package, label: 'FeaziGo', price: '₦800', time: '6 min', active: false },
                       ].map(({ icon: Icon, label, price, time, active }) => (
                         <div key={label} className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 transition ${
@@ -119,7 +119,7 @@ export default function Hero() {
 
                     {/* Book button */}
                     <button className="w-full mt-4 bg-feazi-green text-white font-bold py-3 rounded-2xl text-sm">
-                      Book FeaziPool — ₦450
+                      Book FeaziRide — ₦450
                     </button>
                   </div>
                 </div>

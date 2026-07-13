@@ -115,7 +115,7 @@ function WhoItsFor() {
 }
 
 /* ─── data ─────────────────────────────────────────────────────────────── */
-const logos = ['FeaziPool', 'FeaziHaul', 'FeaziPool', 'FeaziHaul', 'FeaziPool', 'FeaziHaul']
+const logos = ['FeaziRide', 'FeaziHaul', 'FeaziRide', 'FeaziHaul', 'FeaziRide', 'FeaziHaul']
 
 /* ── Hero animated illustration panel ──────────────────────────────────── */
 function HeroAnimationPanel() {
@@ -204,7 +204,7 @@ function HeroAnimationPanel() {
             </div>
           ))}
           <div style={{ background:'#000', borderRadius:10, padding:'8px 10px', marginTop:6 }}>
-            <span style={{ color:'white', fontSize:8, fontWeight:700 }}>Book FeaziPool →</span>
+            <span style={{ color:'white', fontSize:8, fontWeight:700 }}>Book FeaziRide →</span>
           </div>
         </div>
       </div>
@@ -437,7 +437,7 @@ export default function HomePage() {
 
 
       {/* ══════════════════════════════════════════════════════════════════
-          SPLIT PANEL — FeaziPool / FeaziMove (Rank Reserve/Flex style)
+          SPLIT PANEL — FeaziRide / FeaziMove (Rank Reserve/Flex style)
       ═══════════════════════════════════════════════════════════════════ */}
       <section className="pb-24 pt-10" style={{ background: 'var(--bg-subtle)' }}>
         <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-14">
@@ -448,23 +448,23 @@ export default function HomePage() {
 
           <div className="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto">
 
-            {/* FeaziPool */}
+            {/* FeaziRide */}
             <div className="rounded-2xl flex flex-col overflow-hidden" style={{ background:'var(--bg)', border:'1px solid var(--border)', minHeight:480 }}>
               <div className="flex flex-col justify-between p-8 flex-1">
                 <div>
                   <p className="label mb-3" style={{ color:'var(--lime-text)', letterSpacing:'0.16em' }}>POOL</p>
-                  <h3 className="font-black mb-2" style={{ fontSize:'clamp(1.8rem,2.5vw,2.4rem)', letterSpacing:'-0.04em', color:'var(--lime-text)', lineHeight:1 }}>FeaziPool</h3>
+                  <h3 className="font-black mb-2" style={{ fontSize:'clamp(1.8rem,2.5vw,2.4rem)', letterSpacing:'-0.04em', color:'var(--lime-text)', lineHeight:1 }}>FeaziRide</h3>
                   <p className="text-sm leading-relaxed mb-4" style={{ color:'var(--text-muted)' }}>
                     Share your route with commuters heading your way. Same trip, up to 30% cheaper — no surge, ever.
                   </p>
                 </div>
-                <Link to="/services#feazipool" className="inline-flex items-center gap-2 font-bold text-sm" style={{ color:'var(--lime-text)' }}
+                <Link to="/services#feaziride" className="inline-flex items-center gap-2 font-bold text-sm" style={{ color:'var(--lime-text)' }}
                   onMouseEnter={e => e.currentTarget.style.gap='10px'} onMouseLeave={e => e.currentTarget.style.gap='8px'}>
-                  Explore FeaziPool <ArrowRight size={14} />
+                  Explore FeaziRide <ArrowRight size={14} />
                 </Link>
               </div>
               <div style={{ height:280, background:'var(--bg-subtle)', overflow:'hidden' }}>
-                <img loading="lazy" decoding="async" src={feaziPoolImg} alt="FeaziPool" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top', display:'block' }} />
+                <img loading="lazy" decoding="async" src={feaziPoolImg} alt="FeaziRide" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top', display:'block' }} />
               </div>
             </div>
 

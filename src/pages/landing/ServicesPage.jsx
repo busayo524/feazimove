@@ -82,14 +82,14 @@ const services = [
   {
     id: 'pool',
     icon: Users,
-    name: 'FeaziPool',
+    name: 'FeaziRide',
     tagline: 'Shared rides, lower costs.',
     desc: 'Match with commuters heading the same way. Share the journey, split the cost, and reduce traffic — all in one seamless experience.',
     price: 'From ₦1000',
     color: '#0f0f0f',
     colorDim: 'rgba(204,255,0,0.18)',
     features: ['Up to 60% cheaper than solo rides', 'Door-to-door service', 'AC vehicles', 'Verified co-riders', 'Real-time tracking', 'Auto wallet deduction'],
-    illustration: React.createElement('img', { src: busStopPana, alt: 'FeaziPool', style: { width: '100%', maxWidth: 520, display: 'block', margin: '0 auto' } }),
+    illustration: React.createElement('img', { src: busStopPana, alt: 'FeaziRide', style: { width: '100%', maxWidth: 520, display: 'block', margin: '0 auto' } }),
   },
   {
     id: 'send',

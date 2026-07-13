@@ -5,7 +5,7 @@ const services = [
   {
     id: 'pool',
     icon: Users,
-    title: 'FeaziPool',
+    title: 'FeaziRide',
     tagline: 'Ride Together, Save Together',
     desc: 'Match with commuters heading the same way. Share the journey, split the cost, reduce traffic — and arrive refreshed.',
     price: 'From ₦2,000',

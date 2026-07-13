@@ -31,7 +31,7 @@ const testimonials = [
     role: 'University Student, Enugu',
     avatar: 'CE',
     rating: 5,
-    text: 'As a student, every naira matters. FeaziPool makes it possible for me to move around the city affordably. The app is so simple to use and the drivers are always polite and professional.',
+    text: 'As a student, every naira matters. FeaziRide makes it possible for me to move around the city affordably. The app is so simple to use and the drivers are always polite and professional.',
     color: 'bg-purple-500',
   },
 ]
