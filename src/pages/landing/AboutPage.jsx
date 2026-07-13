@@ -83,10 +83,10 @@ export default function AboutPage() {
               </p>
               <p style={{ fontSize: '1.05rem', color: C.textMid, lineHeight: 1.85 }}>
                 The name Feazi is a play on Feasible and Easy — two qualities we believe everyday transit in Africa must have. Our flagship offering connects commuters and goods with independent drivers along shared routes. By pooling rides, we make everyday movement feasible, affordable and easy.{' '}
-                <span style={{ background: '#ccff00', color: '#0f0f0f', fontWeight: 800, padding: '2px 10px', borderRadius: 6, display: 'inline' }}>&ldquo;The Feazi Way&rdquo;</span>
+                <span style={{ fontWeight: 800 }}>&ldquo;The Feazi Way&rdquo;</span>
               </p>
               <p style={{ fontSize: '1.05rem', color: C.textMid, lineHeight: 1.85 }}>
-                Optimizing shared transit allows us to enhance convenience, slash commuting costs, and lower carbon emissions by reducing vehicle density on the road. Beyond daily commuting, FeaziMove is building a comprehensive mobility ecosystem designed to empower individuals, businesses, and logistics networks alike.
+                Our flagship product &lsquo;FeaziMove&rsquo; is a scheduled ride-sharing platform that matches daily commuters with car owners and drivers going along the same route, for the morning-to-work and evening-back-home trips. Instead of hailing a car on demand, users book a seat on a route someone is already driving — making the commute cheaper, more predictable, and less congested.
               </p>
             </div>
           </div>
