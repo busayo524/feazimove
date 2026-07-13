@@ -14,9 +14,8 @@ import cityDriverCuate from '../../assets/city-driver-cuate.svg'
 import wpImg  from '../../assets/Corporate commuters.jpg'
 import drvImg from '../../assets/Female Driver solo.jpg'
 import urbImg from '../../assets/urban residents.jpg'
-import feaziSendImg from '../../assets/feazisend.png'
 import feaziPoolImg from '../../assets/feazipool.png'
-import feaziBizImg  from '../../assets/feazibiz.png'
+import feaziHaulImg from '../../assets/professional-moving-feazi.jpg'
 import appScreenshotHero from '../../assets/app-screenshot-hero.png'
 
 function HeroScene({ className = '' }) {
@@ -116,7 +115,7 @@ function WhoItsFor() {
 }
 
 /* ─── data ─────────────────────────────────────────────────────────────── */
-const logos = ['FeaziPool', 'FeaziMove', 'FeaziBiz', 'FeaziPool', 'FeaziMove', 'FeaziBiz']
+const logos = ['FeaziPool', 'FeaziHaul', 'FeaziPool', 'FeaziHaul', 'FeaziPool', 'FeaziHaul']
 
 /* ── Hero animated illustration panel ──────────────────────────────────── */
 function HeroAnimationPanel() {
@@ -442,12 +441,12 @@ export default function HomePage() {
       ═══════════════════════════════════════════════════════════════════ */}
       <section className="pb-24 pt-10" style={{ background: 'var(--bg-subtle)' }}>
         <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-14">
-          <div className="mb-12">
+          <div className="mb-12 text-center">
             <p className="label mb-2">Our services</p>
             <h2 className="font-black" style={{ fontSize:'clamp(2.2rem,4vw,3.4rem)', letterSpacing:'-0.04em', color:'var(--text)' }}>Pick your move.</h2>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto">
 
             {/* FeaziPool */}
             <div className="rounded-2xl flex flex-col overflow-hidden" style={{ background:'var(--bg)', border:'1px solid var(--border)', minHeight:480 }}>
@@ -469,43 +468,23 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* FeaziMove */}
+            {/* FeaziHaul — the item-moving service (distinct from the FeaziMove parent brand) */}
             <div className="rounded-2xl flex flex-col overflow-hidden" style={{ background:'#e8e8e4', border:'1px solid rgba(0,0,0,0.08)', minHeight:480 }}>
               <div className="flex flex-col justify-between p-8 flex-1">
                 <div>
                   <p className="label mb-3" style={{ color:'#555', letterSpacing:'0.16em' }}>MOVE</p>
-                  <h3 className="font-black mb-2" style={{ fontSize:'clamp(1.8rem,2.5vw,2.4rem)', letterSpacing:'-0.04em', color:'#0f0f0f', lineHeight:1 }}>FeaziMove</h3>
+                  <h3 className="font-black mb-2" style={{ fontSize:'clamp(1.8rem,2.5vw,2.4rem)', letterSpacing:'-0.04em', color:'#0f0f0f', lineHeight:1 }}>FeaziHaul</h3>
                   <p className="text-sm leading-relaxed mb-4" style={{ color:'#444' }}>
                     Move items from groceries to full apartment. Pool your delivery space with others moving items in the same direction.
                   </p>
                 </div>
                 <Link to="/services" className="inline-flex items-center gap-2 font-bold text-sm" style={{ color:'#0f0f0f' }}
                   onMouseEnter={e => e.currentTarget.style.gap='10px'} onMouseLeave={e => e.currentTarget.style.gap='8px'}>
-                  Explore FeaziMove <ArrowRight size={14} />
+                  Explore FeaziHaul <ArrowRight size={14} />
                 </Link>
               </div>
               <div style={{ height:280, background:'rgba(255,255,255,0.04)', overflow:'hidden' }}>
-                <img loading="lazy" decoding="async" src={feaziSendImg} alt="FeaziMove" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top', display:'block' }} />
-              </div>
-            </div>
-
-            {/* FeaziBiz */}
-            <div className="rounded-2xl flex flex-col overflow-hidden" style={{ background:'var(--bg-subtle)', border:'1px solid var(--border)', minHeight:480 }}>
-              <div className="flex flex-col justify-between p-8 flex-1">
-                <div>
-                  <p className="label mb-3" style={{ color:'var(--lime-text)', letterSpacing:'0.16em' }}>BIZ</p>
-                  <h3 className="font-black mb-2" style={{ fontSize:'clamp(1.8rem,2.5vw,2.4rem)', letterSpacing:'-0.04em', color:'var(--text)', lineHeight:1 }}>FeaziBiz</h3>
-                  <p className="text-sm leading-relaxed mb-4" style={{ color:'var(--text-muted)' }}>
-                    Corporate transport for teams. Manage commutes, deliveries, and fleet costs from one dashboard.
-                  </p>
-                </div>
-                <Link to="/services#feazibiz" className="inline-flex items-center gap-2 font-bold text-sm" style={{ color:'var(--lime-text)' }}
-                  onMouseEnter={e => e.currentTarget.style.gap='10px'} onMouseLeave={e => e.currentTarget.style.gap='8px'}>
-                  Explore FeaziBiz <ArrowRight size={14} />
-                </Link>
-              </div>
-              <div style={{ height:280, background:'var(--bg)', overflow:'hidden' }}>
-                <img loading="lazy" decoding="async" src={feaziBizImg} alt="FeaziBiz" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 14%', display:'block' }} />
+                <img loading="lazy" decoding="async" src={feaziHaulImg} alt="FeaziHaul" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top', display:'block' }} />
               </div>
             </div>
 
