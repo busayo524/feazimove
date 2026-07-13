@@ -856,6 +856,7 @@ export default function DriverDashboard() {
               <p style={{ fontSize:14, fontWeight:800, color:TEXT, marginBottom:4 }}>Rate your rider{unratedRides.length > 1 ? 's' : ''}</p>
               <p style={{ fontSize:12.5, color:MUTED, marginBottom:14 }}>
                 Everyone starts at 5 stars — tap a star only if a rider needs a lower rating.
+                Unrated rides from recent trips appear here too.
               </p>
 
               {unratedRides.map(r => (
@@ -867,6 +868,8 @@ export default function DriverDashboard() {
                     </p>
                     <p style={{ fontSize:11.5, color:MUTED, margin:'2px 0 0', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                       {r.pickup} → {r.destination}
+                      {/* Trip time — same rider can appear once per unrated trip */}
+                      {r.completedAt ? ` · ${new Date(r.completedAt).toLocaleString('en-NG', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}` : ''}
                     </p>
                   </div>
                   <div style={{ display:'flex', gap:2, flexShrink:0 }}>
