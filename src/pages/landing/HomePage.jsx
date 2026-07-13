@@ -502,7 +502,7 @@ export default function HomePage() {
         <div className="flex gap-12 animate-marquee whitespace-nowrap">
           {[...logos, ...logos].map((l, i) => (
             <span key={i} className="font-black text-2xl tracking-tight"
-              style={{ color: i % 4 === 0 ? 'var(--lime-text)' : 'var(--text-faint)', letterSpacing: '-0.03em' }}>
+              style={{ color: l === 'FeaziRide' ? 'var(--lime-text)' : 'var(--text-faint)', letterSpacing: '-0.03em' }}>
               {l}
             </span>
           ))}
