@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Users, Package, Briefcase, ArrowRight, Check, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Users, Package, ArrowRight, Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import LandingLayout from '../../components/LandingLayout'
 import { useTheme } from '../../context/ThemeContext'
 import { CarWithPeople, DeliveryPerson, CommuterGroup } from '../../components/illustrations/PeopleIllustration'
@@ -10,7 +10,6 @@ import walletRafiki  from '../../assets/wallet-rafiki.svg'
 import cityDriver    from '../../assets/city-driver.svg'
 import takeaway      from '../../assets/takeaway.svg'
 import heavyBox      from '../../assets/heavy-box-pana.svg'
-import teamPage      from '../../assets/team-page.svg'
 import movingImg     from '../../assets/Moving.png'
 import busStopPana   from '../../assets/bus-stop-pana.svg'
 import apart1 from '../../assets/setus_Apart1.jpg'
@@ -73,7 +72,7 @@ const apartSlides = [
   {
     img: apart4,
     num: '04',
-    title: 'Feazi Move',
+    title: 'FeaziHaul',
     body: 'From groceries to full apartment. Fast, affordable, same-day moving across the city — no extra vehicle needed.',
   },
 ]
@@ -94,26 +93,14 @@ const services = [
   {
     id: 'send',
     icon: Package,
-    name: 'FeaziMove',
+    name: 'FeaziHaul',
     tagline: 'Same-route delivery.',
     desc: React.createElement(React.Fragment, null, 'Move an Item - from groceries to full apartments.', React.createElement('br'), 'Share Moving Space, Split the cost'),
     price: 'From ₦1000',
     color: '#0f0f0f',
     colorDim: 'rgba(204,255,0,0.18)',
     features: ['Real-time tracking', 'Proof of delivery photos', 'Small to large parcels', 'Same-day delivery'],
-    illustration: React.createElement('img', { src: movingImg, alt: 'FeaziMove', style: { width: '100%', maxWidth: 520, display: 'block', margin: '0 auto', borderRadius: 20 } }),
-  },
-  {
-    id: 'biz',
-    icon: Briefcase,
-    name: 'FeaziBiz',
-    tagline: 'Same-route delivery for teams.',
-    desc: 'Manage employee commutes and business deliveries from one dashboard. Reduce fleet costs, get invoices, and track every trip.',
-    price: 'Custom pricing',
-    color: '#0f0f0f',
-    colorDim: 'rgba(204,255,0,0.15)',
-    features: ['Bulk ride booking', 'Team management dashboard', 'Monthly invoicing', 'Analytics & reports', 'Priority driver assignment', 'Dedicated account manager'],
-    illustration: React.createElement('img', { src: teamPage, alt: 'FeaziBiz', style: { width: '100%', maxWidth: 520, display: 'block', margin: '0 auto' } }),
+    illustration: React.createElement('img', { src: movingImg, alt: 'FeaziHaul', style: { width: '100%', maxWidth: 520, display: 'block', margin: '0 auto', borderRadius: 20 } }),
   },
 ]
 
@@ -121,9 +108,8 @@ const tableRows = [
   { label: 'Cost per trip',        feazi: 'Up to 60% less',      regular: 'Full price',    highlight: true  },
   { label: 'Route matching',       feazi: 'Smart AI matching',   regular: 'Fixed routes',  highlight: false },
   { label: 'Live tracking',        feazi: 'Real-time GPS',       regular: 'Limited',       highlight: true  },
-  { label: 'Delivery included',    feazi: 'Yes — FeaziMove',     regular: 'No',            highlight: false },
-  { label: 'Business dashboard',   feazi: 'Yes — FeaziBiz',      regular: 'No',            highlight: true  },
-  { label: 'Expense tracker',      feazi: 'Built-in dashboard',  regular: 'None',          highlight: false },
+  { label: 'Delivery included',    feazi: 'Yes — FeaziHaul',     regular: 'No',            highlight: false },
+  { label: 'Expense tracker',      feazi: 'Built-in dashboard',  regular: 'None',          highlight: true  },
   { label: 'Verified community',   feazi: 'All riders & drivers', regular: 'Varies',       highlight: true  },
   { label: 'Cashless payments',    feazi: 'Wallet & card',       regular: 'Cash only',     highlight: false },
 ]
@@ -156,7 +142,7 @@ export default function ServicesPage() {
               One platform.<br />Every move.
             </h1>
             <p style={{ fontSize: '1.05rem', color: C.textSoft, lineHeight: 1.8, maxWidth: 480 }}>
-              Whether you're commuting daily, sending a package, or managing a team — FeaziMove has a service built for you.
+              Whether you're commuting daily or moving your things across the city — FeaziMove has a service built for you.
             </p>
           </div>
           {/* Right: image */}

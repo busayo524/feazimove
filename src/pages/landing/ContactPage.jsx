@@ -5,7 +5,7 @@ import { api } from '../../services/api'
 
 function sanitize(val) { return val.replace(/[<>"']/g, '').trim() }
 
-const topics = ['General Enquiry', 'FeaziBiz / Corporate', 'Driver Partnership', 'Press & Media', 'Bug Report', 'Other']
+const topics = ['General Enquiry', 'Driver Partnership', 'Press & Media', 'Bug Report', 'Other']
 
 export default function ContactPage() {
   const [form, setForm] = useState({ name: '', email: '', topic: '', message: '' })

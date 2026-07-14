@@ -23,7 +23,7 @@ const testimonials = [
     role: 'HR Manager, Kano',
     avatar: 'FS',
     rating: 5,
-    text: 'We enrolled our entire team on FeaziBiz and the savings have been remarkable. The dashboard makes it easy to manage bookings and the analytics help us optimize our commute policies.',
+    text: 'Our whole team commutes with FeaziRide now and the savings have been remarkable. Booking is easy and everyone gets to work on time, every time.',
     color: 'bg-feazi-accent',
   },
   {
