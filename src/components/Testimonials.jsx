@@ -15,7 +15,7 @@ const testimonials = [
     role: 'Small Business Owner, Abuja',
     avatar: 'EN',
     rating: 5,
-    text: 'FeaziMove is incredible for my business. I can send goods to my customers without hiring a separate delivery person. The tracking feature is top-notch and my customers love getting updates. Highly recommend.',
+    text: 'FeaziMove is incredible for my business. I can send goods to my customers without hiring a separate delivery person. Deliveries arrive same-day and my customers are always happy. Highly recommend.',
     color: 'bg-blue-500',
   },
   {

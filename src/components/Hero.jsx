@@ -46,7 +46,7 @@ export default function Hero() {
                 <span className="text-feazi-green">✓</span> No surge pricing
               </span>
               <span className="flex items-center gap-2">
-                <span className="text-feazi-green">✓</span> Real-time tracking
+                <span className="text-feazi-green">✓</span> Instant matching
               </span>
               <span className="flex items-center gap-2">
                 <span className="text-feazi-green">✓</span> Verified drivers

@@ -29,24 +29,14 @@ const features = [
     flip: false,
   },
   {
-    id: 'track',
-    tag: 'Live Tracking',
-    icon: '📍',
-    title: 'Live tracking, always',
-    desc: 'Know exactly where your ride is in real time. Share your journey with family so they ride with you too.',
-    cta: 'Learn more',
-    img: cityDriver,
-    flip: true,
-  },
-  {
     id: 'send',
     tag: 'Delivery',
     icon: '⚡',
     title: 'Moving an Item? done!',
-    desc: 'Move items by sharing delivery space with others moving your way. Affordable, same-day, trackable end-to-end.',
+    desc: 'Move items by sharing delivery space with others moving your way. Affordable, same-day, and secure.',
     cta: 'Learn more',
     img: heavyBox,
-    flip: false,
+    flip: true,
   },
 ]
 
@@ -58,20 +48,14 @@ const apartSlides = [
     body: 'FeaziMove provides cost-effective transportation by pooling commuters heading the same way. Split costs, cut spending by up to 30%, and enjoy cashless trips — every day, on your route.',
   },
   {
-    img: apart2,
-    num: '02',
-    title: 'Real-Time Tracking',
-    body: 'Track your ride from pickup to drop-off and arrive with total peace of mind — always.',
-  },
-  {
     img: apart3,
-    num: '03',
+    num: '02',
     title: 'Safe & Verified Community',
     body: 'Every driver and rider is verified. Ratings and reviews keep the community accountable. Your safety is our non-negotiable.',
   },
   {
     img: apart4,
-    num: '04',
+    num: '03',
     title: 'FeaziHaul',
     body: 'From groceries to full apartment. Fast, affordable, same-day moving across the city — no extra vehicle needed.',
   },
@@ -87,7 +71,7 @@ const services = [
     price: 'From ₦1000',
     color: '#0f0f0f',
     colorDim: 'rgba(204,255,0,0.18)',
-    features: ['Up to 60% cheaper than solo rides', 'Verified co-riders', 'Real-time tracking', 'Auto wallet deduction'],
+    features: ['Up to 60% cheaper than solo rides', 'Verified co-riders', 'Auto wallet deduction'],
     illustration: React.createElement('img', { src: busStopPana, alt: 'FeaziRide', style: { width: '100%', maxWidth: 520, display: 'block', margin: '0 auto' } }),
   },
   {
@@ -99,7 +83,7 @@ const services = [
     price: 'From ₦1000',
     color: '#0f0f0f',
     colorDim: 'rgba(204,255,0,0.18)',
-    features: ['Real-time tracking', 'Proof of delivery photos', 'Small to large parcels', 'Same-day delivery'],
+    features: ['Proof of delivery photos', 'Small to large parcels', 'Same-day delivery'],
     illustration: React.createElement('img', { src: movingImg, alt: 'FeaziHaul', style: { width: '100%', maxWidth: 520, display: 'block', margin: '0 auto', borderRadius: 20 } }),
   },
 ]
@@ -107,8 +91,7 @@ const services = [
 const tableRows = [
   { label: 'Cost per trip',        feazi: 'Up to 60% less',      regular: 'Full price',    highlight: true  },
   { label: 'Route matching',       feazi: 'Smart AI matching',   regular: 'Fixed routes',  highlight: false },
-  { label: 'Live tracking',        feazi: 'Real-time GPS',       regular: 'Limited',       highlight: true  },
-  { label: 'Delivery included',    feazi: 'Yes — FeaziHaul',     regular: 'No',            highlight: false },
+  { label: 'Delivery included',    feazi: 'Yes — FeaziHaul',     regular: 'No',            highlight: true  },
   { label: 'Expense tracker',      feazi: 'Built-in dashboard',  regular: 'None',          highlight: true  },
   { label: 'Verified community',   feazi: 'All riders & drivers', regular: 'Varies',       highlight: true  },
   { label: 'Cashless payments',    feazi: 'Wallet & card',       regular: 'Cash only',     highlight: false },

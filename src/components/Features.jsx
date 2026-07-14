@@ -10,8 +10,8 @@ const features = [
   },
   {
     icon: MapPin,
-    title: 'Real-Time Tracking',
-    desc: 'Know exactly where your ride is and when it arrives. Share your trip with family for peace of mind.',
+    title: 'Scheduled Routes',
+    desc: 'Book your seat ahead on a fixed route and time — your commute becomes predictable, every single day.',
     badge: null,
   },
   {
