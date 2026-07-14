@@ -1,6 +1,6 @@
 {
   "name": "feazimove-api",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "description": "FeaziMove backend API — Node.js + Express",
   "main": "server.js",
   "scripts": {
@@ -22,7 +22,7 @@
     "multer": "^2.2.0",
     "nodemailer": "^9.0.1",
     "pg": "^8.11.3",
-    "uuid": "^9.0.0",
+    "uuid": "^11.1.1",
     "zcatalyst-sdk-node": "^3.4.0"
   },
   "devDependencies": {
