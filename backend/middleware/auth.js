@@ -26,12 +26,19 @@ async function requireAuth(req, res, next) {
 
   try {
     // A valid token isn't enough — suspended accounts are locked out of every
-    // action (booking, packages, driving) even if their session is still live.
-    const result = await query('SELECT is_active FROM users WHERE id = $1', [decoded.id])
+    // action even if their session is still live, and any token issued before
+    // the account's session cut-off (set on password change) is rejected so a
+    // password change invalidates every other session, stolen tokens included.
+    const result = await query('SELECT is_active, token_version FROM users WHERE id = $1', [decoded.id])
     const user = result.rows[0]
     if (!user) return res.status(401).json({ message: 'Account no longer exists.' })
     if (!user.is_active) {
       return res.status(403).json({ message: 'Your account has been suspended. Please contact support.' })
+    }
+    // Token generation must match the account's current one — a password change
+    // bumps it, instantly invalidating every older token (stolen ones included).
+    if ((decoded.tv || 0) !== (user.token_version || 0)) {
+      return res.status(401).json({ message: 'Session expired. Please sign in again.' })
     }
     // Only attach minimum needed — never full DB row
     req.user = { id: decoded.id, role: decoded.role }

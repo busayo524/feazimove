@@ -443,7 +443,7 @@ router.post('/google',
           'UPDATE users SET google_id = $1 WHERE id = $2 AND google_id IS NULL',
           [googleId, existingUser.id]
         )
-        const token = signToken(existingUser)
+        const token = await signToken(existingUser)
         return res.json({ token, user: safeUser(existingUser), isNew: false })
       }
 
@@ -522,7 +522,7 @@ router.post('/google-access',
 
       if (existingUser) {
         await query('UPDATE users SET google_id = $1 WHERE id = $2 AND google_id IS NULL', [googleId, existingUser.id])
-        const token = signToken(existingUser)
+        const token = await signToken(existingUser)
         return res.json({ token, user: safeUser(existingUser), isNew: false })
       }
 
@@ -625,7 +625,7 @@ router.post('/login',
         return res.status(403).json({ message: 'Your account has been suspended. Please contact support.' })
       }
 
-      const token = signToken(user)
+      const token = await signToken(user)
       res.json({ token, user: safeUser(user) })
     } catch (err) { next(err) }
   }
@@ -664,11 +664,18 @@ router.post('/change-password',
       if (!match) return res.status(401).json({ message: 'Current password is incorrect.' })
 
       const newHash = await bcrypt.hash(newPassword, SALT_ROUNDS)
-      await query(
-        'UPDATE users SET password_hash = $1, force_password_change = false WHERE id = $2',
+      // sessions_valid_from = NOW() invalidates every token issued before this
+      // change (any other device, and any stolen token). We then mint a fresh
+      // token so THIS session — the one that knew the current password — stays
+      // logged in. Delay 1s so NOW() is safely after this new token's iat.
+      // Bump token_version — every token issued before now (other devices,
+      // stolen tokens) stops validating — then mint a fresh token carrying the
+      // new version so THIS session (which knew the current password) stays in.
+      const fresh = await query(
+        'UPDATE users SET password_hash = $1, force_password_change = false, token_version = token_version + 1 WHERE id = $2 RETURNING id, role, active_role, token_version',
         [newHash, req.user.id]
       )
-      res.json({ message: 'Password updated.' })
+      res.json({ message: 'Password updated.', token: await signToken(fresh.rows[0]) })
     } catch (err) { next(err) }
   }
 )
@@ -715,9 +722,17 @@ router.post('/forgot-password',
 )
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function signToken(user) {
+// Embeds the account's current token_version (tv). requireAuth rejects any
+// token whose tv doesn't match the DB, so bumping it invalidates old tokens.
+// Fetches tv if the caller's user object doesn't already carry it.
+async function signToken(user) {
+  let tv = user.token_version
+  if (tv == null) {
+    const r = await query('SELECT token_version FROM users WHERE id = $1', [user.id])
+    tv = r.rows[0]?.token_version ?? 0
+  }
   return jwt.sign(
-    { id: user.id, role: user.active_role || user.role },
+    { id: user.id, role: user.active_role || user.role, tv },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d', algorithm: 'HS256' }
   )
@@ -770,7 +785,7 @@ router.post('/switch-role', requireAuth, async (req, res, next) => {
       [role, req.user.id]
     )
     // Re-issue the token — it embeds the active role, which just changed
-    const token = signToken(result.rows[0])
+    const token = await signToken(result.rows[0])
     res.json({ token, user: safeUser(result.rows[0]) })
   } catch (err) { next(err) }
 })
@@ -792,7 +807,7 @@ router.post('/add-role', requireAuth,
       )
       if (!result.rows[0]) return res.status(404).json({ message: 'User not found.' })
       // Re-issue the token — it embeds the active role, which just changed
-      const token = signToken(result.rows[0])
+      const token = await signToken(result.rows[0])
       res.json({ token, user: safeUser(result.rows[0]) })
     } catch (err) { next(err) }
   }

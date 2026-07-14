@@ -279,7 +279,9 @@ function ChangePasswordModal({ onClose }){
     if(newPassword!==confirm){setError('Passwords do not match.');return}
     setBusy(true)
     try{
-      await api.post('/auth/change-password',{currentPassword,newPassword})
+      // Server rotates the token (old sessions invalidated) — keep this one live.
+      const res=await api.post('/auth/change-password',{currentPassword,newPassword})
+      if(res.data?.token) localStorage.setItem('fm_token',res.data.token)
       setSuccess(true)
       setCurrentPassword('');setNewPassword('');setConfirm('')
     }catch(err){

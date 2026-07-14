@@ -143,6 +143,11 @@ async function runMigrations() {
     -- can precisely requeue or cancel that exact booking
     ALTER TABLE rides ADD COLUMN IF NOT EXISTS booking_id UUID;
 
+    -- Token generation counter — embedded in every JWT. Bumped on password
+    -- change so every previously-issued token (other devices, stolen tokens)
+    -- stops validating. Tokens with no version (pre-feature) count as 0.
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0;
+
     -- Backfill: the face photo collected at registration becomes the avatar
     -- for accounts created before automatic assignment existed (selfie
     -- preferred). Idempotent — only ever fills blanks.
