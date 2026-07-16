@@ -415,24 +415,12 @@ export default function RideTracker({ activeRideId, onExit }) {
 
   if (!ride) return null
 
-  // Trip cancelled — either by this rider elsewhere or by the driver. If the
-  // driver cancelled, the booking is already back in the queue server-side.
+  // Trip cancelled. If the DRIVER cancelled, the rider's booking is already
+  // back in the queue — show a brief notice, then drop back to the matching
+  // screen automatically (the booking-restore logic resumes the search).
   if (ride.status === 'cancelled') {
-    return (
-      <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:340, textAlign:'center', padding:24 }}>
-        <div style={{ width:64, height:64, borderRadius:'50%', background:'#fef2f2', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:16 }}>
-          <AlertCircle size={30} color="#ef4444"/>
-        </div>
-        <p style={{ color:TEXT, fontWeight:800, fontSize:17, marginBottom:6 }}>This trip was cancelled</p>
-        <p style={{ color:MUTED, fontSize:13.5, lineHeight:1.6, maxWidth:320, marginBottom:20 }}>
-          If the driver cancelled, your request is already back in the queue and we'll match you with another driver automatically.
-        </p>
-        <button onClick={() => (onExit ? onExit() : navigate('/book'))}
-          style={{ padding:'12px 28px', borderRadius:50, background:NT, color:NEON, fontWeight:700, fontSize:14, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
-          OK
-        </button>
-      </div>
-    )
+    const byDriver = ride.cancelledBy === 'driver'
+    return <CancelledNotice byDriver={byDriver} onExit={() => (onExit ? onExit() : navigate('/book'))} />
   }
 
   const isPackage = ride.type === 'send'
@@ -631,5 +619,40 @@ export default function RideTracker({ activeRideId, onExit }) {
         </button>
       )}
     </>
+  )
+}
+
+// Cancelled-ride notice. A driver-cancel auto-returns the rider to the
+// matching screen after a short beat (their booking is already re-queued);
+// a self-cancel just waits for an OK tap.
+function CancelledNotice({ byDriver, onExit }) {
+  useEffect(() => {
+    if (!byDriver) return
+    const t = setTimeout(onExit, 2600)
+    return () => clearTimeout(t)
+  }, [byDriver]) // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:340, textAlign:'center', padding:24 }}>
+      <div style={{ width:64, height:64, borderRadius:'50%', background:'#fef2f2', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:16 }}>
+        <AlertCircle size={30} color="#ef4444"/>
+      </div>
+      <p style={{ color:TEXT, fontWeight:800, fontSize:17, marginBottom:6 }}>
+        {byDriver ? 'Ride cancelled by driver' : 'This trip was cancelled'}
+      </p>
+      <p style={{ color:MUTED, fontSize:13.5, lineHeight:1.6, maxWidth:320, marginBottom:20 }}>
+        {byDriver
+          ? "No worries — we're finding you another driver on the same route now…"
+          : 'Your booking has been cancelled.'}
+      </p>
+      {byDriver ? (
+        <div style={{ width:26, height:26, border:`3px solid ${NEON}`, borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.8s linear infinite' }}/>
+      ) : (
+        <button onClick={onExit}
+          style={{ padding:'12px 28px', borderRadius:50, background:NT, color:NEON, fontWeight:700, fontSize:14, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
+          OK
+        </button>
+      )}
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
   )
 }

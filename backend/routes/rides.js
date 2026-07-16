@@ -367,7 +367,7 @@ router.patch('/:rideId/cancel',
   async (req, res, next) => {
     try {
       const result = await query(
-        `UPDATE rides SET status = 'cancelled'
+        `UPDATE rides SET status = 'cancelled', cancelled_by = 'rider'
           WHERE id = $1 AND rider_id = $2 AND status IN ('pending', 'driver_assigned', 'arrived_pickup')
           RETURNING id, booking_id`,
         [req.params.rideId, req.user.id]
@@ -699,6 +699,7 @@ function sanitizeRide(row) {
     notes:          row.notes           || null,
     riderComment:   row.rider_comment   || null,
     driverComment:  row.driver_comment  || null,
+    cancelledBy:    row.cancelled_by     || null,
   }
 }
 

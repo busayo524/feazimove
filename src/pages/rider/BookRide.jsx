@@ -19,7 +19,7 @@ const SERVICES=[
 
 /* ── Route preview popup — auto-shown once pickup/dropoff/time are all set ──
    The actual "Schedule a Ride" action lives inside this popup, not the page ── */
-function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, onClose, onBook, booking, matching, onCancel, cancelling }){
+function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, onClose, onBook, booking, matching, onCancel, cancelling, insufficient }){
   const pc = stopCoords[pickup]
   const dc = stopCoords[dropoff]
   const token = import.meta.env.VITE_MAPBOX_TOKEN
@@ -95,17 +95,22 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, on
           ) : (
             <>
             <p style={{fontSize:11,fontStyle:'italic',color:MUTED,textAlign:'center',margin:'0 0 8px'}}>*Booking should be within 24hrs*</p>
-            <button onClick={onBook} disabled={booking} style={{
+            <button onClick={onBook} disabled={booking||insufficient} style={{
               width:'100%',padding:'11px',borderRadius:50,
-              background:booking?BORDER:NEON,color:booking?MUTED:OLIVE,
+              background:(booking||insufficient)?BORDER:NEON,color:(booking||insufficient)?MUTED:OLIVE,
               fontWeight:800,fontSize:14,border:'none',
-              cursor:booking?'not-allowed':'pointer',
+              cursor:(booking||insufficient)?'not-allowed':'pointer',
               display:'flex',alignItems:'center',justifyContent:'center',gap:10,
               transition:'all 0.2s',
-              boxShadow:booking?'none':'0 4px 16px rgba(204,255,0,0.35)'
+              boxShadow:(booking||insufficient)?'none':'0 4px 16px rgba(204,255,0,0.35)'
             }}>
               {booking?'Scheduling…':'Schedule a Ride'}<ArrowRight size={16}/>
             </button>
+            {insufficient && (
+              <p style={{fontSize:12,fontWeight:600,color:'#ef4444',textAlign:'center',margin:'8px 0 0',lineHeight:1.4}}>
+                Insufficient wallet balance for this ride. Top up your wallet to continue.
+              </p>
+            )}
             </>
           )}
         </div>
@@ -125,6 +130,7 @@ export default function BookRide(){
   const [bookingId,setBookingId]=useState(null)
   const [bookError,setBookError]=useState(null)
   const [cancelling,setCancelling]=useState(false)
+  const [walletKobo,setWalletKobo]=useState(null) // live wallet balance in kobo
 
   // Active, priced routes for the selected period — same data source and
   // structure used by Move an Item — pickup/dropoff dropdowns derive from it.
@@ -236,6 +242,16 @@ export default function BookRide(){
   // actually pairs them, so there's nothing to preview here for that service.
   const previewFareKobo = previewRoute && service === 'pool' ? previewRoute.poolFareKobo : null
 
+  // Pull the live wallet balance whenever the preview opens, so the
+  // insufficient-funds note reflects reality (not a stale login-time value).
+  useEffect(() => {
+    if (!showPreview) return
+    api.get('/wallet/balance')
+      .then(res => setWalletKobo(Math.round((res.data?.balance || 0) * 100)))
+      .catch(() => setWalletKobo(null))
+  }, [showPreview])
+  const insufficientFunds = previewFareKobo != null && walletKobo != null && walletKobo < previewFareKobo
+
   if (activeRideId === undefined) {
     return (
       <AppLayout title="Schedule Ride">
@@ -256,7 +272,7 @@ export default function BookRide(){
           {showPreview && pickup && dropoff && (
             <RoutePreviewModal pickup={pickup} dropoff={dropoff} timeSlot={timeSlot} fareKobo={previewFareKobo}
               stopCoords={stopCoords} onClose={()=>setShowPreview(false)} onBook={handleSearch} booking={searching}
-              matching={!!bookingId} onCancel={cancelBooking} cancelling={cancelling}/>
+              matching={!!bookingId} onCancel={cancelBooking} cancelling={cancelling} insufficient={insufficientFunds}/>
           )}
 
           <div className="bookride-scroll">

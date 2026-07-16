@@ -431,7 +431,7 @@ router.post('/cancel-active', async (req, res, next) => {
     }
 
     const cancelled = await query(
-      `UPDATE rides SET status = 'cancelled'
+      `UPDATE rides SET status = 'cancelled', cancelled_by = 'driver'
         WHERE driver_id = $1 AND status IN ('pending', 'driver_assigned', 'arrived_pickup')
         RETURNING booking_id`,
       [req.user.id]

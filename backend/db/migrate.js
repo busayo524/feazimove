@@ -252,6 +252,10 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS bank_account_number VARCHAR(20);
 -- can precisely requeue or cancel that exact booking
 ALTER TABLE rides ADD COLUMN IF NOT EXISTS booking_id UUID;
 
+-- Who cancelled a ride ('rider' | 'driver') — lets the rider app show
+-- "Ride cancelled by driver" and auto-resume matching vs. a self-cancel.
+ALTER TABLE rides ADD COLUMN IF NOT EXISTS cancelled_by VARCHAR(10);
+
 -- Token generation counter — embedded in every JWT. Bumped on password
 -- change so every previously-issued token (other devices, stolen tokens)
 -- stops validating. Tokens with no version (pre-feature) count as 0.
@@ -286,6 +290,10 @@ CREATE TABLE IF NOT EXISTS action_challenges (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_action_challenges_user ON action_challenges(user_id);
+
+-- email_otps is reused for both signup verification and password reset —
+-- purpose keeps the two flows from cross-validating each other's codes.
+ALTER TABLE email_otps ADD COLUMN IF NOT EXISTS purpose VARCHAR(20) NOT NULL DEFAULT 'signup';
 
 -- Backfill: the face photo collected at registration becomes the avatar
 -- for accounts created before automatic assignment existed (selfie

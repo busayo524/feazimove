@@ -169,7 +169,7 @@ router.post('/verify-otp',
       const otpResult = await query(
         `SELECT id, otp_hash, expires_at
          FROM email_otps
-         WHERE user_id = $1 AND used = false
+         WHERE user_id = $1 AND used = false AND purpose = 'signup'
          ORDER BY created_at DESC
          LIMIT 1`,
         [userId]
@@ -782,14 +782,76 @@ router.patch('/profile',
   }
 )
 
-// ── Forgot password (OTP — integrate with Termii/Twilio) ─────────────────────
+// ── Forgot password — email OTP (all OTPs are email; no SMS anywhere) ────────
+// Step 1 — email an OTP for password reset. Always 200 (no email enumeration).
 router.post('/forgot-password',
-  [body('phone').trim().notEmpty()],
+  otpLimiter,
+  [body('email').isEmail().normalizeEmail()],
   validate,
-  async (req, res) => {
-    // Always return 200 — prevents phone enumeration
-    // In production: lookup user, generate OTP, send via SMS provider
-    res.json({ message: 'If that number is registered, an OTP has been sent.' })
+  async (req, res, next) => {
+    try {
+      const email = req.body.email.toLowerCase().trim()
+      const u = await query(
+        'SELECT id, name FROM users WHERE email = $1 AND is_active = true AND email_verified = true',
+        [email]
+      )
+      const user = u.rows[0]
+      if (user) {
+        const otp = generateOtp()
+        const otpHash = await bcrypt.hash(otp, 10)
+        const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000)
+        // Invalidate previous reset OTPs, then store the new one
+        await query(`UPDATE email_otps SET used = true WHERE user_id = $1 AND purpose = 'reset'`, [user.id])
+        await query(
+          `INSERT INTO email_otps (user_id, email, otp_hash, expires_at, purpose) VALUES ($1, $2, $3, $4, 'reset')`,
+          [user.id, email, otpHash, expiresAt]
+        )
+        sendOtpEmail(email, user.name, otp).catch(err =>
+          console.error(`[email] reset OTP to ${email}:`, err.message))
+      }
+      res.json({ message: 'If that email is registered, a reset code has been sent.' })
+    } catch (err) { next(err) }
+  }
+)
+
+// Step 2 — verify the emailed OTP and set a new password. Invalidates all
+// existing sessions (token_version bump + refresh-token revoke).
+router.post('/reset-password',
+  otpLimiter,
+  [
+    body('email').isEmail().normalizeEmail(),
+    body('otp').trim().isLength({ min: 6, max: 6 }).isNumeric(),
+    body('newPassword').isLength({ min: 8 }).matches(/[A-Z]/).matches(/[0-9]/)
+      .withMessage('New password must be at least 8 characters with 1 uppercase letter and 1 number.'),
+  ],
+  validate,
+  async (req, res, next) => {
+    try {
+      const email = req.body.email.toLowerCase().trim()
+      const { otp, newPassword } = req.body
+      const u = await query('SELECT id FROM users WHERE email = $1 AND is_active = true', [email])
+      const user = u.rows[0]
+      // Constant-ish path even if user missing — but we can't leak, so generic 400
+      const otpRes = user ? await query(
+        `SELECT id, otp_hash, expires_at, used FROM email_otps
+          WHERE user_id = $1 AND purpose = 'reset' ORDER BY created_at DESC LIMIT 1`,
+        [user.id]
+      ) : { rows: [] }
+      const rec = otpRes.rows[0]
+      const dummy = '$2a$10$dummyhashtopreventtimingattacksonmissingotp....'
+      const match = await bcrypt.compare(otp, rec?.otp_hash || dummy)
+      if (!user || !rec || rec.used || new Date(rec.expires_at).getTime() < Date.now() || !match) {
+        return res.status(400).json({ message: 'Invalid or expired reset code. Please request a new one.' })
+      }
+      await query(`UPDATE email_otps SET used = true WHERE id = $1`, [rec.id])
+      const newHash = await bcrypt.hash(newPassword, SALT_ROUNDS)
+      await query(
+        'UPDATE users SET password_hash = $1, force_password_change = false, token_version = token_version + 1 WHERE id = $2',
+        [newHash, user.id]
+      )
+      await revokeAllForUser(user.id)
+      res.json({ message: 'Password reset. Please sign in with your new password.' })
+    } catch (err) { next(err) }
   }
 )
 
