@@ -179,7 +179,7 @@ router.post('/go-live',
       // Reject any pair that isn't an active, priced route (previously only
       // checked pickup against a flat list — dropoff was never validated)
       const routeCheck = await query(
-        `SELECT 1 FROM routes WHERE period = $1 AND pickup = $2 AND dropoff = $3 AND is_active = true`,
+        `SELECT 1 FROM routes WHERE period = $1 AND pickup = $2 AND dropoff = $3 AND is_active = true AND pool_fare_kobo IS NOT NULL`,
         [period, pickup, dropoff]
       )
       if (!routeCheck.rows[0]) {

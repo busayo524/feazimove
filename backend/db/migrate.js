@@ -295,6 +295,12 @@ CREATE INDEX IF NOT EXISTS idx_action_challenges_user ON action_challenges(user_
 -- purpose keeps the two flows from cross-validating each other's codes.
 ALTER TABLE email_otps ADD COLUMN IF NOT EXISTS purpose VARCHAR(20) NOT NULL DEFAULT 'signup';
 
+-- Routes can now be created UNPRICED (admin adds the pairing first, prices it
+-- later). An unpriced route is hidden from riders/drivers until a pool fare is
+-- set — enforced in the query layer, so the columns go nullable.
+ALTER TABLE routes ALTER COLUMN pool_fare_kobo DROP NOT NULL;
+ALTER TABLE routes ALTER COLUMN package_fare_kobo DROP NOT NULL;
+
 -- Backfill: the face photo collected at registration becomes the avatar
 -- for accounts created before automatic assignment existed (selfie
 -- preferred). Idempotent — only ever fills blanks.

@@ -10,8 +10,9 @@ function fmt(kobo) { return `₦${Math.round(kobo / 100).toLocaleString()}` }
 
 function FareCell({ route, field, onSave }) {
   const [editing, setEditing] = useState(false)
-  const [value, setValue] = useState(Math.round(route[field] / 100))
+  const [value, setValue] = useState(route[field] != null ? Math.round(route[field] / 100) : '')
   const [saving, setSaving] = useState(false)
+  const unpriced = route[field] == null
 
   async function save() {
     const kobo = parseInt(value, 10) * 100
@@ -25,10 +26,10 @@ function FareCell({ route, field, onSave }) {
   if (!editing) {
     return (
       <button onClick={() => setEditing(true)}
-        style={{ background:'none', border:'none', padding:'4px 8px', borderRadius:6, cursor:'pointer', fontWeight:700, fontSize:13, color:TEXT, fontFamily:'inherit' }}
-        onMouseEnter={e => e.currentTarget.style.background = BG}
-        onMouseLeave={e => e.currentTarget.style.background = 'none'}>
-        {fmt(route[field])}
+        style={{ background:unpriced?'#fef3c7':'none', border:unpriced?'1px dashed #d97706':'none', padding:'4px 8px', borderRadius:6, cursor:'pointer', fontWeight:700, fontSize:13, color:unpriced?'#b45309':TEXT, fontFamily:'inherit' }}
+        onMouseEnter={e => { if(!unpriced) e.currentTarget.style.background = BG }}
+        onMouseLeave={e => { if(!unpriced) e.currentTarget.style.background = 'none' }}>
+        {unpriced ? 'Set price' : fmt(route[field])}
       </button>
     )
   }
@@ -204,28 +205,13 @@ export default function AdminPricing() {
 
 const NEW_STOP = '__new__'
 
-function NewStopFields({ name, onName, group, onGroup, label }) {
-  return (
-    <div style={{ display:'flex', gap:8, marginBottom:14 }}>
-      <input value={name} onChange={e => onName(e.target.value)} required placeholder={`New ${label} name`}
-        style={{ flex:2, padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}/>
-      <select value={group} onChange={e => onGroup(e.target.value)}
-        style={{ flex:1, padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}>
-        <option value="mainland">Mainland</option>
-        <option value="island">Island</option>
-      </select>
-    </div>
-  )
-}
-
 function AddRouteModal({ period, onClose, onCreated }) {
   const [stops, setStops] = useState([])
-  const [pickup, setPickup] = useState('')
+  const [pickup, setPickup] = useState('')          // existing stop name or NEW_STOP
   const [dropoff, setDropoff] = useState('')
   const [newPickupName, setNewPickupName] = useState('')
   const [newPickupGroup, setNewPickupGroup] = useState('mainland')
-  const [newDropoffName, setNewDropoffName] = useState('')
-  const [newDropoffGroup, setNewDropoffGroup] = useState('mainland')
+  const [selectedDropoffs, setSelectedDropoffs] = useState([]) // fan-out: stop names
   const [poolFareKobo, setPoolFareKobo] = useState('')
   const [packageFareKobo, setPackageFareKobo] = useState('')
   const [busy, setBusy] = useState(false)
@@ -235,82 +221,128 @@ function AddRouteModal({ period, onClose, onCreated }) {
     api.get('/admin/stops').then(res => setStops(res.data.stops.filter(s => s.isActive))).catch(() => {})
   }, [])
 
+  const isFanOut = pickup === NEW_STOP
+  // Opposite side of the new pickup: mainland pickup → island dropoffs, etc.
+  const oppositeGroup = newPickupGroup === 'mainland' ? 'island' : 'mainland'
+  const oppositeStops = stops.filter(s => s.group === oppositeGroup)
+  const allSelected = oppositeStops.length > 0 && selectedDropoffs.length === oppositeStops.length
+
+  function toggleDropoff(name) {
+    setSelectedDropoffs(prev => prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name])
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     setBusy(true); setError('')
     try {
-      // chain_position is unique per group, so track counts locally in case
-      // both pickup and dropoff are new stops in the same group this submit.
-      const groupCounts = { mainland: stops.filter(s => s.group === 'mainland').length, island: stops.filter(s => s.group === 'island').length }
-      async function resolveStop(value, name, group) {
-        if (value !== NEW_STOP) return value
-        await api.post('/admin/stops', { name: name.trim(), group, chainPosition: groupCounts[group] })
-        groupCounts[group] += 1
-        return name.trim()
+      if (isFanOut) {
+        if (!newPickupName.trim()) throw { data: { message: 'Enter the new pickup name.' } }
+        if (!selectedDropoffs.length) throw { data: { message: 'Select at least one destination.' } }
+        const res = await api.post('/admin/routes-bulk', {
+          pickupName: newPickupName.trim(), pickupGroup: newPickupGroup, dropoffNames: selectedDropoffs,
+        })
+        if (res.data.created === 0) throw { data: { message: 'Those routes already exist.' } }
+      } else {
+        // Single route between two existing stops — pricing optional.
+        await api.post('/admin/routes-pricing', {
+          period, pickup, dropoff,
+          poolFareKobo: poolFareKobo ? parseInt(poolFareKobo, 10) * 100 : null,
+          packageFareKobo: packageFareKobo ? parseInt(packageFareKobo, 10) * 100 : null,
+        })
       }
-      const finalPickup = await resolveStop(pickup, newPickupName, newPickupGroup)
-      const finalDropoff = await resolveStop(dropoff, newDropoffName, newDropoffGroup)
-      await api.post('/admin/routes-pricing', {
-        period, pickup: finalPickup, dropoff: finalDropoff,
-        poolFareKobo: parseInt(poolFareKobo, 10) * 100,
-        packageFareKobo: parseInt(packageFareKobo, 10) * 100,
-      })
-      onCreated()
-      onClose()
+      onCreated(); onClose()
     } catch (err) {
       setError(err.data?.message || 'Could not create route.')
     } finally { setBusy(false) }
   }
 
+  const fld = { width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }
+
   return (
     <div style={{ position:'fixed', inset:0, zIndex:1000, background:'rgba(0,0,0,0.4)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
       onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background:CARD, borderRadius:16, padding:24, maxWidth:380, width:'100%', boxShadow:'0 12px 32px rgba(0,0,0,0.2)' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background:CARD, borderRadius:16, padding:24, maxWidth:400, width:'100%', maxHeight:'88vh', overflowY:'auto', boxShadow:'0 12px 32px rgba(0,0,0,0.2)' }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-          <p style={{ fontWeight:800, fontSize:16, color:TEXT }}>Add Route ({period})</p>
+          <p style={{ fontWeight:800, fontSize:16, color:TEXT }}>Add Route</p>
           <button onClick={onClose} style={{ background:'none', border:'none', cursor:'pointer', color:MUTED }}><X size={18}/></button>
         </div>
         <form onSubmit={handleSubmit}>
           <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Pickup</label>
-          <select value={pickup} onChange={e => setPickup(e.target.value)} required
-            style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, marginBottom:14, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}>
+          <select value={pickup} onChange={e => { setPickup(e.target.value); setDropoff(''); setSelectedDropoffs([]) }} required
+            style={{ ...fld, marginBottom:14 }}>
             <option value="">Select…</option>
             {stops.map(s => <option key={s.id} value={s.name}>{s.name} ({s.group})</option>)}
             <option value={NEW_STOP}>+ Add new location…</option>
           </select>
-          {pickup === NEW_STOP && (
-            <NewStopFields label="pickup" name={newPickupName} onName={setNewPickupName} group={newPickupGroup} onGroup={setNewPickupGroup}/>
-          )}
 
-          <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Dropoff</label>
-          <select value={dropoff} onChange={e => setDropoff(e.target.value)} required
-            style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, marginBottom:14, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}>
-            <option value="">Select…</option>
-            {stops.map(s => <option key={s.id} value={s.name}>{s.name} ({s.group})</option>)}
-            <option value={NEW_STOP}>+ Add new location…</option>
-          </select>
-          {dropoff === NEW_STOP && (
-            <NewStopFields label="dropoff" name={newDropoffName} onName={setNewDropoffName} group={newDropoffGroup} onGroup={setNewDropoffGroup}/>
-          )}
+          {isFanOut ? (
+            <>
+              {/* New pickup name + which side of the lagoon it's on */}
+              <div style={{ display:'flex', gap:8, marginBottom:14 }}>
+                <input value={newPickupName} onChange={e => setNewPickupName(e.target.value)} placeholder="New pickup name"
+                  style={{ ...fld, flex:2 }}/>
+                <select value={newPickupGroup} onChange={e => { setNewPickupGroup(e.target.value); setSelectedDropoffs([]) }}
+                  style={{ ...fld, flex:1 }}>
+                  <option value="mainland">Mainland</option>
+                  <option value="island">Island</option>
+                </select>
+              </div>
 
-          <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) minmax(0,1fr)', gap:10, marginBottom:14 }}>
-            <div>
-              <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Pool Fare (₦)</label>
-              <input type="number" min="0" value={poolFareKobo} onChange={e => setPoolFareKobo(e.target.value)} required
-                style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}/>
-            </div>
-            <div>
-              <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Package Fare (₦)</label>
-              <input type="number" min="0" value={packageFareKobo} onChange={e => setPackageFareKobo(e.target.value)} required
-                style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}/>
-            </div>
-          </div>
+              {/* Fan-out: match this new pickup to any/all opposite-side stops */}
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+                <label style={{ fontSize:13, fontWeight:600, color:TEXT }}>
+                  Route to {oppositeGroup} stops
+                </label>
+                <button type="button" onClick={() => setSelectedDropoffs(allSelected ? [] : oppositeStops.map(s => s.name))}
+                  style={{ background:'none', border:'none', color:OLIVE, fontWeight:700, fontSize:12.5, cursor:'pointer', fontFamily:'inherit' }}>
+                  {allSelected ? 'Clear all' : 'Select all'}
+                </button>
+              </div>
+              <div style={{ border:`1.5px solid ${BORDER}`, borderRadius:10, maxHeight:200, overflowY:'auto', marginBottom:8 }}>
+                {oppositeStops.length === 0 ? (
+                  <p style={{ fontSize:13, color:MUTED, padding:'14px', textAlign:'center' }}>No {oppositeGroup} stops yet.</p>
+                ) : oppositeStops.map(s => (
+                  <label key={s.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px', borderBottom:`1px solid ${BG}`, cursor:'pointer', fontSize:14, color:TEXT }}>
+                    <input type="checkbox" checked={selectedDropoffs.includes(s.name)} onChange={() => toggleDropoff(s.name)}
+                      style={{ width:16, height:16, accentColor:OLIVE }}/>
+                    {s.name}
+                  </label>
+                ))}
+              </div>
+              <p style={{ fontSize:12, color:MUTED, marginBottom:14, lineHeight:1.5 }}>
+                Creates {selectedDropoffs.length || 'the selected'} route{selectedDropoffs.length === 1 ? '' : 's'} unpriced —
+                set each fare afterwards on this page.
+              </p>
+            </>
+          ) : (
+            <>
+              <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Dropoff</label>
+              <select value={dropoff} onChange={e => setDropoff(e.target.value)} required style={{ ...fld, marginBottom:14 }}>
+                <option value="">Select…</option>
+                {stops.map(s => <option key={s.id} value={s.name}>{s.name} ({s.group})</option>)}
+              </select>
+
+              <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) minmax(0,1fr)', gap:10, marginBottom:6 }}>
+                <div>
+                  <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Pool Fare (₦)</label>
+                  <input type="number" min="0" value={poolFareKobo} onChange={e => setPoolFareKobo(e.target.value)} placeholder="Optional" style={fld}/>
+                </div>
+                <div>
+                  <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Package Fare (₦)</label>
+                  <input type="number" min="0" value={packageFareKobo} onChange={e => setPackageFareKobo(e.target.value)} placeholder="Optional" style={fld}/>
+                </div>
+              </div>
+              <p style={{ fontSize:12, color:MUTED, marginBottom:14, lineHeight:1.5 }}>
+                Leave fares blank to create the route unpriced — it stays hidden from riders until you set a pool fare.
+              </p>
+            </>
+          )}
 
           {error && <p style={{ fontSize:13, color:'#ef4444', marginBottom:12 }}>{error}</p>}
 
           <button type="submit" disabled={busy}
             style={{ width:'100%', padding:'11px', borderRadius:10, background:NEON, color:OLIVE, border:'none', fontWeight:700, fontSize:14, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit', opacity:busy?0.7:1 }}>
-            {busy ? 'Creating…' : 'Create Route'}
+            {busy ? 'Creating…' : isFanOut ? `Create ${selectedDropoffs.length || ''} Route${selectedDropoffs.length === 1 ? '' : 's'}` : 'Create Route'}
           </button>
         </form>
       </div>

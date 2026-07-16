@@ -1035,7 +1035,8 @@ router.get('/routes-pricing', async (req, res, next) => {
     res.json({
       routes: result.rows.map(r => ({
         id: r.id, period: r.period, pickup: r.pickup, dropoff: r.dropoff,
-        poolFareKobo: Number(r.pool_fare_kobo), packageFareKobo: Number(r.package_fare_kobo),
+        poolFareKobo: r.pool_fare_kobo != null ? Number(r.pool_fare_kobo) : null,
+        packageFareKobo: r.package_fare_kobo != null ? Number(r.package_fare_kobo) : null,
         isActive: r.is_active, updatedAt: r.updated_at, updatedByName: r.updated_by_name,
       })),
     })
@@ -1047,13 +1048,16 @@ router.post('/routes-pricing',
     body('period').isIn(['morning', 'evening']),
     body('pickup').trim().isLength({ min: 1, max: 100 }).escape(),
     body('dropoff').trim().isLength({ min: 1, max: 100 }).escape(),
-    body('poolFareKobo').isInt({ min: 0 }),
-    body('packageFareKobo').isInt({ min: 0 }),
+    body('poolFareKobo').optional({ nullable: true, checkFalsy: false }).isInt({ min: 0 }),
+    body('packageFareKobo').optional({ nullable: true, checkFalsy: false }).isInt({ min: 0 }),
   ],
   validate,
   async (req, res, next) => {
     try {
-      const { period, pickup, dropoff, poolFareKobo, packageFareKobo } = req.body
+      const { period, pickup, dropoff } = req.body
+      // Fares are optional now — a route can be created unpriced and priced later.
+      const poolFareKobo = req.body.poolFareKobo == null || req.body.poolFareKobo === '' ? null : req.body.poolFareKobo
+      const packageFareKobo = req.body.packageFareKobo == null || req.body.packageFareKobo === '' ? null : req.body.packageFareKobo
       const result = await query(
         `INSERT INTO routes (period, pickup, dropoff, pool_fare_kobo, package_fare_kobo, updated_by, updated_at)
          VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING id`,
@@ -1066,6 +1070,85 @@ router.post('/routes-pricing',
       if (err.code === '23505') return res.status(409).json({ message: 'This route already exists for that period.' })
       next(err)
     }
+  }
+)
+
+// ── Bulk fan-out: one new pickup → many opposite-side dropoffs (Item 7) ───────
+// A mainland pickup fans out to selected island stops (morning); an island
+// pickup fans out to selected mainland stops (evening). Routes are created
+// UNPRICED — priced later per-route on the pricing page. The pickup stop is
+// created if it doesn't exist yet.
+router.post('/routes-bulk',
+  [
+    body('pickupName').trim().isLength({ min: 2, max: 100 }).escape(),
+    body('pickupGroup').isIn(['mainland', 'island']),
+    body('dropoffNames').isArray({ min: 1 }),
+    body('dropoffNames.*').trim().isLength({ min: 1, max: 100 }).escape(),
+  ],
+  validate,
+  async (req, res, next) => {
+    const { pickupName, pickupGroup, dropoffNames } = req.body
+    const period = pickupGroup === 'mainland' ? 'morning' : 'evening'
+    const client = await pool.connect()
+    try {
+      await client.query('BEGIN')
+      // Ensure the pickup stop exists (create at the end of its group's chain)
+      const existing = await client.query('SELECT name FROM stops WHERE name = $1', [pickupName])
+      if (!existing.rows[0]) {
+        const pos = await client.query(
+          'SELECT COALESCE(MAX(chain_position), -1) + 1 AS next FROM stops WHERE group_name = $1',
+          [pickupGroup]
+        )
+        await client.query('INSERT INTO stops (name, group_name, chain_position) VALUES ($1, $2, $3)',
+          [pickupName, pickupGroup, pos.rows[0].next])
+      }
+      // Create a route to each selected dropoff — skip any that already exist.
+      let created = 0
+      for (const dropoff of dropoffNames) {
+        const r = await client.query(
+          `INSERT INTO routes (period, pickup, dropoff, updated_by, updated_at)
+           VALUES ($1, $2, $3, $4, NOW())
+           ON CONFLICT (period, pickup, dropoff) DO NOTHING RETURNING id`,
+          [period, pickupName, dropoff, req.user.id]
+        )
+        if (r.rows[0]) created++
+      }
+      await client.query('COMMIT')
+      logActivity(req.user.id, 'Routes Fanned Out', 'route', `${pickupName} → ${created} stop(s) (${period})`)
+      res.status(201).json({ created, period })
+    } catch (err) {
+      await client.query('ROLLBACK').catch(() => {})
+      if (err.code === '23503') return res.status(422).json({ message: 'One of the selected dropoffs is not a known stop.' })
+      next(err)
+    } finally { client.release() }
+  }
+)
+
+// ── Reorder stops within a group by geography (Item 7) ───────────────────────
+router.post('/stops/reorder',
+  [
+    body('group').isIn(['mainland', 'island']),
+    body('orderedIds').isArray({ min: 1 }),
+    body('orderedIds.*').isUUID(),
+  ],
+  validate,
+  async (req, res, next) => {
+    const { group, orderedIds } = req.body
+    const client = await pool.connect()
+    try {
+      await client.query('BEGIN')
+      // Two-phase to dodge the UNIQUE(group_name, chain_position) constraint:
+      // park everyone at negative positions, then write the final order.
+      await client.query('UPDATE stops SET chain_position = -1 - chain_position WHERE group_name = $1', [group])
+      for (let i = 0; i < orderedIds.length; i++) {
+        await client.query('UPDATE stops SET chain_position = $1 WHERE id = $2 AND group_name = $3', [i, orderedIds[i], group])
+      }
+      await client.query('COMMIT')
+      res.json({ message: 'Stops reordered.' })
+    } catch (err) {
+      await client.query('ROLLBACK').catch(() => {})
+      next(err)
+    } finally { client.release() }
   }
 )
 

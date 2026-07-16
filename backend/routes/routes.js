@@ -17,16 +17,19 @@ router.get('/', async (req, res, next) => {
     if (!['morning', 'evening'].includes(period)) {
       return res.status(422).json({ message: 'period must be morning or evening.' })
     }
+    // Only PRICED routes are bookable — an unpriced route (pool fare not yet
+    // set) exists in the admin panel but must never surface to riders/drivers.
     const result = await query(
       `SELECT pickup, dropoff, pool_fare_kobo, package_fare_kobo
-       FROM routes WHERE period = $1 AND is_active = true
+       FROM routes WHERE period = $1 AND is_active = true AND pool_fare_kobo IS NOT NULL
        ORDER BY pickup, dropoff`,
       [period]
     )
     res.json({
       routes: result.rows.map(r => ({
         pickup: r.pickup, dropoff: r.dropoff,
-        poolFareKobo: Number(r.pool_fare_kobo), packageFareKobo: Number(r.package_fare_kobo),
+        poolFareKobo: Number(r.pool_fare_kobo),
+        packageFareKobo: r.package_fare_kobo != null ? Number(r.package_fare_kobo) : null,
       })),
     })
   } catch (err) { next(err) }

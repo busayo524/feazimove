@@ -108,7 +108,10 @@ router.post('/book-intent',
         [period, pickup, dropoff]
       )
       const route = routeRes.rows[0]
-      if (!route) {
+      // Reject unpriced routes too — pool/solo need a pool fare, send needs a
+      // package fare. An unpriced route isn't bookable until an admin prices it.
+      const needsPool = service === 'pool' || service === 'solo'
+      if (!route || (needsPool && route.pool_fare_kobo == null) || (service === 'send' && route.package_fare_kobo == null)) {
         analytics.track(req.user.id, 'reservation_failed', {
           route_name: `${pickup}_to_${dropoff}`, reason: 'no_route_available',
         })

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import AdminLayout from '../../components/AdminLayout'
 import { api } from '../../services/api'
-import { AlertCircle, Plus, Ban, CheckCircle2, X } from 'lucide-react'
+import { AlertCircle, Plus, Ban, CheckCircle2, X, ChevronUp, ChevronDown } from 'lucide-react'
 
 const CARD = '#ffffff', BORDER = '#e5e7eb', TEXT = '#1a1a1a', MUTED = '#6b7280', BG = '#f5f7f2'
 const NEON = '#ccff00', OLIVE = '#243800'
@@ -27,6 +27,24 @@ export default function AdminStops() {
     }
   }
 
+  const [reordering, setReordering] = useState(false)
+  // Move a stop up/down within its group and persist the new order (stops are
+  // arranged by real Lagos geography — the order drivers walk when expanding).
+  async function moveStop(list, group, index, dir) {
+    const target = index + dir
+    if (reordering || target < 0 || target >= list.length) return
+    const reordered = [...list]
+    const [item] = reordered.splice(index, 1)
+    reordered.splice(target, 0, item)
+    setReordering(true)
+    try {
+      await api.post('/admin/stops/reorder', { group, orderedIds: reordered.map(s => s.id) })
+      load()
+    } catch (err) {
+      alert(err.data?.message || 'Could not reorder.')
+    } finally { setReordering(false) }
+  }
+
   const mainland = stops?.filter(s => s.group === 'mainland') || []
   const island = stops?.filter(s => s.group === 'island') || []
 
@@ -41,7 +59,8 @@ export default function AdminStops() {
         </button>
       </div>
       <p style={{ color:MUTED, fontSize:12, marginBottom:20 }}>
-        Adding a stop here doesn't make it bookable on its own — price at least one route using it in "Pricing" first.
+        Use the arrows to arrange each side by geography (the order drivers move through when no rider is at the current stop).
+        A stop only becomes bookable once a route using it is priced in "Pricing".
       </p>
 
       {error && (
@@ -60,14 +79,27 @@ export default function AdminStops() {
               <p style={{ fontWeight:800, fontSize:14, color:TEXT, padding:'14px 18px', borderBottom:`1px solid `, background:CARD }}>
                 {label} ({list.length})
               </p>
-              {list.map(s => (
-                <div key={s.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 18px', borderBottom:`1px solid #f5f5f5` }}>
-                  <div>
-                    <p style={{ fontSize:13, fontWeight:600, color:TEXT }}>{s.name}</p>
-                    <p style={{ fontSize:11, color:MUTED }}>Chain position {s.chainPosition}{!s.isActive && ' · Inactive'}</p>
+              {list.map((s, i) => (
+                <div key={s.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:8, padding:'10px 12px 10px 18px', borderBottom:`1px solid #f5f5f5` }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:6, minWidth:0 }}>
+                    {/* Reorder up/down — the list order IS the geography order */}
+                    <div style={{ display:'flex', flexDirection:'column' }}>
+                      <button onClick={() => moveStop(list, label.toLowerCase(), i, -1)} disabled={i === 0 || reordering}
+                        aria-label="Move up" style={{ background:'none', border:'none', cursor:(i===0||reordering)?'default':'pointer', color:i===0?'#d1d5db':MUTED, padding:0, lineHeight:0 }}>
+                        <ChevronUp size={16}/>
+                      </button>
+                      <button onClick={() => moveStop(list, label.toLowerCase(), i, 1)} disabled={i === list.length-1 || reordering}
+                        aria-label="Move down" style={{ background:'none', border:'none', cursor:(i===list.length-1||reordering)?'default':'pointer', color:i===list.length-1?'#d1d5db':MUTED, padding:0, lineHeight:0 }}>
+                        <ChevronDown size={16}/>
+                      </button>
+                    </div>
+                    <div style={{ minWidth:0 }}>
+                      <p style={{ fontSize:13, fontWeight:600, color:TEXT, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{s.name}</p>
+                      <p style={{ fontSize:11, color:MUTED }}>#{i + 1}{!s.isActive && ' · Inactive'}</p>
+                    </div>
                   </div>
                   <button onClick={() => toggleActive(s)}
-                    style={{ display:'flex', alignItems:'center', gap:5, background:'none', border:'none', cursor:'pointer',
+                    style={{ display:'flex', alignItems:'center', gap:5, background:'none', border:'none', cursor:'pointer', flexShrink:0,
                       color: s.isActive ? '#ef4444' : '#15803d', fontWeight:600, fontSize:11, fontFamily:'inherit' }}>
                     {s.isActive ? <><Ban size={12}/> Deactivate</> : <><CheckCircle2 size={12}/> Activate</>}
                   </button>
