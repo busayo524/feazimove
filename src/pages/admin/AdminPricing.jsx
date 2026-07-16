@@ -161,21 +161,20 @@ export default function AdminPricing() {
         <table style={{ width:'100%', borderCollapse:'collapse', fontSize:14 }}>
           <thead>
             <tr style={{ background:CARD, textAlign:'left' }}>
-              {['Route','Pool Fare','Package Fare','Last Updated','Status',''].map(h => (
+              {['Route','FeaziRide Fare','Last Updated','Status',''].map(h => (
                 <th key={h} style={{ padding:'12px 16px', fontSize:12, color:MUTED, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.04em' }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {!routes ? (
-              <tr><td colSpan={6} style={{ padding:30, textAlign:'center', color:MUTED }}>Loading…</td></tr>
+              <tr><td colSpan={5} style={{ padding:30, textAlign:'center', color:MUTED }}>Loading…</td></tr>
             ) : routes.length === 0 ? (
-              <tr><td colSpan={6} style={{ padding:30, textAlign:'center', color:MUTED }}>No routes for this period yet.</td></tr>
+              <tr><td colSpan={5} style={{ padding:30, textAlign:'center', color:MUTED }}>No routes for this period yet.</td></tr>
             ) : routes.map(r => (
               <tr key={r.id} style={{ borderTop:`1px solid ${BORDER}`, opacity: r.isActive ? 1 : 0.5 }}>
                 <td style={{ padding:'12px 16px', fontWeight:600, color:TEXT }}>{r.pickup} → {r.dropoff}</td>
                 <td style={{ padding:'8px 16px' }}><FareCell route={r} field="poolFareKobo" onSave={handleSave}/></td>
-                <td style={{ padding:'8px 16px' }}><FareCell route={r} field="packageFareKobo" onSave={handleSave}/></td>
                 <td style={{ padding:'12px 16px', color:MUTED, fontSize:12 }}>
                   {r.updatedAt ? `${r.updatedByName || 'Admin'} · ${new Date(r.updatedAt).toLocaleDateString()}` : '—'}
                 </td>
@@ -213,7 +212,6 @@ function AddRouteModal({ period, onClose, onCreated }) {
   const [newPickupGroup, setNewPickupGroup] = useState('mainland')
   const [selectedDropoffs, setSelectedDropoffs] = useState([]) // fan-out: stop names
   const [poolFareKobo, setPoolFareKobo] = useState('')
-  const [packageFareKobo, setPackageFareKobo] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
@@ -247,7 +245,7 @@ function AddRouteModal({ period, onClose, onCreated }) {
         await api.post('/admin/routes-pricing', {
           period, pickup, dropoff,
           poolFareKobo: poolFareKobo ? parseInt(poolFareKobo, 10) * 100 : null,
-          packageFareKobo: packageFareKobo ? parseInt(packageFareKobo, 10) * 100 : null,
+          packageFareKobo: null,
         })
       }
       onCreated(); onClose()
@@ -322,18 +320,10 @@ function AddRouteModal({ period, onClose, onCreated }) {
                 {stops.map(s => <option key={s.id} value={s.name}>{s.name} ({s.group})</option>)}
               </select>
 
-              <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) minmax(0,1fr)', gap:10, marginBottom:6 }}>
-                <div>
-                  <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Pool Fare (₦)</label>
-                  <input type="number" min="0" value={poolFareKobo} onChange={e => setPoolFareKobo(e.target.value)} placeholder="Optional" style={fld}/>
-                </div>
-                <div>
-                  <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Package Fare (₦)</label>
-                  <input type="number" min="0" value={packageFareKobo} onChange={e => setPackageFareKobo(e.target.value)} placeholder="Optional" style={fld}/>
-                </div>
-              </div>
+              <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>FeaziRide Fare (₦)</label>
+              <input type="number" min="0" value={poolFareKobo} onChange={e => setPoolFareKobo(e.target.value)} placeholder="Optional" style={{ ...fld, marginBottom:6 }}/>
               <p style={{ fontSize:12, color:MUTED, marginBottom:14, lineHeight:1.5 }}>
-                Leave fares blank to create the route unpriced — it stays hidden from riders until you set a pool fare.
+                Leave the fare blank to create the route unpriced — it stays hidden from riders until you set a fare.
               </p>
             </>
           )}
