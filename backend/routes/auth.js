@@ -13,8 +13,9 @@ const { requireAuth }  = require('../middleware/auth')
 const { validate }     = require('../middleware/validate')
 const { upload, DOC_FIELDS } = require('../middleware/upload')
 const { saveUpload, sendStored } = require('../services/fileStorage')
-const { generateOtp, sendOtpEmail, sendRegistrationLink, sendWelcomeEmail } = require('../services/emailService')
+const { generateOtp, sendOtpEmail, sendActionCodeEmail, sendRegistrationLink, sendWelcomeEmail } = require('../services/emailService')
 const { issueRefreshToken, rotateRefreshToken, revokeRefreshToken, revokeAllForUser } = require('../services/refreshTokens')
+const { createChallenge, consumeChallenge } = require('../services/actionChallenges')
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
@@ -657,6 +658,32 @@ router.post('/refresh', async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
+// ── Step-up 2FA: email a confirmation code for a sensitive action ────────────
+const ACTION_LABELS = { change_password: 'change your password', wallet_withdraw: 'withdraw from your wallet' }
+router.post('/request-action-code',
+  requireAuth,
+  otpLimiter, // reuse the tight OTP rate limit
+  [body('purpose').isIn(['change_password', 'wallet_withdraw'])],
+  validate,
+  async (req, res, next) => {
+    try {
+      const { purpose } = req.body
+      const u = await query('SELECT email, name FROM users WHERE id = $1', [req.user.id])
+      const user = u.rows[0]
+      if (!user?.email) return res.status(400).json({ message: 'No email on file for this account.' })
+      const { challengeId, code } = await createChallenge(req.user.id, purpose)
+      // Fire-and-forget the email; never block the response on the mail server
+      sendActionCodeEmail(user.email, user.name, code, ACTION_LABELS[purpose])
+        .catch(err => console.error(`[email] action code to ${user.email}:`, err.message))
+      const masked = user.email.replace(/^(.)(.*)(@.*)$/, (_, a, b, c) => a + '*'.repeat(Math.min(b.length, 5)) + c)
+      res.json({ challengeId, maskedEmail: masked })
+    } catch (err) {
+      if (err.status) return res.status(err.status).json({ message: err.message })
+      next(err)
+    }
+  }
+)
+
 // ── Logout — revoke this device's refresh-token family ───────────────────────
 router.post('/logout', async (req, res, next) => {
   try {
@@ -684,11 +711,13 @@ router.post('/change-password',
     body('currentPassword').notEmpty().withMessage('Current password is required.'),
     body('newPassword').isLength({ min: 8 }).matches(/[A-Z]/).matches(/[0-9]/)
       .withMessage('New password must be at least 8 characters with 1 uppercase letter and 1 number.'),
+    body('challengeId').notEmpty().withMessage('Verification required.'),
+    body('code').trim().isLength({ min: 6, max: 6 }).isNumeric().withMessage('Enter the 6-digit code.'),
   ],
   validate,
   async (req, res, next) => {
     try {
-      const { currentPassword, newPassword } = req.body
+      const { currentPassword, newPassword, challengeId, code } = req.body
 
       const result = await query('SELECT password_hash FROM users WHERE id = $1', [req.user.id])
       const user = result.rows[0]
@@ -696,6 +725,11 @@ router.post('/change-password',
 
       const match = await bcrypt.compare(currentPassword, user.password_hash)
       if (!match) return res.status(401).json({ message: 'Current password is incorrect.' })
+
+      // Step-up 2FA — the emailed code proves it's really the account owner,
+      // not just someone holding a stolen (but still-valid) access token.
+      try { await consumeChallenge(req.user.id, 'change_password', challengeId, code) }
+      catch (e) { return res.status(e.status || 400).json({ message: e.message }) }
 
       const newHash = await bcrypt.hash(newPassword, SALT_ROUNDS)
       // sessions_valid_from = NOW() invalidates every token issued before this

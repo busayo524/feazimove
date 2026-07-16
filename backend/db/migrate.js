@@ -273,6 +273,20 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_hash ON refresh_tokens(token_hash);
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user ON refresh_tokens(user_id);
 
+-- Step-up 2FA: a short-lived emailed code that must be verified before a
+-- sensitive action (password change, wallet withdrawal). Code stored hashed.
+CREATE TABLE IF NOT EXISTS action_challenges (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  purpose    VARCHAR(40) NOT NULL,
+  code_hash  TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used       BOOLEAN NOT NULL DEFAULT false,
+  attempts   INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_action_challenges_user ON action_challenges(user_id);
+
 -- Backfill: the face photo collected at registration becomes the avatar
 -- for accounts created before automatic assignment existed (selfie
 -- preferred). Idempotent — only ever fills blanks.

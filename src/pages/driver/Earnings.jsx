@@ -3,6 +3,7 @@ import AppLayout from '../../components/AppLayout'
 import { useAuth } from '../../context/AuthContext'
 import { api } from '../../services/api'
 import { useMyAvatar } from '../../hooks/useMyAvatar'
+import StepUpModal from '../../components/StepUpModal'
 import {
   TrendingUp, Wallet, ArrowDownLeft, Star, Car,
   Clock, CheckCircle, Calendar
@@ -70,6 +71,7 @@ export default function Earnings(){
   const [walletBalance, setWalletBalance] = useState(0)
   const [loading, setLoading] = useState(true)
   const [showWithdraw, setShowWithdraw] = useState(false)
+  const [showWithdrawStepUp, setShowWithdrawStepUp] = useState(false)
   const [withdrawAmount, setWithdrawAmount] = useState('')
   const [withdrawing, setWithdrawing] = useState(false)
   const [withdrawError, setWithdrawError] = useState('')
@@ -100,21 +102,26 @@ export default function Earnings(){
 
   useEffect(()=>{ loadWallet() },[])
 
-  async function handleWithdraw(e){
+  // Step 1: validate the amount, then require an emailed code before payout.
+  function handleWithdraw(e){
     e.preventDefault()
     const amount = parseInt(withdrawAmount, 10)
     if (!amount || amount <= 0) { setWithdrawError('Enter a valid amount.'); return }
     if (amount > walletBalance) { setWithdrawError('Amount exceeds your available balance.'); return }
-    setWithdrawing(true); setWithdrawError(''); setWithdrawSuccess('')
-    try {
-      await api.post('/wallet/withdraw', { amount })
-      setWithdrawSuccess('Withdrawal requested — pending admin approval.')
-      setWithdrawAmount('')
-      await loadWallet()
-      setTimeout(() => { setShowWithdraw(false); setWithdrawSuccess('') }, 1800)
-    } catch (err) {
-      setWithdrawError(err.data?.message || 'Could not request withdrawal.')
-    } finally { setWithdrawing(false) }
+    setWithdrawError('')
+    setShowWithdrawStepUp(true)
+  }
+
+  // Step 2: submit the payout with the emailed code — throws on failure so the
+  // 2FA modal shows the error and stays open.
+  async function verifyAndWithdraw(challengeId, code){
+    const amount = parseInt(withdrawAmount, 10)
+    await api.post('/wallet/withdraw', { amount, challengeId, code })
+    setShowWithdrawStepUp(false)
+    setWithdrawSuccess('Withdrawal requested — pending admin approval.')
+    setWithdrawAmount('')
+    await loadWallet()
+    setTimeout(() => { setShowWithdraw(false); setWithdrawSuccess('') }, 1800)
   }
 
   // ── Compute earnings per period ───────────────────────────────────────────
@@ -249,6 +256,11 @@ export default function Earnings(){
             </form>
           </div>
         </div>
+      )}
+
+      {showWithdrawStepUp && (
+        <StepUpModal purpose="wallet_withdraw" actionText="withdraw from your wallet"
+          onVerify={verifyAndWithdraw} onClose={() => setShowWithdrawStepUp(false)}/>
       )}
 
       {/* ── Recent transactions ── */}

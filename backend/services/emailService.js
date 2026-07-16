@@ -173,6 +173,39 @@ async function sendOtpEmail(to, fullName, otp) {
   })
 }
 
+// ── Step-up 2FA action code (password change / withdrawal) ────────────────────
+async function sendActionCodeEmail(to, fullName, code, actionLabel) {
+  const firstName = (fullName || '').split(' ')[0] || null
+  const body = `
+    <p style="margin:0 0 22px;font-size:17px;color:#222;">${firstName ? `Dear ${firstName},` : 'Hello,'}</p>
+    <p style="margin:0 0 18px;font-size:16px;color:#333;line-height:1.8;">
+      We received a request to <strong>${actionLabel}</strong> on your FeaziMove account.
+      Enter the code below to confirm it was you:
+    </p>
+    <p style="margin:28px 0;font-size:42px;font-weight:900;color:#0a1f15;letter-spacing:10px;text-align:center;">
+      ${code}
+    </p>
+    <p style="margin:0 0 18px;font-size:16px;color:#333;line-height:1.8;">
+      This code expires in <strong>10 minutes</strong>. If you did <strong>not</strong> request this,
+      do not share the code — change your password and contact support immediately.
+    </p>
+    <p style="margin:0 0 18px;font-size:16px;color:#333;line-height:1.8;">
+      For your security, never share this code with anyone. FeaziMove staff will never ask for it.
+    </p>
+    <p style="margin:36px 0 8px;font-size:16px;color:#333;">Best Regards,</p>
+    <p style="margin:0 0 4px;font-size:16px;font-weight:700;color:#0a1f15;">The FeaziMove Team</p>
+    <p style="margin:0;font-size:14px;color:#666;">
+      FeaziMove Technologies Ltd. | Lagos, Nigeria<br/>
+      📧 <a href="mailto:support@feazimove.com" style="color:#2a6048;">support@feazimove.com</a>
+    </p>
+  `
+  await sendEmail({
+    to,
+    subject: `Your FeaziMove Confirmation Code: ${code}`,
+    html: emailShell('#2a6048', body),
+  })
+}
+
 // ── Registration link email ───────────────────────────────────────────────────
 async function sendRegistrationLink(to, fullName, token, role) {
   const firstName = fullName.split(' ')[0]
@@ -424,4 +457,4 @@ async function sendAccountCredentialsEmail(to, fullName, role, tempPassword) {
   })
 }
 
-module.exports = { generateOtp, sendOtpEmail, sendRegistrationLink, sendWelcomeEmail, sendAccountCredentialsEmail }
+module.exports = { generateOtp, sendOtpEmail, sendActionCodeEmail, sendRegistrationLink, sendWelcomeEmail, sendAccountCredentialsEmail }

@@ -5,6 +5,7 @@ const axios    = require('axios')
 const { query } = require('../db')
 const { requireAuth } = require('../middleware/auth')
 const { validate }    = require('../middleware/validate')
+const { consumeChallenge } = require('../services/actionChallenges')
 const analytics = require('../services/analytics')
 
 const router = express.Router()
@@ -180,11 +181,20 @@ router.post('/webhook/paystack', async (req, res, next) => {
 
 // ── Request a payout (driver) — escrows the balance until admin approves ─────
 router.post('/withdraw',
-  [body('amount').isInt({ min: 100 })],
+  [
+    body('amount').isInt({ min: 100 }),
+    body('challengeId').notEmpty().withMessage('Verification required.'),
+    body('code').trim().isLength({ min: 6, max: 6 }).isNumeric().withMessage('Enter the 6-digit code.'),
+  ],
   validate,
   async (req, res, next) => {
     try {
       const amountKobo = req.body.amount * 100
+
+      // Step-up 2FA — money leaving the wallet requires an emailed code, so a
+      // stolen access token alone can't drain funds.
+      try { await consumeChallenge(req.user.id, 'wallet_withdraw', req.body.challengeId, req.body.code) }
+      catch (e) { return res.status(e.status || 400).json({ message: e.message }) }
 
       const userRes = await query('SELECT wallet_balance FROM users WHERE id = $1', [req.user.id])
       if (Number(userRes.rows[0].wallet_balance) < amountKobo) {

@@ -4,6 +4,7 @@ import AdminLayout from '../../components/AdminLayout'
 import { useAuth } from '../../context/AuthContext'
 import { api } from '../../services/api'
 import { AlertCircle, CheckCircle, Lock } from 'lucide-react'
+import StepUpModal from '../../components/StepUpModal'
 
 const CARD = '#ffffff', BORDER = '#e5e7eb', TEXT = '#1a1a1a', MUTED = '#6b7280'
 const NEON = '#ccff00', OLIVE = '#243800'
@@ -19,25 +20,28 @@ export default function AdminSettings() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [showStepUp, setShowStepUp] = useState(false)
 
-  async function handleSubmit(e) {
+  // Step 1: validate, then require an emailed code before changing.
+  function handleSubmit(e) {
     e.preventDefault()
     setError('')
     if (newPassword !== confirm) { setError('Passwords do not match.'); return }
-    setBusy(true)
-    try {
-      // Server rotates the token (old sessions are invalidated on password
-      // change) — swap in the fresh one so this session stays logged in.
-      const res = await api.post('/auth/change-password', { currentPassword, newPassword })
-      if (res.data?.token) localStorage.setItem('fm_token', res.data.token)
-      if (res.data?.refreshToken) localStorage.setItem('fm_refresh', res.data.refreshToken)
-      updateUser({ forcePasswordChange: false })
-      setSuccess(true)
-      setCurrentPassword(''); setNewPassword(''); setConfirm('')
-      if (forced) setTimeout(() => navigate('/admin', { replace: true }), 1200)
-    } catch (err) {
-      setError(err.data?.message || 'Could not update password.')
-    } finally { setBusy(false) }
+    if (!currentPassword || newPassword.length < 8) { setError('Please fill in all fields.'); return }
+    setShowStepUp(true)
+  }
+
+  // Step 2: run the change with the emailed code — throws on failure so the
+  // 2FA modal shows the error and stays open.
+  async function verifyAndChange(challengeId, code) {
+    const res = await api.post('/auth/change-password', { currentPassword, newPassword, challengeId, code })
+    if (res.data?.token) localStorage.setItem('fm_token', res.data.token)
+    if (res.data?.refreshToken) localStorage.setItem('fm_refresh', res.data.refreshToken)
+    updateUser({ forcePasswordChange: false })
+    setShowStepUp(false)
+    setSuccess(true)
+    setCurrentPassword(''); setNewPassword(''); setConfirm('')
+    if (forced) setTimeout(() => navigate('/admin', { replace: true }), 1200)
   }
 
   const content = (
@@ -85,6 +89,10 @@ export default function AdminSettings() {
           </button>
         </form>
       </div>
+      {showStepUp && (
+        <StepUpModal purpose="change_password" actionText="change your password"
+          onVerify={verifyAndChange} onClose={() => setShowStepUp(false)}/>
+      )}
     </div>
   )
 

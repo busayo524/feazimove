@@ -7,6 +7,7 @@ import { useMyAvatar } from '../../hooks/useMyAvatar'
 import { dataUrlToFile } from '../../utils/dataUrlToFile'
 import { compressImage } from '../../utils/compressImage'
 import { rememberAvatar } from '../../utils/avatarCache'
+import StepUpModal from '../../components/StepUpModal'
 import { User, Phone, Mail, Shield, Bell, ChevronRight, LogOut, Camera, CheckCircle, X, RefreshCw, Car, MapPin, AlertCircle, Landmark } from 'lucide-react'
 
 const NEON='#ccff00', NT='#0a0a0a'
@@ -272,22 +273,26 @@ function ChangePasswordModal({ onClose }){
   const [error,setError]=useState('')
   const [success,setSuccess]=useState(false)
   const [busy,setBusy]=useState(false)
+  const [showStepUp,setShowStepUp]=useState(false)
 
-  async function handleSubmit(e){
+  // Step 1: validate locally, then require an emailed code before changing.
+  function handleSubmit(e){
     e.preventDefault()
     setError('')
     if(newPassword!==confirm){setError('Passwords do not match.');return}
-    setBusy(true)
-    try{
-      // Server rotates the token (old sessions invalidated) — keep this one live.
-      const res=await api.post('/auth/change-password',{currentPassword,newPassword})
-      if(res.data?.token) localStorage.setItem('fm_token',res.data.token)
-      if(res.data?.refreshToken) localStorage.setItem('fm_refresh',res.data.refreshToken)
-      setSuccess(true)
-      setCurrentPassword('');setNewPassword('');setConfirm('')
-    }catch(err){
-      setError(err.data?.message||'Could not update password.')
-    }finally{setBusy(false)}
+    if(!currentPassword||newPassword.length<8){setError('Please fill in all fields.');return}
+    setShowStepUp(true)
+  }
+
+  // Step 2: called by the 2FA modal with the emailed code — throws on failure
+  // so the modal shows the error and stays open.
+  async function verifyAndChange(challengeId, code){
+    const res=await api.post('/auth/change-password',{currentPassword,newPassword,challengeId,code})
+    if(res.data?.token) localStorage.setItem('fm_token',res.data.token)
+    if(res.data?.refreshToken) localStorage.setItem('fm_refresh',res.data.refreshToken)
+    setShowStepUp(false)
+    setSuccess(true)
+    setCurrentPassword('');setNewPassword('');setConfirm('')
   }
 
   return(
@@ -331,6 +336,10 @@ function ChangePasswordModal({ onClose }){
           </button>
         </form>
       </div>
+      {showStepUp && (
+        <StepUpModal purpose="change_password" actionText="change your password"
+          onVerify={verifyAndChange} onClose={()=>setShowStepUp(false)}/>
+      )}
     </div>
   )
 }
