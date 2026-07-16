@@ -27,6 +27,7 @@ export function AuthProvider({ children }) {
     // Session sat idle past the limit while the app was closed — don't restore it
     if (sessionIsStale()) {
       localStorage.removeItem('fm_token')
+      localStorage.removeItem('fm_refresh')
       localStorage.removeItem('fm_user')
       localStorage.removeItem(ACTIVITY_KEY)
       sessionStorage.setItem(IDLE_LOGOUT_FLAG, '1')
@@ -41,6 +42,7 @@ export function AuthProvider({ children }) {
       })
       .catch(() => {
         localStorage.removeItem('fm_token')
+        localStorage.removeItem('fm_refresh')
         localStorage.removeItem('fm_user')
       })
       .finally(() => setLoading(false))
@@ -48,9 +50,10 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (identifier, password) => {
     const res = await api.post('/auth/login', { identifier, password })
-    const { token, user } = res.data
+    const { token, refreshToken, user } = res.data
     const normalized = normalizeUser(user)
     localStorage.setItem('fm_token', token)
+    if (refreshToken) localStorage.setItem('fm_refresh', refreshToken)
     localStorage.setItem('fm_user', JSON.stringify(normalized))
     setUser(normalized)
     identifyUser(normalized)
@@ -62,9 +65,10 @@ export function AuthProvider({ children }) {
     const res = await api.post('/auth/register', data)
     // Registration now returns { pending: true } — no token yet
     if (res.data.pending) return { pending: true }
-    const { token, user } = res.data
+    const { token, refreshToken, user } = res.data
     const normalized = normalizeUser(user)
     localStorage.setItem('fm_token', token)
+    if (refreshToken) localStorage.setItem('fm_refresh', refreshToken)
     localStorage.setItem('fm_user', JSON.stringify(normalized))
     setUser(normalized)
     return normalized
@@ -89,7 +93,11 @@ export function AuthProvider({ children }) {
   }, [])
 
   const logout = useCallback(() => {
+    // Best-effort server-side revoke of this device's refresh-token family
+    const rt = localStorage.getItem('fm_refresh')
+    if (rt) api.post('/auth/logout', { refreshToken: rt }).catch(() => {})
     localStorage.removeItem('fm_token')
+    localStorage.removeItem('fm_refresh')
     localStorage.removeItem('fm_user')
     localStorage.removeItem(ACTIVITY_KEY)
     setUser(null)

@@ -282,6 +282,7 @@ function ChangePasswordModal({ onClose }){
       // Server rotates the token (old sessions invalidated) — keep this one live.
       const res=await api.post('/auth/change-password',{currentPassword,newPassword})
       if(res.data?.token) localStorage.setItem('fm_token',res.data.token)
+      if(res.data?.refreshToken) localStorage.setItem('fm_refresh',res.data.refreshToken)
       setSuccess(true)
       setCurrentPassword('');setNewPassword('');setConfirm('')
     }catch(err){

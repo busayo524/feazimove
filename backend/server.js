@@ -148,6 +148,22 @@ async function runMigrations() {
     -- stops validating. Tokens with no version (pre-feature) count as 0.
     ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0;
 
+    -- Refresh tokens: short-lived access JWTs (15m) are silently renewed with a
+    -- long-lived, single-use, rotating refresh token. Reusing an already-rotated
+    -- token (theft signal) revokes the whole family. Only the sha256 hash is kept.
+    CREATE TABLE IF NOT EXISTS refresh_tokens (
+      id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token_hash TEXT NOT NULL,
+      family_id  UUID NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL,
+      revoked    BOOLEAN NOT NULL DEFAULT false,
+      used       BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_refresh_tokens_hash ON refresh_tokens(token_hash);
+    CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user ON refresh_tokens(user_id);
+
     -- Backfill: the face photo collected at registration becomes the avatar
     -- for accounts created before automatic assignment existed (selfie
     -- preferred). Idempotent — only ever fills blanks.

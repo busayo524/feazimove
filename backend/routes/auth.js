@@ -14,6 +14,7 @@ const { validate }     = require('../middleware/validate')
 const { upload, DOC_FIELDS } = require('../middleware/upload')
 const { saveUpload, sendStored } = require('../services/fileStorage')
 const { generateOtp, sendOtpEmail, sendRegistrationLink, sendWelcomeEmail } = require('../services/emailService')
+const { issueRefreshToken, rotateRefreshToken, revokeRefreshToken, revokeAllForUser } = require('../services/refreshTokens')
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
@@ -443,8 +444,8 @@ router.post('/google',
           'UPDATE users SET google_id = $1 WHERE id = $2 AND google_id IS NULL',
           [googleId, existingUser.id]
         )
-        const token = await signToken(existingUser)
-        return res.json({ token, user: safeUser(existingUser), isNew: false })
+        const { token, refreshToken } = await issueSession(existingUser)
+        return res.json({ token, refreshToken, user: safeUser(existingUser), isNew: false })
       }
 
       // New user — need a role to proceed
@@ -522,8 +523,8 @@ router.post('/google-access',
 
       if (existingUser) {
         await query('UPDATE users SET google_id = $1 WHERE id = $2 AND google_id IS NULL', [googleId, existingUser.id])
-        const token = await signToken(existingUser)
-        return res.json({ token, user: safeUser(existingUser), isNew: false })
+        const { token, refreshToken } = await issueSession(existingUser)
+        return res.json({ token, refreshToken, user: safeUser(existingUser), isNew: false })
       }
 
       // New user — need role
@@ -625,11 +626,44 @@ router.post('/login',
         return res.status(403).json({ message: 'Your account has been suspended. Please contact support.' })
       }
 
-      const token = await signToken(user)
-      res.json({ token, user: safeUser(user) })
+      const { token, refreshToken } = await issueSession(user)
+      res.json({ token, refreshToken, user: safeUser(user) })
     } catch (err) { next(err) }
   }
 )
+
+// ── Refresh access token — rotates the refresh token, detects reuse ──────────
+// No access token required (this is called precisely when it has expired).
+router.post('/refresh', async (req, res, next) => {
+  try {
+    const { refreshToken } = req.body || {}
+    let rotated
+    try {
+      rotated = await rotateRefreshToken(refreshToken)
+    } catch (err) {
+      return res.status(401).json({ message: 'Session expired. Please sign in again.', code: err.code })
+    }
+    // Confirm the account is still valid, then mint a fresh access token.
+    const u = await query(
+      'SELECT id, role, active_role, is_active FROM users WHERE id = $1',
+      [rotated.userId]
+    )
+    const user = u.rows[0]
+    if (!user || !user.is_active) {
+      await revokeRefreshToken(rotated.refreshToken)
+      return res.status(401).json({ message: 'Account is no longer active.' })
+    }
+    res.json({ token: await signToken(user), refreshToken: rotated.refreshToken })
+  } catch (err) { next(err) }
+})
+
+// ── Logout — revoke this device's refresh-token family ───────────────────────
+router.post('/logout', async (req, res, next) => {
+  try {
+    await revokeRefreshToken((req.body || {}).refreshToken)
+    res.json({ message: 'Logged out.' })
+  } catch (err) { next(err) }
+})
 
 // ── Get current user ──────────────────────────────────────────────────────────
 router.get('/me', requireAuth, async (req, res, next) => {
@@ -675,7 +709,11 @@ router.post('/change-password',
         'UPDATE users SET password_hash = $1, force_password_change = false, token_version = token_version + 1 WHERE id = $2 RETURNING id, role, active_role, token_version',
         [newHash, req.user.id]
       )
-      res.json({ message: 'Password updated.', token: await signToken(fresh.rows[0]) })
+      // Kill every existing refresh token too, then hand this session a fresh
+      // access + refresh pair so the user who changed the password stays in.
+      await revokeAllForUser(req.user.id)
+      const { token, refreshToken } = await issueSession(fresh.rows[0])
+      res.json({ message: 'Password updated.', token, refreshToken })
     } catch (err) { next(err) }
   }
 )
@@ -734,8 +772,16 @@ async function signToken(user) {
   return jwt.sign(
     { id: user.id, role: user.active_role || user.role, tv },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d', algorithm: 'HS256' }
+    // Short-lived access token — silently renewed via the refresh token, so a
+    // stolen access token is only useful for minutes. Hardcoded (not env-driven)
+    // so a stray JWT_EXPIRES_IN can't silently defeat the refresh-token model.
+    { expiresIn: '15m', algorithm: 'HS256' }
   )
+}
+
+// A full new session = short access JWT + a long-lived rotating refresh token.
+async function issueSession(user) {
+  return { token: await signToken(user), refreshToken: await issueRefreshToken(user.id) }
 }
 
 function safeUser(user) {

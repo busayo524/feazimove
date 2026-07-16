@@ -30,6 +30,7 @@ export default function AdminSettings() {
       // change) — swap in the fresh one so this session stays logged in.
       const res = await api.post('/auth/change-password', { currentPassword, newPassword })
       if (res.data?.token) localStorage.setItem('fm_token', res.data.token)
+      if (res.data?.refreshToken) localStorage.setItem('fm_refresh', res.data.refreshToken)
       updateUser({ forcePasswordChange: false })
       setSuccess(true)
       setCurrentPassword(''); setNewPassword(''); setConfirm('')

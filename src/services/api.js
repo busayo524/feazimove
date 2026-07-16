@@ -29,45 +29,91 @@ function sanitizeBody(obj) {
   )
 }
 
-async function request(method, path, body, options = {}) {
+// ── Silent access-token renewal ───────────────────────────────────────────────
+// Access tokens are short-lived (15m). When one expires mid-session, we exchange
+// the long-lived refresh token for a fresh pair and retry — transparently, so
+// the user never sees a logout. Single-flighted: if many requests 401 at once,
+// only ONE /auth/refresh runs and they all await it.
+let refreshPromise = null
+
+async function tryRefresh() {
+  const refreshToken = localStorage.getItem('fm_refresh')
+  if (!refreshToken) return false
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      try {
+        const r = await fetch(`${BASE_URL}/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken }),
+        })
+        if (!r.ok) return false
+        const d = await r.json().catch(() => ({}))
+        if (!d.token || !d.refreshToken) return false
+        localStorage.setItem('fm_token', d.token)
+        localStorage.setItem('fm_refresh', d.refreshToken)
+        return true
+      } catch { return false }
+      finally { /* cleared by caller below */ }
+    })()
+    // Clear the single-flight latch once it settles
+    refreshPromise.finally(() => { refreshPromise = null })
+  }
+  return refreshPromise
+}
+
+function forceLogout() {
+  localStorage.removeItem('fm_token')
+  localStorage.removeItem('fm_refresh')
+  localStorage.removeItem('fm_user')
+  window.location.href = '/login'
+}
+
+async function doFetch(method, path, body, options) {
   const token = localStorage.getItem('fm_token')
   const isFormData = body instanceof FormData
-
   const headers = {
-    // Skip Content-Type for FormData — the browser sets the multipart boundary itself
     ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...options.headers,
   }
-
-  const config = {
+  return fetch(`${BASE_URL}${path}`, {
     method,
     headers,
-    // Prevent SSRF — only allow requests to our own API base
     ...(body ? { body: isFormData ? body : JSON.stringify(sanitizeBody(body)) } : {}),
-  }
+  })
+}
 
-  const res = await fetch(`${BASE_URL}${path}`, config)
+// Endpoints where a 401 means "wrong credentials", NOT "access token expired" —
+// so they must never trigger a refresh-and-retry. Everything else (including
+// /auth/me, /auth/change-password) does refresh on 401.
+const NO_REFRESH = ['/auth/login', '/auth/refresh', '/auth/logout', '/auth/signup',
+  '/auth/google', '/auth/register', '/auth/verify-otp', '/auth/forgot-password', '/auth/reset-password']
 
-  // Token expired — force logout
-  // Skip this for auth routes (login/signup) — a 401 there means wrong credentials, not expired token
-  const isAuthRoute = path.startsWith('/auth/')
-  if (res.status === 401 && !isAuthRoute) {
-    localStorage.removeItem('fm_token')
-    localStorage.removeItem('fm_user')
-    window.location.href = '/login'
-    return
+async function request(method, path, body, options = {}) {
+  const skipRefresh = NO_REFRESH.some(p => path.startsWith(p))
+  let res = await doFetch(method, path, body, options)
+
+  // Access token expired mid-session — refresh once and retry transparently.
+  if (res.status === 401 && !skipRefresh) {
+    const ok = await tryRefresh()
+    if (ok) {
+      res = await doFetch(method, path, body, options)
+    }
+    // Still (or newly) unauthorized after the refresh attempt → session is done.
+    if (res.status === 401) {
+      forceLogout()
+      return
+    }
   }
 
   const data = await res.json().catch(() => ({}))
-
   if (!res.ok) {
     const err = new Error(data.message || 'An error occurred')
     err.status = res.status
     err.data = data
     throw err
   }
-
   return { data, status: res.status }
 }
 
@@ -81,14 +127,23 @@ async function request(method, path, body, options = {}) {
 const SLICE_SIZE = 128 * 1024
 const SLICE_PARALLEL = 8
 
-async function getBlob(path) {
+function authHeaders() {
   const token = localStorage.getItem('fm_token')
-  const headers = token ? { Authorization: `Bearer ${token}` } : {}
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
+async function getBlob(path) {
+  let headers = authHeaders()
   const sep = path.includes('?') ? '&' : '?'
 
   let size = null
   try {
-    const infoRes = await fetch(`${BASE_URL}${path}${sep}sizeinfo=1`, { headers })
+    let infoRes = await fetch(`${BASE_URL}${path}${sep}sizeinfo=1`, { headers })
+    // Access token expired mid-session — refresh once, rebuild headers, retry.
+    if (infoRes.status === 401 && await tryRefresh()) {
+      headers = authHeaders()
+      infoRes = await fetch(`${BASE_URL}${path}${sep}sizeinfo=1`, { headers })
+    }
     if (infoRes.ok && (infoRes.headers.get('Content-Type') || '').includes('json')) {
       const info = await infoRes.json()
       if (Number.isFinite(info.size)) size = info.size
