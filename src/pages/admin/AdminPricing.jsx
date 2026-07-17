@@ -211,6 +211,8 @@ function AddRouteModal({ period, onClose, onCreated }) {
   const [newPickupName, setNewPickupName] = useState('')
   const [newPickupGroup, setNewPickupGroup] = useState('mainland')
   const [selectedDropoffs, setSelectedDropoffs] = useState([]) // fan-out: stop names
+  const [newDropoffName, setNewDropoffName] = useState('')      // fan-out: hand-typed new destination
+  const [newDropoffChecked, setNewDropoffChecked] = useState(false)
   const [poolFareKobo, setPoolFareKobo] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -235,9 +237,14 @@ function AddRouteModal({ period, onClose, onCreated }) {
     try {
       if (isFanOut) {
         if (!newPickupName.trim()) throw { data: { message: 'Enter the new pickup name.' } }
-        if (!selectedDropoffs.length) throw { data: { message: 'Select at least one destination.' } }
+        // Existing ticked stops + a hand-typed new destination (if ticked & named)
+        const dropoffNames = [...selectedDropoffs]
+        if (newDropoffChecked && newDropoffName.trim() && !dropoffNames.includes(newDropoffName.trim())) {
+          dropoffNames.push(newDropoffName.trim())
+        }
+        if (!dropoffNames.length) throw { data: { message: 'Select or add at least one destination.' } }
         const res = await api.post('/admin/routes-bulk', {
-          pickupName: newPickupName.trim(), pickupGroup: newPickupGroup, dropoffNames: selectedDropoffs,
+          pickupName: newPickupName.trim(), pickupGroup: newPickupGroup, dropoffNames,
         })
         if (res.data.created === 0) throw { data: { message: 'Those routes already exist.' } }
       } else {
@@ -279,7 +286,7 @@ function AddRouteModal({ period, onClose, onCreated }) {
               <div style={{ display:'flex', gap:8, marginBottom:14 }}>
                 <input value={newPickupName} onChange={e => setNewPickupName(e.target.value)} placeholder="New pickup name"
                   style={{ ...fld, flex:2 }}/>
-                <select value={newPickupGroup} onChange={e => { setNewPickupGroup(e.target.value); setSelectedDropoffs([]) }}
+                <select value={newPickupGroup} onChange={e => { setNewPickupGroup(e.target.value); setSelectedDropoffs([]); setNewDropoffName(''); setNewDropoffChecked(false) }}
                   style={{ ...fld, flex:1 }}>
                   <option value="mainland">Mainland</option>
                   <option value="island">Island</option>
@@ -296,21 +303,32 @@ function AddRouteModal({ period, onClose, onCreated }) {
                   {allSelected ? 'Clear all' : 'Select all'}
                 </button>
               </div>
-              <div style={{ border:`1.5px solid ${BORDER}`, borderRadius:10, maxHeight:200, overflowY:'auto', marginBottom:8 }}>
-                {oppositeStops.length === 0 ? (
-                  <p style={{ fontSize:13, color:MUTED, padding:'14px', textAlign:'center' }}>No {oppositeGroup} stops yet.</p>
-                ) : oppositeStops.map(s => (
+              <div style={{ border:`1.5px solid ${BORDER}`, borderRadius:10, maxHeight:240, overflowY:'auto', marginBottom:8 }}>
+                {oppositeStops.map(s => (
                   <label key={s.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px', borderBottom:`1px solid ${BG}`, cursor:'pointer', fontSize:14, color:TEXT }}>
                     <input type="checkbox" checked={selectedDropoffs.includes(s.name)} onChange={() => toggleDropoff(s.name)}
                       style={{ width:16, height:16, accentColor:OLIVE }}/>
                     {s.name}
                   </label>
                 ))}
+                {/* Hand-code a brand-new destination — its checkbox includes it in the fan-out */}
+                <div style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px', background:'#fafcf5' }}>
+                  <input type="checkbox" checked={newDropoffChecked} onChange={e => setNewDropoffChecked(e.target.checked)}
+                    style={{ width:16, height:16, accentColor:OLIVE, flexShrink:0 }}/>
+                  <input value={newDropoffName}
+                    onChange={e => { setNewDropoffName(e.target.value); if (e.target.value.trim()) setNewDropoffChecked(true) }}
+                    placeholder={`+ New ${oppositeGroup} location`}
+                    style={{ flex:1, padding:'6px 10px', borderRadius:8, border:`1.5px solid ${BORDER}`, fontSize:14, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}/>
+                </div>
               </div>
-              <p style={{ fontSize:12, color:MUTED, marginBottom:14, lineHeight:1.5 }}>
-                Creates {selectedDropoffs.length || 'the selected'} route{selectedDropoffs.length === 1 ? '' : 's'} unpriced —
-                set each fare afterwards on this page.
-              </p>
+              {(() => {
+                const count = selectedDropoffs.length + (newDropoffChecked && newDropoffName.trim() ? 1 : 0)
+                return (
+                  <p style={{ fontSize:12, color:MUTED, marginBottom:14, lineHeight:1.5 }}>
+                    Creates {count || 'the selected'} route{count === 1 ? '' : 's'} unpriced — set each fare afterwards on this page.
+                  </p>
+                )
+              })()}
             </>
           ) : (
             <>
@@ -332,7 +350,7 @@ function AddRouteModal({ period, onClose, onCreated }) {
 
           <button type="submit" disabled={busy}
             style={{ width:'100%', padding:'11px', borderRadius:10, background:NEON, color:OLIVE, border:'none', fontWeight:700, fontSize:14, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit', opacity:busy?0.7:1 }}>
-            {busy ? 'Creating…' : isFanOut ? `Create ${selectedDropoffs.length || ''} Route${selectedDropoffs.length === 1 ? '' : 's'}` : 'Create Route'}
+            {busy ? 'Creating…' : isFanOut ? (() => { const n = selectedDropoffs.length + (newDropoffChecked && newDropoffName.trim() ? 1 : 0); return `Create ${n || ''} Route${n === 1 ? '' : 's'}` })() : 'Create Route'}
           </button>
         </form>
       </div>

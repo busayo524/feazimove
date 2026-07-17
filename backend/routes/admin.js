@@ -1089,22 +1089,29 @@ router.post('/routes-bulk',
   async (req, res, next) => {
     const { pickupName, pickupGroup, dropoffNames } = req.body
     const period = pickupGroup === 'mainland' ? 'morning' : 'evening'
+    const dropoffGroup = pickupGroup === 'mainland' ? 'island' : 'mainland'
     const client = await pool.connect()
     try {
       await client.query('BEGIN')
-      // Ensure the pickup stop exists (create at the end of its group's chain)
-      const existing = await client.query('SELECT name FROM stops WHERE name = $1', [pickupName])
-      if (!existing.rows[0]) {
+      // Helper: make sure a stop exists in a given group, creating it at the end
+      // of that group's chain if it's brand new (a hand-typed pickup OR dropoff).
+      async function ensureStop(name, group) {
+        const found = await client.query('SELECT name FROM stops WHERE name = $1', [name])
+        if (found.rows[0]) return
         const pos = await client.query(
           'SELECT COALESCE(MAX(chain_position), -1) + 1 AS next FROM stops WHERE group_name = $1',
-          [pickupGroup]
+          [group]
         )
         await client.query('INSERT INTO stops (name, group_name, chain_position) VALUES ($1, $2, $3)',
-          [pickupName, pickupGroup, pos.rows[0].next])
+          [name, group, pos.rows[0].next])
       }
-      // Create a route to each selected dropoff — skip any that already exist.
+      await ensureStop(pickupName, pickupGroup)
+
+      // Create a route to each dropoff — existing stops OR a hand-typed new one
+      // (created on the opposite side). Skip pairs that already exist.
       let created = 0
       for (const dropoff of dropoffNames) {
+        await ensureStop(dropoff, dropoffGroup)
         const r = await client.query(
           `INSERT INTO routes (period, pickup, dropoff, updated_by, updated_at)
            VALUES ($1, $2, $3, $4, NOW())
