@@ -1095,9 +1095,17 @@ router.post('/routes-bulk',
       await client.query('BEGIN')
       // Helper: make sure a stop exists in a given group, creating it at the end
       // of that group's chain if it's brand new (a hand-typed pickup OR dropoff).
+      // Stop names are globally unique, so if a hand-typed name already exists on
+      // the OTHER side, reject rather than silently building a wrong-side route.
       async function ensureStop(name, group) {
-        const found = await client.query('SELECT name FROM stops WHERE name = $1', [name])
-        if (found.rows[0]) return
+        const found = await client.query('SELECT group_name FROM stops WHERE name = $1', [name])
+        if (found.rows[0]) {
+          if (found.rows[0].group_name !== group) {
+            const e = new Error(`"${name}" already exists as a ${found.rows[0].group_name} stop, so it can't be used as a ${group} location.`)
+            e.status = 409; throw e
+          }
+          return
+        }
         const pos = await client.query(
           'SELECT COALESCE(MAX(chain_position), -1) + 1 AS next FROM stops WHERE group_name = $1',
           [group]
@@ -1125,6 +1133,7 @@ router.post('/routes-bulk',
       res.status(201).json({ created, period })
     } catch (err) {
       await client.query('ROLLBACK').catch(() => {})
+      if (err.status) return res.status(err.status).json({ message: err.message })
       if (err.code === '23503') return res.status(422).json({ message: 'One of the selected dropoffs is not a known stop.' })
       next(err)
     } finally { client.release() }
