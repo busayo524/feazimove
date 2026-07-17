@@ -1101,7 +1101,9 @@ router.post('/routes-bulk',
         const found = await client.query('SELECT group_name FROM stops WHERE name = $1', [name])
         if (found.rows[0]) {
           if (found.rows[0].group_name !== group) {
-            const e = new Error(`"${name}" already exists as a ${found.rows[0].group_name} stop, so it can't be used as a ${group} location.`)
+            const art = g => g === 'island' ? 'an' : 'a' // "an island" / "a mainland"
+            const g0 = found.rows[0].group_name
+            const e = new Error(`"${name}" already exists as ${art(g0)} ${g0} stop, so it can't be used as ${art(group)} ${group} location.`)
             e.status = 409; throw e
           }
           return
