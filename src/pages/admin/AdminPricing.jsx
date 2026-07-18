@@ -213,6 +213,7 @@ function AddRouteModal({ period, onClose, onCreated }) {
   const [selectedDropoffs, setSelectedDropoffs] = useState([]) // fan-out: stop names
   const [newDropoffName, setNewDropoffName] = useState('')      // fan-out: hand-typed new destination
   const [newDropoffChecked, setNewDropoffChecked] = useState(false)
+  const [newDropoffSingle, setNewDropoffSingle] = useState('')  // single-route: hand-typed new dropoff
   const [poolFareKobo, setPoolFareKobo] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -226,6 +227,10 @@ function AddRouteModal({ period, onClose, onCreated }) {
   const oppositeGroup = newPickupGroup === 'mainland' ? 'island' : 'mainland'
   const oppositeStops = stops.filter(s => s.group === oppositeGroup)
   const allSelected = oppositeStops.length > 0 && selectedDropoffs.length === oppositeStops.length
+  // Single-route mode: a hand-typed dropoff lands on the opposite side of the
+  // chosen (existing) pickup — inferred, so the admin doesn't pick a side.
+  const pickupGroup = stops.find(s => s.name === pickup)?.group
+  const singleDropoffGroup = pickupGroup === 'mainland' ? 'island' : pickupGroup === 'island' ? 'mainland' : null
 
   function toggleDropoff(name) {
     setSelectedDropoffs(prev => prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name])
@@ -248,9 +253,15 @@ function AddRouteModal({ period, onClose, onCreated }) {
         })
         if (res.data.created === 0) throw { data: { message: 'Those routes already exist.' } }
       } else {
-        // Single route between two existing stops — pricing optional.
+        // Single route — dropoff is an existing stop, OR a hand-typed new one
+        // that we create on the opposite side of the pickup. Pricing optional.
+        const dropoffIsNew = dropoff === NEW_STOP
+        const finalDropoff = dropoffIsNew ? newDropoffSingle.trim() : dropoff
+        if (dropoffIsNew && !finalDropoff) throw { data: { message: 'Enter the new dropoff name.' } }
+        if (dropoffIsNew && !singleDropoffGroup) throw { data: { message: 'Choose a pickup first, then add the new dropoff.' } }
         await api.post('/admin/routes-pricing', {
-          period, pickup, dropoff,
+          period, pickup, dropoff: finalDropoff,
+          dropoffGroup: dropoffIsNew ? singleDropoffGroup : undefined,
           poolFareKobo: poolFareKobo ? parseInt(poolFareKobo, 10) * 100 : null,
           packageFareKobo: null,
         })
@@ -273,11 +284,11 @@ function AddRouteModal({ period, onClose, onCreated }) {
         </div>
         <form onSubmit={handleSubmit}>
           <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Pickup</label>
-          <select value={pickup} onChange={e => { setPickup(e.target.value); setDropoff(''); setSelectedDropoffs([]) }} required
+          <select value={pickup} onChange={e => { setPickup(e.target.value); setDropoff(''); setSelectedDropoffs([]); setNewDropoffSingle('') }} required
             style={{ ...fld, marginBottom:14 }}>
             <option value="">Select…</option>
-            {stops.map(s => <option key={s.id} value={s.name}>{s.name} ({s.group})</option>)}
             <option value={NEW_STOP}>+ Add new location…</option>
+            {stops.map(s => <option key={s.id} value={s.name}>{s.name} ({s.group})</option>)}
           </select>
 
           {isFanOut ? (
@@ -333,10 +344,25 @@ function AddRouteModal({ period, onClose, onCreated }) {
           ) : (
             <>
               <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Dropoff</label>
-              <select value={dropoff} onChange={e => setDropoff(e.target.value)} required style={{ ...fld, marginBottom:14 }}>
+              <select value={dropoff} onChange={e => { setDropoff(e.target.value); setNewDropoffSingle('') }} required
+                style={{ ...fld, marginBottom: dropoff === NEW_STOP ? 8 : 14 }}>
                 <option value="">Select…</option>
+                <option value={NEW_STOP}>+ Add new location…</option>
                 {stops.map(s => <option key={s.id} value={s.name}>{s.name} ({s.group})</option>)}
               </select>
+
+              {dropoff === NEW_STOP && (
+                <>
+                  <input value={newDropoffSingle} onChange={e => setNewDropoffSingle(e.target.value)} autoFocus
+                    placeholder={singleDropoffGroup ? `New ${singleDropoffGroup} location` : 'New dropoff location'}
+                    style={{ ...fld, marginBottom:6 }}/>
+                  <p style={{ fontSize:12, color:MUTED, marginBottom:14, lineHeight:1.5 }}>
+                    {singleDropoffGroup
+                      ? `Saved as a new ${singleDropoffGroup} location (opposite side of ${pickup}), then the route is created.`
+                      : 'Choose a pickup first — the new dropoff is placed on the opposite side.'}
+                  </p>
+                </>
+              )}
 
               <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>FeaziRide Fare (₦)</label>
               <input type="number" min="0" value={poolFareKobo} onChange={e => setPoolFareKobo(e.target.value)} placeholder="Optional" style={{ ...fld, marginBottom:6 }}/>

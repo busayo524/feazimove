@@ -1048,28 +1048,55 @@ router.post('/routes-pricing',
     body('period').isIn(['morning', 'evening']),
     body('pickup').trim().isLength({ min: 1, max: 100 }).escape(),
     body('dropoff').trim().isLength({ min: 1, max: 100 }).escape(),
+    body('dropoffGroup').optional().isIn(['mainland', 'island']),
     body('poolFareKobo').optional({ nullable: true, checkFalsy: false }).isInt({ min: 0 }),
     body('packageFareKobo').optional({ nullable: true, checkFalsy: false }).isInt({ min: 0 }),
   ],
   validate,
   async (req, res, next) => {
+    const { period, pickup, dropoff, dropoffGroup } = req.body
+    // Fares are optional now — a route can be created unpriced and priced later.
+    const poolFareKobo = req.body.poolFareKobo == null || req.body.poolFareKobo === '' ? null : req.body.poolFareKobo
+    const packageFareKobo = req.body.packageFareKobo == null || req.body.packageFareKobo === '' ? null : req.body.packageFareKobo
+    const client = await pool.connect()
     try {
-      const { period, pickup, dropoff } = req.body
-      // Fares are optional now — a route can be created unpriced and priced later.
-      const poolFareKobo = req.body.poolFareKobo == null || req.body.poolFareKobo === '' ? null : req.body.poolFareKobo
-      const packageFareKobo = req.body.packageFareKobo == null || req.body.packageFareKobo === '' ? null : req.body.packageFareKobo
-      const result = await query(
+      await client.query('BEGIN')
+      // A hand-typed dropoff may be a brand-new location — create the stop first
+      // (same globally-unique / wrong-side guard the fan-out uses) so the route
+      // has a real stop to point at. Only runs when the admin supplied its side.
+      if (dropoffGroup) {
+        const found = await client.query('SELECT group_name FROM stops WHERE name = $1', [dropoff])
+        if (found.rows[0]) {
+          if (found.rows[0].group_name !== dropoffGroup) {
+            const art = g => g === 'island' ? 'an' : 'a' // "an island" / "a mainland"
+            const g0 = found.rows[0].group_name
+            const e = new Error(`"${dropoff}" already exists as ${art(g0)} ${g0} stop, so it can't be used as ${art(dropoffGroup)} ${dropoffGroup} location.`)
+            e.status = 409; throw e
+          }
+        } else {
+          const pos = await client.query(
+            'SELECT COALESCE(MAX(chain_position), -1) + 1 AS next FROM stops WHERE group_name = $1',
+            [dropoffGroup]
+          )
+          await client.query('INSERT INTO stops (name, group_name, chain_position) VALUES ($1, $2, $3)',
+            [dropoff, dropoffGroup, pos.rows[0].next])
+        }
+      }
+      const result = await client.query(
         `INSERT INTO routes (period, pickup, dropoff, pool_fare_kobo, package_fare_kobo, updated_by, updated_at)
          VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING id`,
         [period, pickup, dropoff, poolFareKobo, packageFareKobo, req.user.id]
       )
+      await client.query('COMMIT')
       logActivity(req.user.id, 'Route Created', 'route', `${pickup} → ${dropoff} (${period})`)
       res.status(201).json({ id: result.rows[0].id })
     } catch (err) {
+      await client.query('ROLLBACK').catch(() => {})
+      if (err.status) return res.status(err.status).json({ message: err.message })
       if (err.code === '23503') return res.status(422).json({ message: 'Pickup or dropoff is not a known stop.' })
       if (err.code === '23505') return res.status(409).json({ message: 'This route already exists for that period.' })
       next(err)
-    }
+    } finally { client.release() }
   }
 )
 
