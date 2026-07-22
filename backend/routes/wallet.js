@@ -44,8 +44,15 @@ router.get('/transactions', async (req, res, next) => {
 // ── Initiate wallet top-up via Paystack ───────────────────────────────────────
 // Returns a Paystack checkout URL. When the user completes payment, Paystack
 // fires a webhook → /wallet/webhook/paystack which credits the wallet.
+// context: 'ride' = paying for a specific ride from the booking flow — the
+// redirect returns to the booking page (which auto-completes the booking)
+// instead of the wallet page. The money still lands in the wallet either way,
+// so ride settlement stays on the single wallet rail.
 router.post('/fund',
-  [body('amount').isInt({ min: 100, max: 500000 })],
+  [
+    body('amount').isInt({ min: 100, max: 500000 }),
+    body('context').optional().isIn(['wallet', 'ride']),
+  ],
   validate,
   async (req, res, next) => {
     try {
@@ -54,6 +61,7 @@ router.post('/fund',
       }
 
       const { amount } = req.body
+      const isRidePayment = req.body.context === 'ride'
       const reference = `FM-${crypto.randomUUID()}`
 
       const userRes = await query('SELECT name, email FROM users WHERE id = $1', [req.user.id])
@@ -65,8 +73,13 @@ router.post('/fund',
       // Record as pending — upgraded to 'completed' by the webhook after payment
       await query(
         'INSERT INTO wallet_transactions (user_id, type, amount_kobo, description, reference, status) VALUES ($1, $2, $3, $4, $5, $6)',
-        [req.user.id, 'credit', amount * 100, 'Wallet top-up', reference, 'pending']
+        [req.user.id, 'credit', amount * 100, isRidePayment ? 'Ride payment' : 'Wallet top-up', reference, 'pending']
       )
+
+      const appBase = (process.env.APP_URL || '').replace(/\/+$/, '')
+      const callbackUrl = isRidePayment && appBase
+        ? `${appBase}/book?funded=1`
+        : process.env.PAYSTACK_CALLBACK_URL
 
       // Initialize Paystack transaction — Paystack also takes amount in kobo
       const psRes = await axios.post(
@@ -75,7 +88,7 @@ router.post('/fund',
           email: user.email,
           amount: amount * 100,
           reference,
-          callback_url: process.env.PAYSTACK_CALLBACK_URL,
+          callback_url: callbackUrl,
         },
         { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
       )
