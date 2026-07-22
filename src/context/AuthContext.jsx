@@ -24,8 +24,12 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const token = localStorage.getItem('fm_token')
     if (!token) { setLoading(false); return }
-    // Session sat idle past the limit while the app was closed — don't restore it
+    // Session sat idle past the limit while the app was closed — don't restore
+    // it, and tell the server too (best-effort): revokes the refresh-token
+    // family and flips a driver offline if they have no active ride.
     if (sessionIsStale()) {
+      const rt = localStorage.getItem('fm_refresh')
+      if (rt) api.post('/auth/logout', { refreshToken: rt }).catch(() => {})
       localStorage.removeItem('fm_token')
       localStorage.removeItem('fm_refresh')
       localStorage.removeItem('fm_user')
@@ -104,7 +108,7 @@ export function AuthProvider({ children }) {
     resetAnalytics()
   }, [])
 
-  // Auto-logout after 45 minutes of inactivity
+  // Auto-logout after inactivity — 2h for riders/drivers, 45min for admin
   useIdleLogout(user, logout)
 
   const updateUser = useCallback((updates) => {

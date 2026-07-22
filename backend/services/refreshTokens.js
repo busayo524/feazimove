@@ -64,12 +64,14 @@ async function rotateRefreshToken(token) {
 }
 
 // Revoke a single family (used on logout — kills just this device's session).
+// Returns the owning user's id (or null) so logout can run per-user cleanup
+// like flipping a driver offline.
 async function revokeRefreshToken(token) {
-  if (!token) return
-  const res = await query(`SELECT family_id FROM refresh_tokens WHERE token_hash = $1`, [sha256(token)])
-  if (res.rows[0]) {
-    await query(`UPDATE refresh_tokens SET revoked = true WHERE family_id = $1`, [res.rows[0].family_id])
-  }
+  if (!token || typeof token !== 'string') return null
+  const res = await query(`SELECT user_id, family_id FROM refresh_tokens WHERE token_hash = $1`, [sha256(token)])
+  if (!res.rows[0]) return null
+  await query(`UPDATE refresh_tokens SET revoked = true WHERE family_id = $1`, [res.rows[0].family_id])
+  return res.rows[0].user_id
 }
 
 // Revoke EVERY session for a user (used on password change).

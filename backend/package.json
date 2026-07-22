@@ -1,6 +1,6 @@
 {
   "name": "feazimove-api",
-  "version": "1.1.17",
+  "version": "1.1.18",
   "description": "FeaziMove backend API — Node.js + Express",
   "main": "server.js",
   "scripts": {

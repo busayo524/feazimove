@@ -685,9 +685,32 @@ router.post('/request-action-code',
 )
 
 // ── Logout — revoke this device's refresh-token family ───────────────────────
+// Also flips a driver offline (and cancels their published availability) so
+// they stop looking matchable after logging out or being idle-expired — unless
+// they're mid-ride, in which case they stay online so the ride isn't orphaned.
 router.post('/logout', async (req, res, next) => {
   try {
-    await revokeRefreshToken((req.body || {}).refreshToken)
+    const userId = await revokeRefreshToken((req.body || {}).refreshToken)
+    if (userId) {
+      const activeRide = await query(
+        `SELECT 1 FROM rides WHERE driver_id = $1
+          AND status IN ('pending', 'driver_assigned', 'arrived_pickup', 'in_transit') LIMIT 1`,
+        [userId]
+      )
+      if (!activeRide.rows[0]) {
+        const flipped = await query(
+          'UPDATE users SET is_online = false WHERE id = $1 AND is_online = true RETURNING id',
+          [userId]
+        )
+        if (flipped.rows[0]) {
+          await query(
+            `UPDATE driver_availability SET status = 'cancelled'
+              WHERE driver_id = $1 AND status IN ('waiting', 'active', 'in_progress')`,
+            [userId]
+          )
+        }
+      }
+    }
     res.json({ message: 'Logged out.' })
   } catch (err) { next(err) }
 })
