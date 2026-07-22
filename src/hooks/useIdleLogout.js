@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { api } from '../services/api'
 
 // Auto-logout after a period without any user activity — 2 hours for riders
 // and drivers, 45 minutes for admin (payouts, pricing and user management
@@ -41,13 +42,26 @@ export function useIdleLogout(user, logout) {
       localStorage.setItem(ACTIVITY_KEY, String(now))
     }
 
-    const expireIfIdle = () => {
+    let expiring = false
+    const expireIfIdle = async () => {
       // Read the shared stamp, not the local one — another tab may be active
       const last = Number(localStorage.getItem(ACTIVITY_KEY)) || lastWrite
-      if (Date.now() - last > idleLimit) {
-        sessionStorage.setItem(IDLE_LOGOUT_FLAG, '1')
-        logout()
-      }
+      if (Date.now() - last <= idleLimit || expiring) return
+      expiring = true
+      try {
+        // A live trip is not idleness: a mounted phone gets no touch events for
+        // hours while the driver navigates (and the rider just watches), yet
+        // logging out mid-ride would kill live tracking and chat. Treat an
+        // active ride as activity; if the check fails (offline blip), don't
+        // log out on a guess — the next tick retries.
+        const res = await api.get('/rides/me/active')
+        if (res.data?.rideId || (res.data?.rideIds || []).length > 0) {
+          localStorage.setItem(ACTIVITY_KEY, String(Date.now()))
+          return
+        }
+      } catch { return } finally { expiring = false }
+      sessionStorage.setItem(IDLE_LOGOUT_FLAG, '1')
+      logout()
     }
 
     // capture: true so scrolls inside nested scrollable panes count too

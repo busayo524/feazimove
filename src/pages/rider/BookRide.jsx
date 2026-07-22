@@ -31,7 +31,9 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, on
       <div onClick={e=>e.stopPropagation()} style={{background:CARD,borderRadius:18,maxWidth:380,width:'100%',overflow:'hidden',boxShadow:'0 16px 40px rgba(0,0,0,0.25)',maxHeight:'95vh',display:'flex',flexDirection:'column'}}>
         <div style={{padding:'10px 14px',borderBottom:`1px solid ${BORDER}`,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
           <p style={{fontWeight:700,fontSize:12,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em'}}>Route Preview</p>
-          {!matching && !confirmingPay && (
+          {/* X stays available while confirming a payment — it only hides the
+              modal; confirmation keeps running and reopens it when done */}
+          {!matching && (
             <button onClick={onClose} aria-label="Close" style={{background:'none',border:'none',cursor:'pointer',color:MUTED,padding:2}}><X size={16}/></button>
           )}
         </div>
@@ -212,6 +214,8 @@ export default function BookRide(){
   // so the "Matching you with a driver…" modal resumes instead of vanishing.
   useEffect(() => {
     if (activeRideId !== null || bookingId) return
+    // A card payment round-trip owns this mount — don't fight it for the form
+    if (sessionStorage.getItem(RIDE_PAY_KEY)) return
     let cancelled = false
     api.get('/rides/book-intent/mine')
       .then(res => {
@@ -250,6 +254,7 @@ export default function BookRide(){
       setBookingId(res.data.bookingId)
     } catch(err) {
       setBookError(err.data?.message || 'Could not register your booking. Please try again.')
+      setShowPreview(false) // the error banner lives on the page — don't hide it behind the modal
     } finally {
       setSearching(false)
     }
@@ -272,9 +277,12 @@ export default function BookRide(){
 
   // If the chosen pickup no longer offers the currently-selected dropoff
   // (e.g. period switched, or that pair simply isn't priced), clear it.
+  // Never while routes are still loading or a payment round-trip is restoring
+  // the form — the not-yet-loaded options list would wrongly wipe a valid stop.
   useEffect(() => {
+    if (routesLoading || confirmingPay) return
     if (dropoff && !dropoffOptions.includes(dropoff)) setDropoff('')
-  }, [pickup, routes]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pickup, routes, routesLoading, confirmingPay]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Route preview is opened manually via the "Preview Route" button below —
   // not auto-shown — so the rider gets a chance to type a comment first.
@@ -292,7 +300,7 @@ export default function BookRide(){
   useEffect(() => {
     if (!showPreview) return
     api.get('/wallet/balance')
-      .then(res => setWalletKobo(Math.round((res.data?.balance || 0) * 100)))
+      .then(res => setWalletKobo(res.data?.balanceKobo ?? Math.round((res.data?.balance || 0) * 100)))
       .catch(() => setWalletKobo(null))
   }, [showPreview])
   const insufficientFunds = previewFareKobo != null && walletKobo != null && walletKobo < previewFareKobo
@@ -310,6 +318,7 @@ export default function BookRide(){
       track('Ride Payment Started', { amount, route_name: `${pickup}_to_${dropoff}` })
       sessionStorage.setItem(RIDE_PAY_KEY, JSON.stringify({
         reference: res.data.reference,
+        ts: Date.now(),
         booking: { period, timeSlot, pickup, dropoff, service, comment },
       }))
       window.location.href = res.data.paymentUrl
@@ -322,6 +331,10 @@ export default function BookRide(){
 
   // Back from Paystack: restore the exact booking that was being paid for,
   // poll until the payment is confirmed, then place the booking automatically.
+  // Only a genuine return from checkout (?funded=1 in the callback URL) takes
+  // over the page; a stale key from an abandoned checkout gets ONE quiet
+  // status check and is otherwise discarded — a payment that completes later
+  // still lands in the wallet via the webhook, so no money is ever lost.
   useEffect(() => {
     if (activeRideId !== null) { if (activeRideId) sessionStorage.removeItem(RIDE_PAY_KEY); return }
     const raw = sessionStorage.getItem(RIDE_PAY_KEY)
@@ -329,19 +342,29 @@ export default function BookRide(){
     let saved
     try { saved = JSON.parse(raw) } catch { saved = null }
     if (!saved?.reference || !saved?.booking) { sessionStorage.removeItem(RIDE_PAY_KEY); return }
+    if (saved.ts && Date.now() - saved.ts > 30 * 60 * 1000) { sessionStorage.removeItem(RIDE_PAY_KEY); return }
     const b = saved.booking
 
-    setService(b.service || 'pool')
-    setPeriod(b.period)
-    setTimeSlot(b.timeSlot)
-    setPickup(b.pickup)
-    setDropoff(b.dropoff)
-    setComment(b.comment || '')
-    setShowPreview(true)
-    setConfirmingPay(true)
+    const returnedFromCheckout = new URLSearchParams(window.location.search).has('funded')
+    if (returnedFromCheckout) {
+      // Drop ?funded=1&trxref=… so a refresh doesn't re-run the takeover
+      window.history.replaceState(null, '', window.location.pathname)
+    }
 
     let cancelled = false
     let attempts = 0
+    let interval = null
+
+    const takeover = () => {
+      setService(b.service || 'pool')
+      setPeriod(b.period)
+      setTimeSlot(b.timeSlot)
+      setPickup(b.pickup)
+      setDropoff(b.dropoff)
+      setComment(b.comment || '')
+      setShowPreview(true)
+      setConfirmingPay(true)
+    }
     const fail = message => {
       sessionStorage.removeItem(RIDE_PAY_KEY)
       if (cancelled) return
@@ -349,38 +372,59 @@ export default function BookRide(){
       setShowPreview(false)
       setBookError(message)
     }
-    const interval = setInterval(async () => {
-      if (cancelled) return
-      attempts++
+    const placeBooking = async () => {
+      sessionStorage.removeItem(RIDE_PAY_KEY)
       try {
-        const res = await api.get(`/wallet/fund/status/${saved.reference}`)
-        if (res.data.status === 'completed') {
-          clearInterval(interval)
-          sessionStorage.removeItem(RIDE_PAY_KEY)
-          try {
-            const booked = await api.post('/rides/book-intent', b)
-            if (cancelled) return
-            setWalletKobo(null) // stale now — refetched next time the preview opens
-            setConfirmingPay(false)
-            setBookingId(booked.data.bookingId)
-          } catch (err) {
-            fail(err.data?.message || 'Payment received (it\'s in your wallet) but the booking could not be placed — please try booking again.')
-          }
-        } else if (res.data.status === 'failed') {
-          clearInterval(interval)
-          fail('The payment was not completed. You have not been charged — please try again.')
-        } else if (attempts >= 40) { // ~2 minutes
-          clearInterval(interval)
-          fail('Could not confirm the payment yet. If you were charged, the amount is in your wallet — please try booking again.')
-        }
-      } catch {
-        if (attempts >= 40) {
-          clearInterval(interval)
-          fail('Could not confirm the payment yet. If you were charged, the amount is in your wallet — please try booking again.')
-        }
+        const booked = await api.post('/rides/book-intent', b)
+        if (cancelled) return
+        setWalletKobo(null) // stale now — refetched next time the preview opens
+        setConfirmingPay(false)
+        setShowPreview(true) // may have been closed while confirming
+        setBookingId(booked.data.bookingId)
+      } catch (err) {
+        fail(err.data?.message || 'Payment received (it\'s in your wallet) but the booking could not be placed — please try booking again.')
       }
-    }, 3000)
-    return () => { cancelled = true; clearInterval(interval) }
+    }
+
+    if (returnedFromCheckout) {
+      takeover()
+      interval = setInterval(async () => {
+        if (cancelled) return
+        attempts++
+        try {
+          const res = await api.get(`/wallet/fund/status/${saved.reference}`)
+          if (res.data.status === 'completed') {
+            clearInterval(interval)
+            await placeBooking()
+          } else if (res.data.status === 'failed') {
+            clearInterval(interval)
+            fail('The payment was not completed. You have not been charged — please try again.')
+          } else if (attempts >= 40) { // ~2 minutes
+            clearInterval(interval)
+            fail('Could not confirm the payment yet. If you were charged, the amount is in your wallet — please try booking again.')
+          }
+        } catch {
+          if (attempts >= 40) {
+            clearInterval(interval)
+            fail('Could not confirm the payment yet. If you were charged, the amount is in your wallet — please try booking again.')
+          }
+        }
+      }, 3000)
+    } else {
+      ;(async () => {
+        try {
+          const res = await api.get(`/wallet/fund/status/${saved.reference}`)
+          if (cancelled) return
+          if (res.data.status === 'completed') {
+            takeover()
+            await placeBooking()
+          } else {
+            sessionStorage.removeItem(RIDE_PAY_KEY) // abandoned checkout — forget it
+          }
+        } catch { /* couldn't check — leave the key for the next visit */ }
+      })()
+    }
+    return () => { cancelled = true; if (interval) clearInterval(interval) }
   }, [activeRideId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (activeRideId === undefined) {

@@ -64,14 +64,21 @@ async function rotateRefreshToken(token) {
 }
 
 // Revoke a single family (used on logout — kills just this device's session).
-// Returns the owning user's id (or null) so logout can run per-user cleanup
-// like flipping a driver offline.
+// Returns the owning user's id ONLY when the presented token was live (not
+// used, revoked, or expired) — so logout side effects (e.g. flipping a driver
+// offline) can never be triggered by replaying a stale or stolen-then-rotated
+// token. A dead token still (idempotently) revokes its family but is inert.
 async function revokeRefreshToken(token) {
   if (!token || typeof token !== 'string') return null
-  const res = await query(`SELECT user_id, family_id FROM refresh_tokens WHERE token_hash = $1`, [sha256(token)])
-  if (!res.rows[0]) return null
-  await query(`UPDATE refresh_tokens SET revoked = true WHERE family_id = $1`, [res.rows[0].family_id])
-  return res.rows[0].user_id
+  const res = await query(
+    `SELECT user_id, family_id, used, revoked, expires_at FROM refresh_tokens WHERE token_hash = $1`,
+    [sha256(token)]
+  )
+  const row = res.rows[0]
+  if (!row) return null
+  await query(`UPDATE refresh_tokens SET revoked = true WHERE family_id = $1`, [row.family_id])
+  const wasLive = !row.used && !row.revoked && new Date(row.expires_at).getTime() > Date.now()
+  return wasLive ? row.user_id : null
 }
 
 // Revoke EVERY session for a user (used on password change).

@@ -1091,10 +1091,19 @@ router.patch('/zones/:id',
 
 router.delete('/zones/:id', [param('id').isUUID()], validate, async (req, res, next) => {
   try {
-    const used = await query('SELECT COUNT(*)::int AS n FROM stops WHERE zone_id = $1', [req.params.id])
-    if (used.rows[0].n > 0) return res.status(409).json({ message: 'Move its stops to another category first.' })
-    const result = await query('DELETE FROM stop_zones WHERE id = $1 RETURNING name', [req.params.id])
-    if (!result.rows[0]) return res.status(404).json({ message: 'Category not found.' })
+    // Emptiness check and delete in ONE statement so a concurrent move-into
+    // this zone can't slip between them and orphan its stops.
+    const result = await query(
+      `DELETE FROM stop_zones WHERE id = $1
+         AND NOT EXISTS (SELECT 1 FROM stops WHERE zone_id = $1)
+       RETURNING name`,
+      [req.params.id]
+    )
+    if (!result.rows[0]) {
+      const exists = await query('SELECT 1 FROM stop_zones WHERE id = $1', [req.params.id])
+      if (!exists.rows[0]) return res.status(404).json({ message: 'Category not found.' })
+      return res.status(409).json({ message: 'Move its stops to another category first.' })
+    }
     logActivity(req.user.id, 'Stop Category Deleted', 'route', result.rows[0].name)
     res.json({ message: 'Category deleted.' })
   } catch (err) { next(err) }

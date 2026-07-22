@@ -43,6 +43,15 @@ const otpLimiter = rateLimit({
   legacyHeaders: false,
   message: { message: 'Too many attempts. Please wait 2 minutes.' },
 })
+// Logout is unauthenticated (identified purely by the refresh token) and hits
+// the DB — keep it cheap to abuse-test but generous enough for real devices.
+const logoutLimiter = rateLimit({
+  windowMs: 2 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many requests. Please wait 2 minutes.' },
+})
 
 // ── STEP 1: Initial Signup — collect basic info, send OTP ────────────────────
 //
@@ -686,18 +695,31 @@ router.post('/request-action-code',
 
 // ── Logout — revoke this device's refresh-token family ───────────────────────
 // Also flips a driver offline (and cancels their published availability) so
-// they stop looking matchable after logging out or being idle-expired — unless
-// they're mid-ride, in which case they stay online so the ride isn't orphaned.
-router.post('/logout', async (req, res, next) => {
+// they stop looking matchable after logging out or being idle-expired — but
+// only when it's safe to do so:
+//   • the presented refresh token was still live (revokeRefreshToken returns
+//     null for stale/replayed tokens, so they can't be used to knock a driver
+//     offline);
+//   • no ride is in progress (the ride keeps its driver);
+//   • no OTHER live session remains for this user (a driver logged in on their
+//     phone isn't unpublished because their laptop session logged out).
+router.post('/logout', logoutLimiter, async (req, res, next) => {
   try {
     const userId = await revokeRefreshToken((req.body || {}).refreshToken)
     if (userId) {
-      const activeRide = await query(
-        `SELECT 1 FROM rides WHERE driver_id = $1
-          AND status IN ('pending', 'driver_assigned', 'arrived_pickup', 'in_transit') LIMIT 1`,
-        [userId]
-      )
-      if (!activeRide.rows[0]) {
+      const [activeRide, otherSession] = await Promise.all([
+        query(
+          `SELECT 1 FROM rides WHERE driver_id = $1
+            AND status IN ('pending', 'driver_assigned', 'arrived_pickup', 'in_transit') LIMIT 1`,
+          [userId]
+        ),
+        query(
+          `SELECT 1 FROM refresh_tokens
+            WHERE user_id = $1 AND revoked = false AND used = false AND expires_at > NOW() LIMIT 1`,
+          [userId]
+        ),
+      ])
+      if (!activeRide.rows[0] && !otherSession.rows[0]) {
         const flipped = await query(
           'UPDATE users SET is_online = false WHERE id = $1 AND is_online = true RETURNING id',
           [userId]

@@ -9,13 +9,47 @@ const { consumeChallenge } = require('../services/actionChallenges')
 const analytics = require('../services/analytics')
 
 const router = express.Router()
+
+// ── Paystack webhook — verify and credit wallet ───────────────────────────────
+// Called by Paystack, NOT by the frontend — so it MUST be registered before
+// the router-wide requireAuth below (behind it, Paystack got 401 before the
+// signature was ever checked and crediting depended entirely on the payer
+// coming back to poll /fund/status). Signature is an HMAC SHA512 of the raw
+// request body using our secret key (req.rawBody is captured in server.js).
+router.post('/webhook/paystack', async (req, res, next) => {
+  try {
+    if (!process.env.PAYSTACK_SECRET_KEY) return res.sendStatus(401)
+
+    const expectedSignature = crypto
+      .createHmac('sha512', process.env.PAYSTACK_SECRET_KEY)
+      .update(req.rawBody)
+      .digest('hex')
+
+    if (req.headers['x-paystack-signature'] !== expectedSignature) {
+      return res.status(401).json({ message: 'Invalid webhook signature.' })
+    }
+
+    const { event, data } = req.body
+    if (event !== 'charge.success') {
+      return res.sendStatus(200) // Acknowledge non-success events silently
+    }
+
+    await creditTransaction(data.reference, data.channel, data.amount, data.currency) // no-op if already credited via the verify-fallback
+
+    res.sendStatus(200)
+  } catch (err) { next(err) }
+})
+
 router.use(requireAuth)
 
 // ── Get wallet balance ────────────────────────────────────────────────────────
 router.get('/balance', async (req, res, next) => {
   try {
     const result = await query('SELECT wallet_balance FROM users WHERE id = $1', [req.user.id])
-    res.json({ balance: Math.round(result.rows[0].wallet_balance / 100) }) // kobo → naira
+    res.json({
+      balance: Math.round(result.rows[0].wallet_balance / 100), // kobo → naira (legacy display value)
+      balanceKobo: Number(result.rows[0].wallet_balance),       // exact — use for money math
+    })
   } catch (err) { next(err) }
 })
 
@@ -105,13 +139,19 @@ router.post('/fund',
 
 // Credits a still-pending transaction and marks it completed. Used by both
 // the webhook and the verify-fallback below — guarded by the 'pending' check
-// in the UPDATE so a transaction is never credited twice.
-async function creditTransaction(reference, paymentMethod) {
+// in the UPDATE so a transaction is never credited twice. When Paystack
+// reports what was actually paid, require it to cover the pending amount in
+// NGN — defense in depth against partial-payment/currency surprises.
+async function creditTransaction(reference, paymentMethod, paidKobo, currency) {
+  if (currency != null && currency !== 'NGN') return false
   const txRes = await query(
-    "UPDATE wallet_transactions SET status = 'completed' WHERE reference = $1 AND status = 'pending' RETURNING user_id, amount_kobo",
-    [reference]
+    `UPDATE wallet_transactions SET status = 'completed'
+      WHERE reference = $1 AND status = 'pending'
+        AND ($2::bigint IS NULL OR amount_kobo <= $2::bigint)
+      RETURNING user_id, amount_kobo`,
+    [reference, paidKobo ?? null]
   )
-  if (!txRes.rows[0]) return false // already credited or unknown reference
+  if (!txRes.rows[0]) return false // already credited, unknown reference, or short-paid
   const { user_id, amount_kobo } = txRes.rows[0]
   const balRes = await query(
     'UPDATE users SET wallet_balance = wallet_balance + $1 WHERE id = $2 RETURNING wallet_balance',
@@ -154,8 +194,9 @@ router.get('/fund/status/:reference',
             { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
           )
           if (verifyRes.data.data.status === 'success') {
-            await creditTransaction(req.params.reference, verifyRes.data.data.channel)
-            t = { ...t, status: 'completed' }
+            const ok = await creditTransaction(req.params.reference, verifyRes.data.data.channel,
+              verifyRes.data.data.amount, verifyRes.data.data.currency)
+            if (ok) t = { ...t, status: 'completed' }
           }
         } catch { /* Paystack unreachable or not yet recorded — keep polling */ }
       }
@@ -164,33 +205,6 @@ router.get('/fund/status/:reference',
     } catch (err) { next(err) }
   }
 )
-
-// ── Paystack webhook — verify and credit wallet ───────────────────────────────
-// Called by Paystack, NOT by the frontend. Signature is an HMAC SHA512 of the
-// raw request body using our secret key (req.rawBody is captured in server.js).
-router.post('/webhook/paystack', async (req, res, next) => {
-  try {
-    if (!process.env.PAYSTACK_SECRET_KEY) return res.sendStatus(401)
-
-    const expectedSignature = crypto
-      .createHmac('sha512', process.env.PAYSTACK_SECRET_KEY)
-      .update(req.rawBody)
-      .digest('hex')
-
-    if (req.headers['x-paystack-signature'] !== expectedSignature) {
-      return res.status(401).json({ message: 'Invalid webhook signature.' })
-    }
-
-    const { event, data } = req.body
-    if (event !== 'charge.success') {
-      return res.sendStatus(200) // Acknowledge non-success events silently
-    }
-
-    await creditTransaction(data.reference, data.channel) // no-op if already credited via the verify-fallback
-
-    res.sendStatus(200)
-  } catch (err) { next(err) }
-})
 
 // ── Request a payout (driver) — escrows the balance until admin approves ─────
 router.post('/withdraw',

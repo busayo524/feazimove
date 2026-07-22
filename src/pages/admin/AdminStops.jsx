@@ -20,8 +20,10 @@ export default function AdminStops() {
   const [moveMenuFor, setMoveMenuFor] = useState(null)
 
   function load() {
-    api.get('/admin/stops')
-      .then(res => { setZones(res.data.zones); setStops(res.data.stops) })
+    // `|| []` guards the deploy window where the backend doesn't send zones
+    // yet — stops then show under "Unassigned" instead of loading forever.
+    return api.get('/admin/stops')
+      .then(res => { setZones(res.data.zones || []); setStops(res.data.stops) })
       .catch(err => setError(err.data?.message || 'Could not load stops.'))
   }
   useEffect(() => { load() }, [])
@@ -47,8 +49,10 @@ export default function AdminStops() {
     } catch (err) {
       alert(err.data?.message || 'Could not move stop.')
     } finally {
+      // Stay busy until the fresh order is on screen — otherwise a fast second
+      // click computes its move from the stale pre-reload list.
+      await load()
       setBusy(false)
-      load()
     }
   }
 
@@ -85,15 +89,17 @@ export default function AdminStops() {
     setDrag(null); setDropAt(null)
   }
 
-  // "Move to…" tap fallback — appends the stop at the end of the chosen zone
+  // "Move to…" tap fallback — appends the stop at the end of the chosen zone.
+  // An unassigned (orphan) stop has no source zone to send — membership comes
+  // entirely from the target zone's list.
   function moveToZone(stop, toZone) {
     setMoveMenuFor(null)
-    const from = stopsOf(stop.zoneId).map(s => s.id).filter(id => id !== stop.id)
-    const to = [...stopsOf(toZone.id).map(s => s.id), stop.id]
-    persistArrange([
-      { zoneId: stop.zoneId, orderedIds: from },
-      { zoneId: toZone.id, orderedIds: to },
-    ])
+    const payload = []
+    if (stop.zoneId) {
+      payload.push({ zoneId: stop.zoneId, orderedIds: stopsOf(stop.zoneId).map(s => s.id).filter(id => id !== stop.id) })
+    }
+    payload.push({ zoneId: toZone.id, orderedIds: [...stopsOf(toZone.id).map(s => s.id), stop.id] })
+    persistArrange(payload)
   }
 
   async function addZone(side) {
@@ -172,7 +178,7 @@ export default function AdminStops() {
                 const isTarget = drag && drag.side === side
                 return (
                   <div key={zone.id}
-                    onDragOver={e => { if (isTarget) { e.preventDefault(); if (dropAt?.zoneId !== zone.id) setDropAt({ zoneId: zone.id, index: list.length }) } }}
+                    onDragOver={e => { if (isTarget) { e.preventDefault(); if (dropAt?.zoneId !== zone.id || dropAt.index !== list.length) setDropAt({ zoneId: zone.id, index: list.length }) } }}
                     onDrop={e => { e.preventDefault(); handleDrop(zone) }}
                     style={{ background:CARD, border:`1.5px ${isTarget && dropAt?.zoneId === zone.id ? `dashed ${OLIVE}` : `solid ${BORDER}`}`, borderRadius:14, overflow:'hidden' }}>
                     <div style={{ display:'flex', alignItems:'center', gap:8, padding:'12px 14px 12px 18px', borderBottom:`1px solid ${BORDER}`, background:BG }}>
