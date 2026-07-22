@@ -80,6 +80,20 @@ function fmtCountdown(secs) {
   const s = secs % 60
   return `${m}:${String(s).padStart(2,'0')}`
 }
+// '5:00 AM' / '6:30 PM' → today's Date at that time (null if unparsable)
+function slotToDate(timeSlot) {
+  const m = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i.exec((timeSlot || '').trim())
+  if (!m) return null
+  let h = parseInt(m[1], 10) % 12
+  if (/pm/i.test(m[3])) h += 12
+  const d = new Date()
+  d.setHours(h, parseInt(m[2], 10), 0, 0)
+  return d
+}
+// Search prompts open 5 minutes before the booked slot and, once dismissed
+// with "Continue searching", come back every 5 minutes until seats fill.
+const PROMPT_LEAD_MS   = 5 * 60 * 1000
+const PROMPT_SNOOZE_MS = 5 * 60 * 1000
 function fmtEta(seconds) {
   const mins = Math.max(1, Math.round(seconds / 60))
   if (mins < 60) return `~${mins} min`
@@ -542,8 +556,42 @@ export default function DriverDashboard() {
   const [lastNewMatchAt, setLastNewMatchAt] = useState(0)
   const prevMatchCountRef = useRef(0)
 
+  // ── Prompt scheduling: prompts open 5 min before the slot time and recur
+  // every 5 min (via snooze) until the seats are full or the driver stops ──
+  const [nowTick, setNowTick] = useState(() => Date.now())
+  const [promptSnoozedUntil, setPromptSnoozedUntil] = useState(0)
+  const promptSnoozedUntilRef = useRef(0)
+  const [searchRound, setSearchRound] = useState(0) // bumps re-arm the quiet-search timer
+
+  useEffect(() => { // re-evaluate the time gate twice a minute while live
+    if (matchPhase === 'idle') return
+    const id = setInterval(() => setNowTick(Date.now()), 30_000)
+    return () => clearInterval(id)
+  }, [matchPhase])
+
+  const slotDate = slotToDate(timeSlot)
+  const promptWindowOpen = !slotDate || nowTick >= slotDate.getTime() - PROMPT_LEAD_MS
+  const promptsSnoozed = nowTick < promptSnoozedUntil
+
+  function snoozePrompts() {
+    const until = Date.now() + PROMPT_SNOOZE_MS
+    promptSnoozedUntilRef.current = until
+    setPromptSnoozedUntil(until)
+    setNowTick(Date.now())
+  }
+
+  // "Continue searching" from the no-riders prompt — quiet search for 5 more
+  // minutes at the same stop, then the prompt returns if still empty.
+  function continueSearching() {
+    snoozePrompts()
+    setCountdown(180)
+    setSearchRound(r => r + 1)
+    setMatchPhase('matching')
+  }
+
   const [nextPickupPreview, setNextPickupPreview] = useState(null)
-  const wantNextPickup = matchPhase === 'no-riders' || (matchPhase === 'matched' && matchIdleExpired)
+  const wantNextPickup = matchPhase === 'no-riders' ||
+    (matchPhase === 'matched' && (matchIdleExpired || promptWindowOpen))
   useEffect(() => {
     if (!wantNextPickup || !availabilityId) { setNextPickupPreview(null); return }
     api.get(`/driver/next-pickup?availabilityId=${availabilityId}`)
@@ -588,13 +636,27 @@ export default function DriverDashboard() {
     poll() // immediate first check
     const pollId = setInterval(poll, 8000)
 
-    // Countdown + 3-minute no-riders timeout only apply to the initial search
+    // Countdown + no-riders prompt only apply while actively searching. The
+    // prompt is time-gated: it can only surface from 5 min before the booked
+    // slot onward, and "Continue searching" snoozes it for 5 min — so before
+    // the window (or while snoozed) an empty round quietly re-arms instead.
     let cntId, timerId
     if (matchPhase === 'matching') {
+      const untilEligible = Math.max(
+        slotDate ? slotDate.getTime() - PROMPT_LEAD_MS - Date.now() : 0,
+        promptSnoozedUntilRef.current - Date.now(),
+        0
+      )
+      const delay = Math.min(180_000, untilEligible > 0 ? Math.max(untilEligible, 5_000) : 180_000)
+      setCountdown(Math.round(delay / 1000))
       cntId = setInterval(() => setCountdown(c => Math.max(0, c - 1)), 1000)
       timerId = setTimeout(() => {
-        if (!cancelled) setMatchPhase('no-riders')
-      }, 180_000)
+        if (cancelled) return
+        const sd = slotToDate(timeSlot)
+        const windowOpen = !sd || Date.now() >= sd.getTime() - PROMPT_LEAD_MS
+        if (windowOpen && Date.now() >= promptSnoozedUntilRef.current) setMatchPhase('no-riders')
+        else setSearchRound(r => r + 1) // window not open yet — keep searching quietly
+      }, delay)
     }
 
     return () => {
@@ -603,7 +665,7 @@ export default function DriverDashboard() {
       if (cntId) clearInterval(cntId)
       if (timerId) clearTimeout(timerId)
     }
-  }, [matchPhase, availabilityId])
+  }, [matchPhase, availabilityId, searchRound]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Actions ───────────────────────────────────────────────────────────────
   async function handleGoLive() {
@@ -631,10 +693,15 @@ export default function DriverDashboard() {
       const res = await api.post('/driver/expand-pickup', { availabilityId })
       if (!res.data.newPickup) { handleGoOffline(); return }
       setCurrentPickup(res.data.newPickup)
-      setMatchedRiders([])
-      prevMatchCountRef.current = 0
-      setCountdown(180)
-      setMatchPhase('matching')
+      // Matching now spans every stop covered so far, so riders already
+      // matched STAY matched — expanding only adds candidates from the new
+      // stop. Give the new stop a quiet 5 minutes before prompting again.
+      snoozePrompts()
+      setSearchRound(r => r + 1)
+      if (!matchedRiders.length) {
+        setCountdown(180)
+        setMatchPhase('matching')
+      }
     } catch {
       setGoLiveError('Could not expand pickup. Please try again.')
     }
@@ -757,21 +824,29 @@ export default function DriverDashboard() {
                 </div>
               </div>
               <p style={{ fontSize:13, color:MUTED, marginBottom:14 }}>
-                Would you like to pick up riders from <strong style={{ color:OLIVE }}>{nextPickup}</strong> instead?
+                Do you want to continue searching here, or pick up riders from <strong style={{ color:OLIVE }}>{nextPickup}</strong> instead?
               </p>
-              <div style={{ display:'flex', gap:10 }}>
+              <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
                 <button onClick={handleExpand}
-                  style={{ flex:2, padding:'12px', borderRadius:12, background:NEON, color:OLIVE,
+                  style={{ padding:'12px', borderRadius:12, background:NEON, color:OLIVE,
                     fontWeight:800, fontSize:14, border:'none', cursor:'pointer', fontFamily:'inherit',
                     boxShadow:'0 4px 12px rgba(204,255,0,0.3)' }}>
                   Yes, try {nextPickup}
                 </button>
-                <button onClick={handleGoOffline}
-                  style={{ flex:1, padding:'12px', borderRadius:12, background:CARD,
-                    border:`1.5px solid ${BORDER}`, color:MUTED, fontWeight:600, fontSize:14,
-                    cursor:'pointer', fontFamily:'inherit' }}>
-                  Stop for today
-                </button>
+                <div style={{ display:'flex', gap:10 }}>
+                  <button onClick={continueSearching}
+                    style={{ flex:1, padding:'12px', borderRadius:12, background:CARD,
+                      border:`1.5px solid ${MOSS}`, color:OLIVE, fontWeight:700, fontSize:14,
+                      cursor:'pointer', fontFamily:'inherit' }}>
+                    Continue searching
+                  </button>
+                  <button onClick={handleGoOffline}
+                    style={{ flex:1, padding:'12px', borderRadius:12, background:CARD,
+                      border:`1.5px solid ${BORDER}`, color:MUTED, fontWeight:600, fontSize:14,
+                      cursor:'pointer', fontFamily:'inherit' }}>
+                    Stop for today
+                  </button>
+                </div>
               </div>
             </>
           ) : (
@@ -830,20 +905,28 @@ export default function DriverDashboard() {
             </div>
           )}
 
-          {/* 5 minutes without a new match — offer the next stop in the chain.
-              Unconfirmed matches aren't locked, so they return to the queue. */}
-          {matchedRiders.length < seatsCount && matchIdleExpired && nextPickupPreview && (
+          {/* Seats still open around the slot time (from 5 min before, then
+              every 5 min via snooze) — offer the next stop in the chain.
+              Expanding KEEPS the riders already matched and only adds more. */}
+          {matchedRiders.length < seatsCount && (matchIdleExpired || promptWindowOpen) && !promptsSnoozed && nextPickupPreview && (
             <div style={{ background:BG, border:`1.5px solid ${BORDER}`, borderRadius:12, padding:'12px 14px', margin:'10px 0 2px' }}>
               <p style={{ fontSize:12.5, color:MUTED, marginBottom:10, lineHeight:1.5 }}>
-                No new riders in a while. You can start with your current rider{matchedRiders.length !== 1 ? 's' : ''},
-                or search from <strong style={{ color:OLIVE }}>{nextPickupPreview}</strong> instead — current unconfirmed
-                matches will go back to the queue for other drivers.
+                Seats still open. Do you want to continue searching here, extend your search to{' '}
+                <strong style={{ color:OLIVE }}>{nextPickupPreview}</strong> (your matched rider{matchedRiders.length !== 1 ? 's stay' : ' stays'} on board),
+                or start the route with your current rider{matchedRiders.length !== 1 ? 's' : ''}?
               </p>
-              <button onClick={handleExpand}
-                style={{ width:'100%', padding:'10px', borderRadius:10, background:CARD, border:`1.5px solid ${MOSS}`,
-                  color:OLIVE, fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
-                Search riders at {nextPickupPreview}
-              </button>
+              <div style={{ display:'flex', gap:8 }}>
+                <button onClick={snoozePrompts}
+                  style={{ flex:1, padding:'10px', borderRadius:10, background:CARD, border:`1.5px solid ${BORDER}`,
+                    color:MUTED, fontWeight:600, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+                  Continue searching
+                </button>
+                <button onClick={handleExpand}
+                  style={{ flex:1, padding:'10px', borderRadius:10, background:CARD, border:`1.5px solid ${MOSS}`,
+                    color:OLIVE, fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+                  Search riders at {nextPickupPreview}
+                </button>
+              </div>
             </div>
           )}
 
@@ -897,8 +980,8 @@ export default function DriverDashboard() {
     if (tripDone) {
       return (
         <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:400, textAlign:'center', padding:24 }}>
-          <div style={{ width:80, height:80, borderRadius:'50%', background:NT, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:20 }}>
-            <CheckCircle size={40} color={NEON}/>
+          <div style={{ width:80, height:80, borderRadius:'50%', background:NEON, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:20, boxShadow:'0 8px 24px rgba(204,255,0,0.4)' }}>
+            <CheckCircle size={40} color={OLIVE}/>
           </div>
           <h2 style={{ fontSize:24, fontWeight:900, color:TEXT, marginBottom:8, letterSpacing:'-0.02em' }}>Trip Completed!</h2>
           <p style={{ color:MUTED, fontSize:15, marginBottom:8 }}>

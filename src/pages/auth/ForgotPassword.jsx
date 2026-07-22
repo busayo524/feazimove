@@ -111,13 +111,13 @@ export default function ForgotPassword() {
             </div>
             <div>
               <label htmlFor="fp-np" style={label}>New Password</label>
-              <input id="fp-np" type="password" value={newPassword} autoComplete="new-password"
+              <input id="fp-np" type="password" value={newPassword} autoComplete="off"
                 onChange={e => { setNewPassword(e.target.value); setError('') }}
                 placeholder="At least 8 characters" style={inputStyle} />
             </div>
             <div>
               <label htmlFor="fp-cp" style={label}>Confirm New Password</label>
-              <input id="fp-cp" type="password" value={confirm} autoComplete="new-password"
+              <input id="fp-cp" type="password" value={confirm} autoComplete="off"
                 onChange={e => { setConfirm(e.target.value); setError('') }}
                 placeholder="Re-enter new password" style={inputStyle} />
             </div>

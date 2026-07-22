@@ -33,7 +33,9 @@ export default function AdminLayout({ children, title }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
-  const today = new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' })
+  // Long date on desktop, compact on phones (the long one truncated in narrow headers)
+  const todayLong  = new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' })
+  const todayShort = new Date().toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' })
 
   function handleLogout() {
     logout()
@@ -106,7 +108,7 @@ export default function AdminLayout({ children, title }) {
               className="admin-mobile-menu-btn" aria-label="Toggle menu">
               <Menu size={22}/>
             </button>
-            <p style={{ fontSize:14, color:TEXT, margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', minWidth:0 }}>{today}</p>
+            <p style={{ fontSize:14, color:TEXT, margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', minWidth:0 }}><span className="fm-date-long">{todayLong}</span><span className="fm-date-short">{todayShort}</span></p>
           </div>
           <p style={{ fontSize:13, color:'#6b7280', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
             {user?.email || user?.name}

@@ -152,6 +152,26 @@ async function findNextPickup(period, currentPickup, dropoff) {
   return null
 }
 
+// All stops the driver has covered so far: from where they went live (origin)
+// to where they've expanded to, in chain order. Matching spans EVERY covered
+// stop so riders matched earlier are never dropped when the driver expands
+// forward — expanding only ADDS riders. Falls back to just the current stop
+// for legacy rows without an origin.
+async function visitedPickups(period, originPickup, currentPickup) {
+  const group = PICKUP_GROUP_FOR_PERIOD[period]
+  if (!originPickup || originPickup === currentPickup) return [currentPickup]
+  const res = await query(
+    `SELECT name FROM stops
+      WHERE group_name = $1
+        AND chain_position BETWEEN
+              (SELECT chain_position FROM stops WHERE name = $2 AND group_name = $1)
+          AND (SELECT chain_position FROM stops WHERE name = $3 AND group_name = $1)
+      ORDER BY chain_position ASC`,
+    [group, originPickup, currentPickup]
+  )
+  return res.rows.length ? res.rows.map(r => r.name) : [currentPickup]
+}
+
 // ── Go live on a route ────────────────────────────────────────────────────────
 router.post('/go-live',
   [
@@ -200,8 +220,8 @@ router.post('/go-live',
       )
 
       const result = await query(
-        `INSERT INTO driver_availability (driver_id, period, time_slot, pickup, dropoff, seats, comment)
-         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+        `INSERT INTO driver_availability (driver_id, period, time_slot, pickup, dropoff, origin_pickup, seats, comment)
+         VALUES ($1, $2, $3, $4, $5, $4, $6, $7) RETURNING id`,
         [req.user.id, period, timeSlot, pickup, dropoff, seats, comment || null]
       )
 
@@ -218,14 +238,16 @@ router.get('/matches', async (req, res, next) => {
 
     // Verify this availability belongs to the requesting driver
     const avail = await query(
-      `SELECT id, period, time_slot, pickup, dropoff, seats
+      `SELECT id, period, time_slot, pickup, dropoff, origin_pickup, seats
        FROM driver_availability WHERE id = $1 AND driver_id = $2`,
       [availabilityId, req.user.id]
     )
     if (!avail.rows[0]) return res.status(404).json({ message: 'Availability not found.' })
     const a = avail.rows[0]
 
-    // Find pending riders on the exact same route + time
+    // Find pending riders at ANY stop the driver has covered so far (origin →
+    // current) — expanding forward accumulates riders, it never drops them
+    const pickups = await visitedPickups(a.period, a.origin_pickup, a.pickup)
     const matches = await query(
       `SELECT rb.id, rb.rider_id, rb.pickup, rb.dropoff, rb.service, rb.created_at,
               u.name AS rider_name, u.phone AS rider_phone, u.rating AS rider_rating
@@ -233,13 +255,13 @@ router.get('/matches', async (req, res, next) => {
        JOIN users u ON rb.rider_id = u.id
        WHERE rb.period   = $1
          AND rb.time_slot = $2
-         AND rb.pickup    = $3
+         AND rb.pickup    = ANY($3)
          AND rb.dropoff   = $4
          AND rb.status    = 'pending'
          AND rb.rider_id != $5
        ORDER BY rb.created_at ASC
        LIMIT $6`,
-      [a.period, a.time_slot, a.pickup, a.dropoff, req.user.id, a.seats]
+      [a.period, a.time_slot, pickups, a.dropoff, req.user.id, a.seats]
     )
 
     res.json({
@@ -319,7 +341,7 @@ router.post('/confirm-route',
       const { availabilityId } = req.body
 
       const avail = await query(
-        `SELECT id, period, time_slot, pickup, dropoff, status, comment, seats
+        `SELECT id, period, time_slot, pickup, dropoff, origin_pickup, status, comment, seats
          FROM driver_availability WHERE id = $1 AND driver_id = $2`,
         [availabilityId, req.user.id]
       )
@@ -329,17 +351,20 @@ router.post('/confirm-route',
         return res.status(409).json({ message: 'This route is no longer active.' })
       }
 
-      // Re-derive ALL still-pending matched riders on this exact route + time
-      // (same matching logic as GET /driver/matches). Pool riding: every
-      // matched rider up to the driver's seat count joins this one trip.
+      // Re-derive ALL still-pending matched riders on this route + time across
+      // every stop the driver has covered (same matching logic as
+      // GET /driver/matches). Pool riding: every matched rider up to the
+      // driver's seat count joins this one trip; each ride keeps its rider's
+      // own pickup stop and their own locked-in quoted fare.
+      const visitedList = await visitedPickups(a.period, a.origin_pickup, a.pickup)
       const matchesRes = await query(
-        `SELECT id, rider_id, service, quoted_fare_kobo,
+        `SELECT id, rider_id, pickup, service, quoted_fare_kobo,
                 recipient_name, recipient_phone, package_size, notes, comment
          FROM rider_bookings
-         WHERE period = $1 AND time_slot = $2 AND pickup = $3 AND dropoff = $4
+         WHERE period = $1 AND time_slot = $2 AND pickup = ANY($3) AND dropoff = $4
            AND status = 'pending' AND rider_id != $5
          ORDER BY created_at ASC LIMIT $6`,
-        [a.period, a.time_slot, a.pickup, a.dropoff, req.user.id, a.seats]
+        [a.period, a.time_slot, visitedList, a.dropoff, req.user.id, a.seats]
       )
       if (!matchesRes.rows[0]) return res.status(409).json({ message: 'No riders currently matched on this route.' })
 
@@ -360,7 +385,7 @@ router.post('/confirm-route',
         if (!claim.rows[0]) return res.status(409).json({ message: 'This rider was just matched with another driver.' })
         const routeRes = await query(
           `SELECT pool_fare_kobo FROM routes WHERE period = $1 AND pickup = $2 AND dropoff = $3 AND is_active = true`,
-          [a.period, a.pickup, a.dropoff]
+          [a.period, m.pickup, a.dropoff]
         )
         if (!routeRes.rows[0] || routeRes.rows[0].pool_fare_kobo == null) {
           await query(`UPDATE rider_bookings SET status = 'pending' WHERE id = $1`, [m.id])
@@ -375,7 +400,7 @@ router.post('/confirm-route',
         const ride = await query(
           `INSERT INTO rides (rider_id, driver_id, type, pickup, destination, fare_kobo, status, rider_comment, driver_comment, booking_id)
            VALUES ($1, $2, 'pool', $3, $4, $5, 'driver_assigned', $6, $7, $8) RETURNING id`,
-          [m.rider_id, req.user.id, a.pickup, a.dropoff, fareKobo, m.comment, a.comment, m.id]
+          [m.rider_id, req.user.id, m.pickup, a.dropoff, fareKobo, m.comment, a.comment, m.id]
         )
         const rideId = ride.rows[0].id
         if (m.comment) await query('INSERT INTO ride_messages (ride_id, sender_id, body) VALUES ($1, $2, $3)', [rideId, m.rider_id, m.comment])
@@ -395,7 +420,7 @@ router.post('/confirm-route',
         const claimed = (await client.query(
           `UPDATE rider_bookings SET status = 'matched'
             WHERE id = ANY($1) AND status = 'pending' AND quoted_fare_kobo IS NOT NULL
-            RETURNING id, rider_id, service, quoted_fare_kobo, recipient_name, recipient_phone, package_size, notes, comment`,
+            RETURNING id, rider_id, pickup, service, quoted_fare_kobo, recipient_name, recipient_phone, package_size, notes, comment`,
           [ids]
         )).rows
         if (!claimed.length) {
@@ -415,7 +440,7 @@ router.post('/confirm-route',
         const params = []
         for (const m of claimed) {
           const rideType = m.service === 'send' ? 'send' : 'pool'
-          params.push(m.rider_id, req.user.id, rideType, a.pickup, a.dropoff, m.quoted_fare_kobo,
+          params.push(m.rider_id, req.user.id, rideType, m.pickup, a.dropoff, m.quoted_fare_kobo,
             m.recipient_name, m.recipient_phone, m.package_size, m.notes, m.comment, a.comment, m.id)
         }
         const inserted = (await client.query(

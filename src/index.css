@@ -564,3 +564,10 @@ html, body {
 .mapboxgl-ctrl-logo {
   display: none !important;
 }
+
+/* Responsive header date — full on desktop, compact on phones */
+.fm-date-short { display: none; }
+@media (max-width: 640px) {
+  .fm-date-long  { display: none; }
+  .fm-date-short { display: inline; }
+}

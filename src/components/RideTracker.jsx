@@ -614,7 +614,7 @@ export default function RideTracker({ activeRideId, onExit }) {
 
       {ride.status === 'completed' && (
         <button onClick={() => navigate(`/rate/${activeRideId}`)}
-          style={{ width:'100%', padding:'13px', borderRadius:50, background:NT, color:NEON, fontWeight:700, fontSize:14, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
+          style={{ width:'100%', padding:'13px', borderRadius:50, background:NEON, color:OLIVE, fontWeight:800, fontSize:14, border:'none', cursor:'pointer', fontFamily:'inherit', boxShadow:'0 4px 16px rgba(204,255,0,0.35)' }}>
           Rate This Trip
         </button>
       )}

@@ -39,7 +39,9 @@ export default function AppLayout({ children, title }){
   const [switching, setSwitching] = useState(false)
 
   const navItems  = user?.role === 'driver' ? DRIVER_NAV : RIDER_NAV
-  const today = new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' })
+  // Long date on desktop, compact on phones (the long one truncated in narrow headers)
+  const todayLong  = new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' })
+  const todayShort = new Date().toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' })
   const initials  = `${user?.firstName?.[0]||''}${user?.lastName?.[0]||''}`.toUpperCase() || 'U'
   const [avatarUrl] = useMyAvatar(user?.id)
   const [walletBalance, setWalletBalance] = useState(null)
@@ -175,7 +177,7 @@ export default function AppLayout({ children, title }){
             <button onClick={() => setOpen(!open)} style={{ display:'none', background:'none', border:'none', cursor:'pointer', color:TEXT, padding:4, flexShrink:0 }} className="mobile-menu-btn" aria-label="Toggle menu">
               <Menu size={22}/>
             </button>
-            <p style={{ fontSize:14, color:TEXT, margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', minWidth:0 }}>{today}</p>
+            <p style={{ fontSize:14, color:TEXT, margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', minWidth:0 }}><span className="fm-date-long">{todayLong}</span><span className="fm-date-short">{todayShort}</span></p>
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
             {/* Wallet balance pill — opens the wallet page for every role */}

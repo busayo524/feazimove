@@ -297,7 +297,7 @@ export default function Signup() {
                 <input
                   type={showPw ? 'text' : 'password'}
                   value={form.password} placeholder="Min 8 chars, 1 uppercase, 1 number"
-                  autoComplete="new-password"
+                  autoComplete="off"
                   onChange={e => set('password', e.target.value)}
                   onFocus={e => { e.target.style.borderColor = NEON; if (!form.password) setShowSuggestion(true) }}
                   onBlur={e  => e.target.style.borderColor = errors.password ? '#ef4444' : '#e0e0e0'}
@@ -379,7 +379,7 @@ export default function Signup() {
                 <input
                   type={showPw ? 'text' : 'password'}
                   value={form.confirm} placeholder="Repeat your password"
-                  autoComplete="new-password"
+                  autoComplete="off"
                   onChange={e => set('confirm', e.target.value)}
                   style={{ ...inputStyle, paddingRight: 46, borderColor: errors.confirm ? '#ef4444' : '#e0e0e0' }}
                   onFocus={e => e.target.style.borderColor = NEON}

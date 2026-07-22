@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/AppLayout'
 import RideTracker from '../../components/RideTracker'
 import { LocationDropdown, TimeDropdown, MORNING_SLOTS, EVENING_SLOTS } from '../../components/RouteDropdowns'
-import { MapPin, ArrowRight, Users, Navigation, Sun, Moon, X, Clock, CreditCard, Wallet as WalletIcon } from 'lucide-react'
+import { MapPin, ArrowRight, Users, Navigation, Sun, Moon, X, Clock, CreditCard, Wallet as WalletIcon, Star, Car } from 'lucide-react'
+import PersonAvatar from '../../components/PersonAvatar'
 import { api } from '../../services/api'
 import { track } from '../../services/analytics'
 import { useStopCoords } from '../../hooks/useStopCoords'
@@ -20,7 +21,34 @@ const SERVICES=[
 
 /* ── Route preview popup — auto-shown once pickup/dropoff/time are all set ──
    The actual "Schedule a Ride" action lives inside this popup, not the page ── */
-function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, onClose, onBook, booking, matching, onCancel, cancelling, insufficient, walletKobo, shortfallKobo, onPayNow, payBusy, confirmingPay, onSetupWallet }){
+// A driver whose live route covers this rider's stop — shown while matching.
+// Several can appear; the FIRST one to confirm gets the ride (server-enforced).
+function CandidateDriverCard({ d }) {
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap:10, background:'#f6faee', border:`1.5px solid ${NEON}`,
+      borderRadius:12, padding:'10px 12px', marginBottom:8, textAlign:'left' }}>
+      <PersonAvatar userId={d.id} name={d.name} size={42} fontSize={15}/>
+      <div style={{ minWidth:0, flex:1 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+          <p style={{ fontSize:13.5, fontWeight:800, color:TEXT, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.name}</p>
+          <span style={{ display:'flex', alignItems:'center', gap:3, fontSize:12, fontWeight:700, color:OLIVE, flexShrink:0 }}>
+            <Star size={11} fill="#eab308" color="#eab308"/>{(d.rating ?? 5).toFixed(1)}
+          </span>
+        </div>
+        {(d.vehicleMake || d.vehicleModel || d.plateNumber) && (
+          <p style={{ display:'flex', alignItems:'center', gap:5, fontSize:11.5, color:MUTED, marginTop:2 }}>
+            <Car size={11}/>
+            <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+              {[d.vehicleMake, d.vehicleModel, d.vehicleColor].filter(Boolean).join(' ')}{d.plateNumber ? ` · ${d.plateNumber}` : ''}
+            </span>
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, onClose, onBook, booking, matching, onCancel, cancelling, insufficient, walletKobo, shortfallKobo, onPayNow, payBusy, confirmingPay, onSetupWallet, candidateDrivers }){
   const pc = stopCoords[pickup]
   const dc = stopCoords[dropoff]
   const token = import.meta.env.VITE_MAPBOX_TOKEN
@@ -79,9 +107,22 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, on
         <div style={{padding:'0 14px 12px'}}>
           {matching ? (
             <>
+              {candidateDrivers?.length > 0 && (
+                <div style={{ marginBottom:4 }}>
+                  <p style={{ fontSize:12, fontWeight:800, color:OLIVE, textTransform:'uppercase', letterSpacing:'0.05em', margin:'6px 0 8px' }}>
+                    {candidateDrivers.length === 1 ? 'Driver found on your route!' : `${candidateDrivers.length} drivers found on your route!`}
+                  </p>
+                  {candidateDrivers.map(d => <CandidateDriverCard key={d.id} d={d}/>)}
+                  <p style={{ fontSize:11.5, color:MUTED, lineHeight:1.4, marginBottom:4 }}>
+                    Waiting for a driver to confirm — the first driver to confirm starts your ride.
+                  </p>
+                </div>
+              )}
               <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,padding:'12px 0',marginBottom:8}}>
                 <div style={{width:18,height:18,border:`2.5px solid ${OLIVE}`,borderTopColor:'transparent',borderRadius:'50%',animation:'bookride-spin 0.8s linear infinite'}}/>
-                <span style={{fontSize:13,fontWeight:700,color:OLIVE}}>Matching you with a driver on your route…</span>
+                <span style={{fontSize:13,fontWeight:700,color:OLIVE}}>
+                  {candidateDrivers?.length ? 'Waiting for your driver to confirm…' : 'Matching you with a driver on your route…'}
+                </span>
               </div>
               <button onClick={onCancel} disabled={cancelling} style={{
                 width:'100%',padding:'11px',borderRadius:50,
@@ -178,6 +219,23 @@ export default function BookRide(){
   const [walletKobo,setWalletKobo]=useState(null) // live wallet balance in kobo
   const [payBusy,setPayBusy]=useState(false)       // opening Paystack checkout
   const [confirmingPay,setConfirmingPay]=useState(false) // back from Paystack, polling
+  const [candidateDrivers,setCandidateDrivers]=useState([]) // live drivers covering this route while matching
+
+  // While matching, poll for drivers whose published route covers this stop —
+  // the rider sees who's found them (photo, rating, car) while the driver
+  // decides. First driver to confirm wins (server-enforced atomic claim).
+  useEffect(() => {
+    if (!bookingId) { setCandidateDrivers([]); return }
+    let cancelled = false
+    function check() {
+      api.get('/rides/book-intent/mine')
+        .then(res => { if (!cancelled) setCandidateDrivers(res.data.candidateDrivers || []) })
+        .catch(() => {})
+    }
+    check()
+    const id = setInterval(check, 10000)
+    return () => { cancelled = true; clearInterval(id) }
+  }, [bookingId])
 
   // Active, priced routes for the selected period — same data source and
   // structure used by Move an Item — pickup/dropoff dropdowns derive from it.
@@ -449,7 +507,7 @@ export default function BookRide(){
               stopCoords={stopCoords} onClose={()=>setShowPreview(false)} onBook={handleSearch} booking={searching}
               matching={!!bookingId} onCancel={cancelBooking} cancelling={cancelling} insufficient={insufficientFunds}
               walletKobo={walletKobo} shortfallKobo={shortfallKobo} onPayNow={payNow} payBusy={payBusy}
-              confirmingPay={confirmingPay} onSetupWallet={()=>navigate('/wallet')}/>
+              confirmingPay={confirmingPay} onSetupWallet={()=>navigate('/wallet')} candidateDrivers={candidateDrivers}/>
           )}
 
           <div className="bookride-scroll">

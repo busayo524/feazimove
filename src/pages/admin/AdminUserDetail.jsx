@@ -166,7 +166,7 @@ export default function AdminUserDetail() {
   const st = userStatus(user)
   const s  = STATUS_MAP[st]
   const initials = user.name ? user.name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase() : 'U'
-  const isDriver = user.role === 'driver'
+  const isDriver = user.role === 'driver' || user.canDrive
 
   return (
     <AdminLayout title="User Detail">

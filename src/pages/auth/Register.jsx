@@ -849,7 +849,7 @@ export default function Register() {
                           value={prefill.email || prefill.phone ? (navState.prefill?.password || sessionPrefill.password || form.password) : form.password}
                           onChange={e => f('password', e.target.value)}
                           placeholder="Min 8 chars, 1 uppercase, 1 number"
-                          autoComplete="new-password"
+                          autoComplete="off"
                           disabled={!!(prefill.email || prefill.phone)}
                           style={{
                             ...inp(!!errors.password), paddingRight: 44,
@@ -870,7 +870,7 @@ export default function Register() {
                         value={prefill.email || prefill.phone ? (navState.prefill?.confirm || navState.prefill?.password || sessionPrefill.confirm || sessionPrefill.password || form.confirm) : form.confirm}
                         onChange={e => f('confirm', e.target.value)}
                         placeholder="Repeat password"
-                        autoComplete="new-password"
+                        autoComplete="off"
                         disabled={!!(prefill.email || prefill.phone)}
                         style={{
                           ...inp(!!errors.confirm),

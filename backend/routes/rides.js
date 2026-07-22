@@ -22,17 +22,29 @@ router.get('/avatar/:userId',
   async (req, res, next) => {
     try {
       const { userId } = req.params
+      // Linked = an actual ride together, OR a live booking↔availability pair
+      // in EITHER direction (driver previewing a matched rider, or a rider
+      // previewing a candidate driver whose covered chain includes their stop).
       const linked = await query(
         `SELECT 1 WHERE EXISTS (
            SELECT 1 FROM rides
            WHERE (rider_id = $2 AND driver_id = $1) OR (driver_id = $2 AND rider_id = $1)
          ) OR EXISTS (
            SELECT 1 FROM rider_bookings rb
-           JOIN driver_availability da ON da.driver_id = $1
-             AND da.period = rb.period AND da.time_slot = rb.time_slot
-             AND da.pickup = rb.pickup AND da.dropoff = rb.dropoff
-           WHERE rb.rider_id = $2 AND rb.status IN ('pending', 'matched')
+           JOIN driver_availability da
+             ON ((da.driver_id = $1 AND rb.rider_id = $2) OR (da.driver_id = $2 AND rb.rider_id = $1))
+            AND da.period = rb.period AND da.time_slot = rb.time_slot AND da.dropoff = rb.dropoff
+           WHERE rb.status IN ('pending', 'matched')
              AND da.status IN ('waiting', 'active', 'in_progress')
+             AND EXISTS (
+               SELECT 1 FROM stops sb, stops so, stops sc
+               WHERE sb.name = rb.pickup
+                 AND so.name = COALESCE(da.origin_pickup, da.pickup)
+                 AND sc.name = da.pickup
+                 AND sb.group_name = sc.group_name AND so.group_name = sc.group_name
+                 AND sb.chain_position BETWEEN LEAST(so.chain_position, sc.chain_position)
+                                           AND GREATEST(so.chain_position, sc.chain_position)
+             )
          )`,
         [req.user.id, userId]
       )
@@ -203,11 +215,48 @@ router.get('/book-intent/mine', async (req, res, next) => {
       [req.user.id]
     )
     const b = result.rows[0]
+
+    // Live drivers whose published route currently covers this booking (their
+    // covered chain from origin to current pickup includes the rider's stop).
+    // Shown to the rider as "drivers found — waiting to confirm". The FIRST
+    // driver to hit confirm-route claims the booking atomically; the others
+    // simply lose the race and this list is only ever informational.
+    let candidateDrivers = []
+    if (b) {
+      const drivers = await query(
+        `SELECT DISTINCT ON (u.id) u.id, u.name, u.rating,
+                u.vehicle_make, u.vehicle_model, u.vehicle_color, u.plate_number
+         FROM driver_availability da
+         JOIN users u ON u.id = da.driver_id
+         WHERE da.period = $1 AND da.time_slot = $2 AND da.dropoff = $3
+           AND da.status IN ('waiting', 'active')
+           AND u.is_online = true AND u.is_active = true AND u.id != $5
+           AND EXISTS (
+             SELECT 1 FROM stops sb, stops so, stops sc
+             WHERE sb.name = $4
+               AND so.name = COALESCE(da.origin_pickup, da.pickup)
+               AND sc.name = da.pickup
+               AND sb.group_name = sc.group_name AND so.group_name = sc.group_name
+               AND sb.chain_position BETWEEN LEAST(so.chain_position, sc.chain_position)
+                                         AND GREATEST(so.chain_position, sc.chain_position)
+           )
+         ORDER BY u.id, da.created_at DESC
+         LIMIT 5`,
+        [b.period, b.time_slot, b.dropoff, b.pickup, req.user.id]
+      )
+      candidateDrivers = drivers.rows.map(d => ({
+        id: d.id, name: d.name, rating: d.rating != null ? parseFloat(d.rating) : 5.0,
+        vehicleMake: d.vehicle_make, vehicleModel: d.vehicle_model,
+        vehicleColor: d.vehicle_color, plateNumber: d.plate_number,
+      }))
+    }
+
     res.json({
       booking: b ? {
         bookingId: b.id, period: b.period, timeSlot: b.time_slot,
         pickup: b.pickup, dropoff: b.dropoff, service: b.service,
       } : null,
+      candidateDrivers,
     })
   } catch (err) { next(err) }
 })

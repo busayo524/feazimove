@@ -104,10 +104,12 @@ router.post('/signup',
 
       const password_hash = await bcrypt.hash(password, SALT_ROUNDS)
 
-      // Insert pending user — NOT active, NOT verified
+      // Insert pending user — NOT active, NOT verified. active_role must match
+      // the chosen role (the column defaults to 'rider', which made driver
+      // signups render as "Rider" in the admin panel).
       const userResult = await query(
-        `INSERT INTO users (name, email, phone, password_hash, role, email_verified, is_pending, is_active)
-         VALUES ($1, $2, $3, $4, $5, false, true, false)
+        `INSERT INTO users (name, email, phone, password_hash, role, active_role, email_verified, is_pending, is_active)
+         VALUES ($1, $2, $3, $4, $5, $5, false, true, false)
          RETURNING id, name, email`,
         [name, email, phone, password_hash, role]
       )
@@ -357,10 +359,15 @@ router.post('/register',
 
       // Save all registration data but keep the account pending — an admin must
       // review and approve before the user can log in and book rides.
+      // The wizard's role choice is authoritative: someone can start signup as
+      // one role and complete the wizard as the other — approval later grants
+      // can_drive based on this stored role, so it MUST be persisted here.
       const result = await query(
         `UPDATE users
          SET registration_token = NULL, reg_token_expires = NULL,
              name = $2,
+             role          = $15,
+             active_role   = $15,
              can_ride      = false,
              can_drive     = false,
              id_type       = COALESCE($3, id_type),
@@ -383,6 +390,7 @@ router.post('/register',
           vehicleType || null, vehicleMake || null, vehicleModel || null,
           plateNumber || null, vehicleYear || null, vehicleColor || null,
           city || null, area || null, dateOfBirth || null, gender || null,
+          role,
         ]
       )
 

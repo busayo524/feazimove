@@ -361,6 +361,11 @@ BEGIN
   END IF;
 END $$;
 
+-- Driver's original go-live stop. The pickup column moves forward as the
+-- driver expands along the chain; matching spans origin → current pickup so
+-- riders matched at earlier stops are never dropped by expanding.
+ALTER TABLE driver_availability ADD COLUMN IF NOT EXISTS origin_pickup VARCHAR(100);
+
 -- ── Stop zones: admin-manageable corridors within each side ──────────────────
 -- (Mainland 1, Mainland 2, Island 1, …) — admins create/rename/delete zones
 -- and drag stops between them. stops.chain_position stays the side-wide walk

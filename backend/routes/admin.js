@@ -422,7 +422,7 @@ router.get('/users', async (req, res, next) => {
     res.json({
       users: result.rows.map(u => ({
         id: u.id, name: u.name, email: u.email, phone: u.phone,
-        role: u.active_role || u.role, canRide: u.can_ride, canDrive: u.can_drive,
+        role: u.role, activeRole: u.active_role, canRide: u.can_ride, canDrive: u.can_drive,
         isActive: u.is_active, isPending: u.is_pending,
         rating: u.rating ? parseFloat(u.rating) : null,
         tripCount: parseInt(u.trip_count, 10),
@@ -466,7 +466,7 @@ router.get('/users/:id',
       res.json({
         user: {
           id: u.id, name: u.name, email: u.email, phone: u.phone,
-          role: u.active_role || u.role, canRide: u.can_ride, canDrive: u.can_drive,
+          role: u.role, activeRole: u.active_role, canRide: u.can_ride, canDrive: u.can_drive,
           isActive: u.is_active, isPending: u.is_pending,
           rating: u.rating ? parseFloat(u.rating) : null,
           walletBalance: fmt(u.wallet_balance),
@@ -840,11 +840,20 @@ router.get('/reports', async (req, res, next) => {
 })
 
 // ── CSV export ────────────────────────────────────────────────────────────────
+// Dates render as "2026-07-22 22:11" (Lagos time) — Excel-sortable, no
+// timezone noise. Everything else is stringified and CSV-escaped.
+function csvDate(v) {
+  if (!v) return ''
+  const d = new Date(v)
+  if (isNaN(d)) return String(v)
+  return d.toLocaleString('sv-SE', { timeZone: 'Africa/Lagos', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+}
 function toCsv(rows, columns) {
   const header = columns.map(c => c.label).join(',')
   const lines = rows.map(row =>
     columns.map(c => {
-      const val = row[c.key] ?? ''
+      const raw = row[c.key]
+      const val = c.date ? csvDate(raw) : (raw ?? '')
       const escaped = String(val).replace(/"/g, '""')
       return /[",\n]/.test(escaped) ? `"${escaped}"` : escaped
     }).join(',')
@@ -876,7 +885,7 @@ router.get('/export/:type', async (req, res, next) => {
           { key:'rider_name', label:'Rider' }, { key:'driver_name', label:'Driver' },
           { key:'pickup', label:'Pickup' }, { key:'destination', label:'Destination' },
           { key:'fare', label:'Fare (NGN)' }, { key:'status', label:'Status' },
-          { key:'created_at', label:'Created At' }, { key:'completed_at', label:'Completed At' },
+          { key:'created_at', label:'Booked At', date:true }, { key:'completed_at', label:'Completed At', date:true },
         ]
       )
     } else {
@@ -890,14 +899,16 @@ router.get('/export/:type', async (req, res, next) => {
         [
           { key:'id', label:'Transaction ID' }, { key:'user_name', label:'User' },
           { key:'type', label:'Type' }, { key:'amount', label:'Amount (NGN)' },
-          { key:'description', label:'Description' }, { key:'created_at', label:'Date' },
+          { key:'description', label:'Description' }, { key:'created_at', label:'Date', date:true },
         ]
       )
     }
 
-    res.setHeader('Content-Type', 'text/csv')
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8')
     res.setHeader('Content-Disposition', `attachment; filename="feazimove-${type}-export.csv"`)
-    res.send(csv)
+    // UTF-8 BOM — without it Excel on Windows guesses Windows-1252 and
+    // renders em-dashes in descriptions as "â€"" mojibake.
+    res.send('﻿' + csv)
   } catch (err) { next(err) }
 })
 
