@@ -2,7 +2,6 @@ node_modules/
 dist/
 backend/uploads/
 .env
-.env.example
 .env.local
 .env.*.local
 *.local
