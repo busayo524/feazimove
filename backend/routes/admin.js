@@ -797,7 +797,7 @@ router.get('/alerts', async (req, res, next) => {
 // ── Reports & analytics ──────────────────────────────────────────────────────
 router.get('/reports', async (req, res, next) => {
   try {
-    const [daily, weekly, monthly, series, routes, retention] = await Promise.all([
+    const [daily, weekly, monthly, series, routes, retention, feeRes] = await Promise.all([
       query("SELECT COALESCE(SUM(fare_kobo),0) s FROM rides WHERE status='completed' AND completed_at >= CURRENT_DATE"),
       query("SELECT COALESCE(SUM(fare_kobo),0) s FROM rides WHERE status='completed' AND completed_at >= NOW() - INTERVAL '7 days'"),
       query("SELECT COALESCE(SUM(fare_kobo),0) s FROM rides WHERE status='completed' AND completed_at >= NOW() - INTERVAL '30 days'"),
@@ -816,17 +816,21 @@ router.get('/reports', async (req, res, next) => {
          )
          SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE c > 1) AS repeat_riders FROM counts`
       ),
+      query('SELECT platform_fee_percent FROM platform_settings WHERE id = 1'),
     ])
 
     const totalRoutes = routes.rows.reduce((s, r) => s + parseInt(r.cnt, 10), 0)
     const totalRiders = parseInt(retention.rows[0].total, 10)
     const repeatRiders = parseInt(retention.rows[0].repeat_riders, 10)
+    // Live platform fee — was hardcoded at 20%, which made this page disagree
+    // with the Payments page whenever the admin changed the fee.
+    const feeFrac = (parseFloat(feeRes.rows[0]?.platform_fee_percent) || 20) / 100
 
     res.json({
-      dailyRevenue: Math.round(fmt(daily.rows[0].s) * 0.2),
-      weeklyRevenue: Math.round(fmt(weekly.rows[0].s) * 0.2),
-      monthlyRevenue: Math.round(fmt(monthly.rows[0].s) * 0.2),
-      dailySeries: series.rows.map(r => ({ day: r.day, amount: Math.round(fmt(r.total) * 0.2) })),
+      dailyRevenue: Math.round(fmt(daily.rows[0].s) * feeFrac),
+      weeklyRevenue: Math.round(fmt(weekly.rows[0].s) * feeFrac),
+      monthlyRevenue: Math.round(fmt(monthly.rows[0].s) * feeFrac),
+      dailySeries: series.rows.map(r => ({ day: r.day, amount: Math.round(fmt(r.total) * feeFrac) })),
       topRoutes: routes.rows.map(r => ({
         pickup: r.pickup, destination: r.destination, count: parseInt(r.cnt, 10),
         sharePct: totalRoutes > 0 ? Math.round((parseInt(r.cnt, 10) / totalRoutes) * 100) : 0,
