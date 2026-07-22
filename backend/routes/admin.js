@@ -945,15 +945,38 @@ router.get('/routes', async (req, res, next) => {
 })
 
 // ── Stops management ─────────────────────────────────────────────────────────
+// Stops live inside admin-manageable zones (Mainland 1, Mainland 2, Island 1…).
+// stops.chain_position stays the side-wide "try next stop" walk order drivers
+// use — derived as (zone position, order within zone) and recomputed by this
+// helper whenever anything is rearranged.
+async function recomputeChainPositions(client, side) {
+  // Two-phase to dodge UNIQUE(group_name, chain_position): park at negatives,
+  // then rewrite. Stops without a zone (shouldn't exist) sort last.
+  await client.query('UPDATE stops SET chain_position = -1 - chain_position WHERE group_name = $1', [side])
+  await client.query(
+    `UPDATE stops s SET chain_position = r.pos FROM (
+       SELECT s2.id, ROW_NUMBER() OVER (ORDER BY COALESCE(z.position, 32767), -1 - s2.chain_position) - 1 AS pos
+       FROM stops s2 LEFT JOIN stop_zones z ON z.id = s2.zone_id
+       WHERE s2.group_name = $1
+     ) r WHERE s.id = r.id`,
+    [side]
+  )
+}
+
 router.get('/stops', async (req, res, next) => {
   try {
-    const result = await query(
-      `SELECT id, name, group_name, chain_position, lat, lng, is_active, created_at
-       FROM stops ORDER BY group_name, chain_position`
-    )
+    const [zonesRes, stopsRes] = await Promise.all([
+      query('SELECT id, side, name, position FROM stop_zones ORDER BY side, position'),
+      query(
+        `SELECT s.id, s.name, s.group_name, s.chain_position, s.zone_id, s.lat, s.lng, s.is_active, s.created_at
+         FROM stops s LEFT JOIN stop_zones z ON z.id = s.zone_id
+         ORDER BY s.group_name, COALESCE(z.position, 32767), s.chain_position`
+      ),
+    ])
     res.json({
-      stops: result.rows.map(s => ({
-        id: s.id, name: s.name, group: s.group_name, chainPosition: s.chain_position,
+      zones: zonesRes.rows.map(z => ({ id: z.id, side: z.side, name: z.name, position: z.position })),
+      stops: stopsRes.rows.map(s => ({
+        id: s.id, name: s.name, group: s.group_name, chainPosition: s.chain_position, zoneId: s.zone_id,
         lat: s.lat != null ? Number(s.lat) : null, lng: s.lng != null ? Number(s.lng) : null,
         isActive: s.is_active, createdAt: s.created_at,
       })),
@@ -964,26 +987,35 @@ router.get('/stops', async (req, res, next) => {
 router.post('/stops',
   [
     body('name').trim().isLength({ min: 2, max: 100 }).escape(),
-    body('group').isIn(['mainland', 'island']),
-    body('chainPosition').isInt({ min: 0 }),
+    body('zoneId').isUUID(),
     body('lat').optional({ checkFalsy: true }).isFloat({ min: -90, max: 90 }),
     body('lng').optional({ checkFalsy: true }).isFloat({ min: -180, max: 180 }),
   ],
   validate,
   async (req, res, next) => {
+    const { name, zoneId, lat, lng } = req.body
+    const client = await pool.connect()
     try {
-      const { name, group, chainPosition, lat, lng } = req.body
-      const result = await query(
-        `INSERT INTO stops (name, group_name, chain_position, lat, lng)
-         VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-        [name, group, chainPosition, lat || null, lng || null]
+      await client.query('BEGIN')
+      const zone = await client.query('SELECT side FROM stop_zones WHERE id = $1', [zoneId])
+      if (!zone.rows[0]) { await client.query('ROLLBACK'); return res.status(404).json({ message: 'Category not found.' }) }
+      const side = zone.rows[0].side
+      const result = await client.query(
+        `INSERT INTO stops (name, group_name, chain_position, zone_id, lat, lng)
+         SELECT $1, $2, COALESCE(MAX(chain_position), -1) + 1, $3, $4, $5 FROM stops WHERE group_name = $2
+         RETURNING id`,
+        [name, side, zoneId, lat || null, lng || null]
       )
+      // Slot the new stop after the last stop of its zone, not the side's tail
+      await recomputeChainPositions(client, side)
+      await client.query('COMMIT')
       logActivity(req.user.id, 'Stop Added', 'route', name)
       res.status(201).json({ id: result.rows[0].id })
     } catch (err) {
-      if (err.code === '23505') return res.status(409).json({ message: 'A stop with that name or chain position already exists.' })
+      await client.query('ROLLBACK').catch(() => {})
+      if (err.code === '23505') return res.status(409).json({ message: 'A stop with that name already exists.' })
       next(err)
-    }
+    } finally { client.release() }
   }
 )
 
@@ -991,7 +1023,6 @@ router.patch('/stops/:id',
   [
     param('id').isUUID(),
     body('name').optional({ checkFalsy: true }).trim().isLength({ min: 2, max: 100 }).escape(),
-    body('chainPosition').optional({ checkFalsy: true }).isInt({ min: 0 }),
     body('lat').optional({ checkFalsy: true }).isFloat({ min: -90, max: 90 }),
     body('lng').optional({ checkFalsy: true }).isFloat({ min: -180, max: 180 }),
     body('isActive').optional().isBoolean(),
@@ -999,23 +1030,127 @@ router.patch('/stops/:id',
   validate,
   async (req, res, next) => {
     try {
-      const { name, chainPosition, lat, lng, isActive } = req.body
+      const { name, lat, lng, isActive } = req.body
       const result = await query(
         `UPDATE stops SET
            name = COALESCE($1, name),
-           chain_position = COALESCE($2, chain_position),
-           lat = COALESCE($3, lat),
-           lng = COALESCE($4, lng),
-           is_active = COALESCE($5, is_active)
-         WHERE id = $6 RETURNING id`,
-        [name || null, chainPosition ?? null, lat ?? null, lng ?? null, isActive ?? null, req.params.id]
+           lat = COALESCE($2, lat),
+           lng = COALESCE($3, lng),
+           is_active = COALESCE($4, is_active)
+         WHERE id = $5 RETURNING id`,
+        [name || null, lat ?? null, lng ?? null, isActive ?? null, req.params.id]
       )
       if (!result.rows[0]) return res.status(404).json({ message: 'Stop not found.' })
       res.json({ message: 'Stop updated.' })
     } catch (err) {
-      if (err.code === '23505') return res.status(409).json({ message: 'That name or chain position is already in use.' })
+      if (err.code === '23505') return res.status(409).json({ message: 'That name is already in use.' })
       next(err)
     }
+  }
+)
+
+// ── Zone (category) management ───────────────────────────────────────────────
+router.post('/zones',
+  [
+    body('side').isIn(['mainland', 'island']),
+    body('name').trim().isLength({ min: 2, max: 60 }).escape(),
+  ],
+  validate,
+  async (req, res, next) => {
+    try {
+      const { side, name } = req.body
+      const result = await query(
+        `INSERT INTO stop_zones (side, name, position)
+         SELECT $1, $2, COALESCE(MAX(position), -1) + 1 FROM stop_zones WHERE side = $1
+         RETURNING id`,
+        [side, name]
+      )
+      logActivity(req.user.id, 'Stop Category Added', 'route', name)
+      res.status(201).json({ id: result.rows[0].id })
+    } catch (err) {
+      if (err.code === '23505') return res.status(409).json({ message: 'A category with that name already exists.' })
+      next(err)
+    }
+  }
+)
+
+router.patch('/zones/:id',
+  [param('id').isUUID(), body('name').trim().isLength({ min: 2, max: 60 }).escape()],
+  validate,
+  async (req, res, next) => {
+    try {
+      const result = await query('UPDATE stop_zones SET name = $1 WHERE id = $2 RETURNING id', [req.body.name, req.params.id])
+      if (!result.rows[0]) return res.status(404).json({ message: 'Category not found.' })
+      res.json({ message: 'Category renamed.' })
+    } catch (err) {
+      if (err.code === '23505') return res.status(409).json({ message: 'A category with that name already exists.' })
+      next(err)
+    }
+  }
+)
+
+router.delete('/zones/:id', [param('id').isUUID()], validate, async (req, res, next) => {
+  try {
+    const used = await query('SELECT COUNT(*)::int AS n FROM stops WHERE zone_id = $1', [req.params.id])
+    if (used.rows[0].n > 0) return res.status(409).json({ message: 'Move its stops to another category first.' })
+    const result = await query('DELETE FROM stop_zones WHERE id = $1 RETURNING name', [req.params.id])
+    if (!result.rows[0]) return res.status(404).json({ message: 'Category not found.' })
+    logActivity(req.user.id, 'Stop Category Deleted', 'route', result.rows[0].name)
+    res.json({ message: 'Category deleted.' })
+  } catch (err) { next(err) }
+})
+
+// ── Arrange stops: within-zone reorder AND cross-zone drag in one call ───────
+// The frontend sends the full final ordered stop-id list for every zone it
+// touched (one zone for a reorder, two for a drag between zones). Membership
+// and order come from the payload; untouched zones keep their internal order.
+router.post('/stops/arrange',
+  [
+    body('zones').isArray({ min: 1, max: 50 }),
+    body('zones.*.zoneId').isUUID(),
+    body('zones.*.orderedIds').isArray({ max: 200 }),
+    body('zones.*.orderedIds.*').isUUID(),
+  ],
+  validate,
+  async (req, res, next) => {
+    const client = await pool.connect()
+    try {
+      await client.query('BEGIN')
+      const sides = new Set()
+      let parkBase = -30000 // distinct SMALLINT-safe temp range per arranged zone
+      for (const { zoneId, orderedIds } of req.body.zones) {
+        const zone = await client.query('SELECT side FROM stop_zones WHERE id = $1', [zoneId])
+        if (!zone.rows[0]) { const e = new Error('Category not found.'); e.status = 404; throw e }
+        const side = zone.rows[0].side
+        sides.add(side)
+        if (orderedIds.length === 0) continue
+        // A stop can only live in a zone on its own side — moving a stop
+        // across the water would corrupt route/pricing side pairing.
+        const moved = await client.query(
+          `UPDATE stops SET zone_id = $1 WHERE id = ANY($2::uuid[]) AND group_name = $3 RETURNING id`,
+          [zoneId, orderedIds, side]
+        )
+        if (moved.rows.length !== orderedIds.length) {
+          const e = new Error('One of the stops does not exist on that side.'); e.status = 422; throw e
+        }
+        // Record the requested within-zone order via parked temp positions
+        // (base + index keeps the requested order after recompute's double
+        // negation, and each zone gets its own range so nothing collides);
+        // recompute below turns it into the final side-wide walk order.
+        await client.query(
+          `UPDATE stops SET chain_position = $2 + array_position($1::uuid[], id) WHERE id = ANY($1::uuid[])`,
+          [orderedIds, parkBase]
+        )
+        parkBase += 250 // > max orderedIds per zone, so ranges never overlap
+      }
+      for (const side of sides) await recomputeChainPositions(client, side)
+      await client.query('COMMIT')
+      res.json({ message: 'Stops arranged.' })
+    } catch (err) {
+      await client.query('ROLLBACK').catch(() => {})
+      if (err.status) return res.status(err.status).json({ message: err.message })
+      next(err)
+    } finally { client.release() }
   }
 )
 
@@ -1078,7 +1213,11 @@ router.post('/routes-pricing',
             'SELECT COALESCE(MAX(chain_position), -1) + 1 AS next FROM stops WHERE group_name = $1',
             [dropoffGroup]
           )
-          await client.query('INSERT INTO stops (name, group_name, chain_position) VALUES ($1, $2, $3)',
+          // New hand-typed stop goes to the last zone of its side (end of the
+          // walk chain) — admin can drag it to the right category later.
+          await client.query(
+            `INSERT INTO stops (name, group_name, chain_position, zone_id)
+             VALUES ($1, $2, $3, (SELECT id FROM stop_zones WHERE side = $2 ORDER BY position DESC LIMIT 1))`,
             [dropoff, dropoffGroup, pos.rows[0].next])
         }
       }
@@ -1139,7 +1278,11 @@ router.post('/routes-bulk',
           'SELECT COALESCE(MAX(chain_position), -1) + 1 AS next FROM stops WHERE group_name = $1',
           [group]
         )
-        await client.query('INSERT INTO stops (name, group_name, chain_position) VALUES ($1, $2, $3)',
+        // New hand-typed stop goes to the last zone of its side (end of the
+        // walk chain) — admin can drag it to the right category later.
+        await client.query(
+          `INSERT INTO stops (name, group_name, chain_position, zone_id)
+           VALUES ($1, $2, $3, (SELECT id FROM stop_zones WHERE side = $2 ORDER BY position DESC LIMIT 1))`,
           [name, group, pos.rows[0].next])
       }
       await ensureStop(pickupName, pickupGroup)
@@ -1169,33 +1312,8 @@ router.post('/routes-bulk',
   }
 )
 
-// ── Reorder stops within a group by geography (Item 7) ───────────────────────
-router.post('/stops/reorder',
-  [
-    body('group').isIn(['mainland', 'island']),
-    body('orderedIds').isArray({ min: 1 }),
-    body('orderedIds.*').isUUID(),
-  ],
-  validate,
-  async (req, res, next) => {
-    const { group, orderedIds } = req.body
-    const client = await pool.connect()
-    try {
-      await client.query('BEGIN')
-      // Two-phase to dodge the UNIQUE(group_name, chain_position) constraint:
-      // park everyone at negative positions, then write the final order.
-      await client.query('UPDATE stops SET chain_position = -1 - chain_position WHERE group_name = $1', [group])
-      for (let i = 0; i < orderedIds.length; i++) {
-        await client.query('UPDATE stops SET chain_position = $1 WHERE id = $2 AND group_name = $3', [i, orderedIds[i], group])
-      }
-      await client.query('COMMIT')
-      res.json({ message: 'Stops reordered.' })
-    } catch (err) {
-      await client.query('ROLLBACK').catch(() => {})
-      next(err)
-    } finally { client.release() }
-  }
-)
+// (The old side-wide /stops/reorder endpoint was replaced by /stops/arrange —
+// order now lives inside zones, and the walk chain is derived from them.)
 
 router.patch('/routes-pricing/:id',
   [

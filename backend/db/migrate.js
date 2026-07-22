@@ -360,6 +360,48 @@ BEGIN
     ALTER TABLE routes RENAME COLUMN solo_fare_kobo TO package_fare_kobo;
   END IF;
 END $$;
+
+-- ── Stop zones: admin-manageable corridors within each side ──────────────────
+-- (Mainland 1, Mainland 2, Island 1, …) — admins create/rename/delete zones
+-- and drag stops between them. stops.chain_position stays the side-wide walk
+-- order drivers use ("try next stop") and is recomputed from zone order +
+-- within-zone order whenever stops are rearranged (see /admin/stops/arrange).
+CREATE TABLE IF NOT EXISTS stop_zones (
+  id         UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+  side       VARCHAR(10)  NOT NULL CHECK (side IN ('mainland','island')),
+  name       VARCHAR(60)  UNIQUE NOT NULL,
+  position   SMALLINT     NOT NULL,
+  created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  UNIQUE (side, position)
+);
+ALTER TABLE stops ADD COLUMN IF NOT EXISTS zone_id UUID REFERENCES stop_zones(id) ON DELETE SET NULL;
+
+-- One-time seed (Jul 22 2026 launch split) — only runs while no zones exist.
+-- Zone membership per the agreed corridors; each zone keeps its stops in the
+-- old side-wide order, then chain_position is rewritten as (zone, old order).
+DO $$
+DECLARE m1 UUID; m2 UUID; m3 UUID; i1 UUID; i2 UUID;
+BEGIN
+  IF EXISTS (SELECT 1 FROM stop_zones) THEN RETURN; END IF;
+  INSERT INTO stop_zones (side, name, position) VALUES ('mainland', 'Mainland 1', 0) RETURNING id INTO m1;
+  INSERT INTO stop_zones (side, name, position) VALUES ('mainland', 'Mainland 2', 1) RETURNING id INTO m2;
+  INSERT INTO stop_zones (side, name, position) VALUES ('mainland', 'Mainland 3', 2) RETURNING id INTO m3;
+  INSERT INTO stop_zones (side, name, position) VALUES ('island',   'Island 1',   0) RETURNING id INTO i1;
+  INSERT INTO stop_zones (side, name, position) VALUES ('island',   'Island 2',   1) RETURNING id INTO i2;
+  UPDATE stops SET zone_id = m2 WHERE group_name = 'mainland' AND name IN ('Ikorodu', 'Agric Ikorodu', 'Ikorodu Garage');
+  UPDATE stops SET zone_id = m3 WHERE group_name = 'mainland' AND name = 'Yaba';
+  UPDATE stops SET zone_id = i2 WHERE group_name = 'island'   AND name IN ('SandFill', 'Lekki Phase 1', 'Lekki Phase 2', 'Checking Point', 'Ajah');
+  -- Everything else (and any straggler without an assignment) → zone 1
+  UPDATE stops SET zone_id = m1 WHERE group_name = 'mainland' AND zone_id IS NULL;
+  UPDATE stops SET zone_id = i1 WHERE group_name = 'island'   AND zone_id IS NULL;
+  -- Rewrite the side-wide walk order: zones in position order, old order inside.
+  -- Park at negatives first so UNIQUE(group_name, chain_position) never trips.
+  UPDATE stops SET chain_position = -1 - chain_position;
+  UPDATE stops s SET chain_position = r.pos FROM (
+    SELECT s2.id, ROW_NUMBER() OVER (PARTITION BY s2.group_name ORDER BY z.position, -1 - s2.chain_position) - 1 AS pos
+    FROM stops s2 JOIN stop_zones z ON z.id = s2.zone_id
+  ) r WHERE s.id = r.id;
+END $$;
 `
 
 ;(async () => {
