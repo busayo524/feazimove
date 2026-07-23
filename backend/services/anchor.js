@@ -23,7 +23,7 @@ const http = axios.create({
   baseURL: BASE_URL,
   headers: { 'Content-Type': 'application/json' },
   timeout: 30000,
-})` `
+})
 // Read the key per-request (not at module load) so a key added to the env
 // after boot — or rotated — is picked up without a restart.
 http.interceptors.request.use(config => {
