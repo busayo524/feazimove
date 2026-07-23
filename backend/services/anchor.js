@@ -23,7 +23,7 @@ const http = axios.create({
   baseURL: BASE_URL,
   headers: { 'Content-Type': 'application/json' },
   timeout: 30000,
-})
+})` `
 // Read the key per-request (not at module load) so a key added to the env
 // after boot — or rotated — is picked up without a restart.
 http.interceptors.request.use(config => {
@@ -44,6 +44,15 @@ function anchorError(err, fallback) {
   return e
 }
 
+// Anchor validates phoneNumber as Nigerian LOCAL format (07062545108) and
+// rejects the international form our users register with (+2347062545108).
+function toLocalPhone(phone) {
+  const digits = (phone || '').replace(/\D/g, '')
+  if (digits.startsWith('234') && digits.length === 13) return '0' + digits.slice(3)
+  if (digits.length === 10 && !digits.startsWith('0')) return '0' + digits
+  return digits
+}
+
 // ── Customers (docs.getanchor.co/docs/create-individual-customer-1) ──────────
 // Minimum: fullName, address, email, phoneNumber. BVN (identificationLevel2)
 // is only needed for reserved accounts / deposit-account KYC.
@@ -51,7 +60,7 @@ async function createIndividualCustomer({ firstName, lastName, email, phoneNumbe
   const attributes = {
     fullName: { firstName, lastName },
     email,
-    phoneNumber,
+    phoneNumber: toLocalPhone(phoneNumber),
     address: {
       addressLine_1: address?.line1 || 'Lagos',
       city: address?.city || 'Lagos',
