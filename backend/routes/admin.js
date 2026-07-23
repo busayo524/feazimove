@@ -9,6 +9,7 @@ const { requireAuth, requireRole } = require('../middleware/auth')
 const { validate } = require('../middleware/validate')
 const { sendStored, deleteStored } = require('../services/fileStorage')
 const { sendAccountCredentialsEmail, sendWelcomeEmail } = require('../services/emailService')
+const anchor = require('../services/anchor')
 
 const router = express.Router()
 const SALT_ROUNDS = 12
@@ -695,7 +696,8 @@ router.get('/payouts', async (req, res, next) => {
     const statusFilter = req.query.status || 'pending'
     const result = await query(
       `SELECT p.id, p.amount_kobo, p.status, p.requested_at, p.processed_at,
-              u.id AS driver_id, u.name AS driver_name
+              p.anchor_transfer_id, p.failure_reason,
+              u.id AS driver_id, u.name AS driver_name, u.bank_name, u.bank_account_number
        FROM payout_requests p
        JOIN users u ON p.driver_id = u.id
        ${statusFilter !== 'all' ? 'WHERE p.status = $1' : ''}
@@ -706,25 +708,118 @@ router.get('/payouts', async (req, res, next) => {
       payouts: result.rows.map(p => ({
         id: p.id, amount: fmt(p.amount_kobo), status: p.status,
         driverId: p.driver_id, driverName: p.driver_name,
+        bankName: p.bank_name, accountNumber: p.bank_account_number,
+        transferId: p.anchor_transfer_id, failureReason: p.failure_reason,
         requestedAt: p.requested_at, processedAt: p.processed_at,
       })),
     })
   } catch (err) { next(err) }
 })
 
+// Approving a payout now actually SENDS the money via an Anchor NIP transfer
+// (docs.getanchor.co/docs/bank-transfer): verify the driver's account → create
+// (or reuse) the CounterParty beneficiary → initiate the transfer from the
+// master account. Final settlement lands via nip.transfer.successful/failed
+// webhooks (routes/anchor.js) — failure automatically refunds the driver.
+// Optional body.bankCode overrides the bank-name match when it's ambiguous.
 router.post('/payouts/:id/approve',
-  [param('id').isUUID()], validate,
+  [param('id').isUUID(), body('bankCode').optional({ checkFalsy: true }).trim().isLength({ min: 3, max: 10 })],
+  validate,
   async (req, res, next) => {
     try {
-      const result = await query(
-        `UPDATE payout_requests SET status = 'approved', processed_at = NOW(), processed_by = $1
-         WHERE id = $2 AND status = 'pending' RETURNING id, amount_kobo`,
-        [req.user.id, req.params.id]
+      const p = await query(
+        `SELECT p.id, p.amount_kobo, p.status, u.id AS driver_id, u.name AS driver_name,
+                u.bank_name, u.bank_account_number, u.anchor_counterparty_id
+           FROM payout_requests p JOIN users u ON p.driver_id = u.id
+          WHERE p.id = $1`,
+        [req.params.id]
       )
-      if (!result.rows[0]) return res.status(409).json({ message: 'This request is no longer pending.' })
-      logActivity(req.user.id, 'Payout Approved', 'payment', `₦${fmt(result.rows[0].amount_kobo).toLocaleString()}`)
-      res.json({ message: 'Payout approved.' })
-    } catch (err) { next(err) }
+      const payout = p.rows[0]
+      if (!payout) return res.status(404).json({ message: 'Payout request not found.' })
+      if (payout.status !== 'pending') return res.status(409).json({ message: 'This request is no longer pending.' })
+
+      // Without Anchor configured, fall back to the old bookkeeping-only
+      // approval (money moved by hand outside the app).
+      if (!anchor.configured()) {
+        await query(
+          `UPDATE payout_requests SET status = 'approved', processed_at = NOW(), processed_by = $1 WHERE id = $2`,
+          [req.user.id, req.params.id]
+        )
+        logActivity(req.user.id, 'Payout Approved', 'payment', `₦${fmt(payout.amount_kobo).toLocaleString()} (manual)`)
+        return res.json({ message: 'Payout approved (manual transfer — payment rails not configured).' })
+      }
+
+      if (!/^\d{10}$/.test(payout.bank_account_number || '')) {
+        return res.status(422).json({ message: `${payout.driver_name} has no valid 10-digit account number on their profile.` })
+      }
+
+      // Resolve the driver's bank to its NIP code, then verify + save the
+      // beneficiary once — reused for every future payout to this driver.
+      let counterpartyId = payout.anchor_counterparty_id
+      if (!counterpartyId) {
+        let bankCode = req.body.bankCode
+        if (!bankCode) {
+          const banks = await anchor.listBanks()
+          const norm = s => (s || '').toUpperCase().replace(/[^A-Z]/g, '').replace(/(PLC|LIMITED|LTD)$/g, '')
+          const want = norm(payout.bank_name)
+          if (!want) return res.status(422).json({ message: `${payout.driver_name} has no bank name on their profile.` })
+          const matches = banks.filter(b => {
+            const n = norm(b.attributes?.name)
+            return n && (n === want || n.includes(want) || want.includes(n))
+          })
+          if (matches.length !== 1) {
+            return res.status(422).json({
+              message: `Could not uniquely match bank "${payout.bank_name}" — pick the exact bank.`,
+              candidates: banks.slice(0, 200).map(b => ({ code: b.attributes?.nipCode, name: b.attributes?.name })),
+            })
+          }
+          bankCode = matches[0].attributes.nipCode
+        }
+        const verified = await anchor.verifyAccount(bankCode, payout.bank_account_number)
+        const accountName = verified?.attributes?.accountName || payout.driver_name
+        const cp = await anchor.createCounterparty({ bankCode, accountName, accountNumber: payout.bank_account_number })
+        counterpartyId = cp.id
+        await query('UPDATE users SET anchor_counterparty_id = $1 WHERE id = $2', [counterpartyId, payout.driver_id])
+      }
+
+      // Approve, then fire the transfer. Anchor reference: lowercase
+      // alphanumeric, unique — derived from the payout id.
+      const reference = `po${payout.id.replace(/-/g, '')}`
+      const approved = await query(
+        `UPDATE payout_requests SET status = 'approved', processed_by = $1, anchor_reference = $2
+          WHERE id = $3 AND status = 'pending' RETURNING id`,
+        [req.user.id, reference, req.params.id]
+      )
+      if (!approved.rows[0]) return res.status(409).json({ message: 'This request is no longer pending.' })
+
+      try {
+        const accountId = await anchor.getMasterAccountId()
+        const transfer = await anchor.initiateNipTransfer({
+          amountKobo: Number(payout.amount_kobo),
+          reason: 'FeaziMove driver payout',
+          reference,
+          accountId,
+          counterpartyId,
+        })
+        await query(
+          `UPDATE payout_requests SET status = 'processing', anchor_transfer_id = $1 WHERE id = $2`,
+          [transfer.id, req.params.id]
+        )
+        logActivity(req.user.id, 'Payout Sent', 'payment',
+          `₦${fmt(payout.amount_kobo).toLocaleString()} → ${payout.driver_name} (NIP ${transfer.attributes?.status || 'PENDING'})`)
+        res.json({ message: `Transfer of ₦${fmt(payout.amount_kobo).toLocaleString()} to ${payout.driver_name} is on its way.`, transferId: transfer.id })
+      } catch (err) {
+        // Transfer initiation failed — put the request back so admin can retry
+        await query(
+          `UPDATE payout_requests SET status = 'pending', processed_by = NULL, anchor_reference = NULL WHERE id = $1`,
+          [req.params.id]
+        )
+        return res.status(err.status || 502).json({ message: err.message || 'Transfer could not be initiated — the request is back in pending.' })
+      }
+    } catch (err) {
+      if (err.status) return res.status(err.status).json({ message: err.message })
+      next(err)
+    }
   }
 )
 
@@ -749,6 +844,113 @@ router.post('/payouts/:id/reject',
 
       logActivity(req.user.id, 'Payout Rejected', 'payment', `₦${fmt(payout.rows[0].amount_kobo).toLocaleString()} refunded`)
       res.json({ message: 'Payout rejected and refunded to driver wallet.' })
+    } catch (err) { next(err) }
+  }
+)
+
+// ── Anchor back office — monitoring for the go-live demo & daily operations ──
+// Item 2 of the Anchor checklist: "back office where we monitor transactions
+// and have details of all customers we have collected".
+router.get('/anchor/overview', async (req, res, next) => {
+  try {
+    const [customers, events24, eventsAll, lastEvent, payins, transfers, openFlags, pendingTx] = await Promise.all([
+      query('SELECT COUNT(*)::int n FROM users WHERE anchor_customer_id IS NOT NULL'),
+      query("SELECT COUNT(*)::int n FROM anchor_events WHERE created_at >= NOW() - INTERVAL '24 hours'"),
+      query('SELECT COUNT(*)::int n FROM anchor_events'),
+      query('SELECT MAX(created_at) t FROM anchor_events'),
+      query("SELECT COUNT(*)::int n, COALESCE(SUM(amount_kobo),0) s FROM wallet_transactions WHERE gateway = 'anchor' AND type = 'credit' AND status = 'completed'"),
+      query("SELECT COUNT(*)::int n FROM payout_requests WHERE anchor_transfer_id IS NOT NULL"),
+      query("SELECT COUNT(*)::int n FROM aml_flags WHERE status = 'open'"),
+      query("SELECT COUNT(*)::int n FROM wallet_transactions WHERE gateway = 'anchor' AND status = 'pending'"),
+    ])
+    res.json({
+      customers: customers.rows[0].n,
+      webhookEvents24h: events24.rows[0].n,
+      webhookEventsTotal: eventsAll.rows[0].n,
+      lastEventAt: lastEvent.rows[0].t,
+      collections: { count: payins.rows[0].n, totalNaira: fmt(payins.rows[0].s) },
+      transfersInitiated: transfers.rows[0].n,
+      openAmlFlags: openFlags.rows[0].n,
+      pendingCollections: pendingTx.rows[0].n,
+      configured: anchor.configured(),
+    })
+  } catch (err) { next(err) }
+})
+
+// Live webhook/event feed — the raw evidence of every money movement.
+router.get('/anchor/events', async (req, res, next) => {
+  try {
+    const type = req.query.type
+    const result = await query(
+      `SELECT id, event_id, event_type, resource_id, signature_valid, processed, created_at
+         FROM anchor_events ${type ? 'WHERE event_type = $1' : ''}
+        ORDER BY created_at DESC LIMIT 100`,
+      type ? [type] : []
+    )
+    res.json({ events: result.rows.map(e => ({
+      id: e.id, eventId: e.event_id, type: e.event_type, resourceId: e.resource_id,
+      signatureValid: e.signature_valid, processed: e.processed, at: e.created_at,
+    })) })
+  } catch (err) { next(err) }
+})
+
+// Registry of every user we've onboarded to Anchor as a customer.
+router.get('/anchor/customers', async (req, res, next) => {
+  try {
+    const result = await query(
+      `SELECT id, name, email, phone, role, anchor_customer_id, anchor_kyc_status,
+              reserved_account_number, reserved_account_bank, anchor_counterparty_id, created_at
+         FROM users WHERE anchor_customer_id IS NOT NULL
+        ORDER BY created_at DESC LIMIT 200`
+    )
+    res.json({ customers: result.rows.map(u => ({
+      id: u.id, name: u.name, email: u.email, phone: u.phone, role: u.role,
+      anchorCustomerId: u.anchor_customer_id, kycStatus: u.anchor_kyc_status,
+      reservedAccount: u.reserved_account_number
+        ? { number: u.reserved_account_number, bank: u.reserved_account_bank } : null,
+      hasPayoutBeneficiary: !!u.anchor_counterparty_id,
+      joinedAt: u.created_at,
+    })) })
+  } catch (err) { next(err) }
+})
+
+// ── AML monitoring (item 3 of the Anchor checklist) ──────────────────────────
+// Rule hits from services/walletLedger.js land here for compliance review.
+router.get('/aml/flags', async (req, res, next) => {
+  try {
+    const status = req.query.status || 'open'
+    const result = await query(
+      `SELECT f.id, f.rule, f.severity, f.detail, f.reference, f.status, f.created_at,
+              f.reviewed_at, u.id AS user_id, u.name AS user_name, u.role,
+              r.name AS reviewer_name
+         FROM aml_flags f
+         LEFT JOIN users u ON f.user_id = u.id
+         LEFT JOIN users r ON f.reviewed_by = r.id
+        ${status !== 'all' ? 'WHERE f.status = $1' : ''}
+        ORDER BY f.created_at DESC LIMIT 100`,
+      status !== 'all' ? [status] : []
+    )
+    res.json({ flags: result.rows.map(f => ({
+      id: f.id, rule: f.rule, severity: f.severity, detail: f.detail, reference: f.reference,
+      status: f.status, userId: f.user_id, userName: f.user_name, userRole: f.role,
+      createdAt: f.created_at, reviewedAt: f.reviewed_at, reviewerName: f.reviewer_name,
+    })) })
+  } catch (err) { next(err) }
+})
+
+router.post('/aml/flags/:id/review',
+  [param('id').isUUID(), body('outcome').isIn(['reviewed', 'dismissed'])],
+  validate,
+  async (req, res, next) => {
+    try {
+      const result = await query(
+        `UPDATE aml_flags SET status = $1, reviewed_by = $2, reviewed_at = NOW()
+          WHERE id = $3 AND status = 'open' RETURNING id, rule`,
+        [req.body.outcome, req.user.id, req.params.id]
+      )
+      if (!result.rows[0]) return res.status(409).json({ message: 'This flag has already been reviewed.' })
+      logActivity(req.user.id, 'AML Flag Reviewed', 'payment', `${result.rows[0].rule} → ${req.body.outcome}`)
+      res.json({ message: 'Flag updated.' })
     } catch (err) { next(err) }
   }
 )

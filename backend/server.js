@@ -464,6 +464,48 @@ async function runMigrations() {
         FROM stops s2 JOIN stop_zones z ON z.id = s2.zone_id
       ) r WHERE s.id = r.id;
     END $$;
+
+    -- ── Anchor (getanchor.co) banking rails — kept in sync with db/migrate.js ─
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS anchor_customer_id       VARCHAR(60);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS anchor_kyc_status        VARCHAR(30);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS anchor_reserved_account_id VARCHAR(60);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS reserved_account_number  VARCHAR(20);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS reserved_account_bank    VARCHAR(80);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS reserved_account_name    VARCHAR(120);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS anchor_counterparty_id   VARCHAR(60);
+
+    ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS gateway VARCHAR(12);
+
+    ALTER TABLE payout_requests ADD COLUMN IF NOT EXISTS anchor_transfer_id VARCHAR(60);
+    ALTER TABLE payout_requests ADD COLUMN IF NOT EXISTS anchor_reference   VARCHAR(100);
+    ALTER TABLE payout_requests ADD COLUMN IF NOT EXISTS failure_reason     VARCHAR(300);
+    CREATE INDEX IF NOT EXISTS idx_payouts_anchor_ref ON payout_requests(anchor_reference);
+
+    CREATE TABLE IF NOT EXISTS anchor_events (
+      id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+      event_id        VARCHAR(80) UNIQUE,
+      event_type      VARCHAR(60) NOT NULL,
+      resource_id     VARCHAR(80),
+      signature_valid BOOLEAN     NOT NULL DEFAULT true,
+      processed       BOOLEAN     NOT NULL DEFAULT false,
+      payload         JSONB,
+      created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_anchor_events_type ON anchor_events(event_type, created_at DESC);
+
+    CREATE TABLE IF NOT EXISTS aml_flags (
+      id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id     UUID         REFERENCES users(id) ON DELETE SET NULL,
+      rule        VARCHAR(40)  NOT NULL,
+      severity    VARCHAR(10)  NOT NULL DEFAULT 'medium' CHECK (severity IN ('low','medium','high')),
+      detail      VARCHAR(300) NOT NULL,
+      reference   VARCHAR(100),
+      status      VARCHAR(15)  NOT NULL DEFAULT 'open' CHECK (status IN ('open','reviewed','dismissed')),
+      reviewed_by UUID         REFERENCES users(id) ON DELETE SET NULL,
+      reviewed_at TIMESTAMPTZ,
+      created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_aml_flags_status ON aml_flags(status, created_at DESC);
   `
   try {
     await pool.query(migrations)
@@ -547,6 +589,8 @@ app.use('/api/wallet', walletRoutes)
 app.use('/api/driver', driverRoutes)
 app.use('/api/admin',  adminRoutes)
 app.use('/api/routes', routesCatalog)
+// Anchor webhooks — authenticated by x-anchor-signature, not a user session
+app.use('/api/anchor', require('./routes/anchor'))
 
 // ── Health check (public, no sensitive info) ─────────────────────────────────
 // version identifies the running build so Dev→Prod promotions can be verified

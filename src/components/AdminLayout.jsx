@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import faviconImg from '../assets/favicon.png'
 import {
   LayoutGrid, Users, Car, Navigation, LogOut, Menu, X, Settings, Wallet, AlertTriangle,
-  BarChart3, Map, MapPin, Tag, PackageOpen,
+  BarChart3, Map, MapPin, Tag, PackageOpen, ShieldCheck,
 } from 'lucide-react'
 
 const SB_BG = '#1a2400', SB_BORDER = 'rgba(255,255,255,0.08)' // very deep lime neon
@@ -20,6 +20,7 @@ const NAV = [
   { to: '/admin/drivers',  icon: <Car size={18}/>,           label: 'Drivers' },
   { to: '/admin/rides',    icon: <Navigation size={18}/>,    label: 'Rides' },
   { to: '/admin/payments', icon: <Wallet size={18}/>,        label: 'Payments' },
+  { to: '/admin/back-office', icon: <ShieldCheck size={18}/>, label: 'Back Office' },
   { to: '/admin/routes',   icon: <Map size={18}/>,           label: 'Routes' },
   { to: '/admin/stops',    icon: <MapPin size={18}/>,        label: 'Stops' },
   { to: '/admin/pricing',  icon: <Tag size={18}/>,           label: 'Pricing' },

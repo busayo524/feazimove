@@ -300,7 +300,7 @@ const POLICIES = [
         <UL>
           <LI><B>With Drivers:</B> Your first name, pickup point, drop-off point, and phone number are shared with your assigned Driver to complete the trip;</LI>
           <LI><B>With Co-Passengers:</B> Only your first name and pickup point are visible to other passengers in a shared ride;</LI>
-          <LI><B>With Payment Processors:</B> We share payment data with our PCI-DSS compliant payment partners (e.g., Paystack, Flutterwave) solely for transaction processing;</LI>
+          <LI><B>With Payment Processors:</B> We share payment data with our regulated banking and payment partners (e.g., Anchor, a CBN-regulated banking-as-a-service provider) solely for transaction processing and identity verification;</LI>
           <LI><B>With Service Providers:</B> We use third-party providers for cloud hosting, analytics, customer support tooling, and push notifications under strict data processing agreements;</LI>
           <LI><B>With Regulators & Law Enforcement:</B> We disclose data when required by valid court order, subpoena, or applicable law. We will notify you of such requests where legally permissible;</LI>
           <LI><B>In a Business Transfer:</B> In the event of a merger, acquisition, or asset sale, your data may be transferred to the successor entity under equivalent privacy protections;</LI>
@@ -619,7 +619,7 @@ const POLICIES = [
         <P>Some features of our Platform involve third-party services that set their own cookies. We do not control these cookies. Key third parties include:</P>
         <UL>
           <LI><B>Google Maps API:</B> For route display and location search (subject to Google's Privacy Policy);</LI>
-          <LI><B>Paystack / Flutterwave:</B> For secure payment processing (subject to their respective privacy policies);</LI>
+          <LI><B>Anchor:</B> For secure payment processing, virtual accounts, and BVN identity verification (subject to their privacy policy);</LI>
           <LI><B>Intercom / Zendesk:</B> For in-app customer support chat (subject to their privacy policies);</LI>
           <LI><B>Firebase:</B> For push notifications and app performance monitoring (Google's Privacy Policy).</LI>
         </UL>

@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/AppLayout'
 import RideTracker from '../../components/RideTracker'
 import { LocationDropdown, TimeDropdown, MORNING_SLOTS, EVENING_SLOTS } from '../../components/RouteDropdowns'
-import { MapPin, ArrowRight, Users, Navigation, Sun, Moon, X, Clock, CreditCard, Wallet as WalletIcon, Star, Car } from 'lucide-react'
+import { MapPin, ArrowRight, Users, Navigation, Sun, Moon, X, Clock, Landmark, Wallet as WalletIcon, Star, Car } from 'lucide-react'
+import TransferDetails from '../../components/TransferDetails'
 import PersonAvatar from '../../components/PersonAvatar'
 import { api } from '../../services/api'
 import { track } from '../../services/analytics'
@@ -48,7 +49,7 @@ function CandidateDriverCard({ d }) {
   )
 }
 
-function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, onClose, onBook, booking, matching, onCancel, cancelling, insufficient, walletKobo, shortfallKobo, onPayNow, payBusy, confirmingPay, onSetupWallet, candidateDrivers }){
+function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, onClose, onBook, booking, matching, onCancel, cancelling, insufficient, walletKobo, shortfallKobo, onPayNow, payBusy, confirmingPay, payPending, paySecondsLeft, onCancelPay, onSetupWallet, candidateDrivers }){
   const pc = stopCoords[pickup]
   const dc = stopCoords[dropoff]
   const token = import.meta.env.VITE_MAPBOX_TOKEN
@@ -136,16 +137,20 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, on
               </button>
               <style>{`@keyframes bookride-spin{to{transform:rotate(360deg)}}`}</style>
             </>
-          ) : confirmingPay ? (
+          ) : confirmingPay && payPending ? (
             <>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,padding:'12px 0',marginBottom:4}}>
-                <div style={{width:18,height:18,border:`2.5px solid ${OLIVE}`,borderTopColor:'transparent',borderRadius:'50%',animation:'bookride-spin 0.8s linear infinite'}}/>
-                <span style={{fontSize:13,fontWeight:700,color:OLIVE}}>Confirming your payment…</span>
-              </div>
-              <p style={{fontSize:11.5,color:MUTED,textAlign:'center',margin:0,lineHeight:1.4}}>
-                Hold on — once the payment is confirmed your booking continues automatically.
+              <TransferDetails transfer={payPending.transfer} secondsLeft={paySecondsLeft}
+                waitingLabel="Waiting for your transfer…"/>
+              <p style={{fontSize:11.5,color:MUTED,textAlign:'center',margin:'8px 0 0',lineHeight:1.4}}>
+                Your booking continues automatically the moment the transfer arrives.
               </p>
-              <style>{`@keyframes bookride-spin{to{transform:rotate(360deg)}}`}</style>
+              <button onClick={onCancelPay} style={{
+                width:'100%',padding:'10px',borderRadius:50,marginTop:8,
+                background:'none',border:`1.5px solid ${BORDER}`,color:MUTED,
+                fontWeight:700,fontSize:12.5,cursor:'pointer',fontFamily:'inherit'
+              }}>
+                Cancel this payment
+              </button>
             </>
           ) : insufficient ? (
             /* Fare not covered by wallet — two ways to pay */
@@ -160,8 +165,8 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, on
                 transition:'all 0.2s',
                 boxShadow:payBusy?'none':'0 4px 16px rgba(204,255,0,0.35)'
               }}>
-                <CreditCard size={16}/>
-                {payBusy ? 'Opening secure payment…' : `Pay ₦${Math.max(Math.ceil(shortfallKobo/100),100).toLocaleString()} now & book`}
+                <Landmark size={16}/>
+                {payBusy ? 'Preparing your payment…' : `Pay ₦${Math.max(Math.ceil(shortfallKobo/100),100).toLocaleString()} by transfer & book`}
               </button>
               <button onClick={onSetupWallet} style={{
                 width:'100%',padding:'11px',borderRadius:50,marginTop:8,
@@ -199,9 +204,10 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, on
   )
 }
 
-// A "pay now & book" round-trip through Paystack survives the redirect via
-// this sessionStorage key: { reference, booking } — restored on return so the
-// booking completes automatically once the payment is confirmed.
+// "Pay now & book" happens in-app: a temporary bank account is generated for
+// the missing amount, the rider transfers to it (often switching to their
+// bank app), and booking completes automatically once the money lands. This
+// sessionStorage key lets the flow survive the app being backgrounded.
 const RIDE_PAY_KEY = 'fm_ride_pay'
 
 export default function BookRide(){
@@ -217,8 +223,10 @@ export default function BookRide(){
   const [bookError,setBookError]=useState(null)
   const [cancelling,setCancelling]=useState(false)
   const [walletKobo,setWalletKobo]=useState(null) // live wallet balance in kobo
-  const [payBusy,setPayBusy]=useState(false)       // opening Paystack checkout
-  const [confirmingPay,setConfirmingPay]=useState(false) // back from Paystack, polling
+  const [payBusy,setPayBusy]=useState(false)       // generating the payment account
+  const [confirmingPay,setConfirmingPay]=useState(false) // transfer details shown, waiting for the money
+  const [payPending,setPayPending]=useState(null)  // { reference, transfer, expiresAt, booking }
+  const [paySecondsLeft,setPaySecondsLeft]=useState(0)
   const [candidateDrivers,setCandidateDrivers]=useState([]) // live drivers covering this route while matching
 
   // While matching, poll for drivers whose published route covers this stop —
@@ -364,8 +372,9 @@ export default function BookRide(){
   const insufficientFunds = previewFareKobo != null && walletKobo != null && walletKobo < previewFareKobo
   const shortfallKobo = insufficientFunds ? previewFareKobo - walletKobo : 0
 
-  // Option 1: pay the missing amount by card right now — the payment lands in
-  // the wallet, and on return from Paystack the booking completes automatically.
+  // Option 1: pay the missing amount by bank transfer right now — a temporary
+  // account is generated for the exact shortfall; the booking completes
+  // automatically the moment the transfer lands in the wallet.
   async function payNow(){
     if (payBusy) return
     setPayBusy(true)
@@ -374,115 +383,103 @@ export default function BookRide(){
       const amount = Math.max(Math.ceil(shortfallKobo / 100), 100) // gateway minimum ₦100
       const res = await api.post('/wallet/fund', { amount, context: 'ride' })
       track('Ride Payment Started', { amount, route_name: `${pickup}_to_${dropoff}` })
-      sessionStorage.setItem(RIDE_PAY_KEY, JSON.stringify({
+      const pending = {
         reference: res.data.reference,
-        ts: Date.now(),
+        transfer: res.data.transfer,
+        expiresAt: Date.now() + (res.data.transfer?.expiresInSeconds || 1800) * 1000,
         booking: { period, timeSlot, pickup, dropoff, service, comment },
-      }))
-      window.location.href = res.data.paymentUrl
+      }
+      sessionStorage.setItem(RIDE_PAY_KEY, JSON.stringify(pending))
+      setPayPending(pending)
+      setConfirmingPay(true)
     } catch (err) {
-      setPayBusy(false)
       setShowPreview(false)
       setBookError(err.data?.message || 'Could not start the payment. Please try again.')
+    } finally {
+      setPayBusy(false)
     }
   }
 
-  // Back from Paystack: restore the exact booking that was being paid for,
-  // poll until the payment is confirmed, then place the booking automatically.
-  // Only a genuine return from checkout (?funded=1 in the callback URL) takes
-  // over the page; a stale key from an abandoned checkout gets ONE quiet
-  // status check and is otherwise discarded — a payment that completes later
-  // still lands in the wallet via the webhook, so no money is ever lost.
+  // Countdown for the transfer panel
   useEffect(() => {
-    if (activeRideId !== null) { if (activeRideId) sessionStorage.removeItem(RIDE_PAY_KEY); return }
-    const raw = sessionStorage.getItem(RIDE_PAY_KEY)
-    if (!raw) return
-    let saved
-    try { saved = JSON.parse(raw) } catch { saved = null }
-    if (!saved?.reference || !saved?.booking) { sessionStorage.removeItem(RIDE_PAY_KEY); return }
-    if (saved.ts && Date.now() - saved.ts > 30 * 60 * 1000) { sessionStorage.removeItem(RIDE_PAY_KEY); return }
-    const b = saved.booking
+    if (!payPending) return
+    const tick = () => setPaySecondsLeft(Math.round((payPending.expiresAt - Date.now()) / 1000))
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [payPending])
 
-    const returnedFromCheckout = new URLSearchParams(window.location.search).has('funded')
-    if (returnedFromCheckout) {
-      // Drop ?funded=1&trxref=… so a refresh doesn't re-run the takeover
-      window.history.replaceState(null, '', window.location.pathname)
-    }
+  // Rider changed their mind (or wants to retry) — hide the panel and stop
+  // watching. If they DID send money, the webhook still credits their wallet.
+  function cancelPay(){
+    sessionStorage.removeItem(RIDE_PAY_KEY)
+    setPayPending(null)
+    setConfirmingPay(false)
+    setWalletKobo(null) // refetch on next preview open — a late credit may have landed
+  }
 
+  // Watch a pending ride payment: poll until the transfer lands (the webhook
+  // credits the wallet server-side), then place the booking automatically.
+  useEffect(() => {
+    if (!payPending) return
     let cancelled = false
-    let attempts = 0
-    let interval = null
+    const b = payPending.booking
 
-    const takeover = () => {
-      setService(b.service || 'pool')
-      setPeriod(b.period)
-      setTimeSlot(b.timeSlot)
-      setPickup(b.pickup)
-      setDropoff(b.dropoff)
-      setComment(b.comment || '')
-      setShowPreview(true)
-      setConfirmingPay(true)
-    }
     const fail = message => {
       sessionStorage.removeItem(RIDE_PAY_KEY)
       if (cancelled) return
+      setPayPending(null)
       setConfirmingPay(false)
       setShowPreview(false)
       setBookError(message)
     }
-    const placeBooking = async () => {
-      sessionStorage.removeItem(RIDE_PAY_KEY)
+    const interval = setInterval(async () => {
+      if (cancelled) return
       try {
-        const booked = await api.post('/rides/book-intent', b)
-        if (cancelled) return
-        setWalletKobo(null) // stale now — refetched next time the preview opens
-        setConfirmingPay(false)
-        setShowPreview(true) // may have been closed while confirming
-        setBookingId(booked.data.bookingId)
-      } catch (err) {
-        fail(err.data?.message || 'Payment received (it\'s in your wallet) but the booking could not be placed — please try booking again.')
-      }
-    }
-
-    if (returnedFromCheckout) {
-      takeover()
-      interval = setInterval(async () => {
-        if (cancelled) return
-        attempts++
-        try {
-          const res = await api.get(`/wallet/fund/status/${saved.reference}`)
-          if (res.data.status === 'completed') {
-            clearInterval(interval)
-            await placeBooking()
-          } else if (res.data.status === 'failed') {
-            clearInterval(interval)
-            fail('The payment was not completed. You have not been charged — please try again.')
-          } else if (attempts >= 40) { // ~2 minutes
-            clearInterval(interval)
-            fail('Could not confirm the payment yet. If you were charged, the amount is in your wallet — please try booking again.')
-          }
-        } catch {
-          if (attempts >= 40) {
-            clearInterval(interval)
-            fail('Could not confirm the payment yet. If you were charged, the amount is in your wallet — please try booking again.')
+        const res = await api.get(`/wallet/fund/status/${payPending.reference}`)
+        if (res.data.status === 'completed') {
+          clearInterval(interval)
+          sessionStorage.removeItem(RIDE_PAY_KEY)
+          try {
+            const booked = await api.post('/rides/book-intent', b)
+            if (cancelled) return
+            setWalletKobo(null) // stale now — refetched next time the preview opens
+            setPayPending(null)
+            setConfirmingPay(false)
+            setShowPreview(true) // may have been closed while waiting
+            setBookingId(booked.data.bookingId)
+          } catch (err) {
+            fail(err.data?.message || 'Payment received (it\'s in your wallet) but the booking could not be placed — please try booking again.')
           }
         }
-      }, 3000)
-    } else {
-      ;(async () => {
-        try {
-          const res = await api.get(`/wallet/fund/status/${saved.reference}`)
-          if (cancelled) return
-          if (res.data.status === 'completed') {
-            takeover()
-            await placeBooking()
-          } else {
-            sessionStorage.removeItem(RIDE_PAY_KEY) // abandoned checkout — forget it
-          }
-        } catch { /* couldn't check — leave the key for the next visit */ }
-      })()
-    }
-    return () => { cancelled = true; if (interval) clearInterval(interval) }
+      } catch { /* transient — keep polling */ }
+      if (Date.now() > payPending.expiresAt + 60_000) {
+        clearInterval(interval)
+        fail('The transfer was not received in time. If you did send it, the money will still land in your wallet — then just book again.')
+      }
+    }, 4000)
+    return () => { cancelled = true; clearInterval(interval) }
+  }, [payPending]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Resume after the app was backgrounded (rider switched to their bank app)
+  // or the page reloaded while a ride payment was pending.
+  useEffect(() => {
+    if (activeRideId !== null) { if (activeRideId) sessionStorage.removeItem(RIDE_PAY_KEY); return }
+    if (payPending) return
+    let saved
+    try { saved = JSON.parse(sessionStorage.getItem(RIDE_PAY_KEY) || 'null') } catch { saved = null }
+    if (!saved?.reference || !saved?.booking || !saved?.transfer) { sessionStorage.removeItem(RIDE_PAY_KEY); return }
+    if (Date.now() > (saved.expiresAt || 0) + 60_000) { sessionStorage.removeItem(RIDE_PAY_KEY); return }
+    const b = saved.booking
+    setService(b.service || 'pool')
+    setPeriod(b.period)
+    setTimeSlot(b.timeSlot)
+    setPickup(b.pickup)
+    setDropoff(b.dropoff)
+    setComment(b.comment || '')
+    setShowPreview(true)
+    setConfirmingPay(true)
+    setPayPending(saved) // the watcher effect above takes it from here
   }, [activeRideId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (activeRideId === undefined) {
@@ -507,7 +504,8 @@ export default function BookRide(){
               stopCoords={stopCoords} onClose={()=>setShowPreview(false)} onBook={handleSearch} booking={searching}
               matching={!!bookingId} onCancel={cancelBooking} cancelling={cancelling} insufficient={insufficientFunds}
               walletKobo={walletKobo} shortfallKobo={shortfallKobo} onPayNow={payNow} payBusy={payBusy}
-              confirmingPay={confirmingPay} onSetupWallet={()=>navigate('/wallet')} candidateDrivers={candidateDrivers}/>
+              confirmingPay={confirmingPay} payPending={payPending} paySecondsLeft={paySecondsLeft}
+              onCancelPay={cancelPay} onSetupWallet={()=>navigate('/wallet')} candidateDrivers={candidateDrivers}/>
           )}
 
           <div className="bookride-scroll">

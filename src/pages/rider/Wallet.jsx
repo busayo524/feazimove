@@ -1,21 +1,133 @@
-import React, { useState, useEffect, useCallback } from 'react'
-import { useLocation } from 'react-router-dom'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import AppLayout from '../../components/AppLayout'
 import { useAuth } from '../../context/AuthContext'
 import { api } from '../../services/api'
 import { track } from '../../services/analytics'
-import { ArrowDownLeft, ArrowUpRight, Plus, RefreshCw, AlertCircle } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpRight, Plus, RefreshCw, AlertCircle, Landmark } from 'lucide-react'
+import TransferDetails, { CopyBtn } from '../../components/TransferDetails'
 
 const NEON='#ccff00', OLIVE='#243800', MOSS='#4C6900'
 const CARD='#ffffff', BORDER='#e9ecef', TEXT='#1a2800', MUTED='#4C6900', BG='#f6f7f9'
 
 const QUICK = [1000, 2000, 5000, 10000]
-const POLL_INTERVAL = 2500
-const POLL_MAX = 24 // ~60s total
+const POLL_INTERVAL = 4000
+const PENDING_KEY = 'fm_pending_fund' // survives switching to the bank app
+
+/* Optional permanent funding account (requires BVN — sent to our banking
+   partner for verification, never stored by FeaziMove). */
+function ReservedAccountCard() {
+  const [account, setAccount] = useState(null)
+  const [pending, setPending] = useState(false)
+  const [showForm, setShowForm] = useState(false)
+  const [bvn, setBvn] = useState('')
+  const [dob, setDob] = useState('')
+  const [gender, setGender] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+
+  const load = useCallback(() => {
+    api.get('/wallet/funding-account')
+      .then(res => { setAccount(res.data.account); setPending(res.data.pending) })
+      .catch(() => {})
+  }, [])
+  useEffect(() => { load() }, [load])
+
+  // While Anchor finishes creating the account, refresh every few seconds
+  useEffect(() => {
+    if (!pending || account) return
+    const id = setInterval(load, 5000)
+    return () => clearInterval(id)
+  }, [pending, account, load])
+
+  async function submit(e) {
+    e.preventDefault()
+    setBusy(true); setError('')
+    try {
+      const res = await api.post('/wallet/reserved-account', { bvn, dateOfBirth: dob, gender })
+      setShowForm(false)
+      if (res.data.account) setAccount(res.data.account)
+      else { setPending(true); setNotice(res.data.message) }
+      track('Reserved Account Requested', {})
+    } catch (err) {
+      setError(err.data?.message || 'Could not create your account. Please try again.')
+    } finally { setBusy(false) }
+  }
+
+  return (
+    <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 20, marginBottom: 20, boxShadow: '0 2px 8px rgba(36,56,0,0.06)' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
+        <Landmark size={15} color={MOSS}/>
+        <p style={{ fontWeight: 700, fontSize: 13, color: MOSS, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Your Personal Funding Account</p>
+      </div>
+
+      {account ? (
+        <>
+          {[['Bank', account.bankName], ['Account Number', account.accountNumber, true], ['Account Name', account.accountName]].map(([label, value, copy]) => (
+            <div key={label} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'7px 0', borderBottom:'1px solid #f2f4ee' }}>
+              <span style={{ fontSize:12, color:MUTED }}>{label}</span>
+              <span style={{ display:'flex', alignItems:'center', gap:2, fontSize:14, fontWeight:700, color:TEXT }}>
+                {value || '—'}{copy && value && <CopyBtn text={String(value)}/>}
+              </span>
+            </div>
+          ))}
+          <p style={{ fontSize:12, color:MUTED, marginTop:10 }}>
+            Transfer any amount to this account any time — it lands in your FeaziMove wallet automatically.
+          </p>
+        </>
+      ) : pending ? (
+        <p style={{ fontSize:13, color:MOSS, display:'flex', alignItems:'center', gap:8 }}>
+          <RefreshCw size={13} style={{ animation:'spin 1.2s linear infinite' }}/>
+          {notice || 'Your account is being created — it will appear here shortly.'}
+        </p>
+      ) : showForm ? (
+        <form onSubmit={submit}>
+          <p style={{ fontSize:12.5, color:MUTED, marginBottom:12, lineHeight:1.5 }}>
+            Get a permanent account number in your own name — fund your wallet by transferring to it any time.
+            Your BVN is required by CBN rules; it is verified by our banking partner and never stored by FeaziMove.
+          </p>
+          <input value={bvn} onChange={e => setBvn(e.target.value.replace(/[^0-9]/g, '').slice(0, 11))} placeholder="BVN (11 digits)" inputMode="numeric" required
+            style={{ width:'100%', padding:'11px 14px', borderRadius:10, fontSize:14, border:`1.5px solid ${BORDER}`, marginBottom:10, boxSizing:'border-box', background:CARD, color:TEXT, fontFamily:'inherit' }}/>
+          <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) minmax(0,1fr)', gap:10, marginBottom:10 }}>
+            <input type="date" value={dob} onChange={e => setDob(e.target.value)} required
+              style={{ padding:'11px 14px', borderRadius:10, fontSize:14, border:`1.5px solid ${BORDER}`, boxSizing:'border-box', background:CARD, color:TEXT, fontFamily:'inherit' }}/>
+            <select value={gender} onChange={e => setGender(e.target.value)} required
+              style={{ padding:'11px 14px', borderRadius:10, fontSize:14, border:`1.5px solid ${BORDER}`, boxSizing:'border-box', background:CARD, color:TEXT, fontFamily:'inherit' }}>
+              <option value="">Gender…</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
+          </div>
+          {error && <p style={{ fontSize:12.5, color:'#ef4444', marginBottom:10 }}>{error}</p>}
+          <div style={{ display:'flex', gap:10 }}>
+            <button type="submit" disabled={busy || bvn.length !== 11}
+              style={{ flex:1, padding:'11px', borderRadius:10, background:(busy || bvn.length !== 11)?BORDER:NEON, color:(busy || bvn.length !== 11)?MUTED:OLIVE, border:'none', fontWeight:800, fontSize:13.5, cursor:(busy || bvn.length !== 11)?'not-allowed':'pointer', fontFamily:'inherit' }}>
+              {busy ? 'Creating…' : 'Create My Account'}
+            </button>
+            <button type="button" onClick={() => setShowForm(false)}
+              style={{ padding:'11px 16px', borderRadius:10, background:'none', border:`1.5px solid ${BORDER}`, color:MUTED, fontWeight:700, fontSize:13.5, cursor:'pointer', fontFamily:'inherit' }}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      ) : (
+        <>
+          <p style={{ fontSize:13, color:MUTED, marginBottom:12, lineHeight:1.5 }}>
+            Skip entering amounts — get a permanent account number in your name and fund your wallet by
+            simple bank transfer, any amount, any time.
+          </p>
+          <button onClick={() => setShowForm(true)}
+            style={{ padding:'10px 18px', borderRadius:10, background:'none', border:`1.5px solid ${OLIVE}`, color:OLIVE, fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+            Set Up My Account
+          </button>
+        </>
+      )}
+    </div>
+  )
+}
 
 export default function Wallet() {
   const { user } = useAuth()
-  const location = useLocation()
 
   const [balance, setBalance]           = useState(null)
   const [transactions, setTransactions] = useState([])
@@ -27,7 +139,9 @@ export default function Wallet() {
   const [fundError, setFundError] = useState('')
 
   const [successMsg, setSuccessMsg] = useState('')
-  const [polling, setPolling]       = useState(false)
+  const [pendingFund, setPendingFund] = useState(null) // { reference, transfer, expiresAt }
+  const [secondsLeft, setSecondsLeft] = useState(0)
+  const pollRef = useRef(null)
 
   const fetchWallet = useCallback(async () => {
     try {
@@ -45,42 +159,60 @@ export default function Wallet() {
     }
   }, [])
 
-  // Poll until a pending payment reference is confirmed completed
-  const pollPaymentStatus = useCallback(async (reference) => {
-    setPolling(true)
-    let attempts = 0
-    const interval = setInterval(async () => {
-      attempts++
+  const stopPolling = useCallback(() => {
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
+  }, [])
+
+  // Poll the reference until the incoming transfer is confirmed (the webhook
+  // credits it server-side; we just watch for the flip to 'completed').
+  const watchPending = useCallback((pending) => {
+    setPendingFund(pending)
+    stopPolling()
+    pollRef.current = setInterval(async () => {
       try {
-        const res = await api.get(`/wallet/fund/status/${reference}`)
+        const res = await api.get(`/wallet/fund/status/${pending.reference}`)
         if (res.data.status === 'completed') {
-          clearInterval(interval)
-          sessionStorage.removeItem('fm_pending_ref')
+          stopPolling()
+          sessionStorage.removeItem(PENDING_KEY)
+          setPendingFund(null)
           track('Wallet Topup Completed', { amount: res.data.amount })
           await fetchWallet()
           setSuccessMsg(`₦${res.data.amount.toLocaleString()} added to your wallet!`)
-          setPolling(false)
-          setTimeout(() => setSuccessMsg(''), 5000)
+          setTimeout(() => setSuccessMsg(''), 6000)
         }
       } catch { /* keep polling */ }
-      if (attempts >= POLL_MAX) {
-        clearInterval(interval)
-        setPolling(false)
-        // Refresh anyway in case the webhook was just slow
+      if (Date.now() > pending.expiresAt + 60_000) { // grace past expiry
+        stopPolling()
+        sessionStorage.removeItem(PENDING_KEY)
+        setPendingFund(null)
         fetchWallet()
       }
     }, POLL_INTERVAL)
-  }, [fetchWallet])
+  }, [fetchWallet, stopPolling])
 
-  // On mount: fetch wallet data; if returning from Flutterwave, start polling
+  // Countdown shown on the transfer panel
+  useEffect(() => {
+    if (!pendingFund) return
+    const tick = () => setSecondsLeft(Math.round((pendingFund.expiresAt - Date.now()) / 1000))
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [pendingFund])
+
+  // On mount: fetch wallet; resume a pending top-up (e.g. the rider switched
+  // to their bank app and came back)
   useEffect(() => {
     fetchWallet()
-    const params = new URLSearchParams(location.search)
-    const pendingRef = sessionStorage.getItem('fm_pending_ref')
-    if (params.get('funded') === '1' && pendingRef) {
-      pollPaymentStatus(pendingRef)
-    }
-  }, [fetchWallet, location.search, pollPaymentStatus])
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(PENDING_KEY) || 'null')
+      if (saved?.reference && saved?.transfer && Date.now() < saved.expiresAt + 60_000) {
+        watchPending(saved)
+      } else if (saved) {
+        sessionStorage.removeItem(PENDING_KEY)
+      }
+    } catch { sessionStorage.removeItem(PENDING_KEY) }
+    return stopPolling
+  }, [fetchWallet, watchPending, stopPolling])
 
   function sanitize(val) { return val.replace(/[^0-9]/g, '') }
 
@@ -93,12 +225,28 @@ export default function Wallet() {
     try {
       const res = await api.post('/wallet/fund', { amount: num })
       track('Wallet Topup Started', { amount: num })
-      sessionStorage.setItem('fm_pending_ref', res.data.reference)
-      window.location.href = res.data.paymentUrl
+      const pending = {
+        reference: res.data.reference,
+        transfer: res.data.transfer,
+        expiresAt: Date.now() + (res.data.transfer.expiresInSeconds || 1800) * 1000,
+      }
+      sessionStorage.setItem(PENDING_KEY, JSON.stringify(pending))
+      setAmount('')
+      watchPending(pending)
     } catch (err) {
-      setFundError(err.data?.message || 'Could not initiate payment. Please try again.')
+      setFundError(err.data?.message || 'Could not start the top-up. Please try again.')
+    } finally {
       setFunding(false)
     }
+  }
+
+  function cancelPending() {
+    // Hiding the panel just stops watching — if they DID pay, the webhook
+    // still credits the wallet and the balance refresh will show it.
+    stopPolling()
+    sessionStorage.removeItem(PENDING_KEY)
+    setPendingFund(null)
+    fetchWallet()
   }
 
   return (
@@ -114,8 +262,8 @@ export default function Wallet() {
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
           <p style={{ color: 'rgba(36,56,0,0.45)', fontSize: 13 }}>{user?.phone || '••• ••• ••••'}</p>
-          {polling && <span style={{ fontSize: 12, color: MOSS, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-            <RefreshCw size={11} style={{ animation: 'spin 1s linear infinite' }} /> Confirming payment…
+          {pendingFund && <span style={{ fontSize: 12, color: MOSS, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <RefreshCw size={11} style={{ animation: 'spin 1s linear infinite' }} /> Waiting for transfer…
           </span>}
         </div>
         {successMsg && (
@@ -128,24 +276,36 @@ export default function Wallet() {
       {/* Top up */}
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 20, marginBottom: 20, boxShadow: '0 2px 8px rgba(36,56,0,0.06)' }}>
         <p style={{ fontWeight: 700, fontSize: 13, color: MOSS, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>Top Up Wallet</p>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
-          {QUICK.map(q => (
-            <button key={q} onClick={() => setAmount(String(q))}
-              style={{ padding: '8px 16px', borderRadius: 50, fontSize: 13, fontWeight: 700, border: `1.5px solid ${amount === String(q) ? NEON : BORDER}`, background: amount === String(q) ? NEON : BG, color: amount === String(q) ? OLIVE : MOSS, cursor: 'pointer', transition: 'all 0.15s' }}>
-              ₦{q.toLocaleString()}
-            </button>
-          ))}
-        </div>
-        <form onSubmit={handleFund} style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <input value={amount} onChange={e => setAmount(sanitize(e.target.value))} placeholder="Enter amount (₦)" inputMode="numeric"
-            style={{ flex: 1, minWidth: 140, padding: '12px 16px', borderRadius: 10, fontSize: 15, border: `1.5px solid ${BORDER}`, outline: 'none', background: CARD, color: TEXT, fontFamily: 'inherit' }}
-            onFocus={e => e.target.style.borderColor = MOSS}
-            onBlur={e => e.target.style.borderColor = BORDER} />
-          <button type="submit" disabled={funding}
-            style={{ padding: '12px 20px', borderRadius: 10, background: funding ? BORDER : NEON, color: funding ? MUTED : OLIVE, border: 'none', fontWeight: 800, fontSize: 14, cursor: funding ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Plus size={16} />{funding ? 'Opening…' : 'Add'}
-          </button>
-        </form>
+        {!pendingFund && (
+          <>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+              {QUICK.map(q => (
+                <button key={q} onClick={() => setAmount(String(q))}
+                  style={{ padding: '8px 16px', borderRadius: 50, fontSize: 13, fontWeight: 700, border: `1.5px solid ${amount === String(q) ? NEON : BORDER}`, background: amount === String(q) ? NEON : BG, color: amount === String(q) ? OLIVE : MOSS, cursor: 'pointer', transition: 'all 0.15s' }}>
+                  ₦{q.toLocaleString()}
+                </button>
+              ))}
+            </div>
+            <form onSubmit={handleFund} style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <input value={amount} onChange={e => setAmount(sanitize(e.target.value))} placeholder="Enter amount (₦)" inputMode="numeric"
+                style={{ flex: 1, minWidth: 140, padding: '12px 16px', borderRadius: 10, fontSize: 15, border: `1.5px solid ${BORDER}`, outline: 'none', background: CARD, color: TEXT, fontFamily: 'inherit' }}
+                onFocus={e => e.target.style.borderColor = MOSS}
+                onBlur={e => e.target.style.borderColor = BORDER} />
+              <button type="submit" disabled={funding}
+                style={{ padding: '12px 20px', borderRadius: 10, background: funding ? BORDER : NEON, color: funding ? MUTED : OLIVE, border: 'none', fontWeight: 800, fontSize: 14, cursor: funding ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Plus size={16} />{funding ? 'Preparing…' : 'Add'}
+              </button>
+            </form>
+          </>
+        )}
+        {pendingFund && (
+          <div style={{ marginTop: 14 }}>
+            <TransferDetails transfer={pendingFund.transfer} secondsLeft={secondsLeft} onCancel={cancelPending}/>
+            <p style={{ fontSize:11.5, color:MUTED, marginTop:8 }}>
+              Your wallet updates automatically once the transfer arrives — usually within seconds.
+            </p>
+          </div>
+        )}
         {fundError && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: '8px 12px' }}>
             <AlertCircle size={14} style={{ color: '#ef4444', flexShrink: 0 }} />
@@ -153,6 +313,9 @@ export default function Wallet() {
           </div>
         )}
       </div>
+
+      {/* Permanent funding account (riders only need it, but harmless for all) */}
+      <ReservedAccountCard/>
 
       {/* Transactions */}
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 8px rgba(36,56,0,0.06)' }}>

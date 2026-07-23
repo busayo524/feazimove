@@ -1,46 +1,50 @@
+/**
+ * Wallet routes — balance, funding (via Anchor bank transfers), withdrawals.
+ *
+ * Funding model (Anchor, docs.getanchor.co):
+ *   • Top-up / ride payment → a temporary Pay-with-Transfer NUBAN for the
+ *     exact amount (no BVN needed). Rider transfers to it; Anchor fires
+ *     payin.received at /api/anchor/webhook which credits the wallet.
+ *   • Optional permanent reserved account (rider's own NUBAN, requires BVN):
+ *     any transfer to it auto-credits the wallet, forever.
+ * The old Paystack card flow is fully removed.
+ */
 const express  = require('express')
 const { body, param } = require('express-validator')
 const crypto   = require('crypto')
-const axios    = require('axios')
 const { query } = require('../db')
 const { requireAuth } = require('../middleware/auth')
 const { validate }    = require('../middleware/validate')
 const { consumeChallenge } = require('../services/actionChallenges')
 const analytics = require('../services/analytics')
+const anchor = require('../services/anchor')
+const { runAmlChecksOnPayout } = require('../services/walletLedger')
 
 const router = express.Router()
-
-// ── Paystack webhook — verify and credit wallet ───────────────────────────────
-// Called by Paystack, NOT by the frontend — so it MUST be registered before
-// the router-wide requireAuth below (behind it, Paystack got 401 before the
-// signature was ever checked and crediting depended entirely on the payer
-// coming back to poll /fund/status). Signature is an HMAC SHA512 of the raw
-// request body using our secret key (req.rawBody is captured in server.js).
-router.post('/webhook/paystack', async (req, res, next) => {
-  try {
-    if (!process.env.PAYSTACK_SECRET_KEY) return res.sendStatus(401)
-
-    const expectedSignature = crypto
-      .createHmac('sha512', process.env.PAYSTACK_SECRET_KEY)
-      .update(req.rawBody)
-      .digest('hex')
-
-    if (req.headers['x-paystack-signature'] !== expectedSignature) {
-      return res.status(401).json({ message: 'Invalid webhook signature.' })
-    }
-
-    const { event, data } = req.body
-    if (event !== 'charge.success') {
-      return res.sendStatus(200) // Acknowledge non-success events silently
-    }
-
-    await creditTransaction(data.reference, data.channel, data.amount, data.currency) // no-op if already credited via the verify-fallback
-
-    res.sendStatus(200)
-  } catch (err) { next(err) }
-})
-
 router.use(requireAuth)
+
+// Every user who moves money gets an Anchor Individual Customer record
+// (docs.getanchor.co/docs/create-individual-customer-1) — created lazily the
+// first time it's needed and remembered on users.anchor_customer_id.
+async function ensureAnchorCustomer(userId) {
+  const u = await query(
+    'SELECT name, email, phone, city, area, anchor_customer_id FROM users WHERE id = $1', [userId]
+  )
+  const user = u.rows[0]
+  if (!user) { const e = new Error('User not found.'); e.status = 404; throw e }
+  if (user.anchor_customer_id) return { customerId: user.anchor_customer_id, user }
+  if (!user.email) { const e = new Error('Please add an email to your profile first.'); e.status = 422; throw e }
+  const parts = (user.name || '').trim().split(/\s+/)
+  const customer = await anchor.createIndividualCustomer({
+    firstName: parts[0] || 'FeaziMove',
+    lastName: parts.slice(1).join(' ') || 'User',
+    email: user.email,
+    phoneNumber: user.phone,
+    address: { line1: user.area || 'Lagos', city: user.city || 'Lagos', state: 'Lagos' },
+  })
+  await query('UPDATE users SET anchor_customer_id = $1 WHERE id = $2', [customer.id, userId])
+  return { customerId: customer.id, user }
+}
 
 // ── Get wallet balance ────────────────────────────────────────────────────────
 router.get('/balance', async (req, res, next) => {
@@ -69,19 +73,18 @@ router.get('/transactions', async (req, res, next) => {
         amount:      Math.round(t.amount_kobo / 100),
         description: t.description,
         status:      t.status,
-        date:        new Date(t.created_at).toLocaleDateString('en-NG', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+        date:        new Date(t.created_at).toLocaleDateString('en-NG', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Lagos' }),
       })),
     })
   } catch (err) { next(err) }
 })
 
-// ── Initiate wallet top-up via Paystack ───────────────────────────────────────
-// Returns a Paystack checkout URL. When the user completes payment, Paystack
-// fires a webhook → /wallet/webhook/paystack which credits the wallet.
-// context: 'ride' = paying for a specific ride from the booking flow — the
-// redirect returns to the booking page (which auto-completes the booking)
-// instead of the wallet page. The money still lands in the wallet either way,
-// so ride settlement stays on the single wallet rail.
+// ── Initiate a top-up: temporary bank account for the exact amount ───────────
+// (docs.getanchor.co/docs/pay-with-transfer) Response tells the rider where to
+// transfer. context:'ride' keeps the ride-payment distinction for analytics
+// and history labels; the frontend polls /fund/status/:reference as before.
+const FUND_EXPIRY_SECONDS = 30 * 60
+
 router.post('/fund',
   [
     body('amount').isInt({ min: 100, max: 500000 }),
@@ -90,91 +93,53 @@ router.post('/fund',
   validate,
   async (req, res, next) => {
     try {
-      if (!process.env.PAYSTACK_SECRET_KEY) {
-        return res.status(503).json({ message: 'Payment gateway not configured. Please contact support.' })
+      if (!anchor.configured()) {
+        return res.status(503).json({ message: 'Payment system not configured. Please contact support.' })
       }
-
       const { amount } = req.body
       const isRidePayment = req.body.context === 'ride'
-      const reference = `FM-${crypto.randomUUID()}`
+      // Anchor references: unique, lowercase alphanumeric, ≤100 chars
+      const reference = `fm${crypto.randomUUID().replace(/-/g, '')}`
 
-      const userRes = await query('SELECT name, email FROM users WHERE id = $1', [req.user.id])
-      const user = userRes.rows[0]
-      if (!user.email) {
-        return res.status(422).json({ message: 'Please add an email to your profile before funding your wallet.' })
-      }
+      const { user } = await ensureAnchorCustomer(req.user.id)
 
-      // Record as pending — upgraded to 'completed' by the webhook after payment
+      // Record as pending — flipped to 'completed' by the payin.received
+      // webhook (routes/anchor.js) once the transfer lands.
       await query(
-        'INSERT INTO wallet_transactions (user_id, type, amount_kobo, description, reference, status) VALUES ($1, $2, $3, $4, $5, $6)',
-        [req.user.id, 'credit', amount * 100, isRidePayment ? 'Ride payment' : 'Wallet top-up', reference, 'pending']
+        'INSERT INTO wallet_transactions (user_id, type, amount_kobo, description, reference, status, gateway) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+        [req.user.id, 'credit', amount * 100, isRidePayment ? 'Ride payment' : 'Wallet top-up', reference, 'pending', 'anchor']
       )
 
-      const appBase = (process.env.APP_URL || '').replace(/\/+$/, '')
-      const callbackUrl = isRidePayment && appBase
-        ? `${appBase}/book?funded=1`
-        : process.env.PAYSTACK_CALLBACK_URL
+      const pwt = await anchor.createPayWithTransfer({
+        reference,
+        fullName: user.name,
+        email: user.email,
+        amountKobo: amount * 100,
+        expirySeconds: FUND_EXPIRY_SECONDS,
+        metadata: { feazimoveUserId: req.user.id, context: isRidePayment ? 'ride' : 'wallet' },
+      })
 
-      // Initialize Paystack transaction — Paystack also takes amount in kobo
-      const psRes = await axios.post(
-        'https://api.paystack.co/transaction/initialize',
-        {
-          email: user.email,
-          amount: amount * 100,
-          reference,
-          callback_url: callbackUrl,
+      const a = pwt?.attributes || {}
+      const details = a.accountDetails || a.virtualAccountDetails || a
+      res.json({
+        reference,
+        transfer: {
+          bankName: details.bankName || details.bank?.name || '9 Payment Service Bank',
+          accountNumber: details.accountNumber,
+          accountName: details.accountName || `FeaziMove / ${user.name}`,
+          amount, // naira — must be transferred EXACTLY
+          expiresInSeconds: FUND_EXPIRY_SECONDS,
         },
-        { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
-      )
-
-      res.json({ paymentUrl: psRes.data.data.authorization_url, reference })
+      })
     } catch (err) {
-      if (err.response) {
-        return res.status(502).json({ message: 'Payment gateway error. Please try again.' })
-      }
+      if (err.status) return res.status(err.status).json({ message: err.message })
       next(err)
     }
   }
 )
 
-// Credits a still-pending transaction and marks it completed. Used by both
-// the webhook and the verify-fallback below — guarded by the 'pending' check
-// in the UPDATE so a transaction is never credited twice. When Paystack
-// reports what was actually paid, require it to cover the pending amount in
-// NGN — defense in depth against partial-payment/currency surprises.
-async function creditTransaction(reference, paymentMethod, paidKobo, currency) {
-  if (currency != null && currency !== 'NGN') return false
-  const txRes = await query(
-    `UPDATE wallet_transactions SET status = 'completed'
-      WHERE reference = $1 AND status = 'pending'
-        AND ($2::bigint IS NULL OR amount_kobo <= $2::bigint)
-      RETURNING user_id, amount_kobo`,
-    [reference, paidKobo ?? null]
-  )
-  if (!txRes.rows[0]) return false // already credited, unknown reference, or short-paid
-  const { user_id, amount_kobo } = txRes.rows[0]
-  const balRes = await query(
-    'UPDATE users SET wallet_balance = wallet_balance + $1 WHERE id = $2 RETURNING wallet_balance',
-    [amount_kobo, user_id]
-  )
-
-  // Server-side revenue event — fires only on verified payment confirmation
-  analytics.track(user_id, 'fund_wallet', {
-    amount_loaded: Math.round(amount_kobo / 100),
-    payment_gateway: 'Paystack',
-    payment_method: paymentMethod || 'unknown',
-  })
-  analytics.setProfile(user_id, {
-    current_wallet_balance: Math.round(balRes.rows[0].wallet_balance / 100),
-  })
-  return true
-}
-
-// ── Poll payment status — frontend calls this after redirect back from Paystack ──
-// Webhooks can't reach a local dev server, so as a fallback this also asks
-// Paystack directly whether the transaction succeeded, and credits it here
-// if so. In production the webhook will usually win the race, but this keeps
-// the flow working without a public webhook URL.
+// ── Poll payment status — frontend calls this while showing the transfer UI ──
+// Credit happens in the webhook; this simply reports the row's state.
 router.get('/fund/status/:reference',
   [param('reference').trim().notEmpty()],
   validate,
@@ -185,26 +150,103 @@ router.get('/fund/status/:reference',
         [req.params.reference, req.user.id]
       )
       if (!result.rows[0]) return res.status(404).json({ message: 'Transaction not found.' })
-      let t = result.rows[0]
-
-      if (t.status === 'pending' && process.env.PAYSTACK_SECRET_KEY) {
-        try {
-          const verifyRes = await axios.get(
-            `https://api.paystack.co/transaction/verify/${encodeURIComponent(req.params.reference)}`,
-            { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
-          )
-          if (verifyRes.data.data.status === 'success') {
-            const ok = await creditTransaction(req.params.reference, verifyRes.data.data.channel,
-              verifyRes.data.data.amount, verifyRes.data.data.currency)
-            if (ok) t = { ...t, status: 'completed' }
-          }
-        } catch { /* Paystack unreachable or not yet recorded — keep polling */ }
-      }
-
+      const t = result.rows[0]
       res.json({ status: t.status, amount: Math.round(t.amount_kobo / 100) })
     } catch (err) { next(err) }
   }
 )
+
+// ── Permanent reserved account (optional — requires BVN) ─────────────────────
+// (docs.getanchor.co/docs/reserved-accounts) The BVN is passed straight
+// through to Anchor for CBN-mandated KYC and is NEVER stored by FeaziMove.
+router.post('/reserved-account',
+  [
+    body('bvn').trim().isLength({ min: 11, max: 11 }).isNumeric().withMessage('BVN must be 11 digits.'),
+    body('dateOfBirth').isISO8601().withMessage('Date of birth is required (YYYY-MM-DD).'),
+    body('gender').isIn(['male', 'female']).withMessage('Select a gender.'),
+  ],
+  validate,
+  async (req, res, next) => {
+    try {
+      if (!anchor.configured()) {
+        return res.status(503).json({ message: 'Payment system not configured. Please contact support.' })
+      }
+      const existing = await query(
+        'SELECT reserved_account_number, anchor_reserved_account_id FROM users WHERE id = $1', [req.user.id]
+      )
+      if (existing.rows[0]?.reserved_account_number) {
+        return res.status(409).json({ message: 'You already have a personal funding account.' })
+      }
+
+      const u = await query('SELECT name, email, anchor_customer_id FROM users WHERE id = $1', [req.user.id])
+      const user = u.rows[0]
+      if (!user.email) return res.status(422).json({ message: 'Please add an email to your profile first.' })
+      const parts = (user.name || '').trim().split(/\s+/)
+
+      let acct
+      if (user.anchor_customer_id) {
+        acct = await anchor.createReservedAccount({ customerId: user.anchor_customer_id })
+      } else {
+        // Single-request path: Anchor creates customer + account together
+        acct = await anchor.createReservedAccount({
+          firstName: parts[0] || 'FeaziMove',
+          lastName: parts.slice(1).join(' ') || 'User',
+          email: user.email,
+          bvn: req.body.bvn,
+        })
+        const customerId = acct?.relationships?.customer?.data?.id
+        if (customerId) await query('UPDATE users SET anchor_customer_id = $1 WHERE id = $2', [customerId, req.user.id])
+      }
+
+      // Some responses carry the account details synchronously; otherwise the
+      // reservedAccount.created webhook fills them in moments later.
+      const a = acct?.attributes || {}
+      const details = a.accountDetails || a
+      await query(
+        `UPDATE users SET anchor_reserved_account_id = COALESCE($1, anchor_reserved_account_id),
+            reserved_account_number = COALESCE($2, reserved_account_number),
+            reserved_account_bank   = COALESCE($3, reserved_account_bank),
+            reserved_account_name   = COALESCE($4, reserved_account_name)
+          WHERE id = $5`,
+        [acct?.id || null, details.accountNumber || null,
+         details.bankName || details.bank?.name || null, details.accountName || null, req.user.id]
+      )
+      analytics.track(req.user.id, 'reserved_account_requested', {})
+      res.status(202).json({
+        message: details.accountNumber
+          ? 'Your personal funding account is ready.'
+          : 'Your personal funding account is being created — it will appear here shortly.',
+        account: details.accountNumber ? {
+          bankName: details.bankName || details.bank?.name,
+          accountNumber: details.accountNumber,
+          accountName: details.accountName,
+        } : null,
+      })
+    } catch (err) {
+      if (err.status) return res.status(err.status).json({ message: err.message })
+      next(err)
+    }
+  }
+)
+
+// The rider's permanent funding account, if they've created one.
+router.get('/funding-account', async (req, res, next) => {
+  try {
+    const r = await query(
+      'SELECT reserved_account_number, reserved_account_bank, reserved_account_name, anchor_reserved_account_id FROM users WHERE id = $1',
+      [req.user.id]
+    )
+    const u = r.rows[0]
+    res.json({
+      account: u?.reserved_account_number ? {
+        bankName: u.reserved_account_bank,
+        accountNumber: u.reserved_account_number,
+        accountName: u.reserved_account_name,
+      } : null,
+      pending: !!(u?.anchor_reserved_account_id && !u?.reserved_account_number),
+    })
+  } catch (err) { next(err) }
+})
 
 // ── Request a payout (driver) — escrows the balance until admin approves ─────
 router.post('/withdraw',
@@ -238,6 +280,10 @@ router.post('/withdraw',
         [req.user.id, 'debit', amountKobo, 'Withdrawal request — pending approval']
       )
 
+      // AML: fast in-out (fund → immediate withdrawal) gets flagged for the
+      // back office; the payout itself still goes through admin review.
+      runAmlChecksOnPayout(req.user.id, amountKobo).catch(() => {})
+
       res.status(201).json({ message: 'Withdrawal requested — pending admin approval.', payoutId: result.rows[0].id })
     } catch (err) { next(err) }
   }
@@ -247,14 +293,14 @@ router.post('/withdraw',
 router.get('/payouts', async (req, res, next) => {
   try {
     const result = await query(
-      `SELECT id, amount_kobo, status, requested_at, processed_at
+      `SELECT id, amount_kobo, status, requested_at, processed_at, failure_reason
        FROM payout_requests WHERE driver_id = $1 ORDER BY requested_at DESC LIMIT 20`,
       [req.user.id]
     )
     res.json({
       payouts: result.rows.map(p => ({
         id: p.id, amount: Math.round(p.amount_kobo / 100), status: p.status,
-        requestedAt: p.requested_at, processedAt: p.processed_at,
+        requestedAt: p.requested_at, processedAt: p.processed_at, failureReason: p.failure_reason || null,
       })),
     })
   } catch (err) { next(err) }
