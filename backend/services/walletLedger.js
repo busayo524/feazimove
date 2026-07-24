@@ -138,22 +138,26 @@ async function refundPayout(driverId, amountKobo, reference, description = 'Payo
 
 // Escrow a withdrawal atomically: the conditional decrement makes overdraw
 // impossible even under concurrent requests, and the payout + ledger rows
-// commit together with it. Returns { payoutId } or null if balance short.
-async function escrowWithdrawal(driverId, amountKobo) {
+// commit together with it. amount_kobo is the GROSS escrowed amount (refunds
+// return it in full); fee_kobo is retained by the platform on completion and
+// the NIP transfer sends the difference. Returns { payoutId } or null.
+async function escrowWithdrawal(userId, amountKobo, feeKobo = 0) {
   return tx(async client => {
     const dec = await client.query(
       `UPDATE users SET wallet_balance = wallet_balance - $1
         WHERE id = $2 AND wallet_balance >= $1 RETURNING wallet_balance`,
-      [amountKobo, driverId]
+      [amountKobo, userId]
     )
     if (!dec.rows[0]) return null // insufficient — nothing changed
     const payout = await client.query(
-      'INSERT INTO payout_requests (driver_id, amount_kobo) VALUES ($1, $2) RETURNING id, requested_at',
-      [driverId, amountKobo]
+      'INSERT INTO payout_requests (driver_id, amount_kobo, fee_kobo) VALUES ($1, $2, $3) RETURNING id, requested_at',
+      [userId, amountKobo, feeKobo]
     )
     await client.query(
       'INSERT INTO wallet_transactions (user_id, type, amount_kobo, description, reference) VALUES ($1, $2, $3, $4, $5)',
-      [driverId, 'debit', amountKobo, 'Withdrawal request — pending approval', `payout-${payout.rows[0].id}`]
+      [userId, 'debit', amountKobo,
+       feeKobo > 0 ? 'Withdrawal request (incl. 5% processing fee) — pending approval' : 'Withdrawal request — pending approval',
+       `payout-${payout.rows[0].id}`]
     )
     return { payoutId: payout.rows[0].id, requestedAt: payout.rows[0].requested_at }
   })

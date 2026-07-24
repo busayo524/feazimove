@@ -809,7 +809,6 @@ router.post('/change-password',
 router.patch('/profile',
   requireAuth,
   [
-    body('name').optional().trim().isLength({ min: 2, max: 100 }).escape(),
     body('bankName').optional({ nullable: true }).trim().isLength({ max: 100 }).escape(),
     body('bankAccountNumber').optional({ nullable: true }).trim()
       .custom(v => v === '' || /^\d{10}$/.test(v)).withMessage('Account number must be 10 digits.'),
@@ -817,9 +816,11 @@ router.patch('/profile',
   validate,
   async (req, res, next) => {
     try {
+      // The registered NAME is immutable by the user — it is the KYC anchor
+      // for BVN verification and first-party payout matching. Any `name` in
+      // the body is deliberately ignored; corrections go through an admin.
       const sets = [], vals = []
       const add = (col, val) => { vals.push(val); sets.push(`${col} = $${vals.length}`) }
-      if (req.body.name !== undefined) add('name', req.body.name)
       if (req.body.bankName !== undefined) add('bank_name', req.body.bankName || null)
       if (req.body.bankAccountNumber !== undefined) add('bank_account_number', req.body.bankAccountNumber || null)
       if (!sets.length) return res.json({ message: 'Nothing to update.' })

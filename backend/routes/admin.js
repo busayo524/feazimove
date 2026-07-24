@@ -711,7 +711,7 @@ router.get('/payouts', async (req, res, next) => {
   try {
     const statusFilter = req.query.status || 'pending'
     const result = await query(
-      `SELECT p.id, p.amount_kobo, p.status, p.requested_at, p.processed_at,
+      `SELECT p.id, p.amount_kobo, p.fee_kobo, p.status, p.requested_at, p.processed_at,
               p.anchor_transfer_id, p.failure_reason,
               u.id AS driver_id, u.name AS driver_name, u.bank_name, u.bank_account_number
        FROM payout_requests p
@@ -722,7 +722,8 @@ router.get('/payouts', async (req, res, next) => {
     )
     res.json({
       payouts: result.rows.map(p => ({
-        id: p.id, amount: fmt(p.amount_kobo), status: p.status,
+        id: p.id, amount: fmt(p.amount_kobo), fee: fmt(p.fee_kobo || 0),
+        net: fmt(Number(p.amount_kobo) - Number(p.fee_kobo || 0)), status: p.status,
         driverId: p.driver_id, driverName: p.driver_name,
         bankName: p.bank_name, accountNumber: p.bank_account_number,
         transferId: p.anchor_transfer_id, failureReason: p.failure_reason,
@@ -744,7 +745,7 @@ router.post('/payouts/:id/approve',
   async (req, res, next) => {
     try {
       const p = await query(
-        `SELECT p.id, p.amount_kobo, p.status, u.id AS driver_id, u.name AS driver_name,
+        `SELECT p.id, p.amount_kobo, p.fee_kobo, p.status, u.id AS driver_id, u.name AS driver_name,
                 u.bank_name, u.bank_account_number, u.anchor_counterparty_id
            FROM payout_requests p JOIN users u ON p.driver_id = u.id
           WHERE p.id = $1`,
@@ -771,9 +772,29 @@ router.post('/payouts/:id/approve',
         return res.status(422).json({ message: `${payout.driver_name} has no valid 10-digit account number on their profile.` })
       }
 
+      // First-party payouts ONLY: the bank account holder's name must match
+      // the user's registered (immutable) name. Names are compared as tokens
+      // since banks order surnames differently ("OLOWOOKERE BUSAYO A").
+      const nameMatchesAccount = (registered, bankAccountName) => {
+        const toks = s => (s || '').toUpperCase().replace(/[^A-Z\s]/g, ' ').split(/\s+/).filter(t => t.length >= 2)
+        const need = toks(registered).slice(0, 2)           // first + last as registered
+        const have = new Set(toks(bankAccountName))
+        return need.length > 0 && have.size > 0 && need.every(t => have.has(t))
+      }
+      const blockThirdParty = bankAccountName => res.status(422).json({
+        message: `Payout blocked: the bank account is named "${bankAccountName}" but the registered account holder is "${payout.driver_name}". Payouts can only go to an account in the user's own name — ask them to update their bank details.`,
+      })
+
       // Resolve the driver's bank to its NIP code, then verify + save the
       // beneficiary once — reused for every future payout to this driver.
       let counterpartyId = payout.anchor_counterparty_id
+      if (counterpartyId) {
+        // Re-check the saved beneficiary's name on EVERY approval (fail
+        // closed: if we can't confirm whose account it is, no money moves).
+        const cp = await anchor.getCounterparty(counterpartyId)
+        const cpName = cp?.attributes?.accountName || ''
+        if (!nameMatchesAccount(payout.driver_name, cpName)) return blockThirdParty(cpName || 'unknown')
+      }
       if (!counterpartyId) {
         let bankCode = req.body.bankCode
         if (!bankCode) {
@@ -794,7 +815,8 @@ router.post('/payouts/:id/approve',
           bankCode = matches[0].attributes.nipCode
         }
         const verified = await anchor.verifyAccount(bankCode, payout.bank_account_number)
-        const accountName = verified?.attributes?.accountName || payout.driver_name
+        const accountName = verified?.attributes?.accountName || ''
+        if (!nameMatchesAccount(payout.driver_name, accountName)) return blockThirdParty(accountName || 'unknown')
         const cp = await anchor.createCounterparty({ bankCode, accountName, accountNumber: payout.bank_account_number })
         counterpartyId = cp.id
         await query('UPDATE users SET anchor_counterparty_id = $1 WHERE id = $2', [counterpartyId, payout.driver_id])
@@ -810,11 +832,14 @@ router.post('/payouts/:id/approve',
       )
       if (!approved.rows[0]) return res.status(409).json({ message: 'This request is no longer pending.' })
 
+      // Riders pay a 5% processing fee — the transfer sends the NET amount;
+      // the fee stays with the platform (refunds always return the gross).
+      const netKobo = Number(payout.amount_kobo) - Number(payout.fee_kobo || 0)
       try {
         const accountId = await anchor.getMasterAccountId()
         const transfer = await anchor.initiateNipTransfer({
-          amountKobo: Number(payout.amount_kobo),
-          reason: 'FeaziMove driver payout',
+          amountKobo: netKobo,
+          reason: 'FeaziMove payout',
           reference,
           accountId,
           counterpartyId,

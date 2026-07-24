@@ -211,6 +211,16 @@ async function verifyAccount(bankCode, accountNumber) {
   } catch (err) { throw anchorError(err, 'Could not verify that bank account.') }
 }
 
+// Fetch a saved beneficiary — used to re-check the account holder's name on
+// every payout approval (first-party enforcement), including when the
+// counterparty was created long ago.
+async function getCounterparty(counterpartyId) {
+  try {
+    const res = await http.get(`/api/v1/counterparties/${encodeURIComponent(counterpartyId)}`)
+    return res.data.data
+  } catch (err) { throw anchorError(err, 'Could not fetch the beneficiary.') }
+}
+
 // "A counterparty is simply the person or entity you want to transfer money
 // to — a saved beneficiary." Re-creating an existing one returns the original.
 async function createCounterparty({ bankCode, accountName, accountNumber }) {
@@ -318,6 +328,7 @@ module.exports = {
   listBanks,
   verifyAccount,
   createCounterparty,
+  getCounterparty,
   initiateNipTransfer,
   verifyTransfer,
   findTransferByReference,

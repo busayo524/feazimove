@@ -382,12 +382,14 @@ export default function Profile(){
     setSaving(true);setSaveError('')
     try{
       // Persist server-side so it shows up in the admin panel, then mirror locally
+      // Name is intentionally NOT sent — the registered name is locked for
+      // KYC (BVN verification + first-party payout matching) and the server
+      // ignores it anyway.
       await api.patch('/auth/profile',{
-        name:`${form.firstName} ${form.lastName}`.trim(),
         bankName:(form.bankName||'').trim(),
         bankAccountNumber:acct,
       })
-      updateUser({...form,bankAccountNumber:acct})
+      updateUser({bankName:(form.bankName||'').trim(),bankAccountNumber:acct})
       setSaved(true);setEditing(false);setTimeout(()=>setSaved(false),2500)
     }catch{setSaveError('Could not save changes. Please try again.')}
     finally{setSaving(false)}
@@ -437,11 +439,14 @@ export default function Profile(){
             {[['First Name','firstName'],['Last Name','lastName']].map(([label,key])=>(
               <div key={key}>
                 <label style={{display:'block',fontSize:13,fontWeight:600,color:TEXT,marginBottom:6}}>{label}</label>
-                <input value={form[key]} onChange={e=>set(key,e.target.value)}
-                  style={{width:'100%',padding:'12px 14px',borderRadius:10,fontSize:15,border:`1.5px solid ${BORDER}`,outline:'none',color:TEXT,background:CARD,fontFamily:'inherit',boxSizing:'border-box'}}
-                  onFocus={e=>e.target.style.borderColor=MOSS} onBlur={e=>e.target.style.borderColor=BORDER}/>
+                <input value={form[key]} readOnly disabled
+                  style={{width:'100%',padding:'12px 14px',borderRadius:10,fontSize:15,border:`1.5px solid ${BORDER}`,outline:'none',color:MUTED,background:BG,fontFamily:'inherit',boxSizing:'border-box',cursor:'not-allowed'}}/>
               </div>
             ))}
+            <p style={{fontSize:12,color:MUTED,marginTop:-4,lineHeight:1.45}}>
+              🔒 Your name is locked to match your identity verification and can't be edited.
+              Withdrawals are only paid to a bank account in this name. Contact support if it needs correcting.
+            </p>
             <p style={{fontWeight:700,fontSize:13,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em',marginTop:6}}>Bank Account Details</p>
             <div>
               <label style={{display:'block',fontSize:13,fontWeight:600,color:TEXT,marginBottom:6}}>Bank Name</label>

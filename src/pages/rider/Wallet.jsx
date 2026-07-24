@@ -3,8 +3,9 @@ import AppLayout from '../../components/AppLayout'
 import { useAuth } from '../../context/AuthContext'
 import { api } from '../../services/api'
 import { track } from '../../services/analytics'
-import { ArrowDownLeft, ArrowUpRight, Plus, RefreshCw, AlertCircle, Landmark, ShieldCheck } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpRight, Plus, RefreshCw, AlertCircle, Landmark, ShieldCheck, X } from 'lucide-react'
 import TransferDetails, { CopyBtn } from '../../components/TransferDetails'
+import StepUpModal from '../../components/StepUpModal'
 
 const NEON='#ccff00', OLIVE='#243800', MOSS='#4C6900'
 const CARD='#ffffff', BORDER='#e9ecef', TEXT='#1a2800', MUTED='#4C6900', BG='#f6f7f9'
@@ -153,6 +154,32 @@ export default function Wallet() {
   // top-up card shows a gentle reminder linking into the setup form below.
   const [bvnSetUp, setBvnSetUp] = useState(null) // null = unknown yet
   const [setupFormOpen, setSetupFormOpen] = useState(false)
+
+  // Withdrawals (BVN-verified riders): mirrors the driver flow — emailed
+  // code → escrow → admin approval — with a 5% processing fee for riders.
+  const [showWithdraw, setShowWithdraw] = useState(false)
+  const [withdrawAmount, setWithdrawAmount] = useState('')
+  const [withdrawError, setWithdrawError] = useState('')
+  const [withdrawSuccess, setWithdrawSuccess] = useState('')
+  const [showWithdrawStepUp, setShowWithdrawStepUp] = useState(false)
+  const wAmount = parseInt(withdrawAmount, 10) || 0
+  const wNetKobo = wAmount * 100 - Math.round(wAmount * 100 * 0.05)
+
+  function startWithdraw(e) {
+    e.preventDefault()
+    if (!wAmount || wAmount < 100) { setWithdrawError('Minimum withdrawal is ₦100.'); return }
+    if (wAmount > (balance || 0)) { setWithdrawError('Amount exceeds your available balance.'); return }
+    setWithdrawError('')
+    setShowWithdrawStepUp(true)
+  }
+  async function verifyAndWithdraw(challengeId, code) {
+    const res = await api.post('/wallet/withdraw', { amount: wAmount, challengeId, code })
+    setShowWithdrawStepUp(false)
+    setWithdrawSuccess(res.data?.message || 'Withdrawal requested — pending admin approval.')
+    setWithdrawAmount('')
+    await fetchWallet()
+    setTimeout(() => { setShowWithdraw(false); setWithdrawSuccess('') }, 3000)
+  }
   function goToSetup() {
     setSetupFormOpen(true)
     setTimeout(() => document.getElementById('funding-account-card')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60)
@@ -300,6 +327,13 @@ export default function Wallet() {
             ✓ {successMsg}
           </div>
         )}
+        {bvnSetUp === true && (
+          <button onClick={() => { setWithdrawError(''); setShowWithdraw(true) }}
+            style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 10,
+              background: OLIVE, color: '#fff', border: 'none', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+            <ArrowUpRight size={15}/> Withdraw
+          </button>
+        )}
       </div>
 
       {/* Top up */}
@@ -391,6 +425,51 @@ export default function Wallet() {
           )
         })}
       </div>
+
+      {/* Withdrawal popup — mirrors the driver flow, with the rider fee caveat */}
+      {showWithdraw && (
+        <div style={{ position:'fixed', inset:0, zIndex:1000, background:'rgba(0,0,0,0.4)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
+          onClick={() => setShowWithdraw(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background:CARD, borderRadius:16, padding:24, maxWidth:340, width:'100%', boxShadow:'0 12px 32px rgba(0,0,0,0.2)' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+              <p style={{ fontWeight:800, fontSize:16, color:TEXT }}>Withdraw to Bank</p>
+              <button onClick={() => setShowWithdraw(false)} style={{ background:'none', border:'none', cursor:'pointer', color:MUTED }}><X size={18}/></button>
+            </div>
+            <p style={{ fontSize:13, color:MUTED, marginBottom:4 }}>
+              Available: ₦{(balance ?? 0).toLocaleString()}. Requests are reviewed by an admin and paid
+              only to a bank account in your registered name.
+            </p>
+            <p style={{ fontSize:12, color:MUTED, marginBottom:14 }}>A 5% processing fee applies to withdrawals.</p>
+            <form onSubmit={startWithdraw}>
+              <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Amount (₦)</label>
+              <input type="number" min="100" max={balance ?? 0} value={withdrawAmount}
+                onChange={e => setWithdrawAmount(e.target.value)} required placeholder={`Up to ${(balance ?? 0).toLocaleString()}`}
+                style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, marginBottom:6, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT, caretColor:TEXT }}/>
+              {wAmount >= 100 && (
+                <p style={{ fontSize:12.5, color:MOSS, fontWeight:700, marginBottom:10 }}>
+                  You'll receive ₦{(wNetKobo / 100).toLocaleString(undefined, { maximumFractionDigits: 2 })} after the 5% fee.
+                </p>
+              )}
+              {withdrawError && <p style={{ fontSize:13, color:'#ef4444', marginBottom:10 }}>{withdrawError}</p>}
+              {withdrawSuccess && <p style={{ fontSize:13, color:'#15803d', marginBottom:10 }}>{withdrawSuccess}</p>}
+              <div style={{ display:'flex', gap:10 }}>
+                <button type="button" onClick={() => setShowWithdraw(false)}
+                  style={{ flex:1, padding:'11px', borderRadius:10, border:`1.5px solid ${BORDER}`, background:CARD, color:TEXT, fontWeight:700, fontSize:14, cursor:'pointer', fontFamily:'inherit' }}>
+                  Cancel
+                </button>
+                <button type="submit"
+                  style={{ flex:1, padding:'11px', borderRadius:10, border:'none', background:NEON, color:OLIVE, fontWeight:700, fontSize:14, cursor:'pointer', fontFamily:'inherit' }}>
+                  Withdraw
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {showWithdrawStepUp && (
+        <StepUpModal purpose="wallet_withdraw" actionText="withdraw from your wallet"
+          onVerify={verifyAndWithdraw} onClose={() => setShowWithdrawStepUp(false)}/>
+      )}
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </AppLayout>

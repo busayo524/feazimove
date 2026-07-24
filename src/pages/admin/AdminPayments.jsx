@@ -73,10 +73,16 @@ export default function AdminPayments() {
               <div key={p.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 18px', borderTop:`1px solid ${BORDER}` }}>
                 <div>
                   <Link to={`/admin/drivers/${p.driverId}`} style={{ color:TEXT, fontWeight:700, fontSize:14, textDecoration:'none' }}>{p.driverName}</Link>
-                  <p style={{ fontSize:12, color:MUTED }}>Requested {new Date(p.requestedAt).toLocaleString()}</p>
+                  <p style={{ fontSize:12, color:MUTED }}>Requested {new Date(p.requestedAt).toLocaleString('en-NG', { timeZone:'Africa/Lagos' })}</p>
+                  {p.bankName && <p style={{ fontSize:11.5, color:MUTED }}>{p.bankName} · {p.accountNumber}</p>}
                 </div>
                 <div style={{ display:'flex', alignItems:'center', gap:14 }}>
-                  <p style={{ fontWeight:800, fontSize:15, color:TEXT }}>₦{p.amount.toLocaleString()}</p>
+                  <div style={{ textAlign:'right' }}>
+                    <p style={{ fontWeight:800, fontSize:15, color:TEXT }}>₦{p.amount.toLocaleString()}</p>
+                    {p.fee > 0 && (
+                      <p style={{ fontSize:11, color:MUTED }}>less 5% fee → pays ₦{p.net.toLocaleString()}</p>
+                    )}
+                  </div>
                   <button onClick={() => handlePayout(p.id, 'approve')} disabled={busyId===p.id}
                     style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 12px', borderRadius:8, border:'none', background:NEON, color:OLIVE, fontWeight:700, fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
                     <CheckCircle2 size={13}/> Approve

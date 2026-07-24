@@ -42,6 +42,14 @@ async function requireAuth(req, res, next) {
     }
     // Only attach minimum needed — never full DB row
     req.user = { id: decoded.id, role: decoded.role }
+    // Activity heartbeat (throttled to one write/minute, fire-and-forget) —
+    // feeds the honest online-status sweep: a "online" driver whose app has
+    // gone silent gets flipped offline instead of haunting the admin panel.
+    query(
+      `UPDATE users SET last_seen_at = NOW()
+        WHERE id = $1 AND (last_seen_at IS NULL OR last_seen_at < NOW() - INTERVAL '60 seconds')`,
+      [decoded.id]
+    ).catch(() => {})
     next()
   } catch (err) { next(err) }
 }

@@ -447,6 +447,16 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS anchor_counterparty_id   VARCHAR(60);
 -- NUBAN may exist without it (auto-created behind a payment) — the flag is
 -- what drives the "set up your wallet" funnel in the UI.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS bvn_submitted BOOLEAN NOT NULL DEFAULT false;
+-- Activity heartbeat (touched by requireAuth, ≤1 write/min) — drives the
+-- honest online-status sweep. Backfilled to NOW() once so pre-existing
+-- "online" rows age out naturally instead of flipping instantly on deploy.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ;
+UPDATE users SET last_seen_at = NOW() WHERE last_seen_at IS NULL AND is_online = true;
+
+-- Rider withdrawals carry a 5% processing fee (drivers withdraw free):
+-- amount_kobo stays the GROSS escrowed amount (refunds return it in full);
+-- the NIP transfer sends amount_kobo - fee_kobo.
+ALTER TABLE payout_requests ADD COLUMN IF NOT EXISTS fee_kobo BIGINT NOT NULL DEFAULT 0;
 
 -- Which gateway a wallet transaction travelled through ('paystack' legacy,
 -- 'anchor' new, NULL for internal ledger moves like fares/earnings).

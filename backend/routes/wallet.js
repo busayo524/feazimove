@@ -358,7 +358,11 @@ router.get('/funding-account', async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-// ── Request a payout (driver) — escrows the balance until admin approves ─────
+// ── Request a payout — escrows the balance until admin approves ──────────────
+// Drivers withdraw free. Riders may withdraw once they've completed the BVN
+// wallet-setup step (funds are never locked up), with a 5% processing fee
+// deducted from the amount. All payouts are first-party only — enforced at
+// admin approval by matching the bank account name to the registered name.
 router.post('/withdraw',
   [
     body('amount').isInt({ min: 100 }),
@@ -370,6 +374,14 @@ router.post('/withdraw',
     try {
       const amountKobo = req.body.amount * 100
 
+      const u = await query('SELECT can_drive, bvn_submitted FROM users WHERE id = $1', [req.user.id])
+      const isDriver = !!u.rows[0]?.can_drive
+      if (!isDriver && !u.rows[0]?.bvn_submitted) {
+        return res.status(403).json({ message: 'Complete your wallet setup with your BVN to enable withdrawals.' })
+      }
+      const feeKobo = isDriver ? 0 : Math.round(amountKobo * 0.05)
+      const netKobo = amountKobo - feeKobo
+
       // Step-up 2FA — money leaving the wallet requires an emailed code, so a
       // stolen access token alone can't drain funds.
       try { await consumeChallenge(req.user.id, 'wallet_withdraw', req.body.challengeId, req.body.code) }
@@ -378,14 +390,21 @@ router.post('/withdraw',
       // Atomic escrow: conditional decrement (overdraw impossible even under
       // concurrent requests) + payout row + reconciliation-linked ledger row,
       // all in one transaction (services/walletLedger.js).
-      const escrow = await escrowWithdrawal(req.user.id, amountKobo)
+      const escrow = await escrowWithdrawal(req.user.id, amountKobo, feeKobo)
       if (!escrow) return res.status(402).json({ message: 'Insufficient wallet balance.' })
 
       // AML: fast in-out (fund → immediate withdrawal) gets flagged for the
       // back office; the payout itself still goes through admin review.
       runAmlChecksOnPayout(req.user.id, amountKobo).catch(() => {})
 
-      res.status(201).json({ message: 'Withdrawal requested — pending admin approval.', payoutId: escrow.payoutId })
+      res.status(201).json({
+        message: feeKobo > 0
+          ? `Withdrawal requested — you'll receive ₦${Math.round(netKobo / 100).toLocaleString()} after the 5% processing fee, pending admin approval.`
+          : 'Withdrawal requested — pending admin approval.',
+        payoutId: escrow.payoutId,
+        feeKobo,
+        netKobo,
+      })
     } catch (err) { next(err) }
   }
 )
