@@ -158,11 +158,16 @@ router.post('/webhook', async (req, res) => {
   const signature = req.headers['x-anchor-signature']
   const valid = anchor.verifyWebhookSignature(req.rawBody, signature)
   if (!valid) {
-    // Log invalid attempts too — they're part of the monitoring story.
+    // Log invalid attempts too — they're part of the monitoring story. The
+    // raw body (truncated) is kept so a systematic mismatch can be diagnosed
+    // offline instead of guessed at.
     query(
       `INSERT INTO anchor_events (event_type, signature_valid, processed, payload)
        VALUES ('invalid.signature', false, false, $1) `,
-      [JSON.stringify({ headers: { 'x-anchor-signature': signature || null } })]
+      [JSON.stringify({
+        headers: { 'x-anchor-signature': signature || null },
+        rawBody: req.rawBody ? req.rawBody.toString('utf8').slice(0, 8000) : null,
+      })]
     ).catch(() => {})
     return res.status(401).json({ message: 'Invalid webhook signature.' })
   }

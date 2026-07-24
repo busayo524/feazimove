@@ -245,16 +245,31 @@ async function getMasterAccountId() {
 }
 
 // ── Webhook signature (docs.getanchor.co/docs/verify-webhooks) ───────────────
-// x-anchor-signature = Base64( hex( HMAC_SHA1(rawBody, webhookToken) ) )
+// Documented: x-anchor-signature = Base64( hex( HMAC_SHA1(rawBody, token) ) )
+// In practice implementations differ on two axes — token treated as text vs
+// hex-decoded bytes, and digest base64'd raw vs as a hex string — so accept
+// any variant of the same scheme and report which one matched. Returns the
+// variant name (truthy) or false.
 function verifyWebhookSignature(rawBody, signature) {
   const token = process.env.ANCHOR_WEBHOOK_TOKEN
   if (!token || !signature || !rawBody) return false
-  const expected = Buffer.from(
-    crypto.createHmac('sha1', token).update(rawBody).digest('hex')
-  ).toString('base64')
-  try {
-    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))
-  } catch { return false }
+  const keys = [['text', token]]
+  if (/^[0-9a-fA-F]+$/.test(token) && token.length % 2 === 0) {
+    keys.push(['hexkey', Buffer.from(token, 'hex')])
+  }
+  const candidates = []
+  for (const [keyName, key] of keys) {
+    const mac = k => crypto.createHmac('sha1', k).update(rawBody)
+    candidates.push([`${keyName}+hex64`, Buffer.from(mac(key).digest('hex')).toString('base64')])
+    candidates.push([`${keyName}+raw64`, mac(key).digest('base64')])
+  }
+  for (const [name, expected] of candidates) {
+    try {
+      if (signature.length === expected.length &&
+          crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return name
+    } catch { /* length mismatch — try next */ }
+  }
+  return false
 }
 
 module.exports = {
