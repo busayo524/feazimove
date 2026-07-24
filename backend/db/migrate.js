@@ -419,6 +419,10 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS reserved_account_number  VARCHAR(20);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS reserved_account_bank    VARCHAR(80);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS reserved_account_name    VARCHAR(120);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS anchor_counterparty_id   VARCHAR(60);
+-- True only after the user completes the BVN wallet-setup step. A funding
+-- NUBAN may exist without it (auto-created behind a payment) — the flag is
+-- what drives the "set up your wallet" funnel in the UI.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS bvn_submitted BOOLEAN NOT NULL DEFAULT false;
 
 -- Which gateway a wallet transaction travelled through ('paystack' legacy,
 -- 'anchor' new, NULL for internal ledger moves like fares/earnings).

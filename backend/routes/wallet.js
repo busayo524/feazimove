@@ -224,10 +224,27 @@ router.post('/reserved-account',
         return res.status(503).json({ message: 'Payment system not configured. Please contact support.' })
       }
       const existing = await query(
-        'SELECT reserved_account_number, anchor_reserved_account_id FROM users WHERE id = $1', [req.user.id]
+        'SELECT reserved_account_number, reserved_account_bank, reserved_account_name, anchor_reserved_account_id, bvn_submitted FROM users WHERE id = $1',
+        [req.user.id]
       )
-      if (existing.rows[0]?.reserved_account_number) {
+      if (existing.rows[0]?.reserved_account_number && existing.rows[0]?.bvn_submitted) {
         return res.status(409).json({ message: 'You already have a personal funding account.' })
+      }
+      // An account number may already exist WITHOUT setup (auto-created behind
+      // a pay-by-transfer) — completing setup just claims it: record the BVN
+      // step and present the account as theirs. When Anchor enables production
+      // reserved accounts, this upgrades to a real named account.
+      if (existing.rows[0]?.reserved_account_number) {
+        await query('UPDATE users SET bvn_submitted = true WHERE id = $1', [req.user.id])
+        analytics.track(req.user.id, 'reserved_account_requested', {})
+        return res.status(202).json({
+          message: 'Your personal funding account is ready.',
+          account: {
+            bankName: existing.rows[0].reserved_account_bank,
+            accountNumber: existing.rows[0].reserved_account_number,
+            accountName: existing.rows[0].reserved_account_name,
+          },
+        })
       }
 
       const u = await query('SELECT name, email, anchor_customer_id FROM users WHERE id = $1', [req.user.id])
@@ -255,6 +272,7 @@ router.post('/reserved-account',
         // Virtual NUBAN plays the same role (account in our org's name).
         if (!anchor.isUnavailable(err)) throw err
         const details = await ensureFundingNuban(req.user.id)
+        await query('UPDATE users SET bvn_submitted = true WHERE id = $1', [req.user.id])
         return res.status(202).json({
           message: 'Your personal funding account is ready.',
           account: details,
@@ -292,21 +310,25 @@ router.post('/reserved-account',
   }
 )
 
-// The rider's permanent funding account, if they've created one.
+// The rider's permanent funding account — presented as "set up" only after
+// they've completed the BVN step, even if an account number technically
+// exists behind their payments already (the setup funnel matters).
 router.get('/funding-account', async (req, res, next) => {
   try {
     const r = await query(
-      'SELECT reserved_account_number, reserved_account_bank, reserved_account_name, anchor_reserved_account_id FROM users WHERE id = $1',
+      'SELECT reserved_account_number, reserved_account_bank, reserved_account_name, anchor_reserved_account_id, bvn_submitted FROM users WHERE id = $1',
       [req.user.id]
     )
     const u = r.rows[0]
+    const setUp = !!u?.bvn_submitted
     res.json({
-      account: u?.reserved_account_number ? {
+      bvnSetUp: setUp,
+      account: setUp && u?.reserved_account_number ? {
         bankName: u.reserved_account_bank,
         accountNumber: u.reserved_account_number,
         accountName: u.reserved_account_name,
       } : null,
-      pending: !!(u?.anchor_reserved_account_id && !u?.reserved_account_number),
+      pending: setUp && !!(u?.anchor_reserved_account_id && !u?.reserved_account_number),
     })
   } catch (err) { next(err) }
 })

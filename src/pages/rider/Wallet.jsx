@@ -3,7 +3,7 @@ import AppLayout from '../../components/AppLayout'
 import { useAuth } from '../../context/AuthContext'
 import { api } from '../../services/api'
 import { track } from '../../services/analytics'
-import { ArrowDownLeft, ArrowUpRight, Plus, RefreshCw, AlertCircle, Landmark } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpRight, Plus, RefreshCw, AlertCircle, Landmark, ShieldCheck } from 'lucide-react'
 import TransferDetails, { CopyBtn } from '../../components/TransferDetails'
 
 const NEON='#ccff00', OLIVE='#243800', MOSS='#4C6900'
@@ -14,11 +14,12 @@ const POLL_INTERVAL = 4000
 const PENDING_KEY = 'fm_pending_fund' // survives switching to the bank app
 
 /* Optional permanent funding account (requires BVN — sent to our banking
-   partner for verification, never stored by FeaziMove). */
-function ReservedAccountCard() {
+   partner for verification, never stored by FeaziMove). Presented as "set up"
+   only after the BVN step — the setup funnel is the product goal, so an
+   auto-created payment account never short-circuits it. */
+function ReservedAccountCard({ showForm, setShowForm, onStatus }) {
   const [account, setAccount] = useState(null)
   const [pending, setPending] = useState(false)
-  const [showForm, setShowForm] = useState(false)
   const [bvn, setBvn] = useState('')
   const [dob, setDob] = useState('')
   const [gender, setGender] = useState('')
@@ -28,9 +29,13 @@ function ReservedAccountCard() {
 
   const load = useCallback(() => {
     api.get('/wallet/funding-account')
-      .then(res => { setAccount(res.data.account); setPending(res.data.pending) })
+      .then(res => {
+        setAccount(res.data.account)
+        setPending(res.data.pending)
+        onStatus?.(!!res.data.bvnSetUp)
+      })
       .catch(() => {})
-  }, [])
+  }, [onStatus])
   useEffect(() => { load() }, [load])
 
   // While Anchor finishes creating the account, refresh every few seconds
@@ -48,6 +53,7 @@ function ReservedAccountCard() {
       setShowForm(false)
       if (res.data.account) setAccount(res.data.account)
       else { setPending(true); setNotice(res.data.message) }
+      onStatus?.(true)
       track('Reserved Account Requested', {})
     } catch (err) {
       setError(err.data?.message || 'Could not create your account. Please try again.')
@@ -55,7 +61,7 @@ function ReservedAccountCard() {
   }
 
   return (
-    <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 20, marginBottom: 20, boxShadow: '0 2px 8px rgba(36,56,0,0.06)' }}>
+    <div id="funding-account-card" style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 20, marginBottom: 20, boxShadow: '0 2px 8px rgba(36,56,0,0.06)' }}>
       <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
         <Landmark size={15} color={MOSS}/>
         <p style={{ fontWeight: 700, fontSize: 13, color: MOSS, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Your Personal Funding Account</p>
@@ -142,6 +148,15 @@ export default function Wallet() {
   const [pendingFund, setPendingFund] = useState(null) // { reference, transfer, expiresAt }
   const [secondsLeft, setSecondsLeft] = useState(0)
   const pollRef = useRef(null)
+
+  // Wallet-setup funnel: false until the user completes the BVN step; the
+  // top-up card shows a gentle reminder linking into the setup form below.
+  const [bvnSetUp, setBvnSetUp] = useState(null) // null = unknown yet
+  const [setupFormOpen, setSetupFormOpen] = useState(false)
+  function goToSetup() {
+    setSetupFormOpen(true)
+    setTimeout(() => document.getElementById('funding-account-card')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60)
+  }
 
   const fetchWallet = useCallback(async () => {
     try {
@@ -319,6 +334,18 @@ export default function Wallet() {
             </p>
           </div>
         )}
+        {bvnSetUp === false && !pendingFund && (
+          <button onClick={goToSetup}
+            style={{ display:'flex', alignItems:'flex-start', gap:8, width:'100%', textAlign:'left', marginTop:12,
+              background:'#f7ffe0', border:'1px solid rgba(36,56,0,0.12)', borderRadius:10, padding:'10px 12px',
+              cursor:'pointer', fontFamily:'inherit' }}>
+            <ShieldCheck size={15} color={MOSS} style={{ flexShrink:0, marginTop:1 }}/>
+            <span style={{ fontSize:12.5, color:TEXT, lineHeight:1.45 }}>
+              Finish setting up your wallet — verify with your BVN to get a permanent funding account in
+              your name. <span style={{ fontWeight:800, color:OLIVE, textDecoration:'underline' }}>Set up now</span>
+            </span>
+          </button>
+        )}
         {fundError && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: '8px 12px' }}>
             <AlertCircle size={14} style={{ color: '#ef4444', flexShrink: 0 }} />
@@ -328,7 +355,7 @@ export default function Wallet() {
       </div>
 
       {/* Permanent funding account (riders only need it, but harmless for all) */}
-      <ReservedAccountCard/>
+      <ReservedAccountCard showForm={setupFormOpen} setShowForm={setSetupFormOpen} onStatus={setBvnSetUp}/>
 
       {/* Transactions */}
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 8px rgba(36,56,0,0.06)' }}>

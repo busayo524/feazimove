@@ -473,6 +473,7 @@ async function runMigrations() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS reserved_account_bank    VARCHAR(80);
     ALTER TABLE users ADD COLUMN IF NOT EXISTS reserved_account_name    VARCHAR(120);
     ALTER TABLE users ADD COLUMN IF NOT EXISTS anchor_counterparty_id   VARCHAR(60);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS bvn_submitted BOOLEAN NOT NULL DEFAULT false;
 
     ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS gateway VARCHAR(12);
 
