@@ -43,13 +43,16 @@ async function creditTransaction(reference, { paymentMethod, paidKobo, currency,
 // the payment can cover; the poller watching that reference then completes.
 async function creditPendingForUser(userId, paidKobo, currency) {
   if (currency != null && currency !== 'NGN') return false
+  // Prefer the pending top-up whose amount EXACTLY matches the payment (the
+  // rider almost always transfers the exact figure shown), falling back to
+  // the oldest one the payment can cover.
   const txRes = await query(
     `UPDATE wallet_transactions SET status = 'completed'
       WHERE id = (
         SELECT id FROM wallet_transactions
          WHERE user_id = $1 AND type = 'credit' AND status = 'pending'
            AND gateway = 'anchor' AND amount_kobo <= $2
-         ORDER BY created_at ASC LIMIT 1
+         ORDER BY (amount_kobo = $2) DESC, created_at ASC LIMIT 1
       ) RETURNING amount_kobo`,
     [userId, paidKobo]
   )
