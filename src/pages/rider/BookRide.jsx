@@ -455,7 +455,17 @@ export default function BookRide(){
             fail(err.data?.message || 'Payment received (it\'s in your wallet) but the booking could not be placed — please try booking again.')
           }
         }
-      } catch { /* transient — keep polling */ }
+      } catch (err) {
+        // 404 = this reference doesn't belong to the logged-in account —
+        // drop the takeover silently instead of showing foreign details.
+        if (err?.status === 404) {
+          clearInterval(interval)
+          sessionStorage.removeItem(RIDE_PAY_KEY)
+          if (!cancelled) { setPayPending(null); setConfirmingPay(false) }
+          return
+        }
+        /* transient — keep polling */
+      }
       if (Date.now() > payPending.expiresAt + 60_000) {
         clearInterval(interval)
         fail('The transfer was not received in time. If you did send it, the money will still land in your wallet — then just book again.')

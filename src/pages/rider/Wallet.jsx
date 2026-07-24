@@ -180,7 +180,18 @@ export default function Wallet() {
           setSuccessMsg(`₦${res.data.amount.toLocaleString()} added to your wallet!`)
           setTimeout(() => setSuccessMsg(''), 6000)
         }
-      } catch { /* keep polling */ }
+      } catch (err) {
+        // 404 = the server says this reference is not this account's (or no
+        // longer exists) — kill the panel immediately rather than display
+        // payment details that don't belong to the logged-in user.
+        if (err?.status === 404) {
+          stopPolling()
+          sessionStorage.removeItem(PENDING_KEY)
+          setPendingFund(null)
+          return
+        }
+        /* transient error — keep polling */
+      }
       if (Date.now() > pending.expiresAt + 60_000) { // grace past expiry
         stopPolling()
         sessionStorage.removeItem(PENDING_KEY)
