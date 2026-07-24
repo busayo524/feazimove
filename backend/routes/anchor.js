@@ -31,45 +31,58 @@ async function userByCustomerId(customerId) {
 }
 
 // ── Money arrived (payin.received / payment.received) ────────────────────────
+// Two payload dialects exist: REAL deliveries (observed Jul 24, 2026) inline
+// the payment under event.attributes.payment; the docs describe a JSON:API
+// relationships/included shape. Parse both, inline first.
 async function handlePayin(payload) {
   const event = payload.data
-  const payin = included(payload, 'PayIn') || included(payload, 'Payment')
-  const payinId = payin?.id || relId(event, 'payIn') || relId(event, 'payment')
-  // With "Included" delivery the amount/reference are embedded; fall back to
-  // fetching the PayIn if a basic-mode payload arrives.
-  let attrs = payin?.attributes
-  let rels = payin?.relationships
-  if (!attrs && payinId && anchor.configured()) {
-    try { const full = await anchor.getPayin(payinId); attrs = full?.attributes; rels = full?.relationships } catch { /* fall through */ }
-  }
-  if (!attrs) return false
+  let payinId, amountKobo, currency, ourRef, nubanId, nubanNumber, customerId
 
-  const amountKobo = Number(attrs.amount)
-  const currency = attrs.currency || 'NGN'
+  const inline = event?.attributes?.payment
+  if (inline) {
+    payinId = inline.paymentId || event.id
+    amountKobo = Number(inline.amount)
+    currency = inline.currency || 'NGN'
+    ourRef = inline.paymentReference || null // Anchor's own UUID for simulated transfers; ours for /pay flows
+    nubanId = inline.virtualNuban?.accountId || null
+    nubanNumber = inline.virtualNuban?.accountNumber || null
+    customerId = inline.customer?.customerId || inline.customer?.id || null
+  } else {
+    const payin = included(payload, 'PayIn') || included(payload, 'Payment')
+    payinId = payin?.id || relId(event, 'payIn') || relId(event, 'payment')
+    let attrs = payin?.attributes
+    let rels = payin?.relationships
+    if (!attrs && payinId && anchor.configured()) {
+      try { const full = await anchor.getPayin(payinId); attrs = full?.attributes; rels = full?.relationships } catch { /* fall through */ }
+    }
+    if (!attrs) return false
+    amountKobo = Number(attrs.amount)
+    currency = attrs.currency || 'NGN'
+    ourRef = attrs.reference || attrs.paymentReference || null
+    nubanId = relId({ relationships: rels }, 'virtualNuban') || relId(event, 'virtualNuban')
+    customerId = relId({ relationships: rels }, 'customer') || relId(event, 'customer')
+  }
+
   if (!amountKobo || amountKobo <= 0) return false
-  // Our own reference (set when creating a Pay-with-Transfer) comes back on
-  // the payin — that's the pending wallet_transactions row to credit.
-  const ourRef = attrs.reference || attrs.paymentReference || null
+
+  // 1. A /pay flow echoes OUR reference — credit that exact pending row.
   if (ourRef) {
     const credited = await creditTransaction(ourRef, { paidKobo: amountKobo, currency, gateway: 'anchor', paymentMethod: 'bank_transfer' })
     if (credited) return true
   }
-  // No reference matched → identify the recipient another way:
-  //   1. virtualNuban relationship (sandbox / permanent funding accounts) —
-  //      the NUBAN id is stored on the user row when we create it.
-  //   2. customer relationship (production reserved accounts).
-  // Then settle their oldest pending top-up this payment covers, or if no
-  // top-up is waiting, credit the full amount directly (idempotent per payin).
+  // 2. Identify the recipient by their funding NUBAN (id or account number),
+  //    else by Anchor customer id; settle their oldest coverable pending
+  //    top-up, else credit the full amount directly (idempotent per payin).
   let userId = null
-  const nubanId = relId({ relationships: rels }, 'virtualNuban') || relId(event, 'virtualNuban')
   if (nubanId) {
     const r = await query('SELECT id FROM users WHERE anchor_reserved_account_id = $1', [nubanId])
     userId = r.rows[0]?.id || null
   }
-  if (!userId) {
-    const customerId = relId({ relationships: rels }, 'customer') || relId(event, 'customer')
-    userId = await userByCustomerId(customerId)
+  if (!userId && nubanNumber) {
+    const r = await query('SELECT id FROM users WHERE reserved_account_number = $1', [nubanNumber])
+    userId = r.rows[0]?.id || null
   }
+  if (!userId) userId = await userByCustomerId(customerId)
   if (userId && currency === 'NGN') {
     if (await creditPendingForUser(userId, amountKobo, currency)) return true
     return directCredit(userId, amountKobo, `anchor-payin-${payinId}`, 'Wallet top-up — bank transfer')
