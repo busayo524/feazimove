@@ -83,3 +83,49 @@ trail). Supporting posture points:
 
 **Before the call:** complete Anchor's onboarding questionnaire + SLA (their step ②), and have
 the KYB documents for the business entity ready — approval typically 24h–a few days after.
+
+---
+
+# THE CALL SCRIPT (per Anchor's confirmed agenda, Jul 24)
+
+Anchor's four agenda items: ① Anchor API implementation ② onboarding/KYC ③ risk controls
+incl. AML ④ back-office dashboard. Full presenter script:
+
+**Prep (30 min before):** latest zip on Dev AppSail (/health check); tabs open & logged in:
+rider (₦0 wallet), driver, admin on Back Office, Anchor dashboard on Developers→Events,
+Postman collection, Simulate Transfer form with API key pasted. Dry-run the day before.
+
+**Open (2 min):** FeaziMove = scheduled commuter carpooling, Lagos; wallet-prepaid riders,
+per-ride driver earnings, platform fee. Anchor = complete banking rails.
+
+**① APIs (5 min):** one client module, x-anchor-key, JSON:API, env-switchable base URL.
+Products: Customers; Virtual NUBANs now + Pay-with-Transfer/Reserved Accounts coded for
+production; banks/verify/counterparty/NIP transfers; payments API for verification;
+signature-verified webhook. LIVE: Postman GET /api/v1/banks (200) → POST /wallet/fund →
+show real NUBAN → Anchor API Logs. Principles: idempotency (one credit per payment id,
+any delivery path) + verification (unverifiable webhooks confirmed via authenticated pull).
+
+**② Onboarding/KYC (5 min):** Tier 1 frictionless (auto customer registration at first
+payment); Tier 2 BVN for named account (CBN), BVN pass-through NEVER stored; persistent
+wallet-setup funnel. LIVE: rider nudge → BVN form → Back Office Customers tab (IDs + KYC
+status from customer.identification.* webhooks).
+
+**③ Risk/AML (7 min, centerpiece):** In: verify → exact match → atomic ledger → idempotent.
+Out (3 gates): emailed 6-digit code → human admin approval on EVERY payout → Anchor-verified
+beneficiary. AML rules (env-tunable): ≥₦200k single; >5/24h; ≥₦1m/7d; fund-then-withdraw
+≤60min. LIVE: simulate ₦250,000 → flag appears → Mark Reviewed (named admin + timestamp).
+Closing line: "A human approves every naira that leaves the platform."
+
+**④ Back office (5 min):** overview cards → Transaction Monitor (every event stored before
+processing, incl. forgery attempts) side-by-side with Anchor's Events tab ("your log, our
+log") → Customers registry → Payments (payout lifecycle at true settlement times) → CSV
+export (status/gateway/reference) → three-way reconciliation by reference.
+
+**Closing asks:** 1) enable payment program (Pay-with-Transfer + Reserved Accounts) for
+production — code auto-upgrades; 2) sandbox organic-delivery signing bug (resends verify,
+organic don't; mitigated by API pullback) — confirm production signing; 3) fees absorbed
+into platform fee; timeline KYB → live keys.
+
+**Q&A:** webhook down → Anchor retries + idempotent + pullback + monitor visibility.
+Double credit → per-payment-id claim. BVN storage → none, pass-through. 'Invalid' rows in
+monitor → the signing bug; pullback-verified, 'processed' is the proof.
