@@ -664,11 +664,25 @@ router.get('/payments', async (req, res, next) => {
       query("SELECT COALESCE(SUM(wallet_balance),0) s FROM users"),
       query("SELECT COALESCE(SUM(amount_kobo),0) s FROM payout_requests WHERE status = 'pending'"),
       query("SELECT COALESCE(SUM(fare_kobo),0) s FROM rides WHERE status = 'completed'"),
+      // The feed must show BOTH money moments of a payout: the wallet-side
+      // escrow (wallet_transactions, at request time) AND the bank-side
+      // transfer (payout_requests.processed_at, when the NIP actually moved
+      // money) — reconciliation needs each event at its true timestamp.
       query(
-        `SELECT t.id, t.type, t.amount_kobo, t.description, t.created_at, u.name AS user_name
-         FROM wallet_transactions t
-         JOIN users u ON t.user_id = u.id
-         ORDER BY t.created_at DESC LIMIT 25`
+        `SELECT * FROM (
+           SELECT t.id::text AS id, t.type, t.amount_kobo, t.description, t.created_at, u.name AS user_name
+             FROM wallet_transactions t
+             JOIN users u ON t.user_id = u.id
+           UNION ALL
+           SELECT 'payout-' || p.id AS id, 'debit' AS type, p.amount_kobo,
+                  CASE p.status WHEN 'completed' THEN 'Driver payout sent — bank transfer'
+                                WHEN 'processing' THEN 'Driver payout — transfer in progress'
+                                ELSE 'Driver payout — ' || p.status END AS description,
+                  p.processed_at AS created_at, u.name AS user_name
+             FROM payout_requests p
+             JOIN users u ON p.driver_id = u.id
+            WHERE p.processed_at IS NOT NULL AND p.status IN ('processing', 'completed', 'failed')
+         ) feed ORDER BY created_at DESC LIMIT 25`
       ),
       query('SELECT platform_fee_percent FROM platform_settings WHERE id = 1'),
     ])

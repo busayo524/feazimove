@@ -360,9 +360,11 @@ router.post('/withdraw',
         'INSERT INTO payout_requests (driver_id, amount_kobo) VALUES ($1, $2) RETURNING id, requested_at',
         [req.user.id, amountKobo]
       )
+      // reference ties the wallet-side escrow to the payout record (and via
+      // that to Anchor's transfer) — the spine of payout reconciliation
       await query(
-        'INSERT INTO wallet_transactions (user_id, type, amount_kobo, description) VALUES ($1, $2, $3, $4)',
-        [req.user.id, 'debit', amountKobo, 'Withdrawal request — pending approval']
+        'INSERT INTO wallet_transactions (user_id, type, amount_kobo, description, reference) VALUES ($1, $2, $3, $4, $5)',
+        [req.user.id, 'debit', amountKobo, 'Withdrawal request — pending approval', `payout-${result.rows[0].id}`]
       )
 
       // AML: fast in-out (fund → immediate withdrawal) gets flagged for the

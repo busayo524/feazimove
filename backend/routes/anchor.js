@@ -125,11 +125,25 @@ async function handleTransfer(payload, outcome) {
   if (!transferId && !reference) return false
 
   if (outcome === 'successful') {
-    await query(
+    const done = await query(
       `UPDATE payout_requests SET status = 'completed', processed_at = COALESCE(processed_at, NOW())
-        WHERE (anchor_transfer_id = $1 OR anchor_reference = $2) AND status IN ('approved', 'processing')`,
+        WHERE (anchor_transfer_id = $1 OR anchor_reference = $2) AND status IN ('approved', 'processing')
+        RETURNING id, driver_id, amount_kobo`,
       [transferId || null, reference || null]
     )
+    for (const p of done.rows) {
+      // Settle the driver-facing ledger wording + drop a feed-visible marker
+      // at the ACTUAL money-out moment for reconciliation.
+      await query(
+        `UPDATE wallet_transactions SET description = 'Withdrawal — paid out to bank' WHERE reference = $1`,
+        [`payout-${p.id}`]
+      ).catch(() => {})
+      await query(
+        `INSERT INTO activity_log (actor_id, action, category, detail)
+         VALUES (NULL, 'Payout Completed', 'payment', $1)`,
+        [`₦${Math.round(Number(p.amount_kobo) / 100).toLocaleString()} NIP transfer settled`]
+      ).catch(() => {})
+    }
     return true
   }
   // failed | reversed → mark failed and return the escrowed money to the
