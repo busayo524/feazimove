@@ -171,6 +171,45 @@ router.post('/webhook', async (req, res) => {
   const signature = req.headers['x-anchor-signature']
   const valid = anchor.verifyWebhookSignature(req.rawBody, signature)
   if (!valid) {
+    // Anchor's ORGANIC deliveries are signed with a key that does not match
+    // the webhook's stored token, while their RESEND path signs correctly
+    // (provider quirk observed Jul 24 2026). Fallback: never trust the
+    // unsigned body — but if it CLAIMS a payment, pull that payment from
+    // Anchor's API with our key and process the AUTHENTICATED response.
+    // Idempotent per payment id, so delivery retries can never double-credit.
+    try {
+      let parsed = null
+      try { parsed = JSON.parse(req.rawBody.toString('utf8')) } catch { /* not JSON */ }
+      const claimedType = parsed?.data?.type
+      const claimedPayId = parsed?.data?.attributes?.payment?.paymentId
+      if (claimedType === 'payment.received' && claimedPayId && anchor.configured()) {
+        const pulled = await anchor.getPayment(claimedPayId)
+        const amountKobo = Number(pulled?.attributes?.amount)
+        const currency = pulled?.attributes?.currency || 'NGN'
+        const nubanId = pulled?.relationships?.virtualNuban?.data?.id || null
+        if (amountKobo > 0 && currency === 'NGN') {
+          const claim = await query(
+            `INSERT INTO anchor_events (event_id, event_type, resource_id, signature_valid, payload)
+             VALUES ($1, 'payment.received', $2, false, $3) ON CONFLICT (event_id) DO NOTHING RETURNING id`,
+            [`pull-${claimedPayId}`, claimedPayId, JSON.stringify({ verifiedByApiPull: true, payment: pulled })]
+          )
+          if (claim.rows[0]) {
+            let userId = null
+            if (nubanId) {
+              const r = await query('SELECT id FROM users WHERE anchor_reserved_account_id = $1', [nubanId])
+              userId = r.rows[0]?.id || null
+            }
+            let ok = false
+            if (userId) {
+              ok = await creditPendingForUser(userId, amountKobo, currency)
+              if (!ok) ok = await directCredit(userId, amountKobo, `anchor-payin-${claimedPayId}`, 'Wallet top-up — bank transfer')
+            }
+            if (ok) await query('UPDATE anchor_events SET processed = true WHERE id = $1', [claim.rows[0].id])
+          }
+          return res.sendStatus(200)
+        }
+      }
+    } catch { /* pull failed — fall through to plain rejection */ }
     // Log invalid attempts too — they're part of the monitoring story. The
     // raw body (truncated) is kept so a systematic mismatch can be diagnosed
     // offline instead of guessed at.

@@ -139,6 +139,15 @@ async function getPayin(payinId) {
   } catch (err) { throw anchorError(err, 'Could not fetch payment details.') }
 }
 
+// Authenticated pull of a virtual-NUBAN payment — the trusted source for the
+// verify-by-pullback path when a webhook delivery's signature can't be checked.
+async function getPayment(paymentId) {
+  try {
+    const res = await http.get(`/api/v1/payments/${encodeURIComponent(paymentId)}`)
+    return res.data.data
+  } catch (err) { throw anchorError(err, 'Could not fetch the payment.') }
+}
+
 // The /pay/* product (Pay-with-Transfer, Reserved Accounts) only exists for
 // organizations approved for the payment program IN PRODUCTION — sandbox
 // returns "Endpoint not found". Callers use this to fall back to Virtual
@@ -280,6 +289,7 @@ module.exports = {
   createVirtualNuban,
   isUnavailable,
   getPayin,
+  getPayment,
   listBanks,
   verifyAccount,
   createCounterparty,
