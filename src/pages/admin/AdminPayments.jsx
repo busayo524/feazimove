@@ -80,7 +80,7 @@ export default function AdminPayments() {
                   <div style={{ textAlign:'right' }}>
                     <p style={{ fontWeight:800, fontSize:15, color:TEXT }}>₦{p.amount.toLocaleString()}</p>
                     {p.fee > 0 && (
-                      <p style={{ fontSize:11, color:MUTED }}>less 5% fee → pays ₦{p.net.toLocaleString()}</p>
+                      <p style={{ fontSize:11, color:MUTED }}>less ₦{p.fee.toLocaleString()} fees → pays ₦{p.net.toLocaleString()}</p>
                     )}
                   </div>
                   <button onClick={() => handlePayout(p.id, 'approve')} disabled={busyId===p.id}

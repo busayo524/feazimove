@@ -141,7 +141,7 @@ async function refundPayout(driverId, amountKobo, reference, description = 'Payo
 // commit together with it. amount_kobo is the GROSS escrowed amount (refunds
 // return it in full); fee_kobo is retained by the platform on completion and
 // the NIP transfer sends the difference. Returns { payoutId } or null.
-async function escrowWithdrawal(userId, amountKobo, feeKobo = 0) {
+async function escrowWithdrawal(userId, amountKobo, feeKobo = 0, feeLabel = '') {
   return tx(async client => {
     const dec = await client.query(
       `UPDATE users SET wallet_balance = wallet_balance - $1
@@ -156,7 +156,7 @@ async function escrowWithdrawal(userId, amountKobo, feeKobo = 0) {
     await client.query(
       'INSERT INTO wallet_transactions (user_id, type, amount_kobo, description, reference) VALUES ($1, $2, $3, $4, $5)',
       [userId, 'debit', amountKobo,
-       feeKobo > 0 ? 'Withdrawal request (incl. 5% processing fee) — pending approval' : 'Withdrawal request — pending approval',
+       feeKobo > 0 && feeLabel ? `Withdrawal request (${feeLabel}) — pending approval` : 'Withdrawal request — pending approval',
        `payout-${payout.rows[0].id}`]
     )
     return { payoutId: payout.rows[0].id, requestedAt: payout.rows[0].requested_at }

@@ -249,12 +249,20 @@ export default function Earnings(){
           onClick={() => setShowWithdraw(false)}>
           <div onClick={e => e.stopPropagation()} style={{ background:CARD, borderRadius:16, padding:24, maxWidth:340, width:'100%', boxShadow:'0 12px 32px rgba(0,0,0,0.2)' }}>
             <p style={{ fontWeight:800, fontSize:16, color:TEXT, marginBottom:6 }}>Request Withdrawal</p>
-            <p style={{ fontSize:13, color:MUTED, marginBottom:16 }}>Available: {fmt(walletBalance)}. Requests are reviewed by an admin before payout.</p>
+            <p style={{ fontSize:13, color:MUTED, marginBottom:4 }}>Available: {fmt(walletBalance)}. Requests are reviewed by an admin before payout.</p>
+            <p style={{ fontSize:12, color:MUTED, marginBottom:14 }}>
+              ₦50 bank transfer charge applies. Withdrawals above ₦10,000 attract an additional ₦50 stamp duty.
+            </p>
             <form onSubmit={handleWithdraw}>
               <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Amount (₦)</label>
               <input type="number" min="1" max={walletBalance} value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} required
                 placeholder={`Up to ${walletBalance}`}
-                style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, marginBottom:14, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT, caretColor:TEXT }}/>
+                style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, marginBottom:6, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT, caretColor:TEXT }}/>
+              {parseInt(withdrawAmount, 10) > 0 && (
+                <p style={{ fontSize:12.5, color:MOSS, fontWeight:700, marginBottom:10 }}>
+                  You'll receive ₦{Math.max(parseInt(withdrawAmount, 10) - 50 - (parseInt(withdrawAmount, 10) > 10000 ? 50 : 0), 0).toLocaleString()} after bank charges.
+                </p>
+              )}
 
               {withdrawError && <p style={{ fontSize:13, color:'#ef4444', marginBottom:12 }}>{withdrawError}</p>}
               {withdrawSuccess && <p style={{ fontSize:13, color:'#15803d', marginBottom:12 }}>{withdrawSuccess}</p>}
