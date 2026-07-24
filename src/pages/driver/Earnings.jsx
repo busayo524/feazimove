@@ -238,7 +238,7 @@ export default function Earnings(){
               <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Amount (₦)</label>
               <input type="number" min="1" max={walletBalance} value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} required
                 placeholder={`Up to ${walletBalance}`}
-                style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, marginBottom:14, fontFamily:'inherit', boxSizing:'border-box' }}/>
+                style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, marginBottom:14, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT, caretColor:TEXT }}/>
 
               {withdrawError && <p style={{ fontSize:13, color:'#ef4444', marginBottom:12 }}>{withdrawError}</p>}
               {withdrawSuccess && <p style={{ fontSize:13, color:'#15803d', marginBottom:12 }}>{withdrawSuccess}</p>}
