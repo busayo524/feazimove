@@ -35,13 +35,22 @@ async function ensureAnchorCustomer(userId) {
   if (user.anchor_customer_id) return { customerId: user.anchor_customer_id, user }
   if (!user.email) { const e = new Error('Please add an email to your profile first.'); e.status = 422; throw e }
   const parts = (user.name || '').trim().split(/\s+/)
-  const customer = await anchor.createIndividualCustomer({
-    firstName: parts[0] || 'FeaziMove',
-    lastName: parts.slice(1).join(' ') || 'User',
-    email: user.email,
-    phoneNumber: user.phone,
-    address: { line1: user.area || 'Lagos', city: user.city || 'Lagos', state: 'Lagos' },
-  })
+  let customer
+  try {
+    customer = await anchor.createIndividualCustomer({
+      firstName: parts[0] || 'FeaziMove',
+      lastName: parts.slice(1).join(' ') || 'User',
+      email: user.email,
+      phoneNumber: user.phone,
+      address: { line1: user.area || 'Lagos', city: user.city || 'Lagos', state: 'Lagos' },
+    })
+  } catch (err) {
+    // The email is already registered at Anchor (e.g. a deleted-and-recreated
+    // FeaziMove account) — adopt the existing customer instead of failing.
+    if (!/already exist/i.test(err.message || '')) throw err
+    customer = await anchor.findCustomerByEmail(user.email)
+    if (!customer) throw err
+  }
   await query('UPDATE users SET anchor_customer_id = $1 WHERE id = $2', [customer.id, userId])
   return { customerId: customer.id, user }
 }

@@ -139,6 +139,19 @@ async function getPayin(payinId) {
   } catch (err) { throw anchorError(err, 'Could not fetch payment details.') }
 }
 
+// Find an existing customer by email — used when creation is refused with
+// "Customer with Email already exist" (e.g. a FeaziMove account was deleted
+// and re-registered; the Anchor-side record outlives ours and gets adopted).
+async function findCustomerByEmail(email) {
+  try {
+    const res = await http.get(`/api/v1/customers?query=${encodeURIComponent(email)}`)
+    const hit = (res.data.data || []).find(
+      c => (c.attributes?.email || '').toLowerCase() === (email || '').toLowerCase()
+    )
+    return hit || null
+  } catch (err) { throw anchorError(err, 'Could not look up the customer.') }
+}
+
 // Authenticated pull of a virtual-NUBAN payment — the trusted source for the
 // verify-by-pullback path when a webhook delivery's signature can't be checked.
 async function getPayment(paymentId) {
@@ -290,6 +303,7 @@ module.exports = {
   isUnavailable,
   getPayin,
   getPayment,
+  findCustomerByEmail,
   listBanks,
   verifyAccount,
   createCounterparty,
