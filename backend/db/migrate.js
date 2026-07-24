@@ -88,6 +88,30 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS vehicle_color  VARCHAR(30);
 ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
 ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('rider','driver','admin'));
 
+-- Google sign-in + phone optional for Google-created accounts
+ALTER TABLE users ALTER COLUMN phone DROP NOT NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(128) UNIQUE;
+
+-- Dual-role support: users can be both rider and driver
+ALTER TABLE users ADD COLUMN IF NOT EXISTS can_ride   BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS can_drive  BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS active_role VARCHAR(10) NOT NULL DEFAULT 'rider';
+UPDATE users SET can_ride  = true  WHERE role = 'rider'  AND can_drive = false;
+UPDATE users SET can_drive = true  WHERE role = 'driver';
+UPDATE users SET can_ride  = true  WHERE role = 'driver' AND can_ride = false;
+UPDATE users SET active_role = role WHERE active_role = 'rider' AND role = 'driver';
+
+-- "Move an Item" pre-launch waitlist
+CREATE TABLE IF NOT EXISTS move_waitlist (
+  id         UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID         UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name       VARCHAR(100) NOT NULL,
+  email      VARCHAR(254),
+  phone      VARCHAR(20),
+  joined_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_move_waitlist_joined ON move_waitlist(joined_at DESC);
+
 -- ── Email OTPs — hashed, expiring, single-use ─────────────────────────────────
 -- Security: we store a bcrypt hash of the OTP, never the raw value.
 -- Each OTP expires in 10 minutes and is marked used after verification.

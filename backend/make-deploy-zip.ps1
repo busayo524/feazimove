@@ -2,7 +2,7 @@
 # Excludes the real .env; bundles a minimal fallback .env instead (AppSail
 # Configuration env vars always override it — dotenv never overwrites
 # variables that already exist in the environment).
-# Paystack keys are copied from the local .env at zip time so they never
+# Secrets (DB, JWT, SMTP, Anchor) are copied from the local .env at zip time so they never
 # live in git. Run:  powershell -File make-deploy-zip.ps1
 
 $ErrorActionPreference = 'Stop'

@@ -302,6 +302,7 @@ export default function BookRide(){
 
   function switchPeriod(p){
     if(p === period) return
+    if(payPending) return // a paid-for booking snapshot is in flight — form is locked
     setPeriod(p)
     setTimeSlot('')
     setPickup('')
@@ -393,6 +394,7 @@ export default function BookRide(){
         booking: { period, timeSlot, pickup, dropoff, service, comment },
       }
       sessionStorage.setItem(RIDE_PAY_KEY, JSON.stringify(pending))
+      setPaySecondsLeft(Math.round((pending.expiresAt - Date.now()) / 1000)) // no stale first frame
       setPayPending(pending)
       setConfirmingPay(true)
     } catch (err) {
@@ -418,7 +420,11 @@ export default function BookRide(){
     sessionStorage.removeItem(RIDE_PAY_KEY)
     setPayPending(null)
     setConfirmingPay(false)
-    setWalletKobo(null) // refetch on next preview open — a late credit may have landed
+    // Refetch the balance NOW (not lazily) so the payment-options branch that
+    // replaces the panel computes from reality — a late credit may have landed
+    api.get('/wallet/balance')
+      .then(res => setWalletKobo(res.data?.balanceKobo ?? Math.round((res.data?.balance || 0) * 100)))
+      .catch(() => setWalletKobo(null))
   }
 
   // Watch a pending ride payment: poll until the transfer lands (the webhook
@@ -446,6 +452,13 @@ export default function BookRide(){
           try {
             const booked = await api.post('/rides/book-intent', b)
             if (cancelled) return
+            // Sync the form to what was ACTUALLY booked (the snapshot) so the
+            // matching modal can never display edits made during payment
+            setService(b.service || 'pool')
+            setPeriod(b.period)
+            setTimeSlot(b.timeSlot)
+            setPickup(b.pickup)
+            setDropoff(b.dropoff)
             setWalletKobo(null) // stale now — refetched next time the preview opens
             setPayPending(null)
             setConfirmingPay(false)
@@ -454,6 +467,7 @@ export default function BookRide(){
           } catch (err) {
             fail(err.data?.message || 'Payment received (it\'s in your wallet) but the booking could not be placed — please try booking again.')
           }
+          return // settled either way — never fall through to the expiry check
         }
       } catch (err) {
         // 404 = this reference doesn't belong to the logged-in account —
@@ -493,6 +507,7 @@ export default function BookRide(){
     setComment(b.comment || '')
     setShowPreview(true)
     setConfirmingPay(true)
+    setPaySecondsLeft(Math.round(((saved.expiresAt || 0) - Date.now()) / 1000))
     setPayPending(saved) // the watcher effect above takes it from here
   }, [activeRideId]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -513,13 +528,31 @@ export default function BookRide(){
         <RideTracker activeRideId={activeRideId} onExit={() => setActiveRideId(null)}/>
       ) : (
         <>
-          {showPreview && pickup && dropoff && (
-            <RoutePreviewModal pickup={pickup} dropoff={dropoff} timeSlot={timeSlot} fareKobo={previewFareKobo}
+          {/* While a payment is in flight the modal shows the SNAPSHOT the
+              rider is paying for — never the live (editable) form values —
+              and it can render even if form fields were cleared meanwhile. */}
+          {showPreview && ((pickup && dropoff) || payPending) && (
+            <RoutePreviewModal
+              pickup={payPending?.booking?.pickup || pickup}
+              dropoff={payPending?.booking?.dropoff || dropoff}
+              timeSlot={payPending?.booking?.timeSlot || timeSlot}
+              fareKobo={payPending ? Number(payPending.transfer?.amount || 0) * 100 || previewFareKobo : previewFareKobo}
               stopCoords={stopCoords} onClose={()=>setShowPreview(false)} onBook={handleSearch} booking={searching}
               matching={!!bookingId} onCancel={cancelBooking} cancelling={cancelling} insufficient={insufficientFunds}
               walletKobo={walletKobo} shortfallKobo={shortfallKobo} onPayNow={payNow} payBusy={payBusy}
               confirmingPay={confirmingPay} payPending={payPending} paySecondsLeft={paySecondsLeft}
               onCancelPay={cancelPay} onSetupWallet={()=>navigate('/wallet')} candidateDrivers={candidateDrivers}/>
+          )}
+
+          {/* Payment in flight but modal dismissed — a persistent way back */}
+          {payPending && !showPreview && (
+            <button onClick={()=>setShowPreview(true)}
+              style={{ position:'fixed', bottom:18, left:'50%', transform:'translateX(-50%)', zIndex:900,
+                display:'flex', alignItems:'center', gap:8, padding:'10px 18px', borderRadius:50,
+                background:OLIVE, color:NEON, border:'none', fontWeight:800, fontSize:13,
+                cursor:'pointer', fontFamily:'inherit', boxShadow:'0 6px 20px rgba(0,0,0,0.25)' }}>
+              ₦{Number(payPending.transfer?.amount || 0).toLocaleString()} payment in progress — view details
+            </button>
           )}
 
           <div className="bookride-scroll">

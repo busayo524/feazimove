@@ -181,6 +181,7 @@ export default function Wallet() {
   // Poll the reference until the incoming transfer is confirmed (the webhook
   // credits it server-side; we just watch for the flip to 'completed').
   const watchPending = useCallback((pending) => {
+    setSecondsLeft(Math.round((pending.expiresAt - Date.now()) / 1000)) // no stale first frame
     setPendingFund(pending)
     stopPolling()
     pollRef.current = setInterval(async () => {

@@ -308,7 +308,7 @@ const CATEGORY_TAGS = { ride:'Ride', user:'User', payment:'Payment', route:'Rout
 // Flatten the /admin/alerts payload into uniform rows for the Issues card
 function alertRows(alerts) {
   if (!alerts) return []
-  const timeOf = ts => new Date(ts).toLocaleTimeString('en-NG', { hour:'numeric', minute:'2-digit' })
+  const timeOf = ts => new Date(ts).toLocaleTimeString('en-NG', { hour:'numeric', minute:'2-digit', timeZone:'Africa/Lagos' })
   return [
     ...alerts.delayedRides.map(r => ({
       key: `d-${r.id}`, title: `${r.pickup} → ${r.destination}`,
@@ -503,7 +503,7 @@ export default function AdminDashboard() {
                 <div style={{ flex:1, minWidth:0 }}>
                   <p style={{ fontSize:13.5, fontWeight:700, color:TEXT, margin:0 }}>{a.action}</p>
                   <p style={{ fontSize:12, color:MUTED, margin:'3px 0 0', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                    {a.actor}{a.detail ? ` · ${a.detail}` : ''} · {new Date(a.at).toLocaleString('en-NG')}
+                    {a.actor}{a.detail ? ` · ${a.detail}` : ''} · {new Date(a.at).toLocaleString('en-NG', { timeZone:'Africa/Lagos' })}
                   </p>
                 </div>
                 <span style={{ fontSize:11.5, fontWeight:600, padding:'3px 10px', borderRadius:50,

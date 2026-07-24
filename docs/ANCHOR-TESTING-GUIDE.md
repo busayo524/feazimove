@@ -40,11 +40,11 @@ Use `Authorization: Bearer <token>` on everything below. `{API}` = the Dev backe
 | 2 | `POST /api/wallet/fund` body `{"amount": 1500}` | Creates your Anchor customer (first call only), then a **temporary bank account** (Pay-with-Transfer) for exactly ₦1,500 | 200 `{reference, transfer:{bankName, accountNumber, accountName, amount, expiresInSeconds}}` |
 | 3 | `GET /api/wallet/fund/status/{reference}` | Reports whether the transfer for that reference has landed | 200 `{status:"pending"}` → after payment `{status:"completed"}` |
 | 4 | `GET /api/wallet/balance` | Wallet balance (naira + exact kobo) | 200 `{balance, balanceKobo}` |
-| 5 | `POST /api/wallet/reserved-account` body `{"bvn":"22222222226","dateOfBirth":"1990-01-01","gender":"male"}` | Creates a **permanent account number** in the user's name (sandbox test BVN shown) | 202 `{message, account?}` |
-| 6 | `GET /api/wallet/funding-account` | Returns the permanent account once created | 200 `{account:{bankName, accountNumber, accountName}}` |
+| 5 | `POST /api/wallet/reserved-account` body `{"bvn":"22222222226","dateOfBirth":"1990-01-01","gender":"male"}` | Completes the BVN wallet-setup step and assigns the permanent funding account (sandbox test BVN shown). Repeating it after setup → 409 | 202 `{message, account?}` (409 if already set up) |
+| 6 | `GET /api/wallet/funding-account` | Returns the permanent account **once the BVN setup step is done** (`bvnSetUp:false, account:null` before that — the setup funnel is deliberate) | 200 `{bvnSetUp, account, pending}` |
 | 7 | `POST /api/wallet/withdraw` | Driver payout request (needs step-up email code) — escrows the amount | 201 `{payoutId}` |
 | 8 | `GET /api/wallet/transactions` | Ledger history | 200 `{transactions:[…]}` |
-| 9 | `POST /api/anchor/webhook` | **Anchor-only** — event receiver, HMAC-SHA1 signature required | 401 without valid signature (that's correct!); 200 for Anchor |
+| 9 | `POST /api/anchor/webhook` | **Anchor-only** — event receiver. Signed deliveries verify by HMAC-SHA1; unsigned deliveries claiming a payment/transfer are confirmed against Anchor's API before anything is processed (never trusted directly) | 401 for garbage without a verifiable claim (that's correct!); 200 for genuine Anchor deliveries |
 
 Admin endpoints (log in as admin):
 
@@ -73,14 +73,14 @@ curl -H "x-anchor-key: <KEY>" https://api.sandbox.getanchor.co/api/v1/customers 
 
 1. Open the test web app (URL at top) and **log in as a rider** (create one via Sign Up if needed — use a real-looking email).
 2. Go to **Wallet** → type an amount (e.g. ₦1,500) → **Add**.
-3. A panel appears: *"Transfer to this account"* with a bank, a 10-digit account number, and the exact amount. **This account was just created by Anchor** — behind the scenes FeaziMove also created your Anchor Customer on this first payment.
+3. A panel appears: *"Transfer to this account"* with a bank, a 10-digit account number, and the exact amount. In sandbox this is your **permanent Virtual NUBAN** (created by Anchor on your first payment and reused for all your later ones — the countdown only bounds the pending top-up, not the account); behind the scenes FeaziMove also created your Anchor Customer.
 4. **Simulate the transfer** (sandbox has no real banks):
    - Log in to **app.getanchor.co** → make sure the environment toggle says **Sandbox**.
    - Go to **Accounts → Deposit Accounts** → click **Simulate Transfer** (this is the sandbox-only button per the [onboarding guide](https://docs.getanchor.co/docs/developer-onboarding-to-anchor-api)).
    - Enter the **account number shown in the FeaziMove wallet panel** as the destination, and the **exact amount** (₦1,500 → 150000 kobo if it asks in kobo).
    - Submit.
-5. Watch the FeaziMove wallet page: within seconds the panel disappears and the balance shows **+₦1,500**. What happened: Anchor received the simulated transfer → fired `payin.received` to our webhook → signature verified → wallet credited.
-6. **Verify in the back office**: log in as admin → **Back Office** → the Transaction Monitor shows the `payin.received` event with signature "valid"; the Customers tab shows the rider with their Anchor Customer ID.
+5. Watch the FeaziMove wallet page: within seconds the panel disappears and the balance shows **+₦1,500**. What happened: Anchor received the simulated transfer → notified our webhook → the payment was authenticated (by signature, or — because Anchor's sandbox signs organic deliveries incorrectly — by re-fetching it from Anchor's API with our key) → wallet credited.
+6. **Verify in the back office**: log in as admin → **Back Office** → the Transaction Monitor shows the payment event marked **processed** (a `payment.processed` claim row; for organic sandbox deliveries the signature column reads *invalid* — expected, the API pullback is the verification). The Customers tab shows the rider with their Anchor Customer ID.
 
 ### B. Permanent account (reserved account, BVN)
 

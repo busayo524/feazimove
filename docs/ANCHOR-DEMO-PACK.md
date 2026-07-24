@@ -53,7 +53,9 @@ every payout request; thresholds are configuration, adjustable without code chan
 Compliance workflow: flags open → reviewed/dismissed by a named admin with timestamp (full audit
 trail). Supporting posture points:
 - **BVNs are never stored by FeaziMove** — passed through to Anchor for CBN KYC only.
-- Webhooks are HMAC-SHA1 signature-verified; invalid-signature attempts are themselves logged.
+- Webhooks are HMAC-SHA1 signature-verified; deliveries that fail verification are never trusted —
+  any payment/transfer they claim is independently confirmed against Anchor's authenticated API
+  before a single kobo moves (and forgery attempts are themselves logged).
 - Money can only enter a wallet via verified Anchor events; credits are idempotent (no double
   crediting on redelivery) and amount-checked (short payments never credit in full).
 - Payout money leaves only after: driver step-up email 2FA → admin approval → Anchor-verified

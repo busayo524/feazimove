@@ -3,20 +3,43 @@
  *
  * Anchor pushes events here (payments received, transfers settled, reserved
  * accounts created, KYC decisions — docs.getanchor.co/docs/event-types-1).
- * Every request is verified against the x-anchor-signature header
- * (Base64(hex(HMAC-SHA1(rawBody, webhookToken))) — docs.getanchor.co/docs/verify-webhooks),
- * stored in anchor_events (the back-office audit trail), and processed
- * idempotently: a redelivered event id is acknowledged but not re-applied.
+ * Every request is verified against the x-anchor-signature header; events are
+ * stored in anchor_events (the back-office audit trail) and processed exactly
+ * once.
  *
- * NO auth middleware here — Anchor is not a logged-in user. The signature IS
- * the authentication.
+ * KNOWN PROVIDER QUIRK (Jul 24 2026): Anchor's ORGANIC deliveries are signed
+ * with a key that does not match the webhook's stored token; their dashboard
+ * RESEND path signs correctly. Unsigned deliveries are therefore never
+ * trusted directly — instead, the claimed payment/transfer id is re-fetched
+ * from Anchor's API with our key and the AUTHENTICATED response is processed.
+ *
+ * Money idempotency is keyed on the PAYMENT id ('pay-<paymentId>' rows in
+ * anchor_events), shared by the signed path and the pull path — so the same
+ * payment arriving once organically and once as a signed resend can only
+ * ever credit once. A failed credit releases its claim so a later delivery
+ * can retry; a processed claim is permanent.
+ *
+ * NO auth middleware here — Anchor is not a logged-in user. The signature
+ * (or the authenticated API pull) IS the authentication.
  */
 const express = require('express')
+const rateLimit = require('express-rate-limit')
 const { query } = require('../db')
 const anchor = require('../services/anchor')
-const { creditTransaction, creditPendingForUser, directCredit } = require('../services/walletLedger')
+const { creditTransaction, creditPendingForUser, directCredit, refundPayout } = require('../services/walletLedger')
 
 const router = express.Router()
+
+// Unauthenticated + DB-touching + can trigger outbound Anchor calls → keep a
+// per-route budget well below the global limiter. Anchor's real delivery
+// volume (events + AtLeastOnce retries) sits far under this.
+const webhookLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many requests.' },
+})
 
 // Webhook payloads are JSON:API — the event is `data`, and with "Included"
 // delivery mode the full related resources ride along in `included`.
@@ -30,17 +53,71 @@ async function userByCustomerId(customerId) {
   return r.rows[0]?.id || null
 }
 
-// ── Money arrived (payin.received / payment.received) ────────────────────────
+async function userByNuban(nubanId, nubanNumber) {
+  if (nubanId) {
+    const r = await query('SELECT id FROM users WHERE anchor_reserved_account_id = $1', [nubanId])
+    if (r.rows[0]) return r.rows[0].id
+  }
+  if (nubanNumber) {
+    const r = await query('SELECT id FROM users WHERE reserved_account_number = $1', [nubanNumber])
+    if (r.rows[0]) return r.rows[0].id
+  }
+  return null
+}
+
+// ── The single money gate for incoming payments ──────────────────────────────
+// Claims the payment id, credits through exactly one path, marks the claim
+// processed on success, releases it on failure (so a later delivery retries
+// once e.g. a NUBAN→user mapping exists). Returns true when settled (now or
+// previously), false when the recipient can't be resolved yet.
+async function settlePayment({ paymentId, amountKobo, currency, ourRef, userId, signatureValid, source }) {
+  if (!amountKobo || amountKobo <= 0 || (currency && currency !== 'NGN')) return false
+  if (!paymentId) {
+    // No stable payment id (very old/odd payloads) — reference crediting only,
+    // which is itself idempotent via the pending-row status flip.
+    return ourRef
+      ? creditTransaction(ourRef, { paidKobo: amountKobo, currency, gateway: 'anchor', paymentMethod: 'bank_transfer' })
+      : false
+  }
+  const claim = await query(
+    `INSERT INTO anchor_events (event_id, event_type, resource_id, signature_valid, payload)
+     VALUES ($1, 'payment.processed', $2, $3, $4) ON CONFLICT (event_id) DO NOTHING RETURNING id`,
+    [`pay-${paymentId}`, paymentId, !!signatureValid, JSON.stringify({ source, userId: userId || null, amountKobo })]
+  )
+  if (!claim.rows[0]) return true // already settled via the other delivery path
+  try {
+    let ok = false
+    if (ourRef) {
+      ok = await creditTransaction(ourRef, { paidKobo: amountKobo, currency, gateway: 'anchor', paymentMethod: 'bank_transfer' })
+    }
+    if (!ok && userId) {
+      ok = await creditPendingForUser(userId, amountKobo, currency, paymentId)
+      if (!ok) ok = await directCredit(userId, amountKobo, `anchor-payin-${paymentId}`, 'Wallet top-up — bank transfer')
+    }
+    if (ok) {
+      await query('UPDATE anchor_events SET processed = true WHERE id = $1', [claim.rows[0].id])
+    } else {
+      // Recipient unresolved — release the claim so redelivery can retry
+      await query('DELETE FROM anchor_events WHERE id = $1', [claim.rows[0].id])
+    }
+    return ok
+  } catch (err) {
+    await query('DELETE FROM anchor_events WHERE id = $1', [claim.rows[0].id]).catch(() => {})
+    throw err
+  }
+}
+
+// ── Money arrived (payin.received / payment.received), signed path ───────────
 // Two payload dialects exist: REAL deliveries (observed Jul 24, 2026) inline
 // the payment under event.attributes.payment; the docs describe a JSON:API
 // relationships/included shape. Parse both, inline first.
 async function handlePayin(payload) {
   const event = payload.data
-  let payinId, amountKobo, currency, ourRef, nubanId, nubanNumber, customerId
+  let paymentId, amountKobo, currency, ourRef, nubanId, nubanNumber, customerId
 
   const inline = event?.attributes?.payment
   if (inline) {
-    payinId = inline.paymentId || event.id
+    paymentId = inline.paymentId || event.id
     amountKobo = Number(inline.amount)
     currency = inline.currency || 'NGN'
     ourRef = inline.paymentReference || null // Anchor's own UUID for simulated transfers; ours for /pay flows
@@ -49,11 +126,11 @@ async function handlePayin(payload) {
     customerId = inline.customer?.customerId || inline.customer?.id || null
   } else {
     const payin = included(payload, 'PayIn') || included(payload, 'Payment')
-    payinId = payin?.id || relId(event, 'payIn') || relId(event, 'payment')
+    paymentId = payin?.id || relId(event, 'payIn') || relId(event, 'payment')
     let attrs = payin?.attributes
     let rels = payin?.relationships
-    if (!attrs && payinId && anchor.configured()) {
-      try { const full = await anchor.getPayin(payinId); attrs = full?.attributes; rels = full?.relationships } catch { /* fall through */ }
+    if (!attrs && paymentId && anchor.configured()) {
+      try { const full = await anchor.getPayin(paymentId); attrs = full?.attributes; rels = full?.relationships } catch { /* fall through */ }
     }
     if (!attrs) return false
     amountKobo = Number(attrs.amount)
@@ -63,31 +140,9 @@ async function handlePayin(payload) {
     customerId = relId({ relationships: rels }, 'customer') || relId(event, 'customer')
   }
 
-  if (!amountKobo || amountKobo <= 0) return false
-
-  // 1. A /pay flow echoes OUR reference — credit that exact pending row.
-  if (ourRef) {
-    const credited = await creditTransaction(ourRef, { paidKobo: amountKobo, currency, gateway: 'anchor', paymentMethod: 'bank_transfer' })
-    if (credited) return true
-  }
-  // 2. Identify the recipient by their funding NUBAN (id or account number),
-  //    else by Anchor customer id; settle their oldest coverable pending
-  //    top-up, else credit the full amount directly (idempotent per payin).
-  let userId = null
-  if (nubanId) {
-    const r = await query('SELECT id FROM users WHERE anchor_reserved_account_id = $1', [nubanId])
-    userId = r.rows[0]?.id || null
-  }
-  if (!userId && nubanNumber) {
-    const r = await query('SELECT id FROM users WHERE reserved_account_number = $1', [nubanNumber])
-    userId = r.rows[0]?.id || null
-  }
+  let userId = await userByNuban(nubanId, nubanNumber)
   if (!userId) userId = await userByCustomerId(customerId)
-  if (userId && currency === 'NGN') {
-    if (await creditPendingForUser(userId, amountKobo, currency)) return true
-    return directCredit(userId, amountKobo, `anchor-payin-${payinId}`, 'Wallet top-up — bank transfer')
-  }
-  return false
+  return settlePayment({ paymentId, amountKobo, currency, ourRef, userId, signatureValid: true, source: 'signed-webhook' })
 }
 
 // ── Reserved account lifecycle ───────────────────────────────────────────────
@@ -116,19 +171,15 @@ async function handleReservedAccount(payload, ok) {
   return true
 }
 
-// ── Payout transfer lifecycle (nip.transfer.*) ───────────────────────────────
-async function handleTransfer(payload, outcome) {
-  const event = payload.data
-  const transfer = included(payload, 'NIP_TRANSFER') || included(payload, 'NIPTransfer')
-  const transferId = transfer?.id || relId(event, 'transfer') || relId(event, 'nipTransfer')
-  const reference = transfer?.attributes?.reference || null
+// ── Payout transfer lifecycle — shared by signed events and API pulls ────────
+async function applyTransferOutcome(transferId, reference, outcome) {
   if (!transferId && !reference) return false
 
   if (outcome === 'successful') {
     const done = await query(
       `UPDATE payout_requests SET status = 'completed', processed_at = COALESCE(processed_at, NOW())
         WHERE (anchor_transfer_id = $1 OR anchor_reference = $2) AND status IN ('approved', 'processing')
-        RETURNING id, driver_id, amount_kobo`,
+        RETURNING id, amount_kobo`,
       [transferId || null, reference || null]
     )
     for (const p of done.rows) {
@@ -147,7 +198,7 @@ async function handleTransfer(payload, outcome) {
     return true
   }
   // failed | reversed → mark failed and return the escrowed money to the
-  // driver's wallet exactly once (guarded by the status filter + refund ref).
+  // driver's wallet exactly once (status filter + refund reference guard).
   const failed = await query(
     `UPDATE payout_requests SET status = 'failed', processed_at = NOW(), failure_reason = $3
       WHERE (anchor_transfer_id = $1 OR anchor_reference = $2) AND status IN ('approved', 'processing', 'completed')
@@ -156,16 +207,18 @@ async function handleTransfer(payload, outcome) {
   )
   const row = failed.rows[0]
   if (!row) return false
-  const refunded = await query(
-    `INSERT INTO wallet_transactions (user_id, type, amount_kobo, description, reference, status)
-     VALUES ($1, 'credit', $2, 'Payout failed — funds returned', $3, 'completed')
-     ON CONFLICT (reference) DO NOTHING RETURNING id`,
-    [row.driver_id, row.amount_kobo, `refund-${row.anchor_reference || row.id}`]
-  )
-  if (refunded.rows[0]) {
-    await query('UPDATE users SET wallet_balance = wallet_balance + $1 WHERE id = $2', [row.amount_kobo, row.driver_id])
-  }
+  await refundPayout(row.driver_id, Number(row.amount_kobo), `refund-${row.anchor_reference || row.id}`)
   return true
+}
+
+function handleTransfer(payload, outcome) {
+  const event = payload.data
+  const transfer = included(payload, 'NIP_TRANSFER') || included(payload, 'NIPTransfer')
+  const inline = event?.attributes?.transfer
+  const transferId = transfer?.id || inline?.transferId || inline?.id
+    || relId(event, 'transfer') || relId(event, 'nipTransfer')
+  const reference = transfer?.attributes?.reference || inline?.reference || null
+  return applyTransferOutcome(transferId, reference, outcome)
 }
 
 // ── KYC decisions (customer.identification.*) ────────────────────────────────
@@ -179,61 +232,85 @@ async function handleKyc(payload, status) {
   return true
 }
 
-router.post('/webhook', async (req, res) => {
-  // 1. Authenticate the sender — signature over the RAW body (captured in
-  //    server.js) with our shared webhook token.
+// ── Unsigned deliveries: verify-by-pullback ──────────────────────────────────
+// The unsigned body is treated ONLY as a hint naming a resource id; the data
+// we act on comes from Anchor's API, authenticated with our key. Dedup runs
+// BEFORE any outbound call so crafted garbage can't burn our Anchor quota.
+async function handleUnsigned(rawBody) {
+  let parsed = null
+  try { parsed = JSON.parse(rawBody.toString('utf8')) } catch { return false }
+  const claimedType = parsed?.data?.type || ''
+  if (!anchor.configured()) return false
+
+  if (claimedType === 'payment.received') {
+    const claimedPayId = parsed?.data?.attributes?.payment?.paymentId
+    if (!claimedPayId || typeof claimedPayId !== 'string' || claimedPayId.length > 80) return false
+    const already = await query(
+      "SELECT 1 FROM anchor_events WHERE event_id = $1 AND processed = true", [`pay-${claimedPayId}`]
+    )
+    if (already.rows[0]) return true // settled — no Anchor call needed
+    const pulled = await anchor.getPayment(claimedPayId) // throws on unknown id
+    const userId = await userByNuban(
+      pulled?.relationships?.virtualNuban?.data?.id || null,
+      pulled?.attributes?.virtualNuban?.accountNumber || null
+    )
+    await settlePayment({
+      paymentId: claimedPayId,
+      amountKobo: Number(pulled?.attributes?.amount),
+      currency: pulled?.attributes?.currency || 'NGN',
+      ourRef: pulled?.attributes?.paymentReference || null,
+      userId,
+      signatureValid: false,
+      source: 'api-pull',
+    })
+    return true // hint led to a real payment — acknowledged regardless of settle outcome (retries release-claim path)
+  }
+
+  if (claimedType.startsWith('nip.transfer.')) {
+    const inline = parsed?.data?.attributes?.transfer
+    const claimedId = inline?.transferId || inline?.id || parsed?.data?.relationships?.transfer?.data?.id
+    if (!claimedId || typeof claimedId !== 'string' || claimedId.length > 80) return false
+    const pulled = await anchor.verifyTransfer(claimedId) // authenticated truth
+    const status = (pulled?.attributes?.status || '').toUpperCase()
+    const outcome = status === 'COMPLETED' ? 'successful'
+      : status === 'FAILED' ? 'failed'
+      : status === 'REVERSED' ? 'reversed'
+      : null
+    if (!outcome) return true // PENDING etc. — acknowledged, a later event settles it
+    // Log once per (transfer, outcome); applyTransferOutcome is idempotent anyway
+    await query(
+      `INSERT INTO anchor_events (event_id, event_type, resource_id, signature_valid, processed, payload)
+       VALUES ($1, $2, $3, false, true, $4) ON CONFLICT (event_id) DO NOTHING`,
+      [`trsf-${claimedId}-${outcome}`, `nip.transfer.${outcome}`, claimedId, JSON.stringify({ verifiedByApiPull: true })]
+    )
+    await applyTransferOutcome(claimedId, pulled?.attributes?.reference || null, outcome)
+    return true
+  }
+
+  return false
+}
+
+router.post('/webhook', webhookLimiter, async (req, res) => {
   const signature = req.headers['x-anchor-signature']
   const valid = anchor.verifyWebhookSignature(req.rawBody, signature)
+
   if (!valid) {
-    // Anchor's ORGANIC deliveries are signed with a key that does not match
-    // the webhook's stored token, while their RESEND path signs correctly
-    // (provider quirk observed Jul 24 2026). Fallback: never trust the
-    // unsigned body — but if it CLAIMS a payment, pull that payment from
-    // Anchor's API with our key and process the AUTHENTICATED response.
-    // Idempotent per payment id, so delivery retries can never double-credit.
     try {
-      let parsed = null
-      try { parsed = JSON.parse(req.rawBody.toString('utf8')) } catch { /* not JSON */ }
-      const claimedType = parsed?.data?.type
-      const claimedPayId = parsed?.data?.attributes?.payment?.paymentId
-      if (claimedType === 'payment.received' && claimedPayId && anchor.configured()) {
-        const pulled = await anchor.getPayment(claimedPayId)
-        const amountKobo = Number(pulled?.attributes?.amount)
-        const currency = pulled?.attributes?.currency || 'NGN'
-        const nubanId = pulled?.relationships?.virtualNuban?.data?.id || null
-        if (amountKobo > 0 && currency === 'NGN') {
-          const claim = await query(
-            `INSERT INTO anchor_events (event_id, event_type, resource_id, signature_valid, payload)
-             VALUES ($1, 'payment.received', $2, false, $3) ON CONFLICT (event_id) DO NOTHING RETURNING id`,
-            [`pull-${claimedPayId}`, claimedPayId, JSON.stringify({ verifiedByApiPull: true, payment: pulled })]
-          )
-          if (claim.rows[0]) {
-            let userId = null
-            if (nubanId) {
-              const r = await query('SELECT id FROM users WHERE anchor_reserved_account_id = $1', [nubanId])
-              userId = r.rows[0]?.id || null
-            }
-            let ok = false
-            if (userId) {
-              ok = await creditPendingForUser(userId, amountKobo, currency)
-              if (!ok) ok = await directCredit(userId, amountKobo, `anchor-payin-${claimedPayId}`, 'Wallet top-up — bank transfer')
-            }
-            if (ok) await query('UPDATE anchor_events SET processed = true WHERE id = $1', [claim.rows[0].id])
-          }
-          return res.sendStatus(200)
-        }
-      }
-    } catch { /* pull failed — fall through to plain rejection */ }
-    // Log invalid attempts too — they're part of the monitoring story. The
-    // raw body (truncated) is kept so a systematic mismatch can be diagnosed
-    // offline instead of guessed at.
+      if (await handleUnsigned(req.rawBody)) return res.sendStatus(200)
+    } catch { /* pull failed / unknown resource — fall through to rejection */ }
+    // Log invalid attempts too — they're part of the monitoring story. Body
+    // kept (capped) for offline diagnosis; old junk pruned opportunistically
+    // so unauthenticated garbage can't grow the table forever.
     query(
       `INSERT INTO anchor_events (event_type, signature_valid, processed, payload)
-       VALUES ('invalid.signature', false, false, $1) `,
+       VALUES ('invalid.signature', false, false, $1)`,
       [JSON.stringify({
         headers: { 'x-anchor-signature': signature || null },
-        rawBody: req.rawBody ? req.rawBody.toString('utf8').slice(0, 8000) : null,
+        rawBody: req.rawBody ? req.rawBody.toString('utf8').slice(0, 2000) : null,
       })]
+    ).catch(() => {})
+    query(
+      `DELETE FROM anchor_events WHERE event_type = 'invalid.signature' AND created_at < NOW() - INTERVAL '14 days'`
     ).catch(() => {})
     return res.status(401).json({ message: 'Invalid webhook signature.' })
   }
@@ -243,8 +320,9 @@ router.post('/webhook', async (req, res) => {
   const eventId = event.id || null
   const eventType = event.type || 'unknown'
 
+  let eventRowId = null
   try {
-    // 2. Record the event — the UNIQUE event_id makes redelivery a no-op.
+    // Record the event — the UNIQUE event_id makes redelivery a no-op.
     if (eventId) {
       const stored = await query(
         `INSERT INTO anchor_events (event_id, event_type, resource_id, payload)
@@ -252,9 +330,9 @@ router.post('/webhook', async (req, res) => {
         [eventId, eventType, relId(event, 'payIn') || relId(event, 'transfer') || relId(event, 'customer'), JSON.stringify(payload)]
       )
       if (!stored.rows[0]) return res.sendStatus(200) // duplicate delivery
+      eventRowId = stored.rows[0].id
     }
 
-    // 3. Apply it.
     let processed = false
     if (eventType === 'payin.received' || eventType === 'payment.received') processed = await handlePayin(payload)
     else if (eventType === 'reservedAccount.created') processed = await handleReservedAccount(payload, true)
@@ -266,12 +344,14 @@ router.post('/webhook', async (req, res) => {
     if (eventId && processed) {
       await query('UPDATE anchor_events SET processed = true WHERE event_id = $1', [eventId])
     }
-    // Always 200 — Anchor retries non-2xx, and we never want a processing
-    // hiccup to grow into a redelivery storm (the event row is our replay).
     res.sendStatus(200)
   } catch (err) {
+    // Processing genuinely failed — release the event row and answer 5xx so
+    // Anchor's AtLeastOnce redelivery retries the whole thing (money claims
+    // released their own locks in settlePayment's catch).
     console.error('Anchor webhook error:', err.message)
-    res.sendStatus(200)
+    if (eventRowId) await query('DELETE FROM anchor_events WHERE id = $1', [eventRowId]).catch(() => {})
+    res.sendStatus(500)
   }
 })
 

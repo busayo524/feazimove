@@ -94,7 +94,7 @@ const tableRows = [
   { label: 'Delivery included',    feazi: 'Yes — FeaziHaul',     regular: 'No',            highlight: true  },
   { label: 'Expense tracker',      feazi: 'Built-in dashboard',  regular: 'None',          highlight: true  },
   { label: 'Verified community',   feazi: 'All riders & drivers', regular: 'Varies',       highlight: true  },
-  { label: 'Cashless payments',    feazi: 'Wallet & card',       regular: 'Cash only',     highlight: false },
+  { label: 'Cashless payments',    feazi: 'Wallet & transfer',   regular: 'Cash only',     highlight: false },
 ]
 
 export default function ServicesPage() {

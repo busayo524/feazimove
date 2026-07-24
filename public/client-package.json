@@ -1,6 +1,6 @@
 {
   "name": "feazimove",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "homepage": "index.html",
   "login_redirect": "index.html",
   "404": "404.html"

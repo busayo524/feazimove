@@ -66,7 +66,9 @@ function forceLogout() {
   localStorage.removeItem('fm_token')
   localStorage.removeItem('fm_refresh')
   localStorage.removeItem('fm_user')
-  window.location.href = '/login'
+  // Base-aware: under the Catalyst /app/ package a bare '/login' would 404
+  const base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '')
+  window.location.href = `${base}/login`
 }
 
 async function doFetch(method, path, body, options) {
@@ -103,7 +105,12 @@ async function request(method, path, body, options = {}) {
     // Still (or newly) unauthorized after the refresh attempt → session is done.
     if (res.status === 401) {
       forceLogout()
-      return
+      // Reject (rather than return undefined) so in-flight callers reading
+      // res.data don't crash with TypeErrors during the redirect.
+      const err = new Error('Session expired.')
+      err.status = 401
+      err.data = {}
+      throw err
     }
   }
 

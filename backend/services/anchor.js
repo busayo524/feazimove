@@ -250,6 +250,17 @@ async function verifyTransfer(transferId) {
   } catch (err) { throw anchorError(err, 'Could not verify the transfer.') }
 }
 
+// Reconciliation lookup: did a transfer with OUR reference actually get
+// created at Anchor? Used when transfer initiation errors ambiguously (e.g.
+// timeout) — reverting a payout to retryable is only safe if Anchor has no
+// record of it, otherwise a retry would double-pay the driver.
+async function findTransferByReference(reference) {
+  try {
+    const res = await http.get('/api/v1/transfers')
+    return (res.data.data || []).find(t => t.attributes?.reference === reference) || null
+  } catch (err) { throw anchorError(err, 'Could not list transfers.') }
+}
+
 // The org's root deposit account funds payouts. Configure explicitly via
 // ANCHOR_MASTER_ACCOUNT_ID, else the first ROOT account found is cached.
 let cachedMasterAccountId = null
@@ -309,6 +320,7 @@ module.exports = {
   createCounterparty,
   initiateNipTransfer,
   verifyTransfer,
+  findTransferByReference,
   getMasterAccountId,
   verifyWebhookSignature,
 }

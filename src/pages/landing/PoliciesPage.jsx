@@ -119,10 +119,8 @@ const POLICIES = [
         <P>6.1 <B>Fare Display:</B> All fares are displayed in Nigerian Naira (NGN) on the Platform before you confirm a booking. The displayed fare is the total amount payable including applicable taxes and service fees.</P>
         <P>6.2 <B>Payment Methods:</B> FeaziMove accepts the following payment methods:</P>
         <UL>
-          <LI>Debit and credit cards (Mastercard, Visa, Verve);</LI>
-          <LI>Bank transfer;</LI>
+          <LI>Bank transfer to your secure FeaziMove funding account;</LI>
           <LI>FeaziMove Wallet balance;</LI>
-          <LI>USSD;</LI>
           <LI>Any other method made available on the Platform from time to time.</LI>
         </UL>
         <P>6.3 <B>Surge Pricing:</B> During periods of high demand, fares may increase above the standard rate. The Platform will clearly display the surge multiplier before you confirm your booking. You are under no obligation to proceed with a booking at surge pricing.</P>
@@ -802,9 +800,8 @@ const POLICIES = [
         <P>Once a refund has been approved, the time to receive the funds depends on the original payment method:</P>
         <UL>
           <LI><B>FeaziMove Wallet Credit:</B> Instant — available immediately upon approval;</LI>
-          <LI><B>Debit or Credit Card:</B> 3–5 business days from approval date. Your bank's processing time may extend this;</LI>
-          <LI><B>Bank Transfer:</B> 3–7 business days from approval date;</LI>
-          <LI><B>USSD Payments:</B> 5–10 business days from approval date.</LI>
+          <LI><B>FeaziMove Wallet:</B> instant once approved;</LI>
+          <LI><B>Bank Transfer:</B> 3–7 business days from approval date.</LI>
         </UL>
         <P>FeaziMove will always notify you by email and in-app notification when a refund is approved and when it has been disbursed.</P>
 

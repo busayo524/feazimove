@@ -22,11 +22,13 @@ export default function AdminBackOffice() {
 
   const load = useCallback(() => {
     api.get('/admin/anchor/overview').then(r => setOverview(r.data)).catch(() => {})
-    api.get('/admin/anchor/events').then(r => setEvents(r.data.events)).catch(err => setError(err.data?.message || 'Could not load.'))
+    api.get('/admin/anchor/events')
+      .then(r => { setEvents(r.data.events); setError('') }) // clear stale banner on recovery
+      .catch(err => setError(err.data?.message || 'Could not load.'))
     api.get('/admin/anchor/customers').then(r => setCustomers(r.data.customers)).catch(() => {})
     api.get(`/admin/aml/flags?status=${flagFilter}`).then(r => setFlags(r.data.flags)).catch(() => {})
   }, [flagFilter])
-  useEffect(() => { load() }, [load])
+  useEffect(() => { setFlags(null); load() }, [load]) // reset so the old filter's rows never show under the new tab
   // The monitor is live — refresh every 15s while the page is open
   useEffect(() => { const id = setInterval(load, 15000); return () => clearInterval(id) }, [load])
 

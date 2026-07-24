@@ -1,97 +1,162 @@
 /**
- * Wallet ledger — the single place money enters a FeaziMove wallet from an
- * external gateway, plus the AML rule checks that run on every movement.
- * Used by routes/wallet.js (status polling) and routes/anchor.js (webhooks).
+ * Wallet ledger — the single place money enters or leaves a FeaziMove wallet
+ * on the gateway rails, plus the AML rule checks that run on every movement.
+ * Every mutation here is a BEGIN/COMMIT transaction: the ledger row and the
+ * balance change land together or not at all (a crash mid-sequence must never
+ * leave a row without its balance effect, or vice versa).
+ * Used by routes/wallet.js and routes/anchor.js (webhooks).
  */
-const { query } = require('../db')
+const { query, pool } = require('../db')
 const analytics = require('./analytics')
 
+// Run fn(client) inside a transaction on a dedicated connection.
+async function tx(fn) {
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    const result = await fn(client)
+    await client.query('COMMIT')
+    return result
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {})
+    throw err
+  } finally {
+    client.release()
+  }
+}
+
+function trackCredit(userId, amountKobo, balanceKobo, method) {
+  analytics.track(userId, 'fund_wallet', {
+    amount_loaded: Math.round(amountKobo / 100),
+    payment_gateway: 'Anchor',
+    payment_method: method || 'bank_transfer',
+  })
+  analytics.setProfile(userId, { current_wallet_balance: Math.round(balanceKobo / 100) })
+}
+
 // Credits a still-pending transaction and marks it completed — guarded by the
-// 'pending' check in the UPDATE so a transaction is never credited twice, and
-// by the amount check so a short-paid transfer never credits the full amount.
+// 'pending' check in the UPDATE (concurrency-safe: re-checked after any lock
+// wait) and by the amount check so a short-paid transfer never credits.
 async function creditTransaction(reference, { paymentMethod, paidKobo, currency, gateway } = {}) {
   if (currency != null && currency !== 'NGN') return false
-  const txRes = await query(
-    `UPDATE wallet_transactions SET status = 'completed', gateway = COALESCE($3, gateway)
-      WHERE reference = $1 AND status = 'pending'
-        AND ($2::bigint IS NULL OR amount_kobo <= $2::bigint)
-      RETURNING user_id, amount_kobo`,
-    [reference, paidKobo ?? null, gateway ?? null]
-  )
-  if (!txRes.rows[0]) return false // already credited, unknown reference, or short-paid
-  const { user_id, amount_kobo } = txRes.rows[0]
-  const balRes = await query(
-    'UPDATE users SET wallet_balance = wallet_balance + $1 WHERE id = $2 RETURNING wallet_balance',
-    [amount_kobo, user_id]
-  )
-
-  analytics.track(user_id, 'fund_wallet', {
-    amount_loaded: Math.round(amount_kobo / 100),
-    payment_gateway: gateway === 'anchor' ? 'Anchor' : 'Paystack',
-    payment_method: paymentMethod || 'bank_transfer',
+  const result = await tx(async client => {
+    const txRes = await client.query(
+      `UPDATE wallet_transactions SET status = 'completed', gateway = COALESCE($3, gateway)
+        WHERE reference = $1 AND status = 'pending'
+          AND ($2::bigint IS NULL OR amount_kobo <= $2::bigint)
+        RETURNING user_id, amount_kobo`,
+      [reference, paidKobo ?? null, gateway ?? null]
+    )
+    if (!txRes.rows[0]) return null
+    const { user_id, amount_kobo } = txRes.rows[0]
+    const balRes = await client.query(
+      'UPDATE users SET wallet_balance = wallet_balance + $1 WHERE id = $2 RETURNING wallet_balance',
+      [amount_kobo, user_id]
+    )
+    return { userId: user_id, amountKobo: Number(amount_kobo), balance: Number(balRes.rows[0].wallet_balance) }
   })
-  analytics.setProfile(user_id, {
-    current_wallet_balance: Math.round(balRes.rows[0].wallet_balance / 100),
-  })
-
-  runAmlChecksOnCredit(user_id, Number(amount_kobo), reference).catch(() => {})
+  if (!result) return false
+  trackCredit(result.userId, result.amountKobo, result.balance, paymentMethod)
+  runAmlChecksOnCredit(result.userId, result.amountKobo, reference).catch(() => {})
   return true
 }
 
 // Virtual-NUBAN payments carry no per-payment reference, only "which account
-// number was paid" → "which user". Settle that user's OLDEST pending top-up
-// the payment can cover; the poller watching that reference then completes.
-async function creditPendingForUser(userId, paidKobo, currency) {
+// was paid" → "which user". Settle the user's pending top-up whose amount
+// EXACTLY matches the payment (newest first — the rider paying now is almost
+// certainly paying the panel they just opened, not an abandoned older one).
+// Anything that doesn't match exactly is handled by the caller via
+// directCredit of the full paid amount, so no remainder can ever evaporate.
+// Concurrency-safe: the status guard sits in the OUTER WHERE so a lock-wait
+// re-check prevents two deliveries from completing the same row.
+async function creditPendingForUser(userId, paidKobo, currency, payRef) {
   if (currency != null && currency !== 'NGN') return false
-  // Prefer the pending top-up whose amount EXACTLY matches the payment (the
-  // rider almost always transfers the exact figure shown), falling back to
-  // the oldest one the payment can cover.
-  const txRes = await query(
-    `UPDATE wallet_transactions SET status = 'completed'
-      WHERE id = (
-        SELECT id FROM wallet_transactions
-         WHERE user_id = $1 AND type = 'credit' AND status = 'pending'
-           AND gateway = 'anchor' AND amount_kobo <= $2
-         ORDER BY (amount_kobo = $2) DESC, created_at ASC LIMIT 1
-      ) RETURNING amount_kobo`,
-    [userId, paidKobo]
-  )
-  if (!txRes.rows[0]) return false
-  const amountKobo = Number(txRes.rows[0].amount_kobo)
-  const balRes = await query(
-    'UPDATE users SET wallet_balance = wallet_balance + $1 WHERE id = $2 RETURNING wallet_balance',
-    [amountKobo, userId]
-  )
-  analytics.track(userId, 'fund_wallet', {
-    amount_loaded: Math.round(amountKobo / 100),
-    payment_gateway: 'Anchor', payment_method: 'bank_transfer',
+  const result = await tx(async client => {
+    const txRes = await client.query(
+      `UPDATE wallet_transactions SET status = 'completed'
+        WHERE status = 'pending' AND id = (
+          SELECT id FROM wallet_transactions
+           WHERE user_id = $1 AND type = 'credit' AND status = 'pending'
+             AND gateway = 'anchor' AND amount_kobo = $2
+           ORDER BY created_at DESC LIMIT 1
+        ) RETURNING amount_kobo`,
+      [userId, paidKobo]
+    )
+    if (!txRes.rows[0]) return null
+    const amountKobo = Number(txRes.rows[0].amount_kobo)
+    const balRes = await client.query(
+      'UPDATE users SET wallet_balance = wallet_balance + $1 WHERE id = $2 RETURNING wallet_balance',
+      [amountKobo, userId]
+    )
+    return { amountKobo, balance: Number(balRes.rows[0].wallet_balance) }
   })
-  analytics.setProfile(userId, { current_wallet_balance: Math.round(balRes.rows[0].wallet_balance / 100) })
-  runAmlChecksOnCredit(userId, amountKobo, null).catch(() => {})
+  if (!result) return false
+  trackCredit(userId, result.amountKobo, result.balance, 'bank_transfer')
+  runAmlChecksOnCredit(userId, result.amountKobo, payRef || null).catch(() => {})
   return true
 }
 
 // Credit that did NOT start from a pending row — e.g. a rider transferred
-// straight into their permanent reserved account. Idempotent per reference.
+// straight into their permanent funding account, or an amount that matches no
+// pending top-up. Idempotent per reference (UNIQUE + ON CONFLICT).
 async function directCredit(userId, amountKobo, reference, description, gateway = 'anchor') {
-  const inserted = await query(
-    `INSERT INTO wallet_transactions (user_id, type, amount_kobo, description, reference, status, gateway)
-     VALUES ($1, 'credit', $2, $3, $4, 'completed', $5)
-     ON CONFLICT (reference) DO NOTHING RETURNING id`,
-    [userId, amountKobo, description, reference, gateway]
-  )
-  if (!inserted.rows[0]) return false // duplicate webhook delivery
-  const balRes = await query(
-    'UPDATE users SET wallet_balance = wallet_balance + $1 WHERE id = $2 RETURNING wallet_balance',
-    [amountKobo, userId]
-  )
-  analytics.track(userId, 'fund_wallet', {
-    amount_loaded: Math.round(amountKobo / 100),
-    payment_gateway: 'Anchor', payment_method: 'reserved_account',
+  const result = await tx(async client => {
+    const inserted = await client.query(
+      `INSERT INTO wallet_transactions (user_id, type, amount_kobo, description, reference, status, gateway)
+       VALUES ($1, 'credit', $2, $3, $4, 'completed', $5)
+       ON CONFLICT (reference) DO NOTHING RETURNING id`,
+      [userId, amountKobo, description, reference, gateway]
+    )
+    if (!inserted.rows[0]) return null // duplicate delivery
+    const balRes = await client.query(
+      'UPDATE users SET wallet_balance = wallet_balance + $1 WHERE id = $2 RETURNING wallet_balance',
+      [amountKobo, userId]
+    )
+    return { balance: Number(balRes.rows[0].wallet_balance) }
   })
-  analytics.setProfile(userId, { current_wallet_balance: Math.round(balRes.rows[0].wallet_balance / 100) })
+  if (!result) return false
+  trackCredit(userId, amountKobo, result.balance, 'reserved_account')
   runAmlChecksOnCredit(userId, amountKobo, reference).catch(() => {})
   return true
+}
+
+// Return escrowed payout money to a driver's wallet — exactly once per
+// reference, atomically with the balance change.
+async function refundPayout(driverId, amountKobo, reference, description = 'Payout failed — funds returned') {
+  return tx(async client => {
+    const inserted = await client.query(
+      `INSERT INTO wallet_transactions (user_id, type, amount_kobo, description, reference, status)
+       VALUES ($1, 'credit', $2, $3, $4, 'completed')
+       ON CONFLICT (reference) DO NOTHING RETURNING id`,
+      [driverId, amountKobo, description, reference]
+    )
+    if (!inserted.rows[0]) return false
+    await client.query('UPDATE users SET wallet_balance = wallet_balance + $1 WHERE id = $2', [amountKobo, driverId])
+    return true
+  })
+}
+
+// Escrow a withdrawal atomically: the conditional decrement makes overdraw
+// impossible even under concurrent requests, and the payout + ledger rows
+// commit together with it. Returns { payoutId } or null if balance short.
+async function escrowWithdrawal(driverId, amountKobo) {
+  return tx(async client => {
+    const dec = await client.query(
+      `UPDATE users SET wallet_balance = wallet_balance - $1
+        WHERE id = $2 AND wallet_balance >= $1 RETURNING wallet_balance`,
+      [amountKobo, driverId]
+    )
+    if (!dec.rows[0]) return null // insufficient — nothing changed
+    const payout = await client.query(
+      'INSERT INTO payout_requests (driver_id, amount_kobo) VALUES ($1, $2) RETURNING id, requested_at',
+      [driverId, amountKobo]
+    )
+    await client.query(
+      'INSERT INTO wallet_transactions (user_id, type, amount_kobo, description, reference) VALUES ($1, $2, $3, $4, $5)',
+      [driverId, 'debit', amountKobo, 'Withdrawal request — pending approval', `payout-${payout.rows[0].id}`]
+    )
+    return { payoutId: payout.rows[0].id, requestedAt: payout.rows[0].requested_at }
+  })
 }
 
 // ── AML rules ────────────────────────────────────────────────────────────────
@@ -159,4 +224,11 @@ async function runAmlChecksOnPayout(userId, amountKobo) {
   }
 }
 
-module.exports = { creditTransaction, creditPendingForUser, directCredit, runAmlChecksOnPayout }
+module.exports = {
+  creditTransaction,
+  creditPendingForUser,
+  directCredit,
+  refundPayout,
+  escrowWithdrawal,
+  runAmlChecksOnPayout,
+}

@@ -15,6 +15,16 @@ for (const key of ['JWT_SECRET', 'DATABASE_URL']) {
   }
 }
 
+// Loud (non-fatal) alarm: a production boot pointed at Anchor's SANDBOX means
+// real riders would be "paying" fake money — the classic footgun when an
+// AppSail promotion wipes env config and the bundled .env fallback kicks in.
+if (process.env.NODE_ENV === 'production'
+    && (process.env.ANCHOR_BASE_URL || '').includes('sandbox')
+    && process.env.ANCHOR_API_KEY) {
+  console.error('⚠️  WARNING: NODE_ENV=production but ANCHOR_BASE_URL points at the SANDBOX. '
+    + 'Set the live base URL + live API key in the AppSail environment before serving real users.')
+}
+
 const express    = require('express')
 const helmet     = require('helmet')
 const cors       = require('cors')
@@ -185,24 +195,6 @@ async function runMigrations() {
     -- email_otps is reused for both signup verification and password reset —
     -- purpose keeps the two flows from cross-validating each other's codes.
     ALTER TABLE email_otps ADD COLUMN IF NOT EXISTS purpose VARCHAR(20) NOT NULL DEFAULT 'signup';
-
-    -- Routes can now be created UNPRICED (admin adds the pairing first, prices
-    -- it later). An unpriced route is hidden from riders/drivers until a pool
-    -- fare is set — enforced in the query layer, so the columns go nullable.
-    ALTER TABLE routes ALTER COLUMN pool_fare_kobo DROP NOT NULL;
-    ALTER TABLE routes ALTER COLUMN package_fare_kobo DROP NOT NULL;
-
-    -- Backfill: the face photo collected at registration becomes the avatar
-    -- for accounts created before automatic assignment existed (selfie
-    -- preferred). Idempotent — only ever fills blanks.
-    UPDATE users u SET avatar_path = d.file_path
-    FROM (
-      SELECT DISTINCT ON (user_id) user_id, file_path
-        FROM user_documents
-       WHERE doc_type IN ('selfie','profilePhoto')
-       ORDER BY user_id, (doc_type = 'selfie') DESC, uploaded_at DESC
-    ) d
-    WHERE u.id = d.user_id AND u.avatar_path IS NULL;
 
     CREATE TABLE IF NOT EXISTS ratings (
       id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -507,6 +499,23 @@ async function runMigrations() {
       created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS idx_aml_flags_status ON aml_flags(status, created_at DESC);
+
+    -- ── Late-ordered statements: these reference tables/columns created above,
+    -- so they MUST run last — the whole migration executes as one implicit
+    -- transaction, and on a FRESH database an early reference to a
+    -- not-yet-created relation aborts and rolls back EVERYTHING.
+    -- Routes can be created UNPRICED (hidden from riders until priced).
+    ALTER TABLE routes ALTER COLUMN pool_fare_kobo DROP NOT NULL;
+    ALTER TABLE routes ALTER COLUMN package_fare_kobo DROP NOT NULL;
+    -- Backfill: registration face photo becomes the avatar for old accounts.
+    UPDATE users u SET avatar_path = d.file_path
+    FROM (
+      SELECT DISTINCT ON (user_id) user_id, file_path
+        FROM user_documents
+       WHERE doc_type IN ('selfie','profilePhoto')
+       ORDER BY user_id, (doc_type = 'selfie') DESC, uploaded_at DESC
+    ) d
+    WHERE u.id = d.user_id AND u.avatar_path IS NULL;
   `
   try {
     await pool.query(migrations)
@@ -560,7 +569,7 @@ if (!ON_CATALYST || process.env.FORCE_APP_CORS === '1') {
 }
 
 // Capture the raw body alongside the parsed one — needed to verify the
-// Paystack webhook signature (HMAC over the exact bytes Paystack sent).
+// Anchor webhook signature (HMAC over the exact bytes Anchor sent).
 app.use(express.json({
   limit: '10kb', // Prevent large payload attacks
   verify: (req, _res, buf) => { req.rawBody = buf },

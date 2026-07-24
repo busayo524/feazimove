@@ -144,6 +144,7 @@ router.get('/dashboard', async (req, res, next) => {
            SELECT CASE WHEN t.type = 'credit' THEN 'Wallet Credited' ELSE 'Wallet Debited' END,
                   'payment', u.name, '₦' || ROUND(t.amount_kobo / 100.0)::text || ' — ' || t.description, t.created_at
            FROM wallet_transactions t JOIN users u ON t.user_id = u.id
+           WHERE t.status = 'completed' -- pending/expired top-ups are not money
          ) ev ORDER BY created_at DESC LIMIT 12`
       ),
     ])
@@ -673,6 +674,7 @@ router.get('/payments', async (req, res, next) => {
            SELECT t.id::text AS id, t.type, t.amount_kobo, t.description, t.created_at, u.name AS user_name
              FROM wallet_transactions t
              JOIN users u ON t.user_id = u.id
+            WHERE t.status = 'completed' -- pending/expired top-ups are not money
            UNION ALL
            SELECT 'payout-' || p.id AS id, 'debit' AS type, p.amount_kobo,
                   CASE p.status WHEN 'completed' THEN 'Driver payout sent — bank transfer'
@@ -755,10 +757,12 @@ router.post('/payouts/:id/approve',
       // Without Anchor configured, fall back to the old bookkeeping-only
       // approval (money moved by hand outside the app).
       if (!anchor.configured()) {
-        await query(
-          `UPDATE payout_requests SET status = 'approved', processed_at = NOW(), processed_by = $1 WHERE id = $2`,
+        const manual = await query(
+          `UPDATE payout_requests SET status = 'approved', processed_at = NOW(), processed_by = $1
+            WHERE id = $2 AND status = 'pending' RETURNING id`,
           [req.user.id, req.params.id]
         )
+        if (!manual.rows[0]) return res.status(409).json({ message: 'This request is no longer pending.' })
         logActivity(req.user.id, 'Payout Approved', 'payment', `₦${fmt(payout.amount_kobo).toLocaleString()} (manual)`)
         return res.json({ message: 'Payout approved (manual transfer — payment rails not configured).' })
       }
@@ -823,12 +827,33 @@ router.post('/payouts/:id/approve',
           `₦${fmt(payout.amount_kobo).toLocaleString()} → ${payout.driver_name} (NIP ${transfer.attributes?.status || 'PENDING'})`)
         res.json({ message: `Transfer of ₦${fmt(payout.amount_kobo).toLocaleString()} to ${payout.driver_name} is on its way.`, transferId: transfer.id })
       } catch (err) {
-        // Transfer initiation failed — put the request back so admin can retry
-        await query(
-          `UPDATE payout_requests SET status = 'pending', processed_by = NULL, anchor_reference = NULL WHERE id = $1`,
-          [req.params.id]
-        )
-        return res.status(err.status || 502).json({ message: err.message || 'Transfer could not be initiated — the request is back in pending.' })
+        // Initiation errored AMBIGUOUSLY (e.g. timeout) — Anchor may still
+        // have created the transfer. Reverting to pending without checking
+        // would let a retry double-pay the driver, so reconcile first:
+        //   transfer exists   → adopt it (processing), webhook completes it
+        //   confirmed absent  → safe to revert to pending for retry
+        //   can't tell        → stay approved with the reference intact so a
+        //                       later webhook can still match and settle it
+        const existing = await anchor.findTransferByReference(reference).catch(() => undefined)
+        if (existing) {
+          await query(
+            `UPDATE payout_requests SET status = 'processing', anchor_transfer_id = $1 WHERE id = $2`,
+            [existing.id, req.params.id]
+          )
+          logActivity(req.user.id, 'Payout Sent', 'payment',
+            `₦${fmt(payout.amount_kobo).toLocaleString()} → ${payout.driver_name} (recovered after timeout)`)
+          return res.json({ message: `Transfer of ₦${fmt(payout.amount_kobo).toLocaleString()} to ${payout.driver_name} is on its way (recovered).`, transferId: existing.id })
+        }
+        if (existing === null) {
+          await query(
+            `UPDATE payout_requests SET status = 'pending', processed_by = NULL, anchor_reference = NULL WHERE id = $1 AND status = 'approved'`,
+            [req.params.id]
+          )
+          return res.status(err.status || 502).json({ message: err.message || 'Transfer could not be initiated — the request is back in pending.' })
+        }
+        return res.status(502).json({
+          message: 'Transfer initiation is uncertain — the request stays approved and will settle automatically if Anchor processed it. Do not retry; check Back Office events shortly.',
+        })
       }
     } catch (err) {
       if (err.status) return res.status(err.status).json({ message: err.message })
@@ -1110,15 +1135,17 @@ router.get('/export/:type', async (req, res, next) => {
       )
     } else {
       const result = await query(
-        `SELECT t.id, t.type, t.amount_kobo, t.description, t.created_at, u.name AS user_name
+        `SELECT t.id, t.type, t.amount_kobo, t.description, t.status, t.gateway, t.reference, t.created_at, u.name AS user_name
          FROM wallet_transactions t JOIN users u ON t.user_id = u.id
          ORDER BY t.created_at DESC`
       )
       csv = toCsv(
-        result.rows.map(t => ({ ...t, amount: fmt(t.amount_kobo) })),
+        result.rows.map(t => ({ ...t, amount: fmt(t.amount_kobo), gateway: t.gateway || 'internal' })),
         [
           { key:'id', label:'Transaction ID' }, { key:'user_name', label:'User' },
           { key:'type', label:'Type' }, { key:'amount', label:'Amount (NGN)' },
+          { key:'status', label:'Status' }, { key:'gateway', label:'Gateway' },
+          { key:'reference', label:'Reference' },
           { key:'description', label:'Description' }, { key:'created_at', label:'Date', date:true },
         ]
       )

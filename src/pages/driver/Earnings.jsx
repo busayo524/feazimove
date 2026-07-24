@@ -53,14 +53,32 @@ function BarChart({ data, maxVal }){
   )
 }
 
-// ── Demo data helpers (until real ride data flows) ────────────────────────────
-function buildWeeklyDemo(){
-  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
-  const amounts=[8400,12200,9600,15800,18400,21000,6200]
-  return days.map((label,i)=>({ label, amount:amounts[i] }))
+// ── Real series builders — derived from the wallet ledger (no fabricated
+// numbers: an account with no rides shows honest zeros) ──────────────────────
+const DAY_LABELS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+function buildWeekly(earnings){
+  // Last 7 days, oldest → today
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - (6 - i))
+    return { key: d.toDateString(), label: DAY_LABELS[d.getDay()], amount: 0 }
+  })
+  for (const t of earnings) {
+    const key = new Date(t.createdAt).toDateString()
+    const slot = days.find(d => d.key === key)
+    if (slot) slot.amount += t.amount
+  }
+  return days
 }
-function buildMonthlyDemo(){
-  return Array.from({length:4},(_,i)=>({ label:`Wk ${i+1}`, amount:[62400,74800,91200,55000][i] }))
+function buildMonthly(earnings){
+  // Last 4 whole weeks, oldest → current
+  const weeks = Array.from({ length: 4 }, (_, i) => ({ label: `Wk ${i+1}`, amount: 0 }))
+  const now = Date.now()
+  for (const t of earnings) {
+    const ageDays = (now - new Date(t.createdAt).getTime()) / 86_400_000
+    if (ageDays < 0 || ageDays >= 28) continue
+    weeks[3 - Math.floor(ageDays / 7)].amount += t.amount
+  }
+  return weeks
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
@@ -124,22 +142,20 @@ export default function Earnings(){
     setTimeout(() => { setShowWithdraw(false); setWithdrawSuccess('') }, 1800)
   }
 
-  // ── Compute earnings per period ───────────────────────────────────────────
-  const credits = txns.filter(t => t.type === 'credit')
+  // ── Compute earnings per period — real ledger data only ───────────────────
+  // "Earnings" = ride-earning credits specifically, so wallet top-ups and
+  // payout-failure refunds never inflate the numbers.
+  const earnings = txns.filter(t => t.type === 'credit' && /^Ride earnings/i.test(t.description || ''))
 
-  const now      = new Date()
-  const todayStr = now.toDateString()
+  const todayStr = new Date().toDateString()
+  const inDays = (t, days) => (Date.now() - new Date(t.createdAt).getTime()) < days * 86_400_000
 
-  const todayAmount = credits.filter(t => new Date(t.rawDate||t.date).toDateString?.()===todayStr ||
-    t.date?.toLowerCase().startsWith('today'))
-    .reduce((s,t)=>s+t.amount, 0)
-
-  // Weekly: use demo bars (no per-day data from transactions)
-  const weeklyBars  = buildWeeklyDemo()
-  const monthlyBars = buildMonthlyDemo()
-
-  const weekTotal  = weeklyBars.reduce((s,d)=>s+d.amount, 0)
-  const monthTotal = monthlyBars.reduce((s,d)=>s+d.amount, 0)
+  const todayAmount = earnings.filter(t => new Date(t.createdAt).toDateString() === todayStr).reduce((s,t)=>s+t.amount, 0)
+  const weeklyBars  = buildWeekly(earnings)
+  const monthlyBars = buildMonthly(earnings)
+  const weekTotal   = weeklyBars.reduce((s,d)=>s+d.amount, 0)
+  const monthTotal  = monthlyBars.reduce((s,d)=>s+d.amount, 0)
+  const allTime     = earnings.reduce((s,t)=>s+t.amount, 0)
 
   const periodAmount = period==='today' ? todayAmount
                      : period==='week'  ? weekTotal
@@ -149,18 +165,18 @@ export default function Earnings(){
                      : period==='week'  ? 'This Week'
                      : 'This Month'
 
-  const tripCount = period==='today' ? Math.max(credits.length > 0 ? 2 : 0, 0)
-                  : period==='week'  ? 12
-                  : 47
-
+  const todayTrips = earnings.filter(t => new Date(t.createdAt).toDateString() === todayStr).length
+  const weekTrips  = earnings.filter(t => inDays(t, 7)).length
+  const monthTrips = earnings.filter(t => inDays(t, 28)).length
+  const tripCount  = period==='today' ? todayTrips : period==='week' ? weekTrips : monthTrips
   const avgPerTrip = tripCount > 0 ? Math.round(periodAmount / tripCount) : 0
 
-  // Demo driver profile stats
+  // Driver profile stats — all derived from real data
   const PROFILE_STATS = [
-    { label:'Total Trips',   value: '284',   icon:<Car size={13} color={OLIVE}/> },
-    { label:'Rating',        value: `${user?.rating||'4.8'} ⭐`, icon:<Star size={13} color={OLIVE}/> },
-    { label:'Completion',    value: '97%',   icon:<CheckCircle size={13} color={OLIVE}/> },
-    { label:'Online Hrs',    value: '6.4h',  icon:<Clock size={13} color={OLIVE}/> },
+    { label:'Total Trips',   value: String(earnings.length), icon:<Car size={13} color={OLIVE}/> },
+    { label:'Rating',        value: user?.rating ? `${user.rating} ⭐` : '—', icon:<Star size={13} color={OLIVE}/> },
+    { label:'This Week',     value: `${weekTrips} trips`,   icon:<CheckCircle size={13} color={OLIVE}/> },
+    { label:'All Time',      value: fmt(allTime),           icon:<Clock size={13} color={OLIVE}/> },
   ]
 
   if(loading){
@@ -271,29 +287,9 @@ export default function Earnings(){
         </div>
 
         {txns.length === 0 ? (
-          /* Demo transactions shown while no real data exists */
-          [
-            { id:1, label:'Trip: Ikeja → Victoria Island',  amount:2800, time:'Today, 9:14 AM',      type:'credit' },
-            { id:2, label:'Trip: Gbagada → CMS',             amount:1900, time:'Today, 7:30 AM',      type:'credit' },
-            { id:3, label:'Trip: Ojodu → Ikeja GRA',         amount:1200, time:'Yesterday, 5:00 PM',  type:'credit' },
-            { id:4, label:'FeaziMove: Package delivery',     amount:2400, time:'Yesterday, 2:30 PM',  type:'credit' },
-            { id:5, label:'Trip: Magodo → Victoria Island',  amount:3200, time:'Jun 21, 8:00 AM',     type:'credit' },
-          ].map((t,i,arr)=>(
-            <div key={t.id} style={{ display:'flex', alignItems:'center', gap:14, padding:'13px 20px', borderBottom:i<arr.length-1?`1px solid ${BORDER}`:'none', transition:'background 0.15s' }}
-              onMouseEnter={e=>e.currentTarget.style.background=BG}
-              onMouseLeave={e=>e.currentTarget.style.background=CARD}>
-              <div style={{ width:38, height:38, borderRadius:10, background:NEON, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                <ArrowDownLeft size={15} color={OLIVE}/>
-              </div>
-              <div style={{ flex:1, minWidth:0 }}>
-                <p style={{ color:TEXT, fontWeight:600, fontSize:14, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{t.label}</p>
-                <p style={{ color:MUTED, fontSize:12, marginTop:2 }}>{t.time}</p>
-              </div>
-              <span style={{ fontWeight:800, fontSize:13, color:OLIVE, background:NEON, padding:'3px 11px', borderRadius:20, flexShrink:0 }}>
-                +{fmt(t.amount)}
-              </span>
-            </div>
-          ))
+          <div style={{ padding:'28px 20px', textAlign:'center', color:MUTED, fontSize:13.5 }}>
+            No transactions yet — your ride earnings will appear here after your first completed trip.
+          </div>
         ) : (
           txns.slice(0,20).map((t,i,arr)=>(
             <div key={t.id} style={{ display:'flex', alignItems:'center', gap:14, padding:'13px 20px', borderBottom:i<arr.length-1?`1px solid ${BORDER}`:'none', transition:'background 0.15s' }}
@@ -363,10 +359,10 @@ export default function Earnings(){
           <p style={{ fontWeight:700, fontSize:13, color:MOSS, textTransform:'uppercase', letterSpacing:'0.06em' }}>Earnings Summary</p>
         </div>
         {[
-          { label:'Today',     value: fmt(todayAmount||4700),  sub:'2 trips' },
-          { label:'This Week', value: fmt(weekTotal),          sub:'12 trips' },
-          { label:'This Month',value: fmt(monthTotal),         sub:'47 trips' },
-          { label:'All Time',  value: fmt(monthTotal*6),       sub:'284 total trips' },
+          { label:'Today',     value: fmt(todayAmount), sub:`${todayTrips} trip${todayTrips===1?'':'s'}` },
+          { label:'This Week', value: fmt(weekTotal),   sub:`${weekTrips} trip${weekTrips===1?'':'s'}` },
+          { label:'This Month',value: fmt(monthTotal),  sub:`${monthTrips} trip${monthTrips===1?'':'s'}` },
+          { label:'All Time',  value: fmt(allTime),     sub:`${earnings.length} total trip${earnings.length===1?'':'s'}` },
         ].map((row,i,arr)=>(
           <div key={row.label} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'13px 20px', borderBottom:i<arr.length-1?`1px solid ${BORDER}`:'none' }}>
             <div style={{ display:'flex', alignItems:'center', gap:10 }}>

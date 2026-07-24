@@ -18,7 +18,7 @@ const { validate }    = require('../middleware/validate')
 const { consumeChallenge } = require('../services/actionChallenges')
 const analytics = require('../services/analytics')
 const anchor = require('../services/anchor')
-const { runAmlChecksOnPayout } = require('../services/walletLedger')
+const { runAmlChecksOnPayout, escrowWithdrawal } = require('../services/walletLedger')
 
 const router = express.Router()
 router.use(requireAuth)
@@ -78,11 +78,26 @@ async function ensureFundingNuban(userId) {
     accountNumber: a.accountNumber,
     accountName: a.accountName,
   }
-  await query(
+  // Guarded write: if a concurrent request already saved a NUBAN for this
+  // user, keep THAT one (overwriting would orphan payments sent to the number
+  // the other request displayed). The extra Anchor-side NUBAN is never shown
+  // to anyone, so it's harmless.
+  const saved = await query(
     `UPDATE users SET anchor_reserved_account_id = $1, reserved_account_number = $2,
-        reserved_account_bank = $3, reserved_account_name = $4 WHERE id = $5`,
+        reserved_account_bank = $3, reserved_account_name = $4
+      WHERE id = $5 AND reserved_account_number IS NULL RETURNING id`,
     [nuban.id, details.accountNumber, details.bankName, details.accountName, userId]
   )
+  if (!saved.rows[0]) {
+    const winner = await query(
+      'SELECT reserved_account_number, reserved_account_bank, reserved_account_name FROM users WHERE id = $1', [userId]
+    )
+    return {
+      bankName: winner.rows[0].reserved_account_bank,
+      accountNumber: winner.rows[0].reserved_account_number,
+      accountName: winner.rows[0].reserved_account_name,
+    }
+  }
   return details
 }
 
@@ -113,6 +128,7 @@ router.get('/transactions', async (req, res, next) => {
         amount:      Math.round(t.amount_kobo / 100),
         description: t.description,
         status:      t.status,
+        createdAt:   t.created_at, // raw ISO — clients compute periods from this
         date:        new Date(t.created_at).toLocaleDateString('en-NG', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Lagos' }),
       })),
     })
@@ -143,11 +159,13 @@ router.post('/fund',
 
       const { user } = await ensureAnchorCustomer(req.user.id)
 
-      // Record as pending — flipped to 'completed' by the payin.received
-      // webhook (routes/anchor.js) once the transfer lands.
+      // House-keeping: abandoned top-ups past their window expire NOW so they
+      // can never be matched by mistake and don't clutter the ledger.
       await query(
-        'INSERT INTO wallet_transactions (user_id, type, amount_kobo, description, reference, status, gateway) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-        [req.user.id, 'credit', amount * 100, isRidePayment ? 'Ride payment' : 'Wallet top-up', reference, 'pending', 'anchor']
+        `UPDATE wallet_transactions SET status = 'failed', description = description || ' (expired unpaid)'
+          WHERE user_id = $1 AND gateway = 'anchor' AND type = 'credit' AND status = 'pending'
+            AND created_at < NOW() - INTERVAL '45 minutes'`,
+        [req.user.id]
       )
 
       let transfer
@@ -174,6 +192,13 @@ router.post('/fund',
         if (!anchor.isUnavailable(err)) throw err
         transfer = await ensureFundingNuban(req.user.id)
       }
+
+      // Record as pending only AFTER the payment account exists — flipped to
+      // 'completed' by the webhook (routes/anchor.js) once the transfer lands.
+      await query(
+        'INSERT INTO wallet_transactions (user_id, type, amount_kobo, description, reference, status, gateway) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+        [req.user.id, 'credit', amount * 100, isRidePayment ? 'Ride payment' : 'Wallet top-up', reference, 'pending', 'anchor']
+      )
 
       res.json({
         reference,
@@ -350,28 +375,17 @@ router.post('/withdraw',
       try { await consumeChallenge(req.user.id, 'wallet_withdraw', req.body.challengeId, req.body.code) }
       catch (e) { return res.status(e.status || 400).json({ message: e.message }) }
 
-      const userRes = await query('SELECT wallet_balance FROM users WHERE id = $1', [req.user.id])
-      if (Number(userRes.rows[0].wallet_balance) < amountKobo) {
-        return res.status(402).json({ message: 'Insufficient wallet balance.' })
-      }
-
-      await query('UPDATE users SET wallet_balance = wallet_balance - $1 WHERE id = $2', [amountKobo, req.user.id])
-      const result = await query(
-        'INSERT INTO payout_requests (driver_id, amount_kobo) VALUES ($1, $2) RETURNING id, requested_at',
-        [req.user.id, amountKobo]
-      )
-      // reference ties the wallet-side escrow to the payout record (and via
-      // that to Anchor's transfer) — the spine of payout reconciliation
-      await query(
-        'INSERT INTO wallet_transactions (user_id, type, amount_kobo, description, reference) VALUES ($1, $2, $3, $4, $5)',
-        [req.user.id, 'debit', amountKobo, 'Withdrawal request — pending approval', `payout-${result.rows[0].id}`]
-      )
+      // Atomic escrow: conditional decrement (overdraw impossible even under
+      // concurrent requests) + payout row + reconciliation-linked ledger row,
+      // all in one transaction (services/walletLedger.js).
+      const escrow = await escrowWithdrawal(req.user.id, amountKobo)
+      if (!escrow) return res.status(402).json({ message: 'Insufficient wallet balance.' })
 
       // AML: fast in-out (fund → immediate withdrawal) gets flagged for the
       // back office; the payout itself still goes through admin review.
       runAmlChecksOnPayout(req.user.id, amountKobo).catch(() => {})
 
-      res.status(201).json({ message: 'Withdrawal requested — pending admin approval.', payoutId: result.rows[0].id })
+      res.status(201).json({ message: 'Withdrawal requested — pending admin approval.', payoutId: escrow.payoutId })
     } catch (err) { next(err) }
   }
 )
