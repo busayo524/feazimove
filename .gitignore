@@ -28,3 +28,5 @@ vite.config.js.timestamp*
 
 # Deployment archives (may contain uploads/user documents)
 *.zip
+
+docs

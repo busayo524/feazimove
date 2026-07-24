@@ -38,6 +38,36 @@ async function creditTransaction(reference, { paymentMethod, paidKobo, currency,
   return true
 }
 
+// Virtual-NUBAN payments carry no per-payment reference, only "which account
+// number was paid" → "which user". Settle that user's OLDEST pending top-up
+// the payment can cover; the poller watching that reference then completes.
+async function creditPendingForUser(userId, paidKobo, currency) {
+  if (currency != null && currency !== 'NGN') return false
+  const txRes = await query(
+    `UPDATE wallet_transactions SET status = 'completed'
+      WHERE id = (
+        SELECT id FROM wallet_transactions
+         WHERE user_id = $1 AND type = 'credit' AND status = 'pending'
+           AND gateway = 'anchor' AND amount_kobo <= $2
+         ORDER BY created_at ASC LIMIT 1
+      ) RETURNING amount_kobo`,
+    [userId, paidKobo]
+  )
+  if (!txRes.rows[0]) return false
+  const amountKobo = Number(txRes.rows[0].amount_kobo)
+  const balRes = await query(
+    'UPDATE users SET wallet_balance = wallet_balance + $1 WHERE id = $2 RETURNING wallet_balance',
+    [amountKobo, userId]
+  )
+  analytics.track(userId, 'fund_wallet', {
+    amount_loaded: Math.round(amountKobo / 100),
+    payment_gateway: 'Anchor', payment_method: 'bank_transfer',
+  })
+  analytics.setProfile(userId, { current_wallet_balance: Math.round(balRes.rows[0].wallet_balance / 100) })
+  runAmlChecksOnCredit(userId, amountKobo, null).catch(() => {})
+  return true
+}
+
 // Credit that did NOT start from a pending row — e.g. a rider transferred
 // straight into their permanent reserved account. Idempotent per reference.
 async function directCredit(userId, amountKobo, reference, description, gateway = 'anchor') {
@@ -126,4 +156,4 @@ async function runAmlChecksOnPayout(userId, amountKobo) {
   }
 }
 
-module.exports = { creditTransaction, directCredit, runAmlChecksOnPayout }
+module.exports = { creditTransaction, creditPendingForUser, directCredit, runAmlChecksOnPayout }

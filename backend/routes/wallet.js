@@ -46,6 +46,37 @@ async function ensureAnchorCustomer(userId) {
   return { customerId: customer.id, user }
 }
 
+// Anchor's /pay products (amount-locked temporary accounts, reserved accounts)
+// only exist in PRODUCTION for approved payment programs. In sandbox — and as
+// a graceful fallback — each user gets ONE permanent Virtual NUBAN pointing at
+// our master deposit account; payments to it are matched to the user by the
+// NUBAN id stored here (see routes/anchor.js handlePayin).
+async function ensureFundingNuban(userId) {
+  const u = await query(
+    'SELECT reserved_account_number, reserved_account_bank, reserved_account_name FROM users WHERE id = $1', [userId]
+  )
+  if (u.rows[0]?.reserved_account_number) {
+    return {
+      bankName: u.rows[0].reserved_account_bank,
+      accountNumber: u.rows[0].reserved_account_number,
+      accountName: u.rows[0].reserved_account_name,
+    }
+  }
+  const nuban = await anchor.createVirtualNuban()
+  const a = nuban?.attributes || {}
+  const details = {
+    bankName: a.bank?.name || a.bankName || 'PROVIDUS BANK',
+    accountNumber: a.accountNumber,
+    accountName: a.accountName,
+  }
+  await query(
+    `UPDATE users SET anchor_reserved_account_id = $1, reserved_account_number = $2,
+        reserved_account_bank = $3, reserved_account_name = $4 WHERE id = $5`,
+    [nuban.id, details.accountNumber, details.bankName, details.accountName, userId]
+  )
+  return details
+}
+
 // ── Get wallet balance ────────────────────────────────────────────────────────
 router.get('/balance', async (req, res, next) => {
   try {
@@ -110,23 +141,35 @@ router.post('/fund',
         [req.user.id, 'credit', amount * 100, isRidePayment ? 'Ride payment' : 'Wallet top-up', reference, 'pending', 'anchor']
       )
 
-      const pwt = await anchor.createPayWithTransfer({
-        reference,
-        fullName: user.name,
-        email: user.email,
-        amountKobo: amount * 100,
-        expirySeconds: FUND_EXPIRY_SECONDS,
-        metadata: { feazimoveUserId: req.user.id, context: isRidePayment ? 'ride' : 'wallet' },
-      })
-
-      const a = pwt?.attributes || {}
-      const details = a.accountDetails || a.virtualAccountDetails || a
-      res.json({
-        reference,
-        transfer: {
+      let transfer
+      try {
+        const pwt = await anchor.createPayWithTransfer({
+          reference,
+          fullName: user.name,
+          email: user.email,
+          amountKobo: amount * 100,
+          expirySeconds: FUND_EXPIRY_SECONDS,
+          metadata: { feazimoveUserId: req.user.id, context: isRidePayment ? 'ride' : 'wallet' },
+        })
+        const a = pwt?.attributes || {}
+        const details = a.accountDetails || a.virtualAccountDetails || a
+        transfer = {
           bankName: details.bankName || details.bank?.name || '9 Payment Service Bank',
           accountNumber: details.accountNumber,
           accountName: details.accountName || `FeaziMove / ${user.name}`,
+        }
+      } catch (err) {
+        // Sandbox (or /pay not yet enabled): fall back to the user's permanent
+        // Virtual NUBAN — the webhook matches the incoming amount to this
+        // pending top-up by user instead of by reference.
+        if (!anchor.isUnavailable(err)) throw err
+        transfer = await ensureFundingNuban(req.user.id)
+      }
+
+      res.json({
+        reference,
+        transfer: {
+          ...transfer,
           amount, // naira — must be transferred EXACTLY
           expiresInSeconds: FUND_EXPIRY_SECONDS,
         },
@@ -184,18 +227,29 @@ router.post('/reserved-account',
       const parts = (user.name || '').trim().split(/\s+/)
 
       let acct
-      if (user.anchor_customer_id) {
-        acct = await anchor.createReservedAccount({ customerId: user.anchor_customer_id })
-      } else {
-        // Single-request path: Anchor creates customer + account together
-        acct = await anchor.createReservedAccount({
-          firstName: parts[0] || 'FeaziMove',
-          lastName: parts.slice(1).join(' ') || 'User',
-          email: user.email,
-          bvn: req.body.bvn,
+      try {
+        if (user.anchor_customer_id) {
+          acct = await anchor.createReservedAccount({ customerId: user.anchor_customer_id })
+        } else {
+          // Single-request path: Anchor creates customer + account together
+          acct = await anchor.createReservedAccount({
+            firstName: parts[0] || 'FeaziMove',
+            lastName: parts.slice(1).join(' ') || 'User',
+            email: user.email,
+            bvn: req.body.bvn,
+          })
+          const customerId = acct?.relationships?.customer?.data?.id
+          if (customerId) await query('UPDATE users SET anchor_customer_id = $1 WHERE id = $2', [customerId, req.user.id])
+        }
+      } catch (err) {
+        // Reserved accounts are production-only — in sandbox the permanent
+        // Virtual NUBAN plays the same role (account in our org's name).
+        if (!anchor.isUnavailable(err)) throw err
+        const details = await ensureFundingNuban(req.user.id)
+        return res.status(202).json({
+          message: 'Your personal funding account is ready.',
+          account: details,
         })
-        const customerId = acct?.relationships?.customer?.data?.id
-        if (customerId) await query('UPDATE users SET anchor_customer_id = $1 WHERE id = $2', [customerId, req.user.id])
       }
 
       // Some responses carry the account details synchronously; otherwise the

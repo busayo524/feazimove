@@ -117,3 +117,22 @@ curl -H "x-anchor-key: <KEY>" https://api.sandbox.getanchor.co/api/v1/customers 
 - **/wallet/fund returns 503** → `ANCHOR_API_KEY` missing in the DEPLOYED environment (re-zip + re-upload after editing `.env`).
 - **Reserved account "failed"** → BVN didn't validate in sandbox; use the documented test BVN `22222222226`.
 - Every webhook Anchor sends (valid or not) is recorded in the **Back Office → Transaction Monitor** — that's your first debugging stop.
+
+---
+
+## Important sandbox note (discovered Jul 24)
+
+Anchor's `/pay/*` product (Pay-with-Transfer and Reserved Accounts) **only exists in
+production for approved payment programs** — the sandbox returns "Endpoint not found".
+FeaziMove handles this automatically: it tries the `/pay` endpoints first and falls back
+to **Virtual NUBANs** (a permanent account number per user, pointing at the org's master
+deposit account). Functionally identical for testing; when Anchor enables the payment
+program in production, the code upgrades itself with no changes.
+
+Practical effect on this guide:
+- The account shown on a top-up is the user's permanent funding NUBAN (Providus Bank in
+  sandbox) rather than a one-time account — Simulate Transfer to it exactly as described.
+- The "personal funding account" (section B) returns the same NUBAN; the BVN is validated
+  by the form but only used once production reserved accounts are enabled.
+- Talking point for the pre-go-live call: ask Anchor to enable the payment program
+  (Pay-with-Transfer + Reserved Accounts) for production.

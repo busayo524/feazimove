@@ -139,6 +139,41 @@ async function getPayin(payinId) {
   } catch (err) { throw anchorError(err, 'Could not fetch payment details.') }
 }
 
+// The /pay/* product (Pay-with-Transfer, Reserved Accounts) only exists for
+// organizations approved for the payment program IN PRODUCTION — sandbox
+// returns "Endpoint not found". Callers use this to fall back to Virtual
+// NUBANs, which behave equivalently and exist in both environments.
+function isUnavailable(err) {
+  return err?.anchor?.errors?.[0]?.status === '404'
+}
+
+// ── Virtual NUBANs (docs.getanchor.co/docs/virtual-nubans) ───────────────────
+// "A pointer to a bank account" — a real account number that settles into one
+// of our deposit accounts. Payments to it fire `payment.received` with a
+// virtualNuban relationship. Verified working in sandbox (provider providus).
+async function createVirtualNuban({ settlementAccountId, provider } = {}) {
+  const accountId = settlementAccountId || await getMasterAccountId()
+  const attempt = async prov => {
+    const res = await http.post('/api/v1/virtual-nubans', {
+      data: {
+        type: 'VirtualNuban',
+        attributes: { provider: prov },
+        relationships: { settlementAccount: { data: { id: accountId, type: 'DepositAccount' } } },
+      },
+    })
+    return res.data.data // attributes: { accountNumber, accountName, bank: { name }, permanent, status }
+  }
+  try {
+    return await attempt(provider || PROVIDER)
+  } catch (first) {
+    // Providers differ per environment — providus is the one proven in sandbox
+    if ((provider || PROVIDER) !== 'providus') {
+      try { return await attempt('providus') } catch (err) { throw anchorError(err, 'Could not create an account number.') }
+    }
+    throw anchorError(first, 'Could not create an account number.')
+  }
+}
+
 // ── Payout rails (docs.getanchor.co/docs/bank-transfer) ──────────────────────
 async function listBanks() {
   try {
@@ -227,6 +262,8 @@ module.exports = {
   createIndividualCustomer,
   createPayWithTransfer,
   createReservedAccount,
+  createVirtualNuban,
+  isUnavailable,
   getPayin,
   listBanks,
   verifyAccount,

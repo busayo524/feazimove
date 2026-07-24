@@ -14,7 +14,7 @@
 const express = require('express')
 const { query } = require('../db')
 const anchor = require('../services/anchor')
-const { creditTransaction, directCredit } = require('../services/walletLedger')
+const { creditTransaction, creditPendingForUser, directCredit } = require('../services/walletLedger')
 
 const router = express.Router()
 
@@ -54,12 +54,24 @@ async function handlePayin(payload) {
     const credited = await creditTransaction(ourRef, { paidKobo: amountKobo, currency, gateway: 'anchor', paymentMethod: 'bank_transfer' })
     if (credited) return true
   }
-  // No pending row matched → this is a transfer straight into a rider's
-  // permanent reserved account. Identify the customer and credit directly
-  // (idempotent per payin id).
-  const customerId = relId({ relationships: rels }, 'customer') || relId(event, 'customer')
-  const userId = await userByCustomerId(customerId)
+  // No reference matched → identify the recipient another way:
+  //   1. virtualNuban relationship (sandbox / permanent funding accounts) —
+  //      the NUBAN id is stored on the user row when we create it.
+  //   2. customer relationship (production reserved accounts).
+  // Then settle their oldest pending top-up this payment covers, or if no
+  // top-up is waiting, credit the full amount directly (idempotent per payin).
+  let userId = null
+  const nubanId = relId({ relationships: rels }, 'virtualNuban') || relId(event, 'virtualNuban')
+  if (nubanId) {
+    const r = await query('SELECT id FROM users WHERE anchor_reserved_account_id = $1', [nubanId])
+    userId = r.rows[0]?.id || null
+  }
+  if (!userId) {
+    const customerId = relId({ relationships: rels }, 'customer') || relId(event, 'customer')
+    userId = await userByCustomerId(customerId)
+  }
   if (userId && currency === 'NGN') {
+    if (await creditPendingForUser(userId, amountKobo, currency)) return true
     return directCredit(userId, amountKobo, `anchor-payin-${payinId}`, 'Wallet top-up — bank transfer')
   }
   return false
