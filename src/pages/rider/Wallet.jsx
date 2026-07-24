@@ -205,14 +205,15 @@ export default function Wallet() {
     fetchWallet()
     try {
       const saved = JSON.parse(sessionStorage.getItem(PENDING_KEY) || 'null')
-      if (saved?.reference && saved?.transfer && Date.now() < saved.expiresAt + 60_000) {
+      const mine = saved?.userId && user?.id && saved.userId === user.id
+      if (saved?.reference && saved?.transfer && mine && Date.now() < saved.expiresAt + 60_000) {
         watchPending(saved)
       } else if (saved) {
-        sessionStorage.removeItem(PENDING_KEY)
+        sessionStorage.removeItem(PENDING_KEY) // expired — or another account's
       }
     } catch { sessionStorage.removeItem(PENDING_KEY) }
     return stopPolling
-  }, [fetchWallet, watchPending, stopPolling])
+  }, [fetchWallet, watchPending, stopPolling, user?.id])
 
   function sanitize(val) { return val.replace(/[^0-9]/g, '') }
 
@@ -226,6 +227,7 @@ export default function Wallet() {
       const res = await api.post('/wallet/fund', { amount: num })
       track('Wallet Topup Started', { amount: num })
       const pending = {
+        userId: user?.id || null, // never restore this panel for a different account
         reference: res.data.reference,
         transfer: res.data.transfer,
         expiresAt: Date.now() + (res.data.transfer.expiresInSeconds || 1800) * 1000,

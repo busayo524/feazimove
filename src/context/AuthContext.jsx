@@ -5,6 +5,11 @@ import { useIdleLogout, sessionIsStale, ACTIVITY_KEY, IDLE_LOGOUT_FLAG } from '.
 
 const AuthContext = createContext(null)
 
+// Per-user payment state that must never survive an account switch — a
+// pending top-up panel or in-flight ride payment belongs to ONE user.
+const USER_SCOPED_KEYS = ['fm_pending_fund', 'fm_ride_pay']
+const clearUserScopedState = () => USER_SCOPED_KEYS.forEach(k => sessionStorage.removeItem(k))
+
 // Split "Full Name" → { firstName, lastName } for UI components that expect separate fields
 function normalizeUser(user) {
   if (!user) return null
@@ -34,6 +39,7 @@ export function AuthProvider({ children }) {
       localStorage.removeItem('fm_refresh')
       localStorage.removeItem('fm_user')
       localStorage.removeItem(ACTIVITY_KEY)
+      clearUserScopedState()
       sessionStorage.setItem(IDLE_LOGOUT_FLAG, '1')
       setLoading(false)
       return
@@ -55,6 +61,7 @@ export function AuthProvider({ children }) {
   const login = useCallback(async (identifier, password) => {
     const res = await api.post('/auth/login', { identifier, password })
     const { token, refreshToken, user } = res.data
+    clearUserScopedState() // leftover payment state from a previous account
     const normalized = normalizeUser(user)
     localStorage.setItem('fm_token', token)
     if (refreshToken) localStorage.setItem('fm_refresh', refreshToken)
@@ -104,6 +111,7 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('fm_refresh')
     localStorage.removeItem('fm_user')
     localStorage.removeItem(ACTIVITY_KEY)
+    clearUserScopedState()
     setUser(null)
     resetAnalytics()
   }, [])

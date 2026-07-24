@@ -5,6 +5,7 @@ import RideTracker from '../../components/RideTracker'
 import { LocationDropdown, TimeDropdown, MORNING_SLOTS, EVENING_SLOTS } from '../../components/RouteDropdowns'
 import { MapPin, ArrowRight, Users, Navigation, Sun, Moon, X, Clock, Landmark, Wallet as WalletIcon, Star, Car } from 'lucide-react'
 import TransferDetails from '../../components/TransferDetails'
+import { useAuth } from '../../context/AuthContext'
 import PersonAvatar from '../../components/PersonAvatar'
 import { api } from '../../services/api'
 import { track } from '../../services/analytics'
@@ -212,6 +213,7 @@ const RIDE_PAY_KEY = 'fm_ride_pay'
 
 export default function BookRide(){
   const navigate = useNavigate()
+  const { user: authUser } = useAuth()
   const [service,setService]=useState('pool')
   const [pickup,setPickup]=useState('')
   const [dropoff,setDropoff]=useState('')
@@ -384,6 +386,7 @@ export default function BookRide(){
       const res = await api.post('/wallet/fund', { amount, context: 'ride' })
       track('Ride Payment Started', { amount, route_name: `${pickup}_to_${dropoff}` })
       const pending = {
+        userId: authUser?.id || null, // never restore for a different account
         reference: res.data.reference,
         transfer: res.data.transfer,
         expiresAt: Date.now() + (res.data.transfer?.expiresInSeconds || 1800) * 1000,
@@ -469,6 +472,7 @@ export default function BookRide(){
     let saved
     try { saved = JSON.parse(sessionStorage.getItem(RIDE_PAY_KEY) || 'null') } catch { saved = null }
     if (!saved?.reference || !saved?.booking || !saved?.transfer) { sessionStorage.removeItem(RIDE_PAY_KEY); return }
+    if (!saved.userId || !authUser?.id || saved.userId !== authUser.id) { sessionStorage.removeItem(RIDE_PAY_KEY); return }
     if (Date.now() > (saved.expiresAt || 0) + 60_000) { sessionStorage.removeItem(RIDE_PAY_KEY); return }
     const b = saved.booking
     setService(b.service || 'pool')
