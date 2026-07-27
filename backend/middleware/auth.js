@@ -6,6 +6,7 @@
  */
 const jwt = require('jsonwebtoken')
 const { query } = require('../db')
+const { maybeSweep } = require('../services/onlineStatus')
 
 async function requireAuth(req, res, next) {
   const authHeader = req.headers['authorization']
@@ -50,6 +51,7 @@ async function requireAuth(req, res, next) {
         WHERE id = $1 AND (last_seen_at IS NULL OR last_seen_at < NOW() - INTERVAL '60 seconds')`,
       [decoded.id]
     ).catch(() => {})
+    maybeSweep() // activity-triggered, throttled — never keeps the DB awake on its own
     next()
   } catch (err) { next(err) }
 }

@@ -627,45 +627,14 @@ app.use((err, req, res, _next) => {
   })
 })
 
-// ── Honest online status ─────────────────────────────────────────────────────
-// A driver who closes the browser never tells the server — their is_online
-// flag would lie forever. Every 5 minutes: any "online" user silent for 15+
-// minutes WITH NO RIDE IN PROGRESS is flipped offline and their published
-// availability cancelled, so the admin panel and rider matching both reflect
-// reality. Mid-ride drivers are exempt no matter how silent the app is.
-async function sweepStaleOnline() {
-  try {
-    const stale = await pool.query(
-      `UPDATE users SET is_online = false
-        WHERE is_online = true
-          AND last_seen_at IS NOT NULL
-          AND last_seen_at < NOW() - INTERVAL '15 minutes'
-          AND NOT EXISTS (
-            SELECT 1 FROM rides r
-             WHERE r.driver_id = users.id
-               AND r.status IN ('pending', 'driver_assigned', 'arrived_pickup', 'in_transit')
-          )
-        RETURNING id`
-    )
-    if (stale.rows.length) {
-      await pool.query(
-        `UPDATE driver_availability SET status = 'cancelled'
-          WHERE driver_id = ANY($1) AND status IN ('waiting', 'active', 'in_progress')`,
-        [stale.rows.map(r => r.id)]
-      )
-      console.log(`Stale-online sweep: ${stale.rows.length} user(s) flipped offline.`)
-    }
-  } catch (err) {
-    console.error('Stale-online sweep failed:', err.message)
-  }
-}
-
 runMigrations().then(() => {
   app.listen(PORT, () => {
     console.log(`FeaziMove API running on http://localhost:${PORT}`)
   })
-  sweepStaleOnline()
-  setInterval(sweepStaleOnline, 5 * 60 * 1000)
+  // One honest-status sweep at boot (deploys imply activity anyway); ongoing
+  // sweeps are request-triggered in middleware/auth.js — NEVER on a timer,
+  // which would keep the Neon database awake 24/7 and burn its compute quota.
+  require('./services/onlineStatus').sweepStaleOnline()
 })
 
 module.exports = app
