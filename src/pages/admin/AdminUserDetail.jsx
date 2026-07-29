@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
 import { api } from '../../services/api'
-import { ArrowLeft, Ban, CheckCircle2, XCircle, FileText, AlertCircle, Car, Trash2 } from 'lucide-react'
+import { ArrowLeft, Ban, CheckCircle2, XCircle, FileText, AlertCircle, Car, Trash2,
+  Eye, EyeOff, ShieldCheck, Download } from 'lucide-react'
 
 const CARD = '#ffffff', BORDER = '#e5e7eb', TEXT = '#1a1a1a', MUTED = '#6b7280', BG = '#f5f7f2'
 const GREEN = '#2a6048', NEON = '#ccff00', OLIVE = '#243800'
@@ -46,14 +47,90 @@ const STATUS_MAP = {
   rejected: { label:'Rejected',       bg:'#fef2f2', fg:'#dc2626' },
 }
 
-function Section({ title, children }) {
+function Section({ title, action, children }) {
   return (
     <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:14,
       overflow:'hidden', boxShadow:'0 1px 3px rgba(0,0,0,0.04)', marginBottom:20 }}>
-      <div style={{ padding:'13px 20px', borderBottom:`1px solid ${BORDER}`, background:BG }}>
+      <div style={{ padding:'13px 20px', borderBottom:`1px solid ${BORDER}`, background:BG,
+        display:'flex', justifyContent:'space-between', alignItems:'center', gap:12, flexWrap:'wrap' }}>
         <p style={{ margin:0, fontWeight:700, fontSize:12, color:MUTED, textTransform:'uppercase', letterSpacing:'0.06em' }}>{title}</p>
+        {action}
       </div>
       <div style={{ padding:20 }}>{children}</div>
+    </div>
+  )
+}
+
+/* Authenticator gate for full KYC. The code goes straight to the server —
+   nothing is decrypted client-side, and the modal never holds the BVN unless
+   the server released it. */
+function KycRevealModal({ userId, onRevealed, onClose }) {
+  const [code, setCode] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [needsSetup, setNeedsSetup] = useState(false)
+
+  async function submit(e) {
+    e.preventDefault()
+    setBusy(true); setError('')
+    try {
+      const res = await api.post(`/admin/users/${userId}/kyc/reveal`, { code })
+      onRevealed(res.data.kyc)
+    } catch (err) {
+      // 428 means "no authenticator enrolled yet", not "wrong code".
+      if (err.status === 428) setNeedsSetup(true)
+      setError(err.data?.message || 'Could not verify that code.')
+    } finally { setBusy(false) }
+  }
+
+  return (
+    <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', display:'flex',
+      alignItems:'center', justifyContent:'center', zIndex:100, padding:16 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background:CARD, borderRadius:16, padding:24, width:'100%', maxWidth:400 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:9, marginBottom:8 }}>
+          <ShieldCheck size={17} color={GREEN}/>
+          <p style={{ margin:0, fontWeight:800, fontSize:16, color:TEXT }}>Verify it’s you</p>
+        </div>
+        <p style={{ fontSize:13, color:MUTED, marginBottom:16, lineHeight:1.5 }}>
+          Full KYC data — including the complete BVN — is protected. Enter the current 6-digit
+          code from your authenticator app. This access is recorded.
+        </p>
+        {needsSetup ? (
+          <>
+            <p style={{ fontSize:13, color:'#b45309', marginBottom:16, lineHeight:1.5 }}>
+              You haven’t set up an authenticator app yet. Go to Settings → Security to enrol,
+              then come back.
+            </p>
+            <button onClick={onClose}
+              style={{ width:'100%', padding:'11px', borderRadius:10, background:OLIVE, color:'#fff', border:'none',
+                fontWeight:800, fontSize:13.5, cursor:'pointer', fontFamily:'inherit' }}>
+              Close
+            </button>
+          </>
+        ) : (
+          <form onSubmit={submit}>
+            <input value={code} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              placeholder="000000" inputMode="numeric" autoFocus autoComplete="one-time-code"
+              style={{ width:'100%', padding:'12px 14px', borderRadius:10, fontSize:22, letterSpacing:'0.32em',
+                textAlign:'center', border:`1.5px solid ${BORDER}`, marginBottom:12, boxSizing:'border-box',
+                background:CARD, color:TEXT, fontFamily:'inherit', fontWeight:700 }}/>
+            {error && <p style={{ fontSize:12.5, color:'#ef4444', marginBottom:12 }}>{error}</p>}
+            <div style={{ display:'flex', gap:10 }}>
+              <button type="submit" disabled={busy || code.length !== 6}
+                style={{ flex:1, padding:'11px', borderRadius:10, border:'none', fontWeight:800, fontSize:13.5, fontFamily:'inherit',
+                  background:(busy || code.length !== 6)?BORDER:NEON, color:(busy || code.length !== 6)?MUTED:OLIVE,
+                  cursor:(busy || code.length !== 6)?'not-allowed':'pointer' }}>
+                {busy ? 'Verifying…' : 'Reveal KYC'}
+              </button>
+              <button type="button" onClick={onClose}
+                style={{ padding:'11px 16px', borderRadius:10, background:'none', border:`1.5px solid ${BORDER}`,
+                  color:MUTED, fontWeight:700, fontSize:13.5, cursor:'pointer', fontFamily:'inherit' }}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
     </div>
   )
 }
@@ -106,6 +183,45 @@ export default function AdminUserDetail() {
   const [error, setError] = useState('')
   const [busy, setBusy]   = useState(false)
   const [action, setAction] = useState('')
+  // Revealed KYC lives only in memory for this page view — never cached, and
+  // gone on refresh, so the full BVN is on screen no longer than needed.
+  const [kyc, setKyc] = useState(null)
+  const [showReveal, setShowReveal] = useState(false)
+
+  // Built client-side from the already-revealed payload, so exporting needs no
+  // second authenticator prompt and the code never travels in a URL.
+  function exportKyc() {
+    if (!kyc) return
+    const rows = [
+      ['Field', 'Value'],
+      ['User ID', kyc.userId], ['Full Name', kyc.name], ['Email', kyc.email],
+      ['Phone', kyc.phone], ['Role', kyc.role],
+      ['Date of Birth', kyc.dateOfBirth ? new Date(kyc.dateOfBirth).toLocaleDateString('en-NG') : ''],
+      ['Gender', kyc.gender || ''], ['City', kyc.city || ''], ['Area', kyc.area || ''],
+      ['Residential Address', kyc.residentialAddress || ''],
+      ['ID Type', kyc.idType || ''], ['ID Number', kyc.idNumber || ''],
+      ['BVN (full)', kyc.bvn || (kyc.bvnUnavailable ? 'not recoverable' : '')],
+      ['Wallet KYC Status', kyc.kycStatus || ''],
+      ['Anchor Customer ID', kyc.anchorCustomerId || ''],
+      ['Funding Account', kyc.fundingAccount ? `${kyc.fundingAccount.number} (${kyc.fundingAccount.bank || ''})` : ''],
+      ['Payout Bank', kyc.bankName || ''], ['Payout Account', kyc.bankAccountNumber || ''],
+      ['Joined', kyc.joinedAt ? new Date(kyc.joinedAt).toLocaleString('en-NG') : ''],
+      ['Revealed At', new Date(kyc.revealedAt).toLocaleString('en-NG')],
+      ['Revealed By', kyc.revealedBy || ''],
+    ]
+    const csv = rows.map(r => r.map(v => {
+      const s = String(v ?? '').replace(/"/g, '""')
+      return /[",\n]/.test(s) ? `"${s}"` : s
+    }).join(',')).join('\n')
+    // BOM so Excel on Windows reads it as UTF-8 (matches the server exports).
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `feazimove-kyc-${(kyc.name || 'user').replace(/\s+/g, '-').toLowerCase()}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   function load() {
     api.get(`/admin/users/${id}`)
@@ -281,20 +397,72 @@ export default function AdminUserDetail() {
           ID details and the CBN/BVN wallet check are one compliance story, so
           they live in one section even when only half of it is filled in. */}
       {(user.idType || user.idNumber || user.bvnSubmitted || user.residentialAddress) && (
-        <Section title="Identity Verification/KYC">
+        <Section
+          title="Identity Verification/KYC"
+          action={
+            <div style={{ display:'flex', gap:8 }}>
+              {kyc ? (
+                <>
+                  <button onClick={exportKyc}
+                    style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:8,
+                      border:`1px solid ${BORDER}`, background:CARD, color:TEXT, fontWeight:700, fontSize:11.5,
+                      cursor:'pointer', fontFamily:'inherit' }}>
+                    <Download size={12}/> Export KYC
+                  </button>
+                  <button onClick={() => setKyc(null)}
+                    style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:8,
+                      border:`1px solid ${BORDER}`, background:CARD, color:MUTED, fontWeight:700, fontSize:11.5,
+                      cursor:'pointer', fontFamily:'inherit' }}>
+                    <EyeOff size={12}/> Hide
+                  </button>
+                </>
+              ) : (
+                <button onClick={() => setShowReveal(true)}
+                  style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:8,
+                    border:'none', background:OLIVE, color:'#fff', fontWeight:700, fontSize:11.5,
+                    cursor:'pointer', fontFamily:'inherit' }}>
+                  <Eye size={12}/> View full KYC
+                </button>
+              )}
+            </div>
+          }
+        >
           <InfoGrid rows={[
             ['ID Type',   user.idType || '—'],
-            ['ID Number', user.idNumber || '—'],
-            ['BVN', user.bvnMasked
-              ? `${user.bvnMasked} (last 4 digits only)`
-              : user.bvnSubmitted ? 'Submitted before BVN capture' : '—'],
-            ['Residential Address', user.residentialAddress || '—'],
+            ['ID Number', kyc?.idNumber || user.idNumber || '—'],
+            // Masked until an authenticator code releases the real number.
+            ['BVN', kyc
+              ? (kyc.bvn || (kyc.bvnUnavailable
+                  ? 'Not recoverable — submitted before encrypted storage'
+                  : '—'))
+              : user.bvnMasked
+                ? `${user.bvnMasked} — hidden`
+                : user.bvnSubmitted ? 'Submitted before BVN capture' : '—'],
+            ['Residential Address', kyc?.residentialAddress || user.residentialAddress || '—'],
+            ['Date of Birth', kyc?.dateOfBirth
+              ? new Date(kyc.dateOfBirth).toLocaleDateString('en-NG', { day:'numeric', month:'long', year:'numeric' })
+              : '—'],
             ['Wallet KYC Status', kycLabel(user.kycStatus, user.bvnSubmitted)],
+            ['Anchor Customer ID', kyc?.anchorCustomerId || '—'],
             ['Funding Account', user.fundingAccount
               ? `${user.fundingAccount.number}${user.fundingAccount.bank ? ` · ${user.fundingAccount.bank}` : ''}`
               : '—'],
           ]}/>
+          {kyc && (
+            <p style={{ fontSize:11.5, color:'#b45309', marginTop:14, lineHeight:1.5 }}>
+              Full KYC revealed {new Date(kyc.revealedAt).toLocaleString('en-NG', { timeZone:'Africa/Lagos' })}.
+              This access has been recorded in the activity log.
+            </p>
+          )}
         </Section>
+      )}
+
+      {showReveal && (
+        <KycRevealModal
+          userId={user.id}
+          onRevealed={data => { setKyc(data); setShowReveal(false) }}
+          onClose={() => setShowReveal(false)}
+        />
       )}
 
       {/* Vehicle info (drivers) */}

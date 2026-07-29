@@ -18,6 +18,7 @@ const { validate }    = require('../middleware/validate')
 const { consumeChallenge } = require('../services/actionChallenges')
 const analytics = require('../services/analytics')
 const anchor = require('../services/anchor')
+const kycVault = require('../services/kycVault')
 const { runAmlChecksOnPayout, escrowWithdrawal } = require('../services/walletLedger')
 
 const router = express.Router()
@@ -287,12 +288,15 @@ router.post('/reserved-account',
         return res.status(409).json({ message: 'You already have a personal funding account.' })
       }
       // KYC evidence, recorded BEFORE the Anchor call so it survives whichever
-      // branch below runs (and any Anchor failure). Only the last 4 BVN digits
-      // are kept — the full BVN still goes straight to Anchor and is never
-      // written to our database.
+      // branch below runs (and any Anchor failure). The last 4 digits are kept
+      // in clear for everyday admin confirmation; the full BVN is stored only
+      // AES-256-GCM encrypted, because Anchor can demand complete KYC on any
+      // user and we must be able to produce it. Reading it back needs an
+      // authenticator code (see /admin/users/:id/kyc/reveal).
       await query(
-        'UPDATE users SET bvn_last4 = $1, residential_address = $2 WHERE id = $3',
-        [req.body.bvn.slice(-4), req.body.address, req.user.id]
+        `UPDATE users SET bvn_last4 = $1, residential_address = $2, bvn_encrypted = $3
+          WHERE id = $4`,
+        [req.body.bvn.slice(-4), req.body.address, kycVault.encrypt(req.body.bvn), req.user.id]
       )
       // Logged BEFORE the Anchor call so an attempt that Anchor rejects is still
       // visible in the Back Office — a silent failure was the whole problem.

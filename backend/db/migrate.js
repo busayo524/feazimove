@@ -510,6 +510,48 @@ CREATE INDEX IF NOT EXISTS idx_aml_flags_status ON aml_flags(status, created_at 
 ALTER TABLE aml_flags ADD COLUMN IF NOT EXISTS subject_name  VARCHAR(120);
 ALTER TABLE aml_flags ADD COLUMN IF NOT EXISTS subject_email VARCHAR(255);
 ALTER TABLE aml_flags ADD COLUMN IF NOT EXISTS subject_role  VARCHAR(20);
+
+-- ── Financial records outlive the account ────────────────────────────────────
+-- wallet_transactions and payout_requests were ON DELETE CASCADE, so deleting
+-- a user erased the money that moved through the platform — the ledger no
+-- longer balanced and an approved ₦2.5m withdrawal simply vanished. Money
+-- history is not personal data to be cleaned up with the account: the rows
+-- stay, the user link is nulled, and the identity is snapshotted below.
+ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS subject_name  VARCHAR(120);
+ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS subject_email VARCHAR(255);
+ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS subject_role  VARCHAR(20);
+ALTER TABLE payout_requests     ADD COLUMN IF NOT EXISTS subject_name  VARCHAR(120);
+ALTER TABLE payout_requests     ADD COLUMN IF NOT EXISTS subject_email VARCHAR(255);
+ALTER TABLE payout_requests     ADD COLUMN IF NOT EXISTS subject_role  VARCHAR(20);
+ALTER TABLE payout_requests     ALTER COLUMN driver_id DROP NOT NULL;
+
+-- Flip both foreign keys from CASCADE to SET NULL, once. confdeltype 'c' is
+-- CASCADE — when it is already 'n' (SET NULL) this is a no-op, so the
+-- migration stays idempotent.
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_constraint
+              WHERE conname = 'wallet_transactions_user_id_fkey' AND confdeltype = 'c') THEN
+    ALTER TABLE wallet_transactions DROP CONSTRAINT wallet_transactions_user_id_fkey;
+    ALTER TABLE wallet_transactions ADD CONSTRAINT wallet_transactions_user_id_fkey
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL;
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_constraint
+              WHERE conname = 'payout_requests_driver_id_fkey' AND confdeltype = 'c') THEN
+    ALTER TABLE payout_requests DROP CONSTRAINT payout_requests_driver_id_fkey;
+    ALTER TABLE payout_requests ADD CONSTRAINT payout_requests_driver_id_fkey
+      FOREIGN KEY (driver_id) REFERENCES users(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+-- ── KYC vault + admin authenticator ─────────────────────────────────────────
+-- The FULL BVN, encrypted with AES-256-GCM (services/kycVault.js). Anchor can
+-- demand complete KYC on a user at any time, so it has to be retrievable —
+-- but never as plaintext in the database, and never without a second factor.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS bvn_encrypted TEXT;
+-- Admin TOTP enrolment. The secret is stored encrypted with the same key;
+-- totp_enabled_at NULL means enrolment was started but never confirmed.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret     TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled_at TIMESTAMPTZ;
 `
 
 ;(async () => {

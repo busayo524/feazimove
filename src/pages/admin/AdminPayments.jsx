@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
 import { api } from '../../services/api'
-import { AlertCircle, ArrowDownLeft, ArrowUpRight, CheckCircle2, Ban } from 'lucide-react'
+import { AlertCircle, ArrowDownLeft, ArrowUpRight, CheckCircle2, Ban, Download } from 'lucide-react'
 
 const CARD = '#ffffff', BORDER = '#e5e7eb', TEXT = '#1a1a1a', MUTED = '#6b7280', BG = '#f5f7f2'
 const NEON = '#ccff00', OLIVE = '#243800'
@@ -16,22 +16,64 @@ function StatCard({ label, value, accent }) {
   )
 }
 
+const RANGES = [
+  { key:'all',   label:'All time' },
+  { key:'today', label:'Today' },
+  { key:'week',  label:'This Week' },
+  { key:'month', label:'This Month' },
+  { key:'year',  label:'This Year' },
+]
+
+// A payout row links to the rider or driver page depending on who asked.
+function detailPath(userId, role) {
+  return `/admin/${role === 'driver' ? 'drivers' : 'riders'}/${userId}`
+}
+
+function RoleTag({ role }) {
+  if (!role) return null
+  const isDriver = role === 'driver'
+  return (
+    <span style={{ marginLeft:8, padding:'2px 8px', borderRadius:50, fontSize:10.5, fontWeight:800,
+      textTransform:'uppercase', letterSpacing:'0.04em',
+      background: isDriver ? '#e0edff' : '#f0f7dd', color: isDriver ? '#1d4ed8' : '#3f6212' }}>
+      {isDriver ? 'Driver' : 'Rider'}
+    </span>
+  )
+}
+
 export default function AdminPayments() {
   const [data, setData] = useState(null)
   const [payouts, setPayouts] = useState([])
   const [error, setError] = useState('')
   const [busyId, setBusyId] = useState(null)
+  const [range, setRange] = useState('all')
+  const [exporting, setExporting] = useState(false)
 
-  function load() {
+  function load(r = range) {
     Promise.all([
-      api.get('/admin/payments'),
+      api.get(`/admin/payments?range=${r}`),
       api.get('/admin/payouts?status=pending'),
     ]).then(([pay, payouts]) => {
       setData(pay.data)
       setPayouts(payouts.data.payouts)
     }).catch(err => setError(err.data?.message || 'Could not load payments.'))
   }
-  useEffect(() => { load() }, [])
+  useEffect(() => { load(range) }, [range])
+
+  async function handleExport() {
+    setExporting(true)
+    try {
+      const blob = await api.getBlob(`/admin/export/transactions?range=${range}`)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `feazimove-transactions-${range}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      alert('Could not export transactions.')
+    } finally { setExporting(false) }
+  }
 
   async function handlePayout(id, action) {
     setBusyId(id)
@@ -60,19 +102,26 @@ export default function AdminPayments() {
         <>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))', gap:16, marginBottom:24 }}>
             <StatCard label="Total Wallet Balance (Users)" value={data.totalWalletBalance}/>
-            <StatCard label="Pending Driver Payouts" value={data.pendingPayouts} accent="#b45309"/>
+            <StatCard label="Pending Payouts" value={data.pendingPayouts} accent="#b45309"/>
             <StatCard label="FeaziMove Revenue (est.)" value={data.platformRevenue} accent="#15803d"/>
           </div>
 
           {/* Pending payouts */}
           <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, overflow:'hidden', marginBottom:24 }}>
-            <p style={{ fontWeight:800, fontSize:15, color:TEXT, padding:'16px 18px' }}>Pending Driver Payouts</p>
+            <p style={{ fontWeight:800, fontSize:15, color:TEXT, padding:'16px 18px' }}>Pending Payouts</p>
             {payouts.length === 0 ? (
               <p style={{ color:MUTED, fontSize:13, padding:'0 18px 18px' }}>No pending withdrawal requests.</p>
             ) : payouts.map(p => (
               <div key={p.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 18px', borderTop:`1px solid ${BORDER}` }}>
                 <div>
-                  <Link to={`/admin/drivers/${p.driverId}`} style={{ color:TEXT, fontWeight:700, fontSize:14, textDecoration:'none' }}>{p.driverName}</Link>
+                  <span style={{ display:'inline-flex', alignItems:'center' }}>
+                    {p.userId ? (
+                      <Link to={detailPath(p.userId, p.userRole)} style={{ color:TEXT, fontWeight:700, fontSize:14, textDecoration:'none' }}>{p.userName}</Link>
+                    ) : (
+                      <span style={{ color:TEXT, fontWeight:700, fontSize:14 }}>{p.userName}</span>
+                    )}
+                    <RoleTag role={p.userRole}/>
+                  </span>
                   <p style={{ fontSize:12, color:MUTED }}>Requested {new Date(p.requestedAt).toLocaleString('en-NG', { timeZone:'Africa/Lagos' })}</p>
                   {p.bankName && <p style={{ fontSize:11.5, color:MUTED }}>{p.bankName} · {p.accountNumber}</p>}
                 </div>
@@ -98,9 +147,26 @@ export default function AdminPayments() {
 
           {/* Recent transactions */}
           <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, overflow:'hidden' }}>
-            <p style={{ fontWeight:800, fontSize:15, color:TEXT, padding:'16px 18px' }}>Recent Transactions</p>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12, padding:'16px 18px', flexWrap:'wrap' }}>
+              <p style={{ fontWeight:800, fontSize:15, color:TEXT }}>Transactions</p>
+              <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+                {RANGES.map(r => (
+                  <button key={r.key} onClick={() => setRange(r.key)}
+                    style={{ padding:'6px 12px', borderRadius:50, fontSize:12, fontWeight:700, fontFamily:'inherit', cursor:'pointer',
+                      border:`1.5px solid ${range===r.key ? OLIVE : BORDER}`, background: range===r.key ? OLIVE : CARD, color: range===r.key ? '#fff' : MUTED }}>
+                    {r.label}
+                  </button>
+                ))}
+                <button onClick={handleExport} disabled={exporting}
+                  style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 14px', borderRadius:8, border:'none', background:NEON, color:OLIVE, fontWeight:800, fontSize:12, cursor: exporting?'wait':'pointer', fontFamily:'inherit' }}>
+                  <Download size={13}/> {exporting ? 'Exporting…' : 'Export to Excel'}
+                </button>
+              </div>
+            </div>
             {data.transactions.length === 0 ? (
-              <p style={{ color:MUTED, fontSize:13, padding:'0 18px 18px' }}>No transactions yet.</p>
+              <p style={{ color:MUTED, fontSize:13, padding:'0 18px 18px' }}>
+                No transactions in this period.
+              </p>
             ) : data.transactions.map(t => (
               <div key={t.id} style={{ display:'flex', alignItems:'center', gap:14, padding:'12px 18px', borderTop:`1px solid ${BORDER}` }}>
                 <div style={{ width:32, height:32, borderRadius:9, background: t.type==='credit' ? '#dcfce7' : '#fef2f2', display:'flex', alignItems:'center', justifyContent:'center' }}>
@@ -108,7 +174,13 @@ export default function AdminPayments() {
                 </div>
                 <div style={{ flex:1 }}>
                   <p style={{ fontSize:13, fontWeight:600, color:TEXT }}>{t.description}</p>
-                  <p style={{ fontSize:12, color:MUTED }}>{t.userName} · {new Date(t.date).toLocaleString()}</p>
+                  <p style={{ fontSize:12, color:MUTED }}>
+                    {t.userName}
+                    {/* The account is gone but the money still moved — say so
+                        rather than showing a name that leads nowhere. */}
+                    {t.userDeleted && <span style={{ color:'#b45309', fontWeight:600 }}> · account deleted</span>}
+                    {' · '}{new Date(t.date).toLocaleString('en-NG', { timeZone:'Africa/Lagos' })}
+                  </p>
                 </div>
                 <p style={{ fontWeight:700, fontSize:14, color: t.type==='credit' ? '#15803d' : '#ef4444' }}>
                   {t.type==='credit' ? '+' : '-'}₦{t.amount.toLocaleString()}

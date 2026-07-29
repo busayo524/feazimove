@@ -510,6 +510,35 @@ async function runMigrations() {
     ALTER TABLE aml_flags ADD COLUMN IF NOT EXISTS subject_email VARCHAR(255);
     ALTER TABLE aml_flags ADD COLUMN IF NOT EXISTS subject_role  VARCHAR(20);
 
+    -- Money history must survive the account being deleted (both tables were
+    -- ON DELETE CASCADE, which erased the ledger along with the user).
+    ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS subject_name  VARCHAR(120);
+    ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS subject_email VARCHAR(255);
+    ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS subject_role  VARCHAR(20);
+    ALTER TABLE payout_requests     ADD COLUMN IF NOT EXISTS subject_name  VARCHAR(120);
+    ALTER TABLE payout_requests     ADD COLUMN IF NOT EXISTS subject_email VARCHAR(255);
+    ALTER TABLE payout_requests     ADD COLUMN IF NOT EXISTS subject_role  VARCHAR(20);
+    ALTER TABLE payout_requests     ALTER COLUMN driver_id DROP NOT NULL;
+    DO $$ BEGIN
+      IF EXISTS (SELECT 1 FROM pg_constraint
+                  WHERE conname = 'wallet_transactions_user_id_fkey' AND confdeltype = 'c') THEN
+        ALTER TABLE wallet_transactions DROP CONSTRAINT wallet_transactions_user_id_fkey;
+        ALTER TABLE wallet_transactions ADD CONSTRAINT wallet_transactions_user_id_fkey
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL;
+      END IF;
+      IF EXISTS (SELECT 1 FROM pg_constraint
+                  WHERE conname = 'payout_requests_driver_id_fkey' AND confdeltype = 'c') THEN
+        ALTER TABLE payout_requests DROP CONSTRAINT payout_requests_driver_id_fkey;
+        ALTER TABLE payout_requests ADD CONSTRAINT payout_requests_driver_id_fkey
+          FOREIGN KEY (driver_id) REFERENCES users(id) ON DELETE SET NULL;
+      END IF;
+    END $$;
+
+    -- Encrypted full BVN + admin authenticator enrolment (services/kycVault.js).
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS bvn_encrypted   TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret     TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled_at TIMESTAMPTZ;
+
     -- ── Late-ordered statements: these reference tables/columns created above,
     -- so they MUST run last — the whole migration executes as one implicit
     -- transaction, and on a FRESH database an early reference to a

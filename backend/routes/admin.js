@@ -3,6 +3,7 @@ const path     = require('path')
 const fs       = require('fs')
 const bcrypt   = require('bcryptjs')
 const crypto   = require('crypto')
+const rateLimit = require('express-rate-limit')
 const { body, param } = require('express-validator')
 const { query, pool } = require('../db')
 const { requireAuth, requireRole } = require('../middleware/auth')
@@ -10,6 +11,9 @@ const { validate } = require('../middleware/validate')
 const { sendStored, deleteStored } = require('../services/fileStorage')
 const { sendAccountCredentialsEmail, sendWelcomeEmail } = require('../services/emailService')
 const anchor = require('../services/anchor')
+const kycVault = require('../services/kycVault')
+const totp = require('../services/totp')
+const QRCode = require('qrcode')
 
 const router = express.Router()
 const SALT_ROUNDS = 12
@@ -617,11 +621,16 @@ router.patch('/users/:id/status',
   }
 )
 
-// ── Permanently delete a user and every trace of their data ──────────────────
-// Cascades wipe wallet transactions, OTPs, documents, payout requests,
-// availability and bookings; rides/ratings are anonymized (ids nulled).
-// ride_messages.sender_id is NOT NULL, so those rows are deleted explicitly
-// first — otherwise the FK's SET NULL would violate the constraint and error.
+// ── Permanently delete a user and every trace of their PERSONAL data ─────────
+// Cascades wipe OTPs, documents, availability and bookings; rides/ratings are
+// anonymized (ids nulled). ride_messages.sender_id is NOT NULL, so those rows
+// are deleted explicitly first — otherwise the FK's SET NULL would violate the
+// constraint and error.
+//
+// Money is the exception. Wallet transactions, payout requests and AML flags
+// are NOT deleted: an approved ₦2.5m withdrawal disappearing because someone
+// tidied up a test account is a hole in the ledger, not a privacy win. Their
+// user_id is nulled by the FK and the identity is snapshotted first, below.
 router.delete('/users/:id',
   [param('id').isUUID()],
   validate,
@@ -648,6 +657,20 @@ router.delete('/users/:id',
       if (user.avatar_path) files.push(user.avatar_path)
 
       await client.query('BEGIN')
+      // Stamp the identity onto every financial record BEFORE the delete —
+      // once the user row is gone the FK nulls the link and there is nothing
+      // left to join to. This is the only moment the copy can be made.
+      for (const [table, col] of [
+        ['wallet_transactions', 'user_id'],
+        ['payout_requests', 'driver_id'],
+        ['aml_flags', 'user_id'],
+      ]) {
+        await client.query(
+          `UPDATE ${table} SET subject_name = u.name, subject_email = u.email, subject_role = u.role
+             FROM users u WHERE ${table}.${col} = $1 AND u.id = $1`,
+          [req.params.id]
+        )
+      }
       await client.query('DELETE FROM ride_messages WHERE sender_id = $1', [req.params.id])
       await client.query('DELETE FROM users WHERE id = $1', [req.params.id])
       await client.query('COMMIT')
@@ -658,7 +681,10 @@ router.delete('/users/:id',
       }
 
       logActivity(req.user.id, 'User Deleted', 'user', user.name)
-      res.json({ message: 'User and all their data have been permanently deleted.' })
+      res.json({
+        message: 'User deleted. Their financial records are retained for audit, '
+          + 'attributed to their name but no longer linked to an account.',
+      })
     } catch (err) {
       await client.query('ROLLBACK').catch(() => {})
       next(err)
@@ -669,8 +695,20 @@ router.delete('/users/:id',
 )
 
 // ── Payments overview ───────────────────────────────────────────────────────────
+// `range` filters the feed by when the money moved: today | week | month |
+// year | all (default). Anything else is treated as 'all' rather than erroring,
+// so a stale bookmark still loads the page.
+const RANGE_INTERVALS = {
+  today: '1 day', week: '7 days', month: '30 days', year: '365 days',
+}
+function rangeClause(range, column = 'created_at') {
+  const interval = RANGE_INTERVALS[range]
+  return interval ? `AND ${column} >= NOW() - INTERVAL '${interval}'` : ''
+}
+
 router.get('/payments', async (req, res, next) => {
   try {
+    const range = req.query.range || 'all'
     const [walletTotal, pendingPayouts, revenue, txns, feeRes] = await Promise.all([
       query("SELECT COALESCE(SUM(wallet_balance),0) s FROM users"),
       query("SELECT COALESCE(SUM(amount_kobo),0) s FROM payout_requests WHERE status = 'pending'"),
@@ -679,22 +717,29 @@ router.get('/payments', async (req, res, next) => {
       // escrow (wallet_transactions, at request time) AND the bank-side
       // transfer (payout_requests.processed_at, when the NIP actually moved
       // money) — reconciliation needs each event at its true timestamp.
+      //
+      // LEFT JOIN, not JOIN: a deleted user's rows keep a NULL user_id, and an
+      // inner join would silently drop exactly the history we now retain.
       query(
         `SELECT * FROM (
-           SELECT t.id::text AS id, t.type, t.amount_kobo, t.description, t.created_at, u.name AS user_name
+           SELECT t.id::text AS id, t.type, t.amount_kobo, t.description, t.created_at,
+                  COALESCE(u.name, t.subject_name) AS user_name, u.id AS user_id
              FROM wallet_transactions t
-             JOIN users u ON t.user_id = u.id
+             LEFT JOIN users u ON t.user_id = u.id
             WHERE t.status = 'completed' -- pending/expired top-ups are not money
+              ${rangeClause(range, 't.created_at')}
            UNION ALL
            SELECT 'payout-' || p.id AS id, 'debit' AS type, p.amount_kobo,
-                  CASE p.status WHEN 'completed' THEN 'Driver payout sent — bank transfer'
-                                WHEN 'processing' THEN 'Driver payout — transfer in progress'
-                                ELSE 'Driver payout — ' || p.status END AS description,
-                  p.processed_at AS created_at, u.name AS user_name
+                  CASE p.status WHEN 'completed' THEN 'Payout sent — bank transfer'
+                                WHEN 'processing' THEN 'Payout — transfer in progress'
+                                ELSE 'Payout — ' || p.status END AS description,
+                  p.processed_at AS created_at,
+                  COALESCE(u.name, p.subject_name) AS user_name, u.id AS user_id
              FROM payout_requests p
-             JOIN users u ON p.driver_id = u.id
+             LEFT JOIN users u ON p.driver_id = u.id
             WHERE p.processed_at IS NOT NULL AND p.status IN ('processing', 'completed', 'failed')
-         ) feed ORDER BY created_at DESC LIMIT 25`
+              ${rangeClause(range, 'p.processed_at')}
+         ) feed ORDER BY created_at DESC LIMIT 200`
       ),
       query('SELECT platform_fee_percent FROM platform_settings WHERE id = 1'),
     ])
@@ -708,24 +753,32 @@ router.get('/payments', async (req, res, next) => {
       totalWalletBalance: fmt(walletTotal.rows[0].s),
       pendingPayouts: fmt(pendingPayouts.rows[0].s),
       platformRevenue: Math.round(fmt(revenue.rows[0].s) * feePercent / 100),
+      range,
       transactions: txns.rows.map(t => ({
         id: t.id, type: t.type, amount: fmt(t.amount_kobo), description: t.description,
-        userName: t.user_name, date: t.created_at,
+        userName: t.user_name || 'Deleted user', userId: t.user_id,
+        // No live account behind this row — the name came from the snapshot.
+        userDeleted: !t.user_id,
+        date: t.created_at,
       })),
     })
   } catch (err) { next(err) }
 })
 
-// ── Driver payout requests ──────────────────────────────────────────────────────
+// ── Payout requests ─────────────────────────────────────────────────────────
+// Riders withdraw too, not just drivers — the payout_requests.driver_id column
+// name is historical. Each row carries the requester's role so the admin can
+// tell them apart at a glance.
 router.get('/payouts', async (req, res, next) => {
   try {
     const statusFilter = req.query.status || 'pending'
     const result = await query(
       `SELECT p.id, p.amount_kobo, p.fee_kobo, p.status, p.requested_at, p.processed_at,
-              p.anchor_transfer_id, p.failure_reason,
-              u.id AS driver_id, u.name AS driver_name, u.bank_name, u.bank_account_number
+              p.anchor_transfer_id, p.failure_reason, p.subject_name, p.subject_role,
+              u.id AS user_id, u.name AS user_name, u.role, u.active_role,
+              u.bank_name, u.bank_account_number
        FROM payout_requests p
-       JOIN users u ON p.driver_id = u.id
+       LEFT JOIN users u ON p.driver_id = u.id
        ${statusFilter !== 'all' ? 'WHERE p.status = $1' : ''}
        ORDER BY p.requested_at DESC LIMIT 50`,
       statusFilter !== 'all' ? [statusFilter] : []
@@ -734,7 +787,12 @@ router.get('/payouts', async (req, res, next) => {
       payouts: result.rows.map(p => ({
         id: p.id, amount: fmt(p.amount_kobo), fee: fmt(p.fee_kobo || 0),
         net: fmt(Number(p.amount_kobo) - Number(p.fee_kobo || 0)), status: p.status,
-        driverId: p.driver_id, driverName: p.driver_name,
+        userId: p.user_id,
+        userName: p.user_name || p.subject_name || 'Deleted user',
+        // active_role is what the person was actually using the app as; role
+        // is their registered default. Either beats guessing "driver".
+        userRole: p.active_role || p.role || p.subject_role || null,
+        userDeleted: !p.user_id,
         bankName: p.bank_name, accountNumber: p.bank_account_number,
         transferId: p.anchor_transfer_id, failureReason: p.failure_reason,
         requestedAt: p.requested_at, processedAt: p.processed_at,
@@ -1171,7 +1229,7 @@ function toCsv(rows, columns) {
 router.get('/export/:type', async (req, res, next) => {
   try {
     const { type } = req.params
-    if (!['rides', 'transactions'].includes(type)) {
+    if (!['rides', 'transactions', 'users'].includes(type)) {
       return res.status(400).json({ message: 'Unknown export type.' })
     }
 
@@ -1195,16 +1253,70 @@ router.get('/export/:type', async (req, res, next) => {
           { key:'created_at', label:'Booked At', date:true }, { key:'completed_at', label:'Completed At', date:true },
         ]
       )
-    } else {
+    } else if (type === 'users') {
+      // Platform-wide roster: personal information plus the KYC summary. The
+      // BVN is masked here — the full number is available one user at a time
+      // through the authenticator-gated reveal, never in a bulk download.
       const result = await query(
-        `SELECT t.id, t.type, t.amount_kobo, t.description, t.status, t.gateway, t.reference, t.created_at, u.name AS user_name
-         FROM wallet_transactions t JOIN users u ON t.user_id = u.id
+        `SELECT id, name, email, phone, role, active_role, is_active, is_pending,
+                city, area, residential_address, date_of_birth, gender,
+                id_type, id_number, bvn_submitted, bvn_last4, anchor_kyc_status,
+                reserved_account_number, reserved_account_bank,
+                bank_name, bank_account_number, wallet_balance, rating, created_at
+           FROM users ORDER BY created_at DESC`
+      )
+      csv = toCsv(
+        result.rows.map(u => ({
+          ...u,
+          status: u.is_pending ? 'pending' : u.is_active ? 'active' : 'suspended',
+          bvn: u.bvn_last4 ? `•••••••${u.bvn_last4}` : '',
+          kyc_status: u.anchor_kyc_status || (u.bvn_submitted ? 'submitted' : 'not started'),
+          funding_account: u.reserved_account_number
+            ? `${u.reserved_account_number}${u.reserved_account_bank ? ` (${u.reserved_account_bank})` : ''}` : '',
+          wallet: fmt(u.wallet_balance),
+        })),
+        [
+          { key:'id', label:'User ID' }, { key:'name', label:'Full Name' },
+          { key:'email', label:'Email' }, { key:'phone', label:'Phone' },
+          { key:'role', label:'Role' }, { key:'active_role', label:'Active Role' },
+          { key:'status', label:'Status' },
+          { key:'city', label:'City' }, { key:'area', label:'Area' },
+          { key:'residential_address', label:'Residential Address' },
+          { key:'date_of_birth', label:'Date of Birth', date:true },
+          { key:'gender', label:'Gender' },
+          { key:'id_type', label:'ID Type' }, { key:'id_number', label:'ID Number' },
+          { key:'bvn', label:'BVN (masked)' }, { key:'kyc_status', label:'Wallet KYC Status' },
+          { key:'funding_account', label:'Funding Account' },
+          { key:'bank_name', label:'Payout Bank' }, { key:'bank_account_number', label:'Payout Account' },
+          { key:'wallet', label:'Wallet Balance (NGN)' }, { key:'rating', label:'Rating' },
+          { key:'created_at', label:'Joined', date:true },
+        ]
+      )
+    } else {
+      // LEFT JOIN so transactions belonging to deleted accounts still export —
+      // they are the ones an auditor is most likely to ask about.
+      const result = await query(
+        `SELECT t.id, t.type, t.amount_kobo, t.description, t.status, t.gateway, t.reference,
+                t.created_at, COALESCE(u.name, t.subject_name) AS user_name,
+                COALESCE(u.email, t.subject_email) AS user_email,
+                COALESCE(u.role, t.subject_role) AS user_role,
+                (u.id IS NULL) AS user_deleted
+         FROM wallet_transactions t LEFT JOIN users u ON t.user_id = u.id
+         WHERE 1 = 1 ${rangeClause(req.query.range, 't.created_at')}
          ORDER BY t.created_at DESC`
       )
       csv = toCsv(
-        result.rows.map(t => ({ ...t, amount: fmt(t.amount_kobo), gateway: t.gateway || 'internal' })),
+        result.rows.map(t => ({
+          ...t,
+          amount: fmt(t.amount_kobo),
+          gateway: t.gateway || 'internal',
+          user_name: t.user_name || 'Deleted user',
+          account: t.user_deleted ? 'deleted' : 'active',
+        })),
         [
           { key:'id', label:'Transaction ID' }, { key:'user_name', label:'User' },
+          { key:'user_email', label:'User Email' }, { key:'user_role', label:'User Role' },
+          { key:'account', label:'Account' },
           { key:'type', label:'Type' }, { key:'amount', label:'Amount (NGN)' },
           { key:'status', label:'Status' }, { key:'gateway', label:'Gateway' },
           { key:'reference', label:'Reference' },
@@ -1723,5 +1835,180 @@ router.get('/move-waitlist', async (req, res, next) => {
     })
   } catch (err) { next(err) }
 })
+
+// ── Admin authenticator (TOTP) + gated KYC reveal ───────────────────────────
+// Anchor can require a user's complete KYC — full BVN, address, ID — at short
+// notice, so it has to be retrievable. It is deliberately NOT visible by
+// simply being logged in as an admin: the full BVN is stored encrypted and
+// released only against a live code from an authenticator app, with every
+// release written to the activity log.
+//
+// Deliberately not email-based: an email one-time code is only as strong as
+// the mailbox, and the mailbox is the same thing that recovers the admin
+// password.
+
+// Brute force here is guessing a 6-digit code, so the attempt budget is the
+// real defence. Keyed per admin, not per IP.
+const revealLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: req => req.user?.id || req.ip,
+  message: { message: 'Too many verification attempts. Wait 15 minutes and try again.' },
+})
+
+router.get('/security/totp', async (req, res, next) => {
+  try {
+    const r = await query('SELECT totp_secret, totp_enabled_at FROM users WHERE id = $1', [req.user.id])
+    res.json({
+      enabled: !!r.rows[0]?.totp_enabled_at,
+      pending: !!r.rows[0]?.totp_secret && !r.rows[0]?.totp_enabled_at,
+      enrolledAt: r.rows[0]?.totp_enabled_at || null,
+      vaultConfigured: kycVault.configured(),
+    })
+  } catch (err) { next(err) }
+})
+
+// Start enrolment: mint a secret and hand back a QR to scan. Re-enrolling
+// while already enabled is refused — that would be a way to swap the second
+// factor using only a stolen session.
+router.post('/security/totp/setup', async (req, res, next) => {
+  try {
+    if (!kycVault.configured()) {
+      return res.status(503).json({
+        message: 'KYC vault is not configured on this server (KYC_ENCRYPTION_KEY missing).',
+      })
+    }
+    // requireAuth attaches only { id, role } — the email for the authenticator
+    // label has to be read here.
+    const existing = await query('SELECT email, totp_enabled_at FROM users WHERE id = $1', [req.user.id])
+    if (existing.rows[0]?.totp_enabled_at) {
+      return res.status(409).json({
+        message: 'An authenticator is already set up. Remove the current one first.',
+      })
+    }
+    const secret = totp.generateSecret()
+    const uri = totp.otpauthUri(secret, existing.rows[0]?.email || 'admin')
+    // Stored encrypted and unconfirmed — enrolment only counts once a code
+    // from the app proves the secret actually reached it.
+    await query(
+      'UPDATE users SET totp_secret = $1, totp_enabled_at = NULL WHERE id = $2',
+      [kycVault.encrypt(secret), req.user.id]
+    )
+    res.json({
+      secret, // shown for manual entry when the QR cannot be scanned
+      otpauthUri: uri,
+      qrDataUri: await QRCode.toDataURL(uri, { margin: 1, width: 240 }),
+    })
+  } catch (err) { next(err) }
+})
+
+router.post('/security/totp/enable',
+  [body('code').trim().isLength({ min: 6, max: 6 }).isNumeric().withMessage('Enter the 6-digit code.')],
+  validate,
+  revealLimiter,
+  async (req, res, next) => {
+    try {
+      const r = await query('SELECT totp_secret, totp_enabled_at FROM users WHERE id = $1', [req.user.id])
+      if (r.rows[0]?.totp_enabled_at) return res.status(409).json({ message: 'Authenticator already active.' })
+      const secret = kycVault.decrypt(r.rows[0]?.totp_secret)
+      if (!secret) return res.status(400).json({ message: 'Start setup again — no pending enrolment found.' })
+      if (!totp.verify(secret, req.body.code)) {
+        return res.status(400).json({ message: 'That code is not right. Check your authenticator app and try again.' })
+      }
+      await query('UPDATE users SET totp_enabled_at = NOW() WHERE id = $1', [req.user.id])
+      logActivity(req.user.id, 'Authenticator Enabled', 'security', 'TOTP enrolled for KYC access')
+      res.json({ message: 'Authenticator enabled. It is now required to view full KYC data.' })
+    } catch (err) { next(err) }
+  }
+)
+
+// Removing the factor requires a current code — a stolen session alone must
+// not be able to turn the protection off.
+router.post('/security/totp/disable',
+  [body('code').trim().isLength({ min: 6, max: 6 }).isNumeric().withMessage('Enter the 6-digit code.')],
+  validate,
+  revealLimiter,
+  async (req, res, next) => {
+    try {
+      const r = await query('SELECT totp_secret, totp_enabled_at FROM users WHERE id = $1', [req.user.id])
+      if (!r.rows[0]?.totp_enabled_at) return res.status(409).json({ message: 'No authenticator is set up.' })
+      const secret = kycVault.decrypt(r.rows[0]?.totp_secret)
+      if (!secret || !totp.verify(secret, req.body.code)) {
+        return res.status(400).json({ message: 'That code is not right.' })
+      }
+      await query('UPDATE users SET totp_secret = NULL, totp_enabled_at = NULL WHERE id = $1', [req.user.id])
+      logActivity(req.user.id, 'Authenticator Removed', 'security', 'TOTP disabled')
+      res.json({ message: 'Authenticator removed.' })
+    } catch (err) { next(err) }
+  }
+)
+
+// The reveal itself. Returns the complete KYC record for ONE user, including
+// the decrypted BVN, and records who looked and when.
+router.post('/users/:id/kyc/reveal',
+  [
+    param('id').isUUID(),
+    body('code').trim().isLength({ min: 6, max: 6 }).isNumeric().withMessage('Enter the 6-digit code.'),
+  ],
+  validate,
+  revealLimiter,
+  async (req, res, next) => {
+    try {
+      const admin = await query('SELECT email, totp_secret, totp_enabled_at FROM users WHERE id = $1', [req.user.id])
+      if (!admin.rows[0]?.totp_enabled_at) {
+        // 428 Precondition Required — the client turns this into "set up your
+        // authenticator first" rather than "wrong code".
+        return res.status(428).json({
+          message: 'Set up an authenticator app in Settings before viewing full KYC data.',
+        })
+      }
+      const secret = kycVault.decrypt(admin.rows[0].totp_secret)
+      if (!secret || !totp.verify(secret, req.body.code)) {
+        logActivity(req.user.id, 'KYC Reveal Denied', 'security', `Bad authenticator code for user ${req.params.id}`)
+        return res.status(400).json({ message: 'That code is not right. Check your authenticator app and try again.' })
+      }
+
+      const r = await query(
+        `SELECT id, name, email, phone, role, city, area, residential_address,
+                date_of_birth, gender, id_type, id_number,
+                bvn_encrypted, bvn_last4, bvn_submitted, anchor_kyc_status,
+                anchor_customer_id, reserved_account_number, reserved_account_bank,
+                bank_name, bank_account_number, created_at
+           FROM users WHERE id = $1`,
+        [req.params.id]
+      )
+      const u = r.rows[0]
+      if (!u) return res.status(404).json({ message: 'User not found.' })
+
+      const bvn = kycVault.decrypt(u.bvn_encrypted)
+      // Every successful look is logged — this is the record we would show
+      // Anchor to prove KYC access is controlled.
+      logActivity(req.user.id, 'KYC Revealed', 'security', `Full KYC viewed for ${u.name} (${u.email})`)
+
+      res.json({
+        kyc: {
+          userId: u.id, name: u.name, email: u.email, phone: u.phone, role: u.role,
+          dateOfBirth: u.date_of_birth, gender: u.gender,
+          city: u.city, area: u.area, residentialAddress: u.residential_address,
+          idType: u.id_type, idNumber: u.id_number,
+          // null when the BVN predates encryption, or the vault key changed.
+          bvn: bvn,
+          bvnLast4: u.bvn_last4,
+          bvnUnavailable: !bvn && !!u.bvn_submitted,
+          kycStatus: u.anchor_kyc_status,
+          anchorCustomerId: u.anchor_customer_id,
+          fundingAccount: u.reserved_account_number
+            ? { number: u.reserved_account_number, bank: u.reserved_account_bank } : null,
+          bankName: u.bank_name, bankAccountNumber: u.bank_account_number,
+          joinedAt: u.created_at,
+          revealedAt: new Date().toISOString(),
+          revealedBy: admin.rows[0].email || req.user.id,
+        },
+      })
+    } catch (err) { next(err) }
+  }
+)
 
 module.exports = router

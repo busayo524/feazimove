@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
 import { api } from '../../services/api'
-import { Search, Eye, ChevronDown, AlertCircle, UserPlus, CheckCircle2, X } from 'lucide-react'
+import { Search, Eye, ChevronDown, AlertCircle, UserPlus, CheckCircle2, X, Download } from 'lucide-react'
 
 const CARD = '#ffffff', BORDER = '#e5e7eb', TEXT = '#1a1a1a', MUTED = '#6b7280', BG = '#f5f7f2'
 const GREEN = '#2a6048', NEON = '#ccff00', OLIVE = '#243800'
@@ -70,6 +70,7 @@ export default function AdminUserManagement() {
   const [role,    setRole]    = useState('All Roles')
   const [roleOpen,setRoleOpen]= useState(false)
   const [showAdd, setShowAdd] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   function load() {
     api.get('/admin/users')
@@ -86,6 +87,24 @@ export default function AdminUserManagement() {
     } catch (err) {
       alert(err.data?.message || 'Could not update status.')
     }
+  }
+
+  // Full roster with personal details and the KYC summary. The BVN is masked
+  // in bulk exports — the full number is released one user at a time, behind
+  // the authenticator check on their detail page.
+  async function handleExport() {
+    setExporting(true)
+    try {
+      const blob = await api.getBlob('/admin/export/users')
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'feazimove-users-export.csv'
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      alert('Could not export users.')
+    } finally { setExporting(false) }
   }
 
   const filtered = useMemo(() => {
@@ -109,11 +128,18 @@ export default function AdminUserManagement() {
       {/* Header */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:20, flexWrap:'wrap', gap:10 }}>
         <p style={{ margin:0, color:MUTED, fontSize:14 }}>{users.length} user{users.length !== 1 ? 's' : ''} registered</p>
-        <button onClick={() => setShowAdd(true)}
-          style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 18px', borderRadius:10, background:NEON, border:'none',
-            color:OLIVE, fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
-          <UserPlus size={15}/> Add User
-        </button>
+        <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+          <button onClick={handleExport} disabled={exporting}
+            style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 18px', borderRadius:10, background:CARD,
+              border:`1px solid ${BORDER}`, color:TEXT, fontWeight:700, fontSize:13, cursor: exporting?'wait':'pointer', fontFamily:'inherit' }}>
+            <Download size={15}/> {exporting ? 'Exporting…' : 'Export to Excel'}
+          </button>
+          <button onClick={() => setShowAdd(true)}
+            style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 18px', borderRadius:10, background:NEON, border:'none',
+              color:OLIVE, fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+            <UserPlus size={15}/> Add User
+          </button>
+        </div>
       </div>
 
       {error && (
