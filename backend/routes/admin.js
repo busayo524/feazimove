@@ -946,14 +946,20 @@ router.get('/anchor/events', async (req, res, next) => {
   try {
     const type = req.query.type
     const result = await query(
-      `SELECT id, event_id, event_type, resource_id, signature_valid, processed, created_at
+      `SELECT id, event_id, event_type, resource_id, signature_valid, processed, created_at,
+              payload->>'source' AS source, payload->>'detail' AS detail
          FROM anchor_events ${type ? 'WHERE event_type = $1' : ''}
         ORDER BY created_at DESC LIMIT 100`,
       type ? [type] : []
     )
     res.json({ events: result.rows.map(e => ({
       id: e.id, eventId: e.event_id, type: e.event_type, resourceId: e.resource_id,
-      signatureValid: e.signature_valid, processed: e.processed, at: e.created_at,
+      // Rows we wrote ourselves (wallet setup, KYC submission) were never signed
+      // by anyone — reporting them as "signature valid" would be a lie.
+      signatureValid: e.source === 'feazimove-api' ? null : e.signature_valid,
+      internal: e.source === 'feazimove-api',
+      detail: e.detail || null,
+      processed: e.processed, at: e.created_at,
     })) })
   } catch (err) { next(err) }
 })

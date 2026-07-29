@@ -10,8 +10,10 @@
  * KNOWN PROVIDER QUIRK (Jul 24 2026): Anchor's ORGANIC deliveries are signed
  * with a key that does not match the webhook's stored token; their dashboard
  * RESEND path signs correctly. Unsigned deliveries are therefore never
- * trusted directly — instead, the claimed payment/transfer id is re-fetched
- * from Anchor's API with our key and the AUTHENTICATED response is processed.
+ * trusted directly — instead, the claimed resource id (payment, transfer,
+ * customer, reserved account) is re-fetched from Anchor's API with our key and
+ * the AUTHENTICATED response is processed. A claimed type with no pull-back
+ * branch here is rejected 401, so new event types must be added deliberately.
  *
  * Money idempotency is keyed on the PAYMENT id ('pay-<paymentId>' rows in
  * anchor_events), shared by the signed path and the pull path — so the same
@@ -284,6 +286,60 @@ async function handleUnsigned(rawBody) {
       [`trsf-${claimedId}-${outcome}`, `nip.transfer.${outcome}`, claimedId, JSON.stringify({ verifiedByApiPull: true })]
     )
     await applyTransferOutcome(claimedId, pulled?.attributes?.reference || null, outcome)
+    return true
+  }
+
+  // KYC decisions. Without this branch these deliveries were rejected 401 and
+  // logged only as 'invalid.signature', so anchor_kyc_status never moved off
+  // the placeholder we set at BVN submission — the Customers tab showed a
+  // permanently pending rider even after Anchor had approved them.
+  if (claimedType.startsWith('customer.identification.')) {
+    const claimedId = parsed?.data?.relationships?.customer?.data?.id
+      || parsed?.data?.attributes?.customer?.customerId
+    if (!claimedId || typeof claimedId !== 'string' || claimedId.length > 80) return false
+    const userId = await userByCustomerId(claimedId)
+    if (!userId) return false // not one of ours — let it 401
+    const pulled = await anchor.getCustomer(claimedId) // authenticated truth
+    const status = (pulled?.attributes?.verification?.status || '').toLowerCase()
+    if (!status) return false
+    await query('UPDATE users SET anchor_kyc_status = $1 WHERE id = $2', [status.slice(0, 30), userId])
+    await query(
+      `INSERT INTO anchor_events (event_id, event_type, resource_id, signature_valid, processed, payload)
+       VALUES ($1, $2, $3, false, true, $4) ON CONFLICT (event_id) DO NOTHING`,
+      [`kyc-${claimedId}-${status}`, `customer.identification.${status}`, claimedId,
+       JSON.stringify({ verifiedByApiPull: true, detail: `KYC ${status}` })]
+    )
+    return true
+  }
+
+  // Reserved account ready. Account details come ONLY from the authenticated
+  // pull — trusting an unsigned body here would let a planted account number
+  // redirect riders' transfers to an attacker.
+  if (claimedType.startsWith('reservedAccount.')) {
+    const claimedId = parsed?.data?.relationships?.reservedAccount?.data?.id
+      || parsed?.data?.attributes?.reservedAccount?.accountId
+      || parsed?.data?.relationships?.account?.data?.id
+    if (!claimedId || typeof claimedId !== 'string' || claimedId.length > 80) return false
+    const pulled = await anchor.getReservedAccount(claimedId)
+    const customerId = pulled?.relationships?.customer?.data?.id
+    const userId = await userByCustomerId(customerId)
+    if (!userId) return false
+    const a = pulled?.attributes || {}
+    const d = a.accountDetails || a
+    await query(
+      `UPDATE users SET anchor_reserved_account_id = $1,
+          reserved_account_number = COALESCE($2, reserved_account_number),
+          reserved_account_bank   = COALESCE($3, reserved_account_bank),
+          reserved_account_name   = COALESCE($4, reserved_account_name)
+        WHERE id = $5`,
+      [claimedId, d.accountNumber || null, d.bankName || d.bank?.name || null, d.accountName || null, userId]
+    )
+    await query(
+      `INSERT INTO anchor_events (event_id, event_type, resource_id, signature_valid, processed, payload)
+       VALUES ($1, 'reservedAccount.created', $2, false, true, $3) ON CONFLICT (event_id) DO NOTHING`,
+      [`racct-${claimedId}`, claimedId,
+       JSON.stringify({ verifiedByApiPull: true, detail: `Funding account ${d.accountNumber || 'assigned'}` })]
+    )
     return true
   }
 

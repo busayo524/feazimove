@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import AdminLayout from '../../components/AdminLayout'
 import { api } from '../../services/api'
-import { AlertCircle, ShieldAlert, Radio, Users2, Banknote, CheckCircle2, XCircle } from 'lucide-react'
+import { AlertCircle, ShieldAlert, Radio, Users2, Banknote, CheckCircle2, XCircle, ArrowUpRight } from 'lucide-react'
 
 const CARD = '#ffffff', BORDER = '#e5e7eb', TEXT = '#1a1a1a', MUTED = '#6b7280', BG = '#f5f7f2'
 const NEON = '#ccff00', OLIVE = '#243800'
@@ -43,7 +43,7 @@ export default function AdminBackOffice() {
 
   const stats = overview ? [
     { label: 'Anchor Customers', value: overview.customers, icon: <Users2 size={15}/> },
-    { label: 'Webhook Events (24h)', value: overview.webhookEvents24h, icon: <Radio size={15}/> },
+    { label: 'Events (24h)', value: overview.webhookEvents24h, icon: <Radio size={15}/> },
     { label: 'Collections', value: `₦${(overview.collections?.totalNaira || 0).toLocaleString()}`, sub: `${overview.collections?.count || 0} payments`, icon: <Banknote size={15}/> },
     { label: 'Open AML Flags', value: overview.openAmlFlags, icon: <ShieldAlert size={15}/>, alert: overview.openAmlFlags > 0 },
   ] : []
@@ -97,7 +97,7 @@ export default function AdminBackOffice() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ background: BG, textAlign: 'left' }}>
-                  {['Time', 'Event', 'Resource', 'Signature', 'Processed'].map(h => (
+                  {['Time', 'Event', 'Resource', 'Origin', 'Processed'].map(h => (
                     <th key={h} style={{ padding: '10px 14px', fontSize: 11.5, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
@@ -107,17 +107,25 @@ export default function AdminBackOffice() {
                   <tr><td colSpan={5} style={{ padding: 24, textAlign: 'center', color: MUTED }}>Loading…</td></tr>
                 ) : events.length === 0 ? (
                   <tr><td colSpan={5} style={{ padding: 24, textAlign: 'center', color: MUTED }}>
-                    No events yet — they appear here the moment Anchor sends the first webhook.
+                    No events yet — wallet setups and KYC submissions appear here as they happen,
+                    alongside every webhook Anchor sends.
                   </td></tr>
                 ) : events.map(e => (
                   <tr key={e.id} style={{ borderTop: `1px solid #f5f5f5` }}>
                     <td style={{ padding: '10px 14px', whiteSpace: 'nowrap', color: MUTED }}>{fmtTime(e.at)}</td>
-                    <td style={{ padding: '10px 14px', fontWeight: 700, color: TEXT }}>{e.type}</td>
+                    <td style={{ padding: '10px 14px', fontWeight: 700, color: TEXT }}>
+                      {e.type}
+                      {e.detail && <p style={{ fontWeight: 400, fontSize: 11.5, color: MUTED, marginTop: 2 }}>{e.detail}</p>}
+                    </td>
                     <td style={{ padding: '10px 14px', color: MUTED, fontFamily: 'monospace', fontSize: 12 }}>{e.resourceId || '—'}</td>
                     <td style={{ padding: '10px 14px' }}>
-                      {e.signatureValid
-                        ? <span style={{ color: '#15803d', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}><CheckCircle2 size={13}/> valid</span>
-                        : <span style={{ color: '#dc2626', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}><XCircle size={13}/> INVALID</span>}
+                      {/* Internal rows are steps WE initiated (wallet setup, KYC
+                          submission) — there is no signature to judge them by. */}
+                      {e.internal
+                        ? <span style={{ color: MUTED, display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}><ArrowUpRight size={13}/> FeaziMove</span>
+                        : e.signatureValid
+                          ? <span style={{ color: '#15803d', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}><CheckCircle2 size={13}/> Anchor · signed</span>
+                          : <span style={{ color: '#dc2626', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}><XCircle size={13}/> Anchor · UNSIGNED</span>}
                     </td>
                     <td style={{ padding: '10px 14px' }}>{e.processed ? '✓' : '—'}</td>
                   </tr>

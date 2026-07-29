@@ -55,6 +55,25 @@ async function ensureAnchorCustomer(userId) {
   return { customerId: customer.id, user }
 }
 
+// Back-office trail for the steps FeaziMove ITSELF initiates against Anchor.
+// anchor_events was previously written only by the inbound webhook receiver, so
+// a rider completing BVN wallet setup left no trace anywhere in the Back Office
+// — the Transaction Monitor showed nothing because nothing inbound had happened
+// yet. These rows carry payload.source = 'feazimove-api' so the monitor can tell
+// them apart from Anchor's own deliveries (their signature_valid means nothing).
+// Fire-and-forget: an audit write must never fail the user's wallet setup.
+function logWalletEvent(userId, { eventId, eventType, action, detail }) {
+  query(
+    `INSERT INTO anchor_events (event_id, event_type, resource_id, signature_valid, processed, payload)
+     VALUES ($1, $2, $3, true, true, $4) ON CONFLICT (event_id) DO NOTHING`,
+    [eventId, eventType, userId, JSON.stringify({ source: 'feazimove-api', userId, detail: detail || null })]
+  ).catch(err => console.error('anchor_events write failed:', err.message))
+  query(
+    "INSERT INTO activity_log (actor_id, action, category, detail) VALUES ($1, $2, 'payment', $3)",
+    [userId, action, detail || null]
+  ).catch(err => console.error('activity_log write failed:', err.message))
+}
+
 // Anchor's /pay products (amount-locked temporary accounts, reserved accounts)
 // only exist in PRODUCTION for approved payment programs. In sandbox — and as
 // a graceful fallback — each user gets ONE permanent Virtual NUBAN pointing at
@@ -244,6 +263,9 @@ router.post('/reserved-account',
   ],
   validate,
   async (req, res, next) => {
+    // One id ties this attempt's submitted → completed/failed rows together, so
+    // the Back Office shows a readable trail even when Anchor rejects the BVN.
+    const attempt = crypto.randomUUID().slice(0, 12)
     try {
       if (!anchor.configured()) {
         return res.status(503).json({ message: 'Payment system not configured. Please contact support.' })
@@ -255,13 +277,34 @@ router.post('/reserved-account',
       if (existing.rows[0]?.reserved_account_number && existing.rows[0]?.bvn_submitted) {
         return res.status(409).json({ message: 'You already have a personal funding account.' })
       }
+      // Logged BEFORE the Anchor call so an attempt that Anchor rejects is still
+      // visible in the Back Office — a silent failure was the whole problem.
+      logWalletEvent(req.user.id, {
+        eventId: `wsetup-${attempt}-submitted`,
+        eventType: 'wallet.setup.submitted',
+        action: 'Wallet Setup — BVN Submitted',
+        detail: 'BVN, date of birth and gender sent to Anchor for CBN KYC',
+      })
+
       // An account number may already exist WITHOUT setup (auto-created behind
       // a pay-by-transfer) — completing setup just claims it: record the BVN
       // step and present the account as theirs. When Anchor enables production
       // reserved accounts, this upgrades to a real named account.
       if (existing.rows[0]?.reserved_account_number) {
-        await query('UPDATE users SET bvn_submitted = true WHERE id = $1', [req.user.id])
+        // COALESCE so a decision that already arrived by webhook is never
+        // overwritten by our own "awaiting decision" placeholder.
+        await query(
+          `UPDATE users SET bvn_submitted = true,
+              anchor_kyc_status = COALESCE(anchor_kyc_status, 'submitted') WHERE id = $1`,
+          [req.user.id]
+        )
         analytics.track(req.user.id, 'reserved_account_requested', {})
+        logWalletEvent(req.user.id, {
+          eventId: `wsetup-${attempt}-completed`,
+          eventType: 'wallet.setup.completed',
+          action: 'Wallet Setup Completed',
+          detail: `Existing funding account claimed — ${existing.rows[0].reserved_account_number}`,
+        })
         return res.status(202).json({
           message: 'Your personal funding account is ready.',
           account: {
@@ -297,7 +340,29 @@ router.post('/reserved-account',
         // Virtual NUBAN plays the same role (account in our org's name).
         if (!anchor.isUnavailable(err)) throw err
         const details = await ensureFundingNuban(req.user.id)
-        await query('UPDATE users SET bvn_submitted = true WHERE id = $1', [req.user.id])
+        // Register the Anchor customer even on this path. Without it the rider
+        // finishes wallet setup with anchor_customer_id still NULL and never
+        // appears in the Back Office Customers registry (it filters on that
+        // column) — invisible despite having completed KYC. Non-fatal: the
+        // funding account works regardless of whether the customer call lands.
+        await ensureAnchorCustomer(req.user.id).catch(
+          e => console.error('Anchor customer registration failed:', e.message)
+        )
+        // 'pending_provider' = BVN captured by us, but this environment has no
+        // reserved-account product, so Anchor never ran the CBN check. Distinct
+        // from 'submitted', which means a real decision is genuinely pending.
+        await query(
+          `UPDATE users SET bvn_submitted = true,
+              anchor_kyc_status = COALESCE(anchor_kyc_status, 'pending_provider') WHERE id = $1`,
+          [req.user.id]
+        )
+        analytics.track(req.user.id, 'reserved_account_requested', {})
+        logWalletEvent(req.user.id, {
+          eventId: `wsetup-${attempt}-completed`,
+          eventType: 'wallet.setup.completed',
+          action: 'Wallet Setup Completed',
+          detail: `Virtual NUBAN assigned (reserved accounts unavailable) — ${details.accountNumber}`,
+        })
         return res.status(202).json({
           message: 'Your personal funding account is ready.',
           account: details,
@@ -317,7 +382,20 @@ router.post('/reserved-account',
         [acct?.id || null, details.accountNumber || null,
          details.bankName || details.bank?.name || null, details.accountName || null, req.user.id]
       )
+      await query(
+        `UPDATE users SET bvn_submitted = true,
+            anchor_kyc_status = COALESCE(anchor_kyc_status, 'submitted') WHERE id = $1`,
+        [req.user.id]
+      )
       analytics.track(req.user.id, 'reserved_account_requested', {})
+      logWalletEvent(req.user.id, {
+        eventId: `wsetup-${attempt}-completed`,
+        eventType: 'wallet.setup.completed',
+        action: 'Wallet Setup Completed',
+        detail: details.accountNumber
+          ? `Reserved account ${details.accountNumber} — awaiting Anchor KYC decision`
+          : 'Reserved account requested — awaiting reservedAccount.created webhook',
+      })
       res.status(202).json({
         message: details.accountNumber
           ? 'Your personal funding account is ready.'
@@ -329,6 +407,14 @@ router.post('/reserved-account',
         } : null,
       })
     } catch (err) {
+      // A rejected BVN or an Anchor outage now leaves a row too — previously
+      // the rider saw an error and the Back Office showed nothing at all.
+      logWalletEvent(req.user.id, {
+        eventId: `wsetup-${attempt}-failed`,
+        eventType: 'wallet.setup.failed',
+        action: 'Wallet Setup Failed',
+        detail: (err.message || 'Unknown error').slice(0, 280),
+      })
       if (err.status) return res.status(err.status).json({ message: err.message })
       next(err)
     }

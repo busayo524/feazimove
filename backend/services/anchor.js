@@ -152,6 +152,26 @@ async function findCustomerByEmail(email) {
   } catch (err) { throw anchorError(err, 'Could not look up the customer.') }
 }
 
+// Authenticated pull of a customer — the trusted source of a KYC decision when
+// a customer.identification.* delivery can't be signature-checked. The verdict
+// lives at attributes.verification.status.
+async function getCustomer(customerId) {
+  try {
+    const res = await http.get(`/api/v1/customers/${encodeURIComponent(customerId)}`)
+    return res.data.data
+  } catch (err) { throw anchorError(err, 'Could not fetch the customer.') }
+}
+
+// Authenticated pull of a reserved account — same role for reservedAccount.*
+// deliveries. Account details from an UNSIGNED body are never trusted: a
+// planted account number would redirect a rider's transfer to an attacker.
+async function getReservedAccount(accountId) {
+  try {
+    const res = await http.get(`/pay/reserved-account/${encodeURIComponent(accountId)}`)
+    return res.data.data
+  } catch (err) { throw anchorError(err, 'Could not fetch the reserved account.') }
+}
+
 // Authenticated pull of a virtual-NUBAN payment — the trusted source for the
 // verify-by-pullback path when a webhook delivery's signature can't be checked.
 async function getPayment(paymentId) {
@@ -324,6 +344,8 @@ module.exports = {
   isUnavailable,
   getPayin,
   getPayment,
+  getCustomer,
+  getReservedAccount,
   findCustomerByEmail,
   listBanks,
   verifyAccount,
