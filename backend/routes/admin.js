@@ -12,6 +12,7 @@ const { sendStored, deleteStored } = require('../services/fileStorage')
 const { sendAccountCredentialsEmail, sendWelcomeEmail } = require('../services/emailService')
 const anchor = require('../services/anchor')
 const kycVault = require('../services/kycVault')
+const { payoutAllowed } = require('../services/paymentsGate')
 const totp = require('../services/totp')
 const QRCode = require('qrcode')
 
@@ -822,6 +823,12 @@ router.post('/payouts/:id/approve',
       const payout = p.rows[0]
       if (!payout) return res.status(404).json({ message: 'Payout request not found.' })
       if (payout.status !== 'pending') return res.status(409).json({ message: 'This request is no longer pending.' })
+
+      // On sandbox rails a NIP transfer reports success without moving money —
+      // the driver's wallet would be debited and the payout marked sent while
+      // nothing arrives. Refuse for anyone outside the test allowlist.
+      const gate = await payoutAllowed(payout.driver_id)
+      if (!gate.ok) return res.status(503).json({ message: gate.message })
 
       // Without Anchor configured, fall back to the old bookkeeping-only
       // approval (money moved by hand outside the app).

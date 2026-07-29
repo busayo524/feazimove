@@ -19,6 +19,7 @@ const { consumeChallenge } = require('../services/actionChallenges')
 const analytics = require('../services/analytics')
 const anchor = require('../services/anchor')
 const kycVault = require('../services/kycVault')
+const { requireTestAccount } = require('../services/paymentsGate')
 const { runAmlChecksOnPayout, escrowWithdrawal } = require('../services/walletLedger')
 
 const router = express.Router()
@@ -169,6 +170,7 @@ router.get('/transactions', async (req, res, next) => {
 const FUND_EXPIRY_SECONDS = 30 * 60
 
 router.post('/fund',
+  requireTestAccount, // no-op unless sandbox rails + an allowlist are configured
   [
     body('amount').isInt({ min: 100, max: 500000 }),
     body('context').optional().isIn(['wallet', 'ride']),
@@ -264,6 +266,7 @@ router.get('/fund/status/:reference',
 // (docs.getanchor.co/docs/reserved-accounts) The BVN is passed straight
 // through to Anchor for CBN-mandated KYC and is NEVER stored by FeaziMove.
 router.post('/reserved-account',
+  requireTestAccount, // a sandbox NUBAN is not a real bank account
   [
     body('bvn').trim().isLength({ min: 11, max: 11 }).isNumeric().withMessage('BVN must be 11 digits.'),
     body('dateOfBirth').isISO8601().withMessage('Date of birth is required (YYYY-MM-DD).'),
@@ -471,6 +474,7 @@ router.get('/funding-account', async (req, res, next) => {
 // deducted from the amount. All payouts are first-party only — enforced at
 // admin approval by matching the bank account name to the registered name.
 router.post('/withdraw',
+  requireTestAccount, // a sandbox NIP payout debits the wallet but sends nothing
   [
     body('amount').isInt({ min: 100 }),
     body('challengeId').notEmpty().withMessage('Verification required.'),

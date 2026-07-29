@@ -693,6 +693,9 @@ app.use((err, req, res, _next) => {
 runMigrations().then(() => {
   app.listen(PORT, () => {
     console.log(`FeaziMove API running on http://localhost:${PORT}`)
+    // Which payment rails are live, and who can reach them — printed at boot so
+    // the mode is answerable from the AppSail logs rather than guessed at.
+    console.log(require('./services/paymentsGate').describe())
   })
   // One honest-status sweep at boot (deploys imply activity anyway); ongoing
   // sweeps are request-triggered in middleware/auth.js — NEVER on a timer,
