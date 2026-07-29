@@ -6,9 +6,29 @@
  * - Never exposes raw fetch — keeps security consistent
  */
 
-// In dev, Vite proxies /api → localhost:4000 so no CORS issues.
-// In production, set VITE_API_URL to your deployed backend URL.
-const BASE_URL = import.meta.env.VITE_API_URL || '/api'
+// The API host is resolved at RUNTIME from the hostname, not baked in at build
+// time. It used to come from VITE_API_URL, which meant a bundle could only ever
+// talk to one backend — so promoting the Development build to production gave
+// www.feazimove.com a client still calling the Development API, which rejects
+// that origin via CORS and made every login fail with "cannot connect".
+// Resolving per hostname means the SAME artifact is correct in both
+// environments and a promotion can never point the site at the wrong backend.
+const PROD_API = 'https://feazimove-api-10128445142.catalystappsail.com/api'
+const DEV_API  = 'https://feazimove-api-10128445142.development.catalystappsail.com/api'
+
+function resolveBaseUrl() {
+  // Explicit override still wins — local work against a specific backend.
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL
+  const host = typeof window !== 'undefined' ? window.location.hostname : ''
+  // Vite dev server proxies /api → localhost:4000, so no CORS locally.
+  if (/^(localhost|127\.0\.0\.1|\[?::1\]?)$/.test(host)) return '/api'
+  // feazimove.com and www.feazimove.com are production; anything else
+  // (the *.development.catalystserverless.com preview host) is Development.
+  if (/(^|\.)feazimove\.com$/i.test(host)) return PROD_API
+  return DEV_API
+}
+
+const BASE_URL = resolveBaseUrl()
 
 // Input sanitization for all outgoing string values
 function sanitizeValue(val) {
