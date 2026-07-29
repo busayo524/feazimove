@@ -21,6 +21,19 @@ const DOC_LABELS = {
   utilityBill:    'Utility Bill',
 }
 
+// Raw anchor_kyc_status values are internal shorthand — spell them out so an
+// admin reading this page knows whether anyone actually verified the BVN.
+function kycLabel(status, bvnSubmitted) {
+  if (!status) return bvnSubmitted ? 'BVN submitted — no decision recorded' : 'Not started'
+  return {
+    submitted:        'Submitted — awaiting Anchor decision',
+    pending_provider: 'BVN captured — not yet checked by Anchor',
+    approved:         'Approved by Anchor',
+    verified:         'Verified by Anchor',
+    rejected:         'Rejected by Anchor',
+  }[status] || status
+}
+
 function userStatus(u) {
   if (u.isPending) return 'pending'
   if (u.isActive)  return 'approved'
@@ -264,12 +277,22 @@ export default function AdminUserDetail() {
         ]}/>
       </Section>
 
-      {/* Identity info (riders) */}
-      {!isDriver && (user.idType || user.idNumber) && (
-        <Section title="Identity Verification">
+      {/* Identity + wallet KYC — shown for riders AND drivers. Registration
+          ID details and the CBN/BVN wallet check are one compliance story, so
+          they live in one section even when only half of it is filled in. */}
+      {(user.idType || user.idNumber || user.bvnSubmitted || user.residentialAddress) && (
+        <Section title="Identity Verification/KYC">
           <InfoGrid rows={[
-            ['ID Type',   user.idType],
-            ['ID Number', user.idNumber],
+            ['ID Type',   user.idType || '—'],
+            ['ID Number', user.idNumber || '—'],
+            ['BVN', user.bvnMasked
+              ? `${user.bvnMasked} (last 4 digits only)`
+              : user.bvnSubmitted ? 'Submitted before BVN capture' : '—'],
+            ['Residential Address', user.residentialAddress || '—'],
+            ['Wallet KYC Status', kycLabel(user.kycStatus, user.bvnSubmitted)],
+            ['Funding Account', user.fundingAccount
+              ? `${user.fundingAccount.number}${user.fundingAccount.bank ? ` · ${user.fundingAccount.bank}` : ''}`
+              : '—'],
           ]}/>
         </Section>
       )}

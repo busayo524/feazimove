@@ -447,6 +447,11 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS anchor_counterparty_id   VARCHAR(60);
 -- NUBAN may exist without it (auto-created behind a payment) — the flag is
 -- what drives the "set up your wallet" funnel in the UI.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS bvn_submitted BOOLEAN NOT NULL DEFAULT false;
+-- KYC evidence captured at wallet setup. The FULL BVN is still never stored —
+-- only the last 4 digits, enough for an admin to confirm which BVN a rider
+-- gave without the back office becoming a bank-grade PII target.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS bvn_last4 VARCHAR(4);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS residential_address VARCHAR(200);
 -- Activity heartbeat (touched by requireAuth, ≤1 write/min) — drives the
 -- honest online-status sweep. Backfilled to NOW() once so pre-existing
 -- "online" rows age out naturally instead of flipping instantly on deploy.
@@ -497,6 +502,14 @@ CREATE TABLE IF NOT EXISTS aml_flags (
   created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_aml_flags_status ON aml_flags(status, created_at DESC);
+-- Identity SNAPSHOT taken when the flag is raised. user_id is ON DELETE SET
+-- NULL, so deleting the account (test cleanup, GDPR erasure) silently
+-- anonymised the flag and left compliance staring at "Unknown user". A money
+-- laundering alert has to outlive its subject, so the who is copied in here
+-- and never updated afterwards.
+ALTER TABLE aml_flags ADD COLUMN IF NOT EXISTS subject_name  VARCHAR(120);
+ALTER TABLE aml_flags ADD COLUMN IF NOT EXISTS subject_email VARCHAR(255);
+ALTER TABLE aml_flags ADD COLUMN IF NOT EXISTS subject_role  VARCHAR(20);
 `
 
 ;(async () => {

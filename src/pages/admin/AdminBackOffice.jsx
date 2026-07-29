@@ -165,7 +165,21 @@ export default function AdminBackOffice() {
                     <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
                       {c.reservedAccount ? `${c.reservedAccount.number} · ${c.reservedAccount.bank}` : '—'}
                     </td>
-                    <td style={{ padding: '10px 14px' }}>{c.hasPayoutBeneficiary ? '✓' : '—'}</td>
+                    {/* The bank account the user saved in their own profile —
+                        where a withdrawal actually lands. */}
+                    <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
+                      {c.payoutBeneficiary ? (
+                        <>
+                          <span style={{ fontWeight: 700, color: TEXT }}>{c.payoutBeneficiary.accountNumber}</span>
+                          {c.payoutBeneficiary.bank && <span style={{ color: MUTED }}> · {c.payoutBeneficiary.bank}</span>}
+                          {c.payoutBeneficiary.registered && (
+                            <p style={{ fontSize: 11, color: '#15803d', fontWeight: 600, marginTop: 2 }}>
+                              Registered with Anchor
+                            </p>
+                          )}
+                        </>
+                      ) : <span style={{ color: MUTED }}>Not added</span>}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -201,8 +215,19 @@ export default function AdminBackOffice() {
                     {f.rule} <span style={{ color: SEV[f.severity], fontSize: 11, textTransform: 'uppercase' }}>· {f.severity}</span>
                   </p>
                   <p style={{ fontSize: 13, color: TEXT, margin: '3px 0' }}>{f.detail}</p>
+                  {/* Who moved the money. Flags raised before identity was
+                      snapshotted, on an account since deleted, have nothing
+                      left to show — say that rather than "Unknown user". */}
                   <p style={{ fontSize: 11.5, color: MUTED }}>
-                    {f.userName || 'Unknown user'} ({f.userRole || '—'}) · {fmtTime(f.createdAt)}
+                    <span style={{ fontWeight: 700, color: f.userName ? TEXT : MUTED }}>
+                      {f.userName || 'Identity not recorded'}
+                    </span>
+                    {f.userEmail && ` · ${f.userEmail}`}
+                    {f.userRole && ` · ${f.userRole}`}
+                    {f.subjectDeleted && (
+                      <span style={{ color: '#b45309', fontWeight: 600 }}> · account deleted</span>
+                    )}
+                    {' · '}{fmtTime(f.createdAt)}
                     {f.status !== 'open' && ` · ${f.status} by ${f.reviewerName || '—'} ${fmtTime(f.reviewedAt)}`}
                   </p>
                 </div>

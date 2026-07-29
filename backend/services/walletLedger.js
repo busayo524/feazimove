@@ -178,9 +178,16 @@ async function flag(userId, rule, severity, detail, reference) {
     [userId, rule, reference || null]
   )
   if (existing.rows[0]) return
+  // Copy WHO this is about into the flag itself. aml_flags.user_id is ON
+  // DELETE SET NULL, so relying on the join alone means deleting the account
+  // erases the subject of its own laundering alert.
+  const subject = await query('SELECT name, email, role FROM users WHERE id = $1', [userId])
+  const s = subject.rows[0] || {}
   await query(
-    'INSERT INTO aml_flags (user_id, rule, severity, detail, reference) VALUES ($1, $2, $3, $4, $5)',
-    [userId, rule, severity, detail.slice(0, 300), reference || null]
+    `INSERT INTO aml_flags (user_id, rule, severity, detail, reference, subject_name, subject_email, subject_role)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [userId, rule, severity, detail.slice(0, 300), reference || null,
+     s.name || null, s.email || null, s.role || null]
   )
 }
 

@@ -14,14 +14,16 @@ const QUICK = [1000, 2000, 5000, 10000]
 const POLL_INTERVAL = 4000
 const PENDING_KEY = 'fm_pending_fund' // survives switching to the bank app
 
-/* Optional permanent funding account (requires BVN — sent to our banking
-   partner for verification, never stored by FeaziMove). Presented as "set up"
+/* Optional permanent funding account (requires BVN — sent in full to our
+   banking partner for verification; only its last 4 digits are kept here, for
+   admin confirmation in the back office). Presented as "set up"
    only after the BVN step — the setup funnel is the product goal, so an
    auto-created payment account never short-circuits it. */
 function ReservedAccountCard({ showForm, setShowForm, onStatus }) {
   const [account, setAccount] = useState(null)
   const [pending, setPending] = useState(false)
   const [bvn, setBvn] = useState('')
+  const [address, setAddress] = useState('')
   const [dob, setDob] = useState('')
   const [gender, setGender] = useState('')
   const [busy, setBusy] = useState(false)
@@ -46,11 +48,15 @@ function ReservedAccountCard({ showForm, setShowForm, onStatus }) {
     return () => clearInterval(id)
   }, [pending, account, load])
 
+  const canSubmit = !busy && bvn.length === 11 && address.trim().length >= 5
+
   async function submit(e) {
     e.preventDefault()
     setBusy(true); setError('')
     try {
-      const res = await api.post('/wallet/reserved-account', { bvn, dateOfBirth: dob, gender })
+      const res = await api.post('/wallet/reserved-account', {
+        bvn, dateOfBirth: dob, gender, address: address.trim(),
+      })
       setShowForm(false)
       if (res.data.account) setAccount(res.data.account)
       else { setPending(true); setNotice(res.data.message) }
@@ -88,12 +94,17 @@ function ReservedAccountCard({ showForm, setShowForm, onStatus }) {
           {notice || 'Your account is being created — it will appear here shortly.'}
         </p>
       ) : showForm ? (
+        // Mirrors the server's validators so the button never enables a
+        // request the API will reject (address must be at least 5 chars).
         <form onSubmit={submit}>
           <p style={{ fontSize:12.5, color:MUTED, marginBottom:12, lineHeight:1.5 }}>
             Get a permanent account number in your own name — fund your wallet by transferring to it any time.
-            Your BVN is required by CBN rules; it is verified by our banking partner and never stored by FeaziMove.
+            Your BVN is required by CBN KYC policy; it is verified by our banking partner.
           </p>
           <input value={bvn} onChange={e => setBvn(e.target.value.replace(/[^0-9]/g, '').slice(0, 11))} placeholder="BVN (11 digits)" inputMode="numeric" required
+            style={{ width:'100%', padding:'11px 14px', borderRadius:10, fontSize:14, border:`1.5px solid ${BORDER}`, marginBottom:10, boxSizing:'border-box', background:CARD, color:TEXT, fontFamily:'inherit' }}/>
+          <input value={address} onChange={e => setAddress(e.target.value.slice(0, 200))}
+            placeholder="Residential address" autoComplete="street-address" required
             style={{ width:'100%', padding:'11px 14px', borderRadius:10, fontSize:14, border:`1.5px solid ${BORDER}`, marginBottom:10, boxSizing:'border-box', background:CARD, color:TEXT, fontFamily:'inherit' }}/>
           <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) minmax(0,1fr)', gap:10, marginBottom:10 }}>
             <input type="date" value={dob} onChange={e => setDob(e.target.value)} required
@@ -107,8 +118,8 @@ function ReservedAccountCard({ showForm, setShowForm, onStatus }) {
           </div>
           {error && <p style={{ fontSize:12.5, color:'#ef4444', marginBottom:10 }}>{error}</p>}
           <div style={{ display:'flex', gap:10 }}>
-            <button type="submit" disabled={busy || bvn.length !== 11}
-              style={{ flex:1, padding:'11px', borderRadius:10, background:(busy || bvn.length !== 11)?BORDER:NEON, color:(busy || bvn.length !== 11)?MUTED:OLIVE, border:'none', fontWeight:800, fontSize:13.5, cursor:(busy || bvn.length !== 11)?'not-allowed':'pointer', fontFamily:'inherit' }}>
+            <button type="submit" disabled={!canSubmit}
+              style={{ flex:1, padding:'11px', borderRadius:10, background:!canSubmit?BORDER:NEON, color:!canSubmit?MUTED:OLIVE, border:'none', fontWeight:800, fontSize:13.5, cursor:!canSubmit?'not-allowed':'pointer', fontFamily:'inherit' }}>
               {busy ? 'Creating…' : 'Create My Account'}
             </button>
             <button type="button" onClick={() => setShowForm(false)}

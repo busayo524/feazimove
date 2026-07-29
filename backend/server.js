@@ -466,6 +466,8 @@ async function runMigrations() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS reserved_account_name    VARCHAR(120);
     ALTER TABLE users ADD COLUMN IF NOT EXISTS anchor_counterparty_id   VARCHAR(60);
     ALTER TABLE users ADD COLUMN IF NOT EXISTS bvn_submitted BOOLEAN NOT NULL DEFAULT false;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS bvn_last4 VARCHAR(4);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS residential_address VARCHAR(200);
     ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ;
     UPDATE users SET last_seen_at = NOW() WHERE last_seen_at IS NULL AND is_online = true;
     ALTER TABLE payout_requests ADD COLUMN IF NOT EXISTS fee_kobo BIGINT NOT NULL DEFAULT 0;
@@ -502,6 +504,11 @@ async function runMigrations() {
       created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS idx_aml_flags_status ON aml_flags(status, created_at DESC);
+    -- Identity snapshot — user_id is ON DELETE SET NULL, so without this a
+    -- deleted account turns its own AML alerts into "Unknown user".
+    ALTER TABLE aml_flags ADD COLUMN IF NOT EXISTS subject_name  VARCHAR(120);
+    ALTER TABLE aml_flags ADD COLUMN IF NOT EXISTS subject_email VARCHAR(255);
+    ALTER TABLE aml_flags ADD COLUMN IF NOT EXISTS subject_role  VARCHAR(20);
 
     -- ── Late-ordered statements: these reference tables/columns created above,
     -- so they MUST run last — the whole migration executes as one implicit

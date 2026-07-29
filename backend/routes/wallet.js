@@ -28,7 +28,8 @@ router.use(requireAuth)
 // first time it's needed and remembered on users.anchor_customer_id.
 async function ensureAnchorCustomer(userId) {
   const u = await query(
-    'SELECT name, email, phone, city, area, anchor_customer_id FROM users WHERE id = $1', [userId]
+    'SELECT name, email, phone, city, area, residential_address, anchor_customer_id FROM users WHERE id = $1',
+    [userId]
   )
   const user = u.rows[0]
   if (!user) { const e = new Error('User not found.'); e.status = 404; throw e }
@@ -42,7 +43,13 @@ async function ensureAnchorCustomer(userId) {
       lastName: parts.slice(1).join(' ') || 'User',
       email: user.email,
       phoneNumber: user.phone,
-      address: { line1: user.area || 'Lagos', city: user.city || 'Lagos', state: 'Lagos' },
+      // The address the user gave at wallet setup is the real one; area/city
+      // are coarse ride-matching fields and only stand in when it is absent.
+      address: {
+        line1: user.residential_address || user.area || 'Lagos',
+        city: user.city || 'Lagos',
+        state: 'Lagos',
+      },
     })
   } catch (err) {
     // The email is already registered at Anchor (e.g. a deleted-and-recreated
@@ -260,6 +267,8 @@ router.post('/reserved-account',
     body('bvn').trim().isLength({ min: 11, max: 11 }).isNumeric().withMessage('BVN must be 11 digits.'),
     body('dateOfBirth').isISO8601().withMessage('Date of birth is required (YYYY-MM-DD).'),
     body('gender').isIn(['male', 'female']).withMessage('Select a gender.'),
+    body('address').trim().isLength({ min: 5, max: 200 })
+      .withMessage('Enter your residential address.'),
   ],
   validate,
   async (req, res, next) => {
@@ -277,13 +286,21 @@ router.post('/reserved-account',
       if (existing.rows[0]?.reserved_account_number && existing.rows[0]?.bvn_submitted) {
         return res.status(409).json({ message: 'You already have a personal funding account.' })
       }
+      // KYC evidence, recorded BEFORE the Anchor call so it survives whichever
+      // branch below runs (and any Anchor failure). Only the last 4 BVN digits
+      // are kept — the full BVN still goes straight to Anchor and is never
+      // written to our database.
+      await query(
+        'UPDATE users SET bvn_last4 = $1, residential_address = $2 WHERE id = $3',
+        [req.body.bvn.slice(-4), req.body.address, req.user.id]
+      )
       // Logged BEFORE the Anchor call so an attempt that Anchor rejects is still
       // visible in the Back Office — a silent failure was the whole problem.
       logWalletEvent(req.user.id, {
         eventId: `wsetup-${attempt}-submitted`,
         eventType: 'wallet.setup.submitted',
         action: 'Wallet Setup — BVN Submitted',
-        detail: 'BVN, date of birth and gender sent to Anchor for CBN KYC',
+        detail: 'BVN, date of birth, gender and residential address sent to Anchor for CBN KYC',
       })
 
       // An account number may already exist WITHOUT setup (auto-created behind

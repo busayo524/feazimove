@@ -447,6 +447,8 @@ router.get('/users/:id',
                   is_active, is_pending, rating, wallet_balance, created_at,
                   city, area, date_of_birth, gender,
                   id_type, id_number,
+                  bvn_submitted, bvn_last4, residential_address, anchor_kyc_status,
+                  reserved_account_number, reserved_account_bank,
                   vehicle_type, vehicle_make, vehicle_model, plate_number, vehicle_year, vehicle_color,
                   avatar_path, bank_name, bank_account_number
            FROM users WHERE id = $1`,
@@ -476,6 +478,14 @@ router.get('/users/:id',
           city: u.city, area: u.area, dateOfBirth: u.date_of_birth, gender: u.gender,
           bankName: u.bank_name, bankAccountNumber: u.bank_account_number,
           idType: u.id_type, idNumber: u.id_number,
+          // Wallet/CBN KYC. Only the last 4 BVN digits are ever stored, so
+          // this is a confirmation aid, not a retrievable BVN.
+          bvnSubmitted: u.bvn_submitted,
+          bvnMasked: u.bvn_last4 ? `•••••••${u.bvn_last4}` : null,
+          residentialAddress: u.residential_address,
+          kycStatus: u.anchor_kyc_status,
+          fundingAccount: u.reserved_account_number
+            ? { number: u.reserved_account_number, bank: u.reserved_account_bank } : null,
           vehicleType: u.vehicle_type, vehicleMake: u.vehicle_make,
           vehicleModel: u.vehicle_model, plateNumber: u.plate_number,
           vehicleYear: u.vehicle_year, vehicleColor: u.vehicle_color,
@@ -969,7 +979,8 @@ router.get('/anchor/customers', async (req, res, next) => {
   try {
     const result = await query(
       `SELECT id, name, email, phone, role, anchor_customer_id, anchor_kyc_status,
-              reserved_account_number, reserved_account_bank, anchor_counterparty_id, created_at
+              reserved_account_number, reserved_account_bank, anchor_counterparty_id,
+              bank_name, bank_account_number, created_at
          FROM users WHERE anchor_customer_id IS NOT NULL
         ORDER BY created_at DESC LIMIT 200`
     )
@@ -978,7 +989,16 @@ router.get('/anchor/customers', async (req, res, next) => {
       anchorCustomerId: u.anchor_customer_id, kycStatus: u.anchor_kyc_status,
       reservedAccount: u.reserved_account_number
         ? { number: u.reserved_account_number, bank: u.reserved_account_bank } : null,
-      hasPayoutBeneficiary: !!u.anchor_counterparty_id,
+      // The beneficiary is the bank account the user typed into their own
+      // profile — that is where any withdrawal is paid. `registered` says
+      // whether it has also been registered with Anchor as a counterparty.
+      payoutBeneficiary: u.bank_account_number
+        ? {
+            bank: u.bank_name || null,
+            accountNumber: u.bank_account_number,
+            registered: !!u.anchor_counterparty_id,
+          }
+        : null,
       joinedAt: u.created_at,
     })) })
   } catch (err) { next(err) }
@@ -990,8 +1010,12 @@ router.get('/aml/flags', async (req, res, next) => {
   try {
     const status = req.query.status || 'open'
     const result = await query(
+      // The live user is preferred (name changes stay current), but the
+      // snapshot taken when the flag was raised is the fallback — it is the
+      // only identity left once an account is deleted.
       `SELECT f.id, f.rule, f.severity, f.detail, f.reference, f.status, f.created_at,
-              f.reviewed_at, u.id AS user_id, u.name AS user_name, u.role,
+              f.reviewed_at, f.user_id, f.subject_name, f.subject_email, f.subject_role,
+              u.id AS live_user_id, u.name AS user_name, u.email AS user_email, u.role,
               r.name AS reviewer_name
          FROM aml_flags f
          LEFT JOIN users u ON f.user_id = u.id
@@ -1002,7 +1026,14 @@ router.get('/aml/flags', async (req, res, next) => {
     )
     res.json({ flags: result.rows.map(f => ({
       id: f.id, rule: f.rule, severity: f.severity, detail: f.detail, reference: f.reference,
-      status: f.status, userId: f.user_id, userName: f.user_name, userRole: f.role,
+      status: f.status,
+      // userId is null when the account is gone — the UI uses it to decide
+      // whether the subject is still clickable.
+      userId: f.live_user_id,
+      userName: f.user_name || f.subject_name || null,
+      userEmail: f.user_email || f.subject_email || null,
+      userRole: f.role || f.subject_role || null,
+      subjectDeleted: !f.live_user_id && !!(f.subject_name || f.subject_email),
       createdAt: f.created_at, reviewedAt: f.reviewed_at, reviewerName: f.reviewer_name,
     })) })
   } catch (err) { next(err) }
