@@ -25,6 +25,19 @@ const SALT_ROUNDS = 12  // bcrypt cost factor — NIST recommended minimum
 const OTP_EXPIRY_MINUTES = 5
 const REG_TOKEN_EXPIRY_HOURS = 24
 
+// What a newly registered account may do. The users table defaults are
+// rider-shaped (can_ride NOT NULL DEFAULT true), so any INSERT that omits
+// these columns silently grants rider access — which is how drivers ended up
+// listed as riders in the admin panel. Every signup path must pass these
+// explicitly; the second role is only ever granted through POST /add-role.
+function capabilitiesFor(role) {
+  return {
+    canRide:  role !== 'driver',   // riders and admins
+    canDrive: role === 'driver',
+    activeRole: role,              // never leave this to the 'rider' default
+  }
+}
+
 // ── Endpoint-scoped rate limits ───────────────────────────────────────────────
 // Short windows, applied only to the credential-guessing endpoints themselves —
 // not the whole router — so normal navigation (session checks, role switches,
@@ -104,14 +117,17 @@ router.post('/signup',
 
       const password_hash = await bcrypt.hash(password, SALT_ROUNDS)
 
-      // Insert pending user — NOT active, NOT verified. active_role must match
-      // the chosen role (the column defaults to 'rider', which made driver
-      // signups render as "Rider" in the admin panel).
+      // Insert pending user — NOT active, NOT verified. Role capabilities are
+      // set explicitly: the column defaults are rider-shaped, so relying on
+      // them made driver signups render as "Rider" AND appear in the riders
+      // list. A driver gets rider access only via POST /add-role.
+      const caps = capabilitiesFor(role)
       const userResult = await query(
-        `INSERT INTO users (name, email, phone, password_hash, role, active_role, email_verified, is_pending, is_active)
-         VALUES ($1, $2, $3, $4, $5, $5, false, true, false)
+        `INSERT INTO users (name, email, phone, password_hash, role, active_role,
+                            can_ride, can_drive, email_verified, is_pending, is_active)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, true, false)
          RETURNING id, name, email`,
-        [name, email, phone, password_hash, role]
+        [name, email, phone, password_hash, role, caps.activeRole, caps.canRide, caps.canDrive]
       )
       const user = userResult.rows[0]
 
@@ -481,11 +497,13 @@ router.post('/google',
 
       // Create pending user — phone added later in registration wizard
       const passwordHash = await bcrypt.hash(require('crypto').randomBytes(32).toString('hex'), SALT_ROUNDS)
+      const caps = capabilitiesFor(role)
       const userResult = await query(
-        `INSERT INTO users (name, email, google_id, password_hash, role, email_verified, is_pending, is_active)
-         VALUES ($1, $2, $3, $4, $5, true, true, false)
+        `INSERT INTO users (name, email, google_id, password_hash, role, active_role,
+                            can_ride, can_drive, email_verified, is_pending, is_active)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, true, false)
          RETURNING id, name, email, role`,
-        [name, email, googleId, passwordHash, role]
+        [name, email, googleId, passwordHash, role, caps.activeRole, caps.canRide, caps.canDrive]
       )
       const newUser = userResult.rows[0]
 
@@ -562,11 +580,13 @@ router.post('/google-access',
       const crypto = require('crypto')
       const passwordHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), SALT_ROUNDS)
 
+      const caps = capabilitiesFor(role)
       const userResult = await query(
-        `INSERT INTO users (name, email, google_id, password_hash, role, email_verified, is_pending, is_active)
-         VALUES ($1, $2, $3, $4, $5, true, true, false)
+        `INSERT INTO users (name, email, google_id, password_hash, role, active_role,
+                            can_ride, can_drive, email_verified, is_pending, is_active)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, true, false)
          RETURNING id, name, email, role`,
-        [name, email, googleId, passwordHash, role]
+        [name, email, googleId, passwordHash, role, caps.activeRole, caps.canRide, caps.canDrive]
       )
       const newUser = userResult.rows[0]
 

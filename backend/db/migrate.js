@@ -98,7 +98,10 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS can_drive  BOOLEAN NOT NULL DEFAULT f
 ALTER TABLE users ADD COLUMN IF NOT EXISTS active_role VARCHAR(10) NOT NULL DEFAULT 'rider';
 UPDATE users SET can_ride  = true  WHERE role = 'rider'  AND can_drive = false;
 UPDATE users SET can_drive = true  WHERE role = 'driver';
-UPDATE users SET can_ride  = true  WHERE role = 'driver' AND can_ride = false;
+-- NOTE: there was a third statement here forcing can_ride = true for every
+-- driver. It ran on EVERY deploy, so registering as a driver silently granted
+-- rider access and put the account in the admin Riders list. Being both is
+-- opt-in through POST /add-role, never automatic. Do not reinstate it.
 UPDATE users SET active_role = role WHERE active_role = 'rider' AND role = 'driver';
 
 -- "Move an Item" pre-launch waitlist
@@ -552,6 +555,37 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS bvn_encrypted TEXT;
 -- totp_enabled_at NULL means enrolment was started but never confirmed.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret     TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled_at TIMESTAMPTZ;
+
+-- ── One-shot data corrections ───────────────────────────────────────────────
+-- Runs last: references rides and rider_bookings, created further up.
+--
+-- Some fixes must run exactly once, ever. Re-running this one would fight the
+-- application — it would strip a driver who has legitimately opted into rider
+-- mode through /add-role but has not booked a ride yet. The marker table is
+-- what makes "once, ever" true across every deploy and every server boot.
+CREATE TABLE IF NOT EXISTS schema_data_fixes (
+  name       VARCHAR(80)  PRIMARY KEY,
+  applied_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  detail     VARCHAR(200)
+);
+
+-- Undoes the old "force can_ride = true for every driver" statement: a driver
+-- who never chose to be a rider should not be one. Anyone with real rider
+-- history (a ride or a booking as rider) is left alone — they either opted in
+-- deliberately or have already used rider mode.
+DO $$
+DECLARE fixed INT;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM schema_data_fixes WHERE name = 'driver_can_ride_optin') THEN
+    UPDATE users u SET can_ride = false
+     WHERE u.role = 'driver' AND u.can_ride = true
+       AND NOT EXISTS (SELECT 1 FROM rides r          WHERE r.rider_id = u.id)
+       AND NOT EXISTS (SELECT 1 FROM rider_bookings b WHERE b.rider_id = u.id);
+    GET DIAGNOSTICS fixed = ROW_COUNT;
+    INSERT INTO schema_data_fixes (name, detail)
+      VALUES ('driver_can_ride_optin', fixed || ' driver(s) un-flagged as riders');
+  END IF;
+END $$;
 `
 
 ;(async () => {

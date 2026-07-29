@@ -96,7 +96,10 @@ async function runMigrations() {
     -- Backfill existing users based on their role column
     UPDATE users SET can_ride  = true  WHERE role = 'rider'  AND can_drive = false;
     UPDATE users SET can_drive = true  WHERE role = 'driver';
-    UPDATE users SET can_ride  = true  WHERE role = 'driver' AND can_ride = false;
+    -- NOTE: a third statement here used to force can_ride = true for every
+    -- driver, on every boot — that is what put drivers in the Riders list.
+    -- Dual role is opt-in via POST /add-role. Do not reinstate it. The
+    -- corrective one-shot fix lives in the late-ordered section below.
     UPDATE users SET active_role = role WHERE active_role = 'rider' AND role = 'driver';
 
     -- OTP table
@@ -555,6 +558,30 @@ async function runMigrations() {
        ORDER BY user_id, (doc_type = 'selfie') DESC, uploaded_at DESC
     ) d
     WHERE u.id = d.user_id AND u.avatar_path IS NULL;
+
+    -- One-shot data corrections. Exactly once, ever — re-running the fix below
+    -- would strip a driver who opted into rider mode via /add-role but has not
+    -- booked yet, which is the same bug it exists to repair, inverted.
+    CREATE TABLE IF NOT EXISTS schema_data_fixes (
+      name       VARCHAR(80)  PRIMARY KEY,
+      applied_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+      detail     VARCHAR(200)
+    );
+    -- Drivers were force-flagged can_ride = true on every boot; undo that for
+    -- anyone with no actual rider history.
+    DO $$
+    DECLARE fixed INT;
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM schema_data_fixes WHERE name = 'driver_can_ride_optin') THEN
+        UPDATE users u SET can_ride = false
+         WHERE u.role = 'driver' AND u.can_ride = true
+           AND NOT EXISTS (SELECT 1 FROM rides r          WHERE r.rider_id = u.id)
+           AND NOT EXISTS (SELECT 1 FROM rider_bookings b WHERE b.rider_id = u.id);
+        GET DIAGNOSTICS fixed = ROW_COUNT;
+        INSERT INTO schema_data_fixes (name, detail)
+          VALUES ('driver_can_ride_optin', fixed || ' driver(s) un-flagged as riders');
+      END IF;
+    END $$;
   `
   try {
     await pool.query(migrations)
