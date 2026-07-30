@@ -11,7 +11,7 @@ const NT     = '#0a0a0a'
 const LEARN_ITEMS = [
   { icon: <Users size={18} color="#15803d"/>,       label: 'How FeaziMove Works',  sub: 'Understand how pooled rides & delivery work', href: '/how-it-works', bg: '#dcfce7' },
   { icon: <MapPin size={18} color="#7c3aed"/>,      label: 'Routes & Coverage',    sub: 'Explore active routes in your city',          href: '/services',     bg: '#ede9fe' },
-  { icon: <Clock size={18} color="#0369a1"/>,       label: 'FAQ',                  sub: 'Answers to common questions',                 href: '/contact',      bg: '#e0f2fe' },
+  { icon: <Clock size={18} color="#0369a1"/>,       label: 'FAQ',                  sub: 'Answers to common questions',                 href: '/faq',          bg: '#e0f2fe' },
   { icon: <BookOpen size={18} color="#15803d"/>,    label: 'Safety',               sub: 'How we keep every trip safe',                 href: '/safety',       bg: '#dcfce7' },
   { icon: <TrendingUp size={18} color="#b45309"/>,  label: 'Blog & Updates',       sub: 'Stay up to date with FeaziMove news',         href: '/about',        bg: '#fef3c7' },
   { icon: <Briefcase size={18} color="#be185d"/>,   label: 'Careers',              sub: 'Join the FeaziMove team',                     href: '/about',        bg: '#fce7f3' },

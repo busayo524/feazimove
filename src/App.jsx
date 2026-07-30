@@ -32,6 +32,7 @@ const AboutPage       = lazy(() => import('./pages/landing/AboutPage'))
 const ContactPage     = lazy(() => import('./pages/landing/ContactPage'))
 const PoliciesPage    = lazy(() => import('./pages/landing/PoliciesPage'))
 const SafetyPage      = lazy(() => import('./pages/landing/SafetyPage'))
+const FaqPage         = lazy(() => import('./pages/landing/FaqPage'))
 
 // Auth
 const Login           = lazy(() => import('./pages/auth/Login'))
@@ -128,6 +129,7 @@ export default function App() {
           <Route path="/contact"      element={<ContactPage />} />
           <Route path="/policies"     element={<PoliciesPage />} />
           <Route path="/safety"       element={<SafetyPage />} />
+          <Route path="/faq"          element={<FaqPage />} />
 
           {/* Auth — signup flow */}
           <Route path="/login"              element={<Login />} />
