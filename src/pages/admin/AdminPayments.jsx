@@ -48,6 +48,7 @@ export default function AdminPayments() {
   const [busyId, setBusyId] = useState(null)
   const [range, setRange] = useState('all')
   const [exporting, setExporting] = useState(false)
+  const [mismatch, setMismatch] = useState(null) // sandbox name-check override prompt
 
   function load(r = range) {
     Promise.all([
@@ -75,13 +76,20 @@ export default function AdminPayments() {
     } finally { setExporting(false) }
   }
 
-  async function handlePayout(id, action) {
+  async function handlePayout(id, action, body) {
     setBusyId(id)
     try {
-      await api.post(`/admin/payouts/${id}/${action}`)
+      await api.post(`/admin/payouts/${id}/${action}`, body)
       load()
     } catch (err) {
-      alert(err.data?.message || 'Could not process this request.')
+      // A name mismatch is only overridable while the rails are sandbox, where
+      // Anchor returns a different random account name on every lookup. On live
+      // keys the server refuses and there is nothing to offer here.
+      if (err.data?.nameMismatch && err.data?.overridable) {
+        setMismatch({ id, ...err.data })
+      } else {
+        alert(err.data?.message || 'Could not process this request.')
+      }
     } finally { setBusyId(null) }
   }
 
@@ -190,6 +198,70 @@ export default function AdminPayments() {
           </div>
         </>
       )}
+
+      {mismatch && (
+        <NameMismatchModal
+          data={mismatch}
+          busy={busyId === mismatch.id}
+          onClose={() => setMismatch(null)}
+          onConfirm={reason => {
+            const id = mismatch.id
+            setMismatch(null)
+            handlePayout(id, 'approve', { overrideNameCheck: true, overrideReason: reason })
+          }}
+        />
+      )}
     </AdminLayout>
+  )
+}
+
+/* Offered ONLY when the server says the mismatch is overridable, which it only
+   is while the rails are Anchor sandbox — there, name enquiry returns a fresh
+   random name on every call, so a genuine match is impossible. On live keys
+   this never appears and the payout stays blocked. */
+function NameMismatchModal({ data, busy, onClose, onConfirm }) {
+  const [reason, setReason] = useState('')
+  return (
+    <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', display:'flex',
+      alignItems:'center', justifyContent:'center', zIndex:100, padding:16 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background:CARD, borderRadius:16, padding:24, width:'100%', maxWidth:460 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:9, marginBottom:10 }}>
+          <AlertCircle size={17} color="#b45309"/>
+          <p style={{ margin:0, fontWeight:800, fontSize:16, color:TEXT }}>Account name doesn’t match</p>
+        </div>
+        <p style={{ fontSize:13, color:MUTED, lineHeight:1.55, marginBottom:12 }}>
+          The bank reports this account as <strong style={{ color:TEXT }}>{data.bankAccountName}</strong>,
+          but the registered holder is <strong style={{ color:TEXT }}>{data.registeredName}</strong>.
+        </p>
+        <div style={{ background:'#fffbeb', border:'1px solid #fcd34d', borderRadius:10, padding:'10px 13px', marginBottom:14 }}>
+          <p style={{ fontSize:12.5, color:'#92400e', lineHeight:1.5 }}>
+            You’re on Anchor <strong>sandbox</strong>, which invents a new random account name on every
+            lookup — so this check can never pass here. Overriding is safe for testing. It will not be
+            offered once live keys are in place.
+          </p>
+        </div>
+        <label style={{ display:'block', fontSize:12.5, fontWeight:700, color:TEXT, marginBottom:6 }}>
+          Reason (recorded in the audit log)
+        </label>
+        <input value={reason} onChange={e => setReason(e.target.value.slice(0, 200))}
+          placeholder="e.g. sandbox test payout"
+          style={{ width:'100%', padding:'11px 13px', borderRadius:10, fontSize:14, border:`1.5px solid ${BORDER}`,
+            marginBottom:14, boxSizing:'border-box', background:CARD, color:TEXT, fontFamily:'inherit' }}/>
+        <div style={{ display:'flex', gap:10 }}>
+          <button onClick={() => onConfirm(reason.trim())} disabled={busy || reason.trim().length < 3}
+            style={{ flex:1, padding:'11px', borderRadius:10, border:'none', fontWeight:800, fontSize:13.5, fontFamily:'inherit',
+              background:(busy || reason.trim().length < 3) ? BORDER : '#b45309',
+              color:(busy || reason.trim().length < 3) ? MUTED : '#fff',
+              cursor:(busy || reason.trim().length < 3) ? 'not-allowed' : 'pointer' }}>
+            {busy ? 'Approving…' : 'Override & approve'}
+          </button>
+          <button onClick={onClose}
+            style={{ padding:'11px 16px', borderRadius:10, background:'none', border:`1.5px solid ${BORDER}`,
+              color:MUTED, fontWeight:700, fontSize:13.5, cursor:'pointer', fontFamily:'inherit' }}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }

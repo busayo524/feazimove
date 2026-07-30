@@ -12,7 +12,7 @@ const { sendStored, deleteStored } = require('../services/fileStorage')
 const { sendAccountCredentialsEmail, sendWelcomeEmail } = require('../services/emailService')
 const anchor = require('../services/anchor')
 const kycVault = require('../services/kycVault')
-const { payoutAllowed } = require('../services/paymentsGate')
+const { payoutAllowed, sandboxRails } = require('../services/paymentsGate')
 const totp = require('../services/totp')
 const QRCode = require('qrcode')
 
@@ -809,7 +809,13 @@ router.get('/payouts', async (req, res, next) => {
 // webhooks (routes/anchor.js) — failure automatically refunds the driver.
 // Optional body.bankCode overrides the bank-name match when it's ambiguous.
 router.post('/payouts/:id/approve',
-  [param('id').isUUID(), body('bankCode').optional({ checkFalsy: true }).trim().isLength({ min: 3, max: 10 })],
+  [
+    param('id').isUUID(),
+    body('bankCode').optional({ checkFalsy: true }).trim().isLength({ min: 3, max: 10 }),
+    // Sandbox-only escape hatch for Anchor's randomised test name-enquiry.
+    body('overrideNameCheck').optional().isBoolean(),
+    body('overrideReason').optional({ checkFalsy: true }).trim().isLength({ max: 200 }),
+  ],
   validate,
   async (req, res, next) => {
     try {
@@ -856,9 +862,33 @@ router.post('/payouts/:id/approve',
         const have = new Set(toks(bankAccountName))
         return need.length > 0 && have.size > 0 && need.every(t => have.has(t))
       }
-      const blockThirdParty = bankAccountName => res.status(422).json({
-        message: `Payout blocked: the bank account is named "${bankAccountName}" but the registered account holder is "${payout.driver_name}". Payouts can only go to an account in the user's own name — ask them to update their bank details.`,
-      })
+      // Anchor's SANDBOX name-enquiry returns a freshly randomised name on every
+      // call for the same account number (verified: three consecutive lookups of
+      // 0000000000 returned "Taiwo Habibu", "Chinara Abubakar", "Kennedy Alabi").
+      // The first-party check therefore CANNOT pass in sandbox, which would make
+      // payouts untestable. An admin may override it — but only while the rails
+      // are sandbox, and every override is written to the audit log. On live
+      // keys the block is absolute: a real name mismatch means the money is
+      // heading to someone else's account.
+      const overrideRequested = req.body.overrideNameCheck === true
+      const canOverride = overrideRequested && sandboxRails()
+      const blockThirdParty = bankAccountName => {
+        if (canOverride) return null
+        return res.status(422).json({
+          message: `Payout blocked: the bank account is named "${bankAccountName}" but the registered account holder is "${payout.driver_name}". Payouts can only go to an account in the user's own name — ask them to update their bank details.`,
+          // Tells the admin UI it may offer the sandbox override.
+          nameMismatch: true,
+          bankAccountName,
+          registeredName: payout.driver_name,
+          overridable: sandboxRails(),
+        })
+      }
+      const noteOverride = bankAccountName => {
+        if (!canOverride) return
+        logActivity(req.user.id, 'Payout Name-Check Overridden', 'payment',
+          `${payout.driver_name} → account named "${bankAccountName}" (sandbox)`
+          + (req.body.overrideReason ? ` — ${String(req.body.overrideReason).slice(0, 120)}` : ''))
+      }
 
       // Resolve the driver's bank to its NIP code, then verify + save the
       // beneficiary once — reused for every future payout to this driver.
@@ -868,7 +898,11 @@ router.post('/payouts/:id/approve',
         // closed: if we can't confirm whose account it is, no money moves).
         const cp = await anchor.getCounterparty(counterpartyId)
         const cpName = cp?.attributes?.accountName || ''
-        if (!nameMatchesAccount(payout.driver_name, cpName)) return blockThirdParty(cpName || 'unknown')
+        if (!nameMatchesAccount(payout.driver_name, cpName)) {
+          const blocked = blockThirdParty(cpName || 'unknown')
+          if (blocked) return blocked
+          noteOverride(cpName || 'unknown')
+        }
       }
       if (!counterpartyId) {
         let bankCode = req.body.bankCode
@@ -891,7 +925,11 @@ router.post('/payouts/:id/approve',
         }
         const verified = await anchor.verifyAccount(bankCode, payout.bank_account_number)
         const accountName = verified?.attributes?.accountName || ''
-        if (!nameMatchesAccount(payout.driver_name, accountName)) return blockThirdParty(accountName || 'unknown')
+        if (!nameMatchesAccount(payout.driver_name, accountName)) {
+          const blocked = blockThirdParty(accountName || 'unknown')
+          if (blocked) return blocked
+          noteOverride(accountName || 'unknown')
+        }
         const cp = await anchor.createCounterparty({ bankCode, accountName, accountNumber: payout.bank_account_number })
         counterpartyId = cp.id
         await query('UPDATE users SET anchor_counterparty_id = $1 WHERE id = $2', [counterpartyId, payout.driver_id])
