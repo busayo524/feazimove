@@ -559,6 +559,35 @@ async function runMigrations() {
     ) d
     WHERE u.id = d.user_id AND u.avatar_path IS NULL;
 
+    -- Contact/feedback messages from the public site. Stored as well as
+    -- emailed so an SMTP outage can never lose a customer's message.
+    CREATE TABLE IF NOT EXISTS contact_messages (
+      id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+      name        VARCHAR(100) NOT NULL,
+      email       VARCHAR(255) NOT NULL,
+      topic       VARCHAR(60)  NOT NULL,
+      message     TEXT         NOT NULL,
+      status      VARCHAR(15)  NOT NULL DEFAULT 'new' CHECK (status IN ('new','read','handled')),
+      ip_address  VARCHAR(45),
+      user_agent  VARCHAR(300),
+      emailed     BOOLEAN      NOT NULL DEFAULT false,
+      handled_by  UUID         REFERENCES users(id) ON DELETE SET NULL,
+      handled_at  TIMESTAMPTZ,
+      created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_contact_status ON contact_messages(status, created_at DESC);
+
+    -- Audit trail hardening: make "who viewed whose KYC" queryable, survive the
+    -- deletion of either party, and carry request context.
+    ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS target_user_id UUID REFERENCES users(id) ON DELETE SET NULL;
+    ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS actor_email    VARCHAR(255);
+    ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS target_name    VARCHAR(120);
+    ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS target_email   VARCHAR(255);
+    ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS ip_address     VARCHAR(45);
+    ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS user_agent     VARCHAR(300);
+    CREATE INDEX IF NOT EXISTS idx_activity_target   ON activity_log(target_user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_activity_category ON activity_log(category, created_at DESC);
+
     -- One-shot data corrections. Exactly once, ever — re-running the fix below
     -- would strip a driver who opted into rider mode via /add-role but has not
     -- booked yet, which is the same bug it exists to repair, inverted.
@@ -665,6 +694,7 @@ app.use('/api/wallet', walletRoutes)
 app.use('/api/driver', driverRoutes)
 app.use('/api/admin',  adminRoutes)
 app.use('/api/routes', routesCatalog)
+app.use('/api/contact', require('./routes/contact'))
 // Anchor webhooks — authenticated by x-anchor-signature, not a user session
 app.use('/api/anchor', require('./routes/anchor'))
 

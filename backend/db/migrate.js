@@ -556,6 +556,42 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS bvn_encrypted TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret     TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled_at TIMESTAMPTZ;
 
+-- ── Contact / feedback messages from the public site ────────────────────────
+-- Stored as well as emailed: an SMTP outage must not lose a customer's message,
+-- and support needs a queue it can work through rather than an inbox.
+CREATE TABLE IF NOT EXISTS contact_messages (
+  id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+  name        VARCHAR(100) NOT NULL,
+  email       VARCHAR(255) NOT NULL,
+  topic       VARCHAR(60)  NOT NULL,
+  message     TEXT         NOT NULL,
+  status      VARCHAR(15)  NOT NULL DEFAULT 'new' CHECK (status IN ('new','read','handled')),
+  ip_address  VARCHAR(45),
+  user_agent  VARCHAR(300),
+  -- Whether the notification email actually reached support.
+  emailed     BOOLEAN      NOT NULL DEFAULT false,
+  handled_by  UUID         REFERENCES users(id) ON DELETE SET NULL,
+  handled_at  TIMESTAMPTZ,
+  created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_contact_status ON contact_messages(status, created_at DESC);
+
+-- ── Audit trail hardening ───────────────────────────────────────────────────
+-- activity_log is the record of who looked at whose KYC. Three problems it had:
+-- the subject lived only inside a free-text string (unqueryable, and broken by a
+-- rename), actor_id is ON DELETE SET NULL so deleting an admin anonymised their
+-- own access history, and there was no request context. All three matter the
+-- moment a regulator asks "who accessed this person's record".
+ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS target_user_id UUID REFERENCES users(id) ON DELETE SET NULL;
+-- Snapshots — deliberately NOT foreign keys, so they outlive the rows they name.
+ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS actor_email    VARCHAR(255);
+ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS target_name    VARCHAR(120);
+ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS target_email   VARCHAR(255);
+ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS ip_address     VARCHAR(45);
+ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS user_agent     VARCHAR(300);
+CREATE INDEX IF NOT EXISTS idx_activity_target   ON activity_log(target_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_activity_category ON activity_log(category, created_at DESC);
+
 -- ── One-shot data corrections ───────────────────────────────────────────────
 -- Runs last: references rides and rider_bookings, created further up.
 --

@@ -13,14 +13,14 @@ const LEARN_ITEMS = [
   { icon: <MapPin size={18} color="#7c3aed"/>,      label: 'Routes & Coverage',    sub: 'Explore active routes in your city',          href: '/services',     bg: '#ede9fe' },
   { icon: <Clock size={18} color="#0369a1"/>,       label: 'FAQ',                  sub: 'Answers to common questions',                 href: '/faq',          bg: '#e0f2fe' },
   { icon: <BookOpen size={18} color="#15803d"/>,    label: 'Safety',               sub: 'How we keep every trip safe',                 href: '/safety',       bg: '#dcfce7' },
+  { icon: <Briefcase size={18} color="#0d9488"/>,   label: 'Services',             sub: 'Everything FeaziMove moves for you',          href: '/services',     bg: '#ccfbf1' },
+  { icon: <Users size={18} color="#be185d"/>,       label: 'About',                sub: 'Who we are and why we built this',            href: '/about',        bg: '#fce7f3' },
   { icon: <TrendingUp size={18} color="#b45309"/>,  label: 'Blog & Updates',       sub: 'Stay up to date with FeaziMove news',         href: '/about',        bg: '#fef3c7' },
-  { icon: <Briefcase size={18} color="#be185d"/>,   label: 'Careers',              sub: 'Join the FeaziMove team',                     href: '/about',        bg: '#fce7f3' },
   { icon: <Package size={18} color="#1d4ed8"/>,     label: 'Contact Us',           sub: 'Having an issue? Reach out to us',            href: '/contact',      bg: '#dbeafe' },
 ]
 
+// Services and About now live inside Learn, so the top bar keeps only Contact.
 const SIMPLE_LINKS = [
-  { label: 'Services',     href: '/services'     },
-  { label: 'About',        href: '/about'        },
   { label: 'Contact',      href: '/contact'      },
 ]
 

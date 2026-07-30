@@ -68,6 +68,8 @@ const AdminDriverDetail   = lazy(() => import('./pages/admin/AdminDriverDetail')
 const AdminRides          = lazy(() => import('./pages/admin/AdminRides'))
 const AdminPayments       = lazy(() => import('./pages/admin/AdminPayments'))
 const AdminBackOffice     = lazy(() => import('./pages/admin/AdminBackOffice'))
+const AdminFeedback       = lazy(() => import('./pages/admin/AdminFeedback'))
+const AdminKycAccessLog   = lazy(() => import('./pages/admin/AdminKycAccessLog'))
 const AdminAlerts         = lazy(() => import('./pages/admin/AdminAlerts'))
 const AdminMoveWaitlist   = lazy(() => import('./pages/admin/AdminMoveWaitlist'))
 const AdminReports        = lazy(() => import('./pages/admin/AdminReports'))
@@ -168,6 +170,8 @@ export default function App() {
           <Route path="/admin/rides"          element={<ProtectedRoute requiredRole="admin"><AdminRides /></ProtectedRoute>} />
           <Route path="/admin/payments"       element={<ProtectedRoute requiredRole="admin"><AdminPayments /></ProtectedRoute>} />
           <Route path="/admin/back-office"    element={<ProtectedRoute requiredRole="admin"><AdminBackOffice /></ProtectedRoute>} />
+          <Route path="/admin/feedback"       element={<ProtectedRoute requiredRole="admin"><AdminFeedback /></ProtectedRoute>} />
+          <Route path="/admin/kyc-access"     element={<ProtectedRoute requiredRole="admin"><AdminKycAccessLog /></ProtectedRoute>} />
           <Route path="/admin/routes"         element={<ProtectedRoute requiredRole="admin"><AdminRoutesPage /></ProtectedRoute>} />
           <Route path="/admin/stops"          element={<ProtectedRoute requiredRole="admin"><AdminStops /></ProtectedRoute>} />
           <Route path="/admin/pricing"        element={<ProtectedRoute requiredRole="admin"><AdminPricing /></ProtectedRoute>} />

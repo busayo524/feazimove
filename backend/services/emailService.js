@@ -457,4 +457,49 @@ async function sendAccountCredentialsEmail(to, fullName, role, tempPassword) {
   })
 }
 
-module.exports = { generateOtp, sendOtpEmail, sendActionCodeEmail, sendRegistrationLink, sendWelcomeEmail, sendAccountCredentialsEmail }
+// ── Contact-form notification to the support inbox ───────────────────────────
+// replyTo is the sender's own address, so support can hit Reply and answer the
+// customer directly instead of copying the address out of the body.
+async function sendContactMessageEmail({ name, email, topic, message, receivedAt }) {
+  const esc = s => String(s || '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+  const to = process.env.SUPPORT_EMAIL || 'support@feazimove.com'
+  const row = (label, value) => `
+    <tr>
+      <td style="padding:6px 12px 6px 0;font-size:13px;color:#666;white-space:nowrap;vertical-align:top;">${label}</td>
+      <td style="padding:6px 0;font-size:14px;color:#111;"><strong>${value}</strong></td>
+    </tr>`
+  const html = emailShell('#2a6048', `
+    <tr><td>
+      <h2 style="margin:0 0 6px;font-size:19px;color:#111;">New message from the website</h2>
+      <p style="margin:0 0 18px;font-size:13px;color:#666;">
+        Sent through the Contact page on feazimove.com.
+      </p>
+      <table cellpadding="0" cellspacing="0" style="width:100%;margin-bottom:18px;">
+        ${row('From', esc(name))}
+        ${row('Email', `<a href="mailto:${esc(email)}" style="color:#2a6048;">${esc(email)}</a>`)}
+        ${row('Topic', esc(topic))}
+        ${row('Received', esc(receivedAt))}
+      </table>
+      <p style="margin:0 0 8px;font-size:13px;color:#666;">Message</p>
+      <div style="background:#f6f7f2;border:1px solid #e4e7dd;border-radius:8px;padding:14px 16px;
+        font-size:14px;color:#111;line-height:1.7;white-space:pre-wrap;">${esc(message)}</div>
+      <p style="margin:18px 0 0;font-size:12.5px;color:#666;">
+        Reply to this email to answer ${esc(name)} directly. The message is also queued in
+        Admin → Feedback.
+      </p>
+    </td></tr>
+  `)
+  const transporter = createTransport()
+  await transporter.sendMail({
+    from: process.env.SMTP_FROM || `"FeaziMove" <${process.env.SMTP_USER}>`,
+    to,
+    replyTo: email,
+    subject: `[${topic}] Website message from ${name}`,
+    html,
+    text: html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim(),
+  })
+}
+
+module.exports = { generateOtp, sendOtpEmail, sendActionCodeEmail, sendRegistrationLink, sendWelcomeEmail, sendAccountCredentialsEmail, sendContactMessageEmail }

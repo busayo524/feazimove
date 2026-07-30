@@ -11,6 +11,7 @@ export default function ContactPage() {
   const [form, setForm] = useState({ name: '', email: '', topic: '', message: '' })
   const [errors, setErrors] = useState({})
   const [status, setStatus] = useState(null) // 'success' | 'error'
+  const [statusMessage, setStatusMessage] = useState('')
   const [loading, setLoading] = useState(false)
 
   function set(field, val) {
@@ -28,16 +29,28 @@ export default function ContactPage() {
     return Object.keys(e).length === 0
   }
 
+  // Send stays disabled until the form is genuinely sendable — a valid email
+  // address and an actual message body, not just a topic. Mirrors the server's
+  // rules so the button never enables a request the API will reject.
+  const canSend =
+    form.name.trim().length >= 2 &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim()) &&
+    !!form.topic &&
+    form.message.trim().length >= 10
+
   async function handleSubmit(e) {
     e.preventDefault()
     if (!validate()) return
     setLoading(true)
+    setStatus(null)
     try {
-      await api.post('/contact', form)
+      const res = await api.post('/contact', form)
       setStatus('success')
+      setStatusMessage(res.data?.message || '')
       setForm({ name: '', email: '', topic: '', message: '' })
-    } catch {
+    } catch (err) {
       setStatus('error')
+      setStatusMessage(err.data?.message || '')
     } finally {
       setLoading(false)
     }
@@ -113,7 +126,9 @@ export default function ContactPage() {
               <div className="text-center py-10">
                 <CheckCircle size={52} className="text-lime mx-auto mb-4" />
                 <h3 className="font-display font-bold text-xl mb-2" style={{ color: 'var(--text)' }}>Message sent!</h3>
-                <p className="section-sub mb-6">We'll get back to you within 24 hours.</p>
+                <p className="section-sub mb-6">
+                  {statusMessage || "We'll get back to you within 24 hours."}
+                </p>
                 <button onClick={() => setStatus(null)} className="btn-lime">Send another</button>
               </div>
             ) : (
@@ -193,11 +208,13 @@ export default function ContactPage() {
                 {status === 'error' && (
                   <div className="flex items-center gap-2 rounded-xl px-4 py-3" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }} role="alert">
                     <AlertCircle size={15} className="text-red-400 flex-shrink-0" />
-                    <p className="text-red-400 text-sm">Could not send message. Please try again.</p>
+                    <p className="text-red-400 text-sm">
+                      {statusMessage || 'Could not send message. Please try again.'}
+                    </p>
                   </div>
                 )}
 
-                <button type="submit" disabled={loading} className="btn-lime w-full justify-center py-3.5 disabled:opacity-50">
+                <button type="submit" disabled={loading || !canSend} className="btn-lime w-full justify-center py-3.5 disabled:opacity-50">
                   {loading ? (
                     <span className="flex items-center gap-2">
                       <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />

@@ -23,11 +23,30 @@ router.use(requireAuth, requireRole('admin'))
 
 function fmt(kobo) { return Math.round((kobo || 0) / 100) }
 
-// Fire-and-forget audit write — a logging failure must never break the action
-function logActivity(actorId, action, category, detail) {
+// Fire-and-forget audit write — a logging failure must never break the action.
+//
+// `ctx` carries what an auditor actually needs: WHO (snapshotted, so deleting
+// the admin cannot anonymise their own access history), WHOSE record, and from
+// where. Pass { req, target: { id, name, email } } on anything that touches
+// personal data; plain calls still work for ordinary admin actions.
+function logActivity(actorId, action, category, detail, ctx = {}) {
+  const req = ctx.req
+  const ip = req
+    ? ((req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.ip || null)
+    : null
+  const ua = req ? ((req.headers['user-agent'] || '').slice(0, 300) || null) : null
+  const t = ctx.target || {}
+  // The actor's email is copied in at write time — the FK is ON DELETE SET NULL
+  // and would otherwise erase the only record of who looked.
   query(
-    'INSERT INTO activity_log (actor_id, action, category, detail) VALUES ($1, $2, $3, $4)',
-    [actorId, action, category, detail || null]
+    `INSERT INTO activity_log
+       (actor_id, action, category, detail, actor_email,
+        target_user_id, target_name, target_email, ip_address, user_agent)
+     VALUES ($1, $2, $3, $4,
+             COALESCE($5, (SELECT email FROM users WHERE id = $1)),
+             $6, $7, $8, $9, $10)`,
+    [actorId, action, category, detail || null, ctx.actorEmail || null,
+     t.id || null, t.name || null, t.email || null, ip, ua]
   ).catch(err => console.error('activity_log write failed:', err.message))
 }
 
@@ -1963,7 +1982,7 @@ router.post('/security/totp/enable',
         return res.status(400).json({ message: 'That code is not right. Check your authenticator app and try again.' })
       }
       await query('UPDATE users SET totp_enabled_at = NOW() WHERE id = $1', [req.user.id])
-      logActivity(req.user.id, 'Authenticator Enabled', 'security', 'TOTP enrolled for KYC access')
+      logActivity(req.user.id, 'Authenticator Enabled', 'security', 'TOTP enrolled for KYC access', { req })
       res.json({ message: 'Authenticator enabled. It is now required to view full KYC data.' })
     } catch (err) { next(err) }
   }
@@ -1984,7 +2003,7 @@ router.post('/security/totp/disable',
         return res.status(400).json({ message: 'That code is not right.' })
       }
       await query('UPDATE users SET totp_secret = NULL, totp_enabled_at = NULL WHERE id = $1', [req.user.id])
-      logActivity(req.user.id, 'Authenticator Removed', 'security', 'TOTP disabled')
+      logActivity(req.user.id, 'Authenticator Removed', 'security', 'TOTP disabled', { req })
       res.json({ message: 'Authenticator removed.' })
     } catch (err) { next(err) }
   }
@@ -2011,7 +2030,11 @@ router.post('/users/:id/kyc/reveal',
       }
       const secret = kycVault.decrypt(admin.rows[0].totp_secret)
       if (!secret || !totp.verify(secret, req.body.code)) {
-        logActivity(req.user.id, 'KYC Reveal Denied', 'security', `Bad authenticator code for user ${req.params.id}`)
+        // Failed attempts are logged with the same context — repeated denials
+        // against one subject is exactly the pattern worth spotting.
+        const t = await query('SELECT id, name, email FROM users WHERE id = $1', [req.params.id])
+        logActivity(req.user.id, 'KYC Reveal Denied', 'security', 'Incorrect authenticator code',
+          { req, actorEmail: admin.rows[0].email, target: t.rows[0] || { id: req.params.id } })
         return res.status(400).json({ message: 'That code is not right. Check your authenticator app and try again.' })
       }
 
@@ -2030,7 +2053,9 @@ router.post('/users/:id/kyc/reveal',
       const bvn = kycVault.decrypt(u.bvn_encrypted)
       // Every successful look is logged — this is the record we would show
       // Anchor to prove KYC access is controlled.
-      logActivity(req.user.id, 'KYC Revealed', 'security', `Full KYC viewed for ${u.name} (${u.email})`)
+      logActivity(req.user.id, 'KYC Revealed', 'security',
+        `Full KYC viewed${bvn ? ' including BVN' : ''}`,
+        { req, actorEmail: admin.rows[0].email, target: { id: u.id, name: u.name, email: u.email } })
 
       res.json({
         kyc: {
@@ -2055,5 +2080,120 @@ router.post('/users/:id/kyc/reveal',
     } catch (err) { next(err) }
   }
 )
+
+// ── Feedback: messages sent through the public Contact form ─────────────────
+router.get('/contact-messages', async (req, res, next) => {
+  try {
+    const status = req.query.status || 'all'
+    const result = await query(
+      `SELECT c.id, c.name, c.email, c.topic, c.message, c.status, c.emailed,
+              c.ip_address, c.user_agent, c.created_at, c.handled_at,
+              h.name AS handled_by_name
+         FROM contact_messages c
+         LEFT JOIN users h ON c.handled_by = h.id
+        ${status !== 'all' ? 'WHERE c.status = $1' : ''}
+        ORDER BY c.created_at DESC LIMIT 300`,
+      status !== 'all' ? [status] : []
+    )
+    const counts = await query(
+      `SELECT status, COUNT(*)::int n FROM contact_messages GROUP BY status`)
+    res.json({
+      messages: result.rows.map(m => ({
+        id: m.id, name: m.name, email: m.email, topic: m.topic, message: m.message,
+        status: m.status, emailed: m.emailed,
+        ipAddress: m.ip_address, userAgent: m.user_agent,
+        receivedAt: m.created_at, handledAt: m.handled_at, handledBy: m.handled_by_name,
+      })),
+      counts: Object.fromEntries(counts.rows.map(r => [r.status, r.n])),
+    })
+  } catch (err) { next(err) }
+})
+
+router.patch('/contact-messages/:id',
+  [param('id').isUUID(), body('status').isIn(['new', 'read', 'handled'])],
+  validate,
+  async (req, res, next) => {
+    try {
+      const handled = req.body.status === 'handled'
+      const r = await query(
+        `UPDATE contact_messages
+            SET status = $1,
+                handled_by = ${handled ? '$2' : 'NULL'},
+                handled_at = ${handled ? 'NOW()' : 'NULL'}
+          WHERE id = $${handled ? '3' : '2'} RETURNING id`,
+        handled ? [req.body.status, req.user.id, req.params.id] : [req.body.status, req.params.id]
+      )
+      if (!r.rows[0]) return res.status(404).json({ message: 'Message not found.' })
+      res.json({ message: 'Updated.' })
+    } catch (err) { next(err) }
+  }
+)
+
+// ── KYC access log ──────────────────────────────────────────────────────────
+// The compliance answer to "who looked at this person's record". Reads the
+// snapshot columns so a deleted admin or a deleted subject still resolves.
+function kycLogQuery(where, params) {
+  return query(
+    `SELECT a.id, a.action, a.detail, a.created_at, a.ip_address, a.user_agent,
+            COALESCE(u.email, a.actor_email)   AS actor_email,
+            COALESCE(u.name,  a.actor_email)   AS actor_name,
+            (u.id IS NULL AND a.actor_email IS NOT NULL) AS actor_deleted,
+            a.target_user_id,
+            COALESCE(t.name,  a.target_name)   AS target_name,
+            COALESCE(t.email, a.target_email)  AS target_email,
+            (t.id IS NULL AND a.target_email IS NOT NULL) AS target_deleted
+       FROM activity_log a
+       LEFT JOIN users u ON a.actor_id = u.id
+       LEFT JOIN users t ON a.target_user_id = t.id
+      WHERE a.category = 'security' ${where}
+      ORDER BY a.created_at DESC LIMIT 500`,
+    params
+  )
+}
+
+router.get('/kyc-access-log', async (req, res, next) => {
+  try {
+    const params = []
+    let where = ''
+    if (req.query.userId) { params.push(req.query.userId); where += ` AND a.target_user_id = $${params.length}` }
+    if (req.query.action) { params.push(req.query.action); where += ` AND a.action = $${params.length}` }
+    const result = await kycLogQuery(where, params)
+    res.json({
+      entries: result.rows.map(r => ({
+        id: r.id, action: r.action, detail: r.detail, at: r.created_at,
+        actorName: r.actor_name, actorEmail: r.actor_email, actorDeleted: r.actor_deleted,
+        targetUserId: r.target_user_id, targetName: r.target_name, targetEmail: r.target_email,
+        targetDeleted: r.target_deleted,
+        ipAddress: r.ip_address, userAgent: r.user_agent,
+      })),
+    })
+  } catch (err) { next(err) }
+})
+
+router.get('/kyc-access-log/export', async (req, res, next) => {
+  try {
+    const result = await kycLogQuery('', [])
+    const csv = toCsv(
+      result.rows.map(r => ({
+        ...r,
+        actor: r.actor_email || 'unknown',
+        actor_state: r.actor_deleted ? 'account deleted' : 'active',
+        target: r.target_email || r.target_name || '—',
+        target_state: r.target_deleted ? 'account deleted' : 'active',
+      })),
+      [
+        { key: 'created_at', label: 'When', date: true },
+        { key: 'action', label: 'Event' },
+        { key: 'actor', label: 'Admin' }, { key: 'actor_state', label: 'Admin Account' },
+        { key: 'target', label: 'Subject' }, { key: 'target_state', label: 'Subject Account' },
+        { key: 'ip_address', label: 'IP Address' }, { key: 'user_agent', label: 'Device' },
+        { key: 'detail', label: 'Detail' },
+      ]
+    )
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8')
+    res.setHeader('Content-Disposition', 'attachment; filename="feazimove-kyc-access-log.csv"')
+    res.send('﻿' + csv)
+  } catch (err) { next(err) }
+})
 
 module.exports = router
