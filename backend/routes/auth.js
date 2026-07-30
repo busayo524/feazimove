@@ -832,6 +832,11 @@ router.patch('/profile',
     body('bankName').optional({ nullable: true }).trim().isLength({ max: 100 }).escape(),
     body('bankAccountNumber').optional({ nullable: true }).trim()
       .custom(v => v === '' || /^\d{10}$/.test(v)).withMessage('Account number must be 10 digits.'),
+    // Same rule as signup — phone doubles as a login identifier, so the format
+    // must stay consistent with what /auth/login accepts.
+    body('phone').optional({ nullable: true }).trim()
+      .matches(/^\+\d{6,15}$|^(\+?234|0)[789][01]\d{8}$/)
+      .withMessage('Enter a valid phone number.'),
   ],
   validate,
   async (req, res, next) => {
@@ -843,6 +848,19 @@ router.patch('/profile',
       const add = (col, val) => { vals.push(val); sets.push(`${col} = $${vals.length}`) }
       if (req.body.bankName !== undefined) add('bank_name', req.body.bankName || null)
       if (req.body.bankAccountNumber !== undefined) add('bank_account_number', req.body.bankAccountNumber || null)
+      // Phone IS editable (unlike name) — it is contact detail, not a KYC
+      // anchor. It is also a login identifier, so it must stay unique: checked
+      // here for a friendly message, and enforced by the DB index below in case
+      // two people submit the same number at once.
+      if (req.body.phone !== undefined && req.body.phone !== null && req.body.phone !== '') {
+        const taken = await query(
+          'SELECT 1 FROM users WHERE phone = $1 AND id <> $2', [req.body.phone.trim(), req.user.id]
+        )
+        if (taken.rows[0]) {
+          return res.status(409).json({ message: 'That phone number is already in use on another account.' })
+        }
+        add('phone', req.body.phone.trim())
+      }
       if (!sets.length) return res.json({ message: 'Nothing to update.' })
       vals.push(req.user.id)
       const result = await query(
@@ -852,7 +870,14 @@ router.patch('/profile',
         vals
       )
       res.json({ message: 'Profile updated.', user: safeUser(result.rows[0]) })
-    } catch (err) { next(err) }
+    } catch (err) {
+      // users_phone_key — two people claimed the same number between the check
+      // above and this write. Report it as the conflict it is, not a 500.
+      if (err.code === '23505' && /phone/.test(err.constraint || '')) {
+        return res.status(409).json({ message: 'That phone number is already in use on another account.' })
+      }
+      next(err)
+    }
   }
 )
 

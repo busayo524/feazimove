@@ -350,7 +350,7 @@ export default function Profile(){
   const navigate=useNavigate()
   const [editing,setEditing]=useState(false)
   const [saved,setSaved]=useState(false)
-  const [form,setForm]=useState({firstName:user?.firstName||'',lastName:user?.lastName||'',bankName:user?.bankName||'',bankAccountNumber:user?.bankAccountNumber||''})
+  const [form,setForm]=useState({firstName:user?.firstName||'',lastName:user?.lastName||'',phone:user?.phone||'',bankName:user?.bankName||'',bankAccountNumber:user?.bankAccountNumber||''})
   const [saving,setSaving]=useState(false)
   const [saveError,setSaveError]=useState('')
   const [avatarUrl,setAvatarUrl]=useMyAvatar(user?.id)
@@ -379,6 +379,11 @@ export default function Profile(){
     if(!form.firstName.trim())return
     const acct=(form.bankAccountNumber||'').trim()
     if(acct&&!/^\d{10}$/.test(acct)){setSaveError('Account number must be exactly 10 digits.');return}
+    const phone=(form.phone||'').trim()
+    // Mirrors the server's rule so the user is told before a round-trip.
+    if(!/^\+\d{6,15}$|^(\+?234|0)[789][01]\d{8}$/.test(phone)){
+      setSaveError('Enter a valid phone number, e.g. 08012345678.');return
+    }
     setSaving(true);setSaveError('')
     try{
       // Persist server-side so it shows up in the admin panel, then mirror locally
@@ -386,12 +391,16 @@ export default function Profile(){
       // KYC (BVN verification + first-party payout matching) and the server
       // ignores it anyway.
       await api.patch('/auth/profile',{
+        phone,
         bankName:(form.bankName||'').trim(),
         bankAccountNumber:acct,
       })
-      updateUser({bankName:(form.bankName||'').trim(),bankAccountNumber:acct})
+      updateUser({phone,bankName:(form.bankName||'').trim(),bankAccountNumber:acct})
       setSaved(true);setEditing(false);setTimeout(()=>setSaved(false),2500)
-    }catch{setSaveError('Could not save changes. Please try again.')}
+    }catch(err){
+      // 409 = the number belongs to someone else; show the server's wording.
+      setSaveError(err.data?.message||'Could not save changes. Please try again.')
+    }
     finally{setSaving(false)}
   }
 
@@ -447,6 +456,19 @@ export default function Profile(){
               🔒 Your name is locked to match your identity verification and can't be edited.
               Withdrawals are only paid to a bank account in this name. Contact support if it needs correcting.
             </p>
+            {/* Phone IS editable — it is contact detail, not a KYC anchor like
+                the name. It is also a login identifier, so the server keeps it
+                unique and rejects a number already on another account. */}
+            <div>
+              <label style={{display:'block',fontSize:13,fontWeight:600,color:TEXT,marginBottom:6}}>Phone Number</label>
+              <input value={form.phone} inputMode="tel" placeholder="e.g. 08012345678 or +2348012345678"
+                onChange={e=>set('phone',e.target.value.replace(/[^\d+]/g,'').slice(0,16))}
+                style={{width:'100%',padding:'12px 14px',borderRadius:10,fontSize:15,border:`1.5px solid ${BORDER}`,outline:'none',color:TEXT,background:CARD,fontFamily:'inherit',boxSizing:'border-box'}}
+                onFocus={e=>e.target.style.borderColor=MOSS} onBlur={e=>e.target.style.borderColor=BORDER}/>
+              <p style={{fontSize:12,color:MUTED,marginTop:6,lineHeight:1.45}}>
+                You sign in with this number, so keep it one you can access.
+              </p>
+            </div>
             <p style={{fontWeight:700,fontSize:13,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em',marginTop:6}}>Bank Account Details</p>
             <div>
               <label style={{display:'block',fontSize:13,fontWeight:600,color:TEXT,marginBottom:6}}>Bank Name</label>
