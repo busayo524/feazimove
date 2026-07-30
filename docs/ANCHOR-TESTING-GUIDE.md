@@ -12,11 +12,23 @@ FeaziMove's test web app: `https://feazimove-929573268.development.catalystserve
 ## Part 0 — One-time setup checklist
 
 1. **API key** — created in Anchor Dashboard → Developers → API Keys; pasted into `backend/.env` as `ANCHOR_API_KEY`. ✅ (verified working)
-2. **Webhook** — Anchor Dashboard → Settings → Developers → Webhooks → Add Webhook:
-   - URL: `https://feazimove-api-10128445142.development.catalystappsail.com/api/anchor/webhook`
-   - Delivery mode: **Included** (full resource payloads)
-   - Secret token: the value of `ANCHOR_WEBHOOK_TOKEN` in `backend/.env` (both sides must match)
-   - Events: select all (at minimum: payin.*, payment.*, nip.transfer.*, book.transfer.*, customer.*, reservedAccount.*)
+2. **Webhook** — Anchor Dashboard → Developers → Webhooks → Create Webhook:
+   - URL — Development: `https://feazimove-api-10128445142.development.catalystappsail.com/api/anchor/webhook`
+     Production: `https://feazimove-api-10128445142.catalystappsail.com/api/anchor/webhook`
+     (each environment needs its OWN webhook — they are separate deployments)
+   - Label: anything; use `feazimove-dev` / `feazimove-prod` so two entries stay tellable apart
+   - Delivery Mode: **AtLeastOnce** — the only option Anchor offers. It means events
+     may arrive MORE THAN ONCE, which is safe here: `anchor_events.event_id` is unique
+     with ON CONFLICT DO NOTHING, and payments claim a `pay-<paymentId>` row before
+     crediting, so a redelivery can never double-credit a wallet.
+   - Secret token: must equal `ANCHOR_WEBHOOK_TOKEN` in the deployed `.env`.
+     **MAX 10 CHARACTERS** — the form accepts longer values and then silently fails
+     to deliver (undocumented; cost a full debugging cycle).
+   - Support Included: leave OFF.
+   - Events: tick **Add all events**. Handled: `payin.received`, `payment.received`,
+     `reservedAccount.created`, `reservedAccount.failed`, `nip.transfer.*`,
+     `customer.identification.*`. Unrecognised events are recorded in the event log
+     and ignored, so over-subscribing is free.
 3. **Backend deployed** — upload `backend/feazimove-backend-PRODUCTION.zip` (v1.2.x) to **AppSail → feazimove-api → Development** via Create Deployment. Confirm: open
    `https://feazimove-api-10128445142.development.catalystappsail.com/health` → `{"status":"ok","version":"1.2.x"}`.
 
