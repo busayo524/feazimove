@@ -322,13 +322,36 @@ export default function DriverDashboard() {
 
   // Online status — drivers are only matchable with riders while online
   const [online, setOnline]   = useState(false)
+  // True when this page picked an in-flight search back up rather than the
+  // driver starting one — drives the "we resumed your search" notice.
+  const [resumedSearch, setResumedSearch] = useState(false)
   const [togglingOnline, setTogglingOnline] = useState(false)
   const [onlineError, setOnlineError] = useState('')
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
 
+  // On mount, resume a search that is still live server-side. The availability
+  // row outlives the browser — riders go on matching against it — so closing the
+  // app, losing the tab or hitting a runtime error must not leave the driver
+  // looking at an empty form while a rider is already matched to them.
   useEffect(() => {
     api.get('/driver/status')
-      .then(res => setOnline(res.data.online))
+      .then(res => {
+        setOnline(res.data.online)
+        const s = res.data.liveSession
+        if (!s) return
+        setAvailabilityId(s.availabilityId)
+        setPeriod(s.period)
+        setTimeSlot(s.timeSlot)
+        setPickup(s.originPickup)      // where the chain started
+        setCurrentPickup(s.currentPickup) // how far it has been expanded
+        setDropoff(s.dropoff)
+        setSeats(String(s.seats))
+        setCountdown(180)
+        // 'matching' is the safe entry point — the poll below promotes it to
+        // 'matched' on the next tick if riders are already attached.
+        setMatchPhase('matching')
+        setResumedSearch(true)
+      })
       .catch(err => setOnlineError(err.data?.message || 'Could not load your online status.'))
   }, [])
 
@@ -531,6 +554,7 @@ export default function DriverDashboard() {
     setRideError('')
     setMatchPhase('idle')
     setAvailabilityId(null)
+    setResumedSearch(false)
     setCurrentPickup('')
     setMatchedRiders([])
     setPickup('')
@@ -727,6 +751,7 @@ export default function DriverDashboard() {
     }
     setMatchPhase('idle')
     setAvailabilityId(null)
+    setResumedSearch(false)
     setCurrentPickup('')
     setMatchedRiders([])
     setPickup('')
@@ -749,6 +774,12 @@ export default function DriverDashboard() {
       return (
         <div style={{ background:CARD, border:`1.5px solid ${BORDER}`, borderRadius:16, padding:24,
           marginBottom:16, boxShadow:'0 4px 16px rgba(36,56,0,0.08)', textAlign:'center' }}>
+          {resumedSearch && (
+            <p style={{ fontSize:12.5, color:MOSS, background:'#f3fbd3', border:'1px solid #dff0a8',
+              borderRadius:10, padding:'8px 12px', marginBottom:14, lineHeight:1.45 }}>
+              Your search was still running — we picked it back up where you left off.
+            </p>
+          )}
           {/* Animated ring */}
           <div style={{ position:'relative', width:88, height:88, margin:'0 auto 16px' }}>
             <svg width="88" height="88" style={{ position:'absolute', top:0, left:0, transform:'rotate(-90deg)' }}>

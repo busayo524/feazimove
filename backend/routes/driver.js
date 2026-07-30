@@ -90,10 +90,42 @@ router.get('/requests', async (req, res, next) => {
 })
 
 // ── Get current online status ─────────────────────────────────────────────────
+// Also returns the driver's LIVE availability session, if any. The row already
+// survives a browser close — riders keep matching against it — but the dashboard
+// used to start with availabilityId = null, so a reload (or the crash that
+// prompted this) left the driver staring at an empty form while riders were
+// being matched to them. This lets the UI pick the search back up.
 router.get('/status', async (req, res, next) => {
   try {
-    const result = await query('SELECT is_online FROM users WHERE id = $1', [req.user.id])
-    res.json({ online: result.rows[0]?.is_online || false })
+    const [me, live] = await Promise.all([
+      query('SELECT is_online FROM users WHERE id = $1', [req.user.id]),
+      query(
+        `SELECT id, period, time_slot, pickup, dropoff, seats, status, origin_pickup, created_at, expires_at
+           FROM driver_availability
+          WHERE driver_id = $1 AND status IN ('waiting', 'active') AND expires_at > NOW()
+          ORDER BY created_at DESC LIMIT 1`,
+        [req.user.id]
+      ),
+    ])
+    const a = live.rows[0]
+    res.json({
+      online: me.rows[0]?.is_online || false,
+      // null when there is nothing to resume.
+      liveSession: a ? {
+        availabilityId: a.id,
+        period: a.period,
+        timeSlot: a.time_slot,
+        // origin_pickup is where the driver STARTED; pickup is how far the
+        // chain has been expanded. The UI needs both.
+        originPickup: a.origin_pickup || a.pickup,
+        currentPickup: a.pickup,
+        dropoff: a.dropoff,
+        seats: a.seats,
+        status: a.status,
+        startedAt: a.created_at,
+        expiresAt: a.expires_at,
+      } : null,
+    })
   } catch (err) { next(err) }
 })
 

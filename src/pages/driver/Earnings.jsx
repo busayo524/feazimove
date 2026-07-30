@@ -29,21 +29,45 @@ function StatBox({ label, value, sub, icon, accent }){
   )
 }
 
+// Column values are abbreviated (₦3,984 → "4k") because seven columns on a
+// phone give each one ~36px — a full "3,984" overflows its column and collides
+// with the neighbouring label and the card's header total. The exact figure is
+// always readable in that header and in the summary table below.
+function compactAmount(n){
+  if(n >= 1000) return `${Math.round(n / 100) / 10}k`.replace('.0k','k')
+  return String(Math.round(n))
+}
+
+const BAR_TRACK = 86 // px — every bar shares this baseline
+
 function BarChart({ data, maxVal }){
   if(!data||!data.length) return null
   const peak = maxVal || Math.max(...data.map(d=>d.amount), 1)
   return(
-    <div style={{ display:'flex', alignItems:'flex-end', gap:6, height:100 }}>
+    // No fixed height on the row: the old 100px box was shorter than its own
+    // contents (86px bar + two 12px labels + gaps), so the value label spilled
+    // upward over the "Weekly Breakdown" total. Height is now content-driven.
+    <div style={{ display:'flex', alignItems:'flex-end', gap:6 }}>
       {data.map((d, i) => {
-        const h = Math.max(Math.round((d.amount / peak) * 86), 4)
-        const isHighest = d.amount === peak
+        const h = Math.max(Math.round((d.amount / peak) * BAR_TRACK), 4)
+        const isHighest = d.amount === peak && d.amount > 0
         return(
-          <div key={i} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:5 }}>
-            <span style={{ fontSize:10, color:MUTED, fontWeight:600 }}>
-              {d.amount > 0 ? fmt(d.amount).replace('₦','') : ''}
+          // minWidth:0 lets the column shrink below its text width instead of
+          // forcing the row wider than the card on narrow screens.
+          <div key={i} style={{ flex:'1 1 0', minWidth:0, display:'flex', flexDirection:'column', alignItems:'center', gap:5 }}>
+            <span style={{ fontSize:9.5, color:MUTED, fontWeight:600, lineHeight:1.2, minHeight:12,
+              whiteSpace:'nowrap', overflow:'hidden', textOverflow:'clip' }}>
+              {d.amount > 0 ? compactAmount(d.amount) : ''}
             </span>
-            <div style={{ width:'100%', height:h, borderRadius:'5px 5px 3px 3px', background: isHighest ? NEON : `rgba(76,105,0,0.2)`, transition:'height 0.4s ease' }}/>
-            <span style={{ fontSize:10, fontWeight: isHighest ? 700 : 500, color: isHighest ? OLIVE : MUTED, background: isHighest ? NEON : 'transparent', padding: isHighest ? '1px 5px' : '0', borderRadius:4 }}>
+            {/* Fixed-height track keeps every bar on one baseline even when
+                some columns have no value label above them. */}
+            <div style={{ width:'100%', height:BAR_TRACK, display:'flex', alignItems:'flex-end' }}>
+              <div style={{ width:'100%', height:h, borderRadius:'5px 5px 3px 3px',
+                background: isHighest ? NEON : 'rgba(76,105,0,0.2)', transition:'height 0.4s ease' }}/>
+            </div>
+            <span style={{ fontSize:10, fontWeight: isHighest ? 700 : 500, color: isHighest ? OLIVE : MUTED,
+              background: isHighest ? NEON : 'transparent', padding: isHighest ? '1px 5px' : '0',
+              borderRadius:4, whiteSpace:'nowrap' }}>
               {d.label}
             </span>
           </div>
@@ -352,11 +376,16 @@ export default function Earnings(){
 
       {/* ── Chart ── */}
       <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:16, padding:'18px 20px', marginBottom:16, boxShadow:'0 2px 8px rgba(36,56,0,0.06)' }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+        {/* flexWrap + gap so the title and total stack instead of colliding on
+            a narrow phone; the total never wraps mid-number. */}
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline',
+          gap:10, flexWrap:'wrap', marginBottom:16 }}>
           <p style={{ fontWeight:700, fontSize:13, color:MOSS, textTransform:'uppercase', letterSpacing:'0.06em' }}>
             {period==='month' ? 'Monthly Breakdown' : 'Weekly Breakdown'}
           </p>
-          <span style={{ fontSize:13, color:MUTED, fontWeight:600 }}>{fmt(period==='month'?monthTotal:weekTotal)}</span>
+          <span style={{ fontSize:13, color:MUTED, fontWeight:600, whiteSpace:'nowrap' }}>
+            {fmt(period==='month'?monthTotal:weekTotal)}
+          </span>
         </div>
         <BarChart data={period==='month' ? monthlyBars : weeklyBars}/>
       </div>
