@@ -399,7 +399,11 @@ export default function HomePage() {
               maxWidth: 480,
               marginBottom: 16,
             }}>
-              Get matched with a car owner on your route. To work every morning, home every evening.
+              {/* Two lines: the promise in bold, the rhythm of it underneath. */}
+              <strong style={{ display: 'block', fontWeight: 800, color: '#ffffff' }}>
+                Get matched with a car owner on your route.
+              </strong>
+              To work every morning, home every evening.
             </p>
 
             {/* Divider line */}
