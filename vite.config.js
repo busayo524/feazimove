@@ -17,6 +17,11 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate', // installed apps silently pick up each new deploy
+      // We register the worker ourselves in src/main.jsx. The script this
+      // plugin injects only calls register() — it never re-checks for a new
+      // worker and never reloads, so a tab open across a deploy stayed on the
+      // old build indefinitely. null stops it double-registering.
+      injectRegister: null,
       includeAssets: ['favicon.png', 'apple-touch-icon.png'],
       manifest: {
         name: 'FeaziMove — Smart Urban Mobility',
