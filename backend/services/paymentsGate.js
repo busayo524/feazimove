@@ -75,11 +75,17 @@ async function payoutAllowed(userId) {
 }
 
 // Logged once at boot so the mode is visible in AppSail logs.
+//
+// Two INDEPENDENT facts, and conflating them is dangerous: which rails the
+// money runs on (sandbox = fake, live = real), and whether the allowlist gate
+// is restricting who may move it. Live rails with PAYMENTS_TEST_MODE=1 is a
+// legitimate "test with real money, but only my own accounts" setup — it must
+// never be reported as SANDBOX.
 function describe() {
-  if (!sandboxRails()) return 'Anchor rails: LIVE'
-  return active()
-    ? `Anchor rails: SANDBOX — payments restricted to ${allowlist().join(', ')}`
-    : 'Anchor rails: SANDBOX — OPEN TO ALL USERS (PAYMENTS_TEST_ALLOWLIST is unset)'
+  const liveRails = !/sandbox/i.test(process.env.ANCHOR_BASE_URL || 'sandbox')
+  const rails = liveRails ? 'LIVE (REAL MONEY)' : 'SANDBOX (no real money)'
+  if (!active()) return `Anchor rails: ${rails} — payments OPEN TO ALL USERS`
+  return `Anchor rails: ${rails} — payments restricted to ${allowlist().join(', ')}`
 }
 
 module.exports = { active, emailAllowed, requireTestAccount, payoutAllowed, describe, sandboxRails }
