@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Eye, EyeOff, AlertCircle, Lock, Clock } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { IDLE_LOGOUT_FLAG } from '../../hooks/useIdleLogout'
+import { HomeLogoLink } from '../../components/StandaloneApp'
 import faviconImg from '../../assets/favicon.png'
 
 const NEON = '#ccff00'
@@ -60,13 +61,13 @@ export default function Login() {
   return (
     <div style={{ minHeight: '100vh', background: '#f2f3f4', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
 
-      {/* Logo — side by side. Not a link: purely decorative on the sign-in screen. */}
-      <div style={{ display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 28, userSelect: 'none', pointerEvents: 'none' }}>
+      {/* Logo — side by side. Links home in the browser, inert in the installed app. */}
+      <HomeLogoLink style={{ display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 28 }}>
         <img src={faviconImg} alt="FeaziMove" draggable={false} style={{ width: 52, height: 52, objectFit: 'contain' }} />
         <span style={{ fontSize: 26, letterSpacing: '-0.02em', color: DARK }}>
           <span style={{ fontWeight: 500 }}>Feazi</span><span style={{ fontWeight: 900 }}>Move</span>
         </span>
-      </div>
+      </HomeLogoLink>
 
       {/* Heading */}
       <h1 style={{ fontSize: 'clamp(1.8rem,3.5vw,2.4rem)', fontWeight: 900, color: DARK, letterSpacing: '-0.03em', marginBottom: 6, textAlign: 'center' }}>

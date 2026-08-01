@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import logo from '../assets/favicon.png'
 
@@ -32,6 +32,28 @@ export function StandaloneGate() {
   }, [loading, user, location.pathname, navigate])
 
   return null
+}
+
+// Logo wrapper for the auth screens. In the browser the logo links home like
+// any website header. In the installed app it is a plain picture: '/' is a
+// marketing path, so tapping it navigated to the landing page only for
+// StandaloneGate to bounce straight back — a visible flicker with no
+// destination. Only ever rendered inside the app, so no home link is lost.
+export function HomeLogoLink({ children, style, className }) {
+  if (isStandalone()) {
+    return (
+      <div className={className} style={{ ...style, userSelect: 'none', pointerEvents: 'none' }}>
+        {children}
+      </div>
+    )
+  }
+  return <Link to="/" className={className} style={{ textDecoration: 'none', ...style }}>{children}</Link>
+}
+
+// Renders children only in the browser — for links that point at marketing
+// pages, which are out of scope in the installed app.
+export function BrowserOnly({ children }) {
+  return isStandalone() ? null : children
 }
 
 // Branded launch splash — black screen with the centered logo, shown only in

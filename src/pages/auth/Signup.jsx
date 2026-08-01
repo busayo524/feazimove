@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { HomeLogoLink } from '../../components/StandaloneApp'
 import { Eye, EyeOff, AlertCircle, RefreshCw, CheckCircle2, ArrowRight } from 'lucide-react'
 import { api } from '../../services/api'
 import { track } from '../../services/analytics'
@@ -237,13 +238,13 @@ export default function Signup() {
   return (
     <div style={{ minHeight: '100vh', background: '#f2f3f4', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
 
-      {/* Logo — not a link: purely decorative. */}
-      <div style={{ display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 28, userSelect: 'none', pointerEvents: 'none' }}>
+      {/* Logo — links home in the browser, inert in the installed app. */}
+      <HomeLogoLink style={{ display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 28 }}>
         <img src={faviconImg} alt="FeaziMove" draggable={false} style={{ width: 52, height: 52, objectFit: 'contain' }} />
         <span style={{ fontSize: 26, letterSpacing: '-0.02em', color: DARK }}>
           <span style={{ fontWeight: 500 }}>Feazi</span><span style={{ fontWeight: 900 }}>Move</span>
         </span>
-      </div>
+      </HomeLogoLink>
 
       {/* ══ PHASE 1 — FORM ══ */}
       {phase === 'form' && (<>

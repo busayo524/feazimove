@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { HomeLogoLink } from '../../components/StandaloneApp'
 import { ArrowRight } from 'lucide-react'
 import faviconImg from '../../assets/favicon.png'
 
@@ -92,11 +93,11 @@ export default function RoleSelect() {
 
       {/* Nav */}
       <nav className="fm-nav">
-        {/* Logo — not a link: purely decorative. */}
-        <div className="fm-logo" style={{ userSelect: 'none', pointerEvents: 'none' }}>
+        {/* Logo — links home in the browser, inert in the installed app. */}
+        <HomeLogoLink className="fm-logo">
           <img src={faviconImg} alt="FeaziMove" draggable={false} style={{ width: 36, height: 36, objectFit: 'contain' }} />
           <span>Feazi<span style={{ color: LIME }}>Move</span></span>
-        </div>
+        </HomeLogoLink>
         <Link to="/login" className="fm-signin-nav">Sign in</Link>
       </nav>
 

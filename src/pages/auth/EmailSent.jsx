@@ -6,6 +6,7 @@
  */
 import React from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { HomeLogoLink, BrowserOnly } from '../../components/StandaloneApp'
 import { Mail, ArrowRight, CheckCircle2 } from 'lucide-react'
 import { useEffect } from 'react'
 import faviconImg from '../../assets/favicon.png'
@@ -36,13 +37,13 @@ export default function EmailSent() {
         background: '#fff', borderBottom: '1px solid #f0f0f0',
         padding: '14px clamp(20px,5vw,60px)',
       }}>
-        {/* Logo — not a link: purely decorative. */}
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, userSelect: 'none', pointerEvents: 'none' }}>
+        {/* Logo — links home in the browser, inert in the installed app. */}
+        <HomeLogoLink style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
           <img src={faviconImg} alt="FeaziMove" draggable={false} style={{ width: 34, height: 34, objectFit: 'contain' }} />
           <span style={{ fontSize: 15, fontWeight: 900, color: DARK, letterSpacing: '-0.3px' }}>
             Feazi<span style={{ color: GREEN }}>Move</span>
           </span>
-        </div>
+        </HomeLogoLink>
       </nav>
 
       <main style={{
@@ -154,12 +155,15 @@ export default function EmailSent() {
             >
               <Mail size={16} /> Open email app <ArrowRight size={15} />
             </a>
-            <Link to="/" style={{
-              fontSize: 13, color: '#9ca3af', textDecoration: 'none',
-              display: 'inline-flex', alignItems: 'center', gap: 4,
-            }}>
-              ← Back to FeaziMove home
-            </Link>
+            {/* Marketing home — browser only; the installed app has nowhere to send them. */}
+            <BrowserOnly>
+              <Link to="/" style={{
+                fontSize: 13, color: '#9ca3af', textDecoration: 'none',
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+              }}>
+                ← Back to FeaziMove home
+              </Link>
+            </BrowserOnly>
           </div>
 
         </div>

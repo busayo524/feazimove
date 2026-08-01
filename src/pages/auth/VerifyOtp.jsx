@@ -15,6 +15,7 @@
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { HomeLogoLink } from '../../components/StandaloneApp'
 import { Mail, AlertCircle, RefreshCw, ArrowRight, CheckCircle2 } from 'lucide-react'
 import { api } from '../../services/api'
 import faviconImg from '../../assets/favicon.png'
@@ -184,13 +185,13 @@ export default function VerifyOtp() {
         padding: '14px clamp(20px,5vw,60px)',
         display: 'flex', alignItems: 'center', gap: 10,
       }}>
-        {/* Logo — not a link: purely decorative. */}
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, userSelect: 'none', pointerEvents: 'none' }}>
+        {/* Logo — links home in the browser, inert in the installed app. */}
+        <HomeLogoLink style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
           <img src={faviconImg} alt="FeaziMove" draggable={false} style={{ width: 34, height: 34, objectFit: 'contain' }} />
           <span style={{ fontSize: 15, fontWeight: 900, color: DARK, letterSpacing: '-0.3px' }}>
             Feazi<span style={{ color: GREEN }}>Move</span>
           </span>
-        </div>
+        </HomeLogoLink>
       </nav>
 
       <main style={{
