@@ -12,7 +12,7 @@ const { sendStored, deleteStored } = require('../services/fileStorage')
 const { sendAccountCredentialsEmail, sendWelcomeEmail } = require('../services/emailService')
 const anchor = require('../services/anchor')
 const kycVault = require('../services/kycVault')
-const { payoutAllowed, sandboxRails } = require('../services/paymentsGate')
+const { payoutAllowed, sandboxRails, active: paymentsGateActive } = require('../services/paymentsGate')
 const totp = require('../services/totp')
 const QRCode = require('qrcode')
 
@@ -1049,7 +1049,8 @@ router.post('/payouts/:id/reject',
 // and have details of all customers we have collected".
 router.get('/anchor/overview', async (req, res, next) => {
   try {
-    const [customers, events24, eventsAll, lastEvent, payins, transfers, openFlags, pendingTx] = await Promise.all([
+    const [customers, events24, eventsAll, lastEvent, payins, transfers, openFlags, pendingTx,
+           fallbackAccounts, kycVerified] = await Promise.all([
       query('SELECT COUNT(*)::int n FROM users WHERE anchor_customer_id IS NOT NULL'),
       query("SELECT COUNT(*)::int n FROM anchor_events WHERE created_at >= NOW() - INTERVAL '24 hours'"),
       query('SELECT COUNT(*)::int n FROM anchor_events'),
@@ -1058,6 +1059,15 @@ router.get('/anchor/overview', async (req, res, next) => {
       query("SELECT COUNT(*)::int n FROM payout_requests WHERE anchor_transfer_id IS NOT NULL"),
       query("SELECT COUNT(*)::int n FROM aml_flags WHERE status = 'open'"),
       query("SELECT COUNT(*)::int n FROM wallet_transactions WHERE gateway = 'anchor' AND status = 'pending'"),
+      // Users sitting on a FALLBACK account: the reserved-account request was
+      // refused, so they hold a Virtual NUBAN in OUR company name and Anchor
+      // never ran their BVN check. Counting this makes an otherwise invisible
+      // compliance gap visible — the setup log reads like a success.
+      query(`SELECT COUNT(*)::int n FROM users
+              WHERE reserved_account_number IS NOT NULL
+                AND anchor_kyc_status = 'pending_provider'`),
+      query(`SELECT COUNT(*)::int n FROM users
+              WHERE anchor_kyc_status IN ('approved','verified')`),
     ])
     res.json({
       customers: customers.rows[0].n,
@@ -1069,6 +1079,19 @@ router.get('/anchor/overview', async (req, res, next) => {
       openAmlFlags: openFlags.rows[0].n,
       pendingCollections: pendingTx.rows[0].n,
       configured: anchor.configured(),
+      // Which rails the money is really on, and who may move it. Surfaced so
+      // this is answerable from the admin panel instead of the AppSail logs.
+      rails: {
+        live: !/sandbox/i.test(process.env.ANCHOR_BASE_URL || 'sandbox'),
+        restricted: paymentsGateActive(),
+        allowlistCount: (process.env.PAYMENTS_TEST_ALLOWLIST || '')
+          .split(',').map(s => s.trim()).filter(Boolean).length,
+      },
+      // Compliance visibility: fallback accounts carry no verified identity.
+      kyc: {
+        onFallbackAccount: fallbackAccounts.rows[0].n,
+        verified: kycVerified.rows[0].n,
+      },
     })
   } catch (err) { next(err) }
 })

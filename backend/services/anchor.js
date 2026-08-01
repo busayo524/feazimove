@@ -17,7 +17,10 @@ const axios = require('axios')
 const crypto = require('crypto')
 
 const BASE_URL = (process.env.ANCHOR_BASE_URL || 'https://api.sandbox.getanchor.co').replace(/\/+$/, '')
-const PROVIDER = process.env.ANCHOR_PROVIDER || 'ninepsb'
+// Providus is FeaziMove's provider — confirmed with Anchor. It is also the one
+// proven to work in sandbox, where ninepsb returned 412s. Kept as the default
+// so a missing env var can't silently route accounts to the wrong bank.
+const PROVIDER = process.env.ANCHOR_PROVIDER || 'providus'
 
 const http = axios.create({
   baseURL: BASE_URL,

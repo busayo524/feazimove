@@ -59,6 +59,47 @@ export default function AdminBackOffice() {
           : '● Anchor API key not configured'}
       </p>
 
+      {/* Which rails the money is really on. Previously answerable only by
+          reading AppSail logs — too easy to misjudge during a launch. */}
+      {overview?.rails && (
+        <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap', padding:'10px 14px',
+          borderRadius:10, marginBottom:12,
+          background: overview.rails.live ? '#fffbeb' : '#f5f7f2',
+          border: `1px solid ${overview.rails.live ? '#fcd34d' : BORDER}` }}>
+          <span style={{ padding:'3px 10px', borderRadius:50, fontSize:11, fontWeight:800, letterSpacing:'0.04em',
+            background: overview.rails.live ? '#b45309' : '#6b7280', color:'#fff' }}>
+            {overview.rails.live ? 'LIVE — REAL MONEY' : 'SANDBOX — NO REAL MONEY'}
+          </span>
+          <span style={{ fontSize:12.5, color: TEXT }}>
+            {overview.rails.restricted
+              ? `Payments restricted to ${overview.rails.allowlistCount} test account${overview.rails.allowlistCount === 1 ? '' : 's'}`
+              : 'Payments open to all users'}
+          </span>
+        </div>
+      )}
+
+      {/* A fallback account means Anchor refused the reserved-account request:
+          the rider holds an account in OUR company name and their BVN was
+          never verified. The setup log reads like a success, so without this
+          the gap is invisible. */}
+      {overview?.kyc?.onFallbackAccount > 0 && (
+        <div style={{ display:'flex', gap:9, padding:'11px 14px', background:'#fef2f2',
+          border:'1px solid #fca5a5', borderRadius:10, marginBottom:16 }}>
+          <ShieldAlert size={15} color="#b91c1c" style={{ flexShrink:0, marginTop:1 }}/>
+          <div>
+            <p style={{ fontSize:13, color:'#b91c1c', fontWeight:700 }}>
+              {overview.kyc.onFallbackAccount} user{overview.kyc.onFallbackAccount === 1 ? '' : 's'} on a fallback funding account — no BVN verification
+            </p>
+            <p style={{ fontSize:12.5, color:'#7f1d1d', lineHeight:1.55, marginTop:3 }}>
+              Anchor refused the reserved-account request, so these accounts are in FeaziMove's
+              name rather than the customer's and no CBN identity check was performed. Ask Anchor
+              to enable reserved accounts, and make sure the deposit account can cover the
+              per-account fee. {overview.kyc.verified} user{overview.kyc.verified === 1 ? ' has' : 's have'} a verified identity.
+            </p>
+          </div>
+        </div>
+      )}
+
       {error && (
         <div style={{ display: 'flex', gap: 8, padding: '10px 14px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 10, marginBottom: 16 }}>
           <AlertCircle size={14} color="#ef4444" style={{ flexShrink: 0, marginTop: 1 }}/>
