@@ -189,7 +189,17 @@ async function getPayment(paymentId) {
 // returns "Endpoint not found". Callers use this to fall back to Virtual
 // NUBANs, which behave equivalently and exist in both environments.
 function isUnavailable(err) {
-  return err?.anchor?.errors?.[0]?.status === '404'
+  const e = err?.anchor?.errors?.[0]
+  if (!e) return false
+  // 404 — the endpoint does not exist in this environment (sandbox).
+  if (e.status === '404') return true
+  // 412 "Invalid Organization" — LIVE, but the /pay product is not enabled for
+  // our organization yet. Practically identical to 404: the feature is not
+  // available to us, so use the Virtual NUBAN path instead. Without this a
+  // rider simply cannot fund — the error was rethrown as a 502.
+  const text = `${e.title || ''} ${e.detail || ''}`
+  if (e.status === '412' && /invalid organization|not (support|enable)|unavailable/i.test(text)) return true
+  return false
 }
 
 // ── Virtual NUBANs (docs.getanchor.co/docs/virtual-nubans) ───────────────────
