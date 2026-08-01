@@ -75,6 +75,19 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS reg_token_expires  TIMESTAMPTZ;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_online           BOOLEAN     NOT NULL DEFAULT false;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS force_password_change BOOLEAN   NOT NULL DEFAULT false;
 
+-- ── Resumable registration ───────────────────────────────────────────────────
+-- The account row is created at signup, before the 3-step wizard runs, so
+-- is_pending cannot distinguish "still filling it in" from "submitted, waiting
+-- on an admin". Without that split, losing the page mid-registration left the
+-- applicant locked out of both the wizard and login.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS reg_completed  BOOLEAN  NOT NULL DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS reg_step       SMALLINT NOT NULL DEFAULT 1;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS reg_draft      JSONB;
+-- A NULL registration_token means no wizard is in flight, so existing accounts
+-- are treated as completed and keep the approval message they had before.
+UPDATE users SET reg_completed = true
+ WHERE reg_completed = false AND registration_token IS NULL;
+
 ALTER TABLE users ADD COLUMN IF NOT EXISTS id_type        VARCHAR(40);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS id_number      VARCHAR(40);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS vehicle_type   VARCHAR(30);

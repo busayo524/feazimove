@@ -23,32 +23,6 @@ function maskEmail(e)     { return e.replace(/^(.)(.*)(@.*)$/, (_, a, b, c) => a
 function fmt(s)           { return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` }
 function sanitize(v)      { return v.replace(/[<>"'`]/g, '').trimStart() }
 
-/* ── Strong password generator ── */
-function generatePassword() {
-  const upper  = 'ABCDEFGHJKLMNPQRSTUVWXYZ'
-  const lower  = 'abcdefghjkmnpqrstuvwxyz'
-  const digits = '23456789'
-  const syms   = '@#$%&!'
-  const all    = upper + lower + digits + syms
-  // Guarantee at least one of each required character class
-  let pw = [
-    upper [Math.floor(Math.random() * upper.length)],
-    upper [Math.floor(Math.random() * upper.length)],
-    lower [Math.floor(Math.random() * lower.length)],
-    lower [Math.floor(Math.random() * lower.length)],
-    digits[Math.floor(Math.random() * digits.length)],
-    digits[Math.floor(Math.random() * digits.length)],
-    syms  [Math.floor(Math.random() * syms.length)],
-  ]
-  for (let i = 0; i < 7; i++) pw.push(all[Math.floor(Math.random() * all.length)])
-  // Fisher-Yates shuffle
-  for (let i = pw.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pw[i], pw[j]] = [pw[j], pw[i]]
-  }
-  return pw.join('')
-}
-
 function strength(p) {
   if (!p) return { pct: 0, label: '', color: '#e5e7eb' }
   let s = 0
@@ -74,26 +48,6 @@ export default function Signup() {
   const [errors,  setErrors]  = useState({})
   const [formErr, setFormErr] = useState('')
   const [sending, setSending] = useState(false)
-
-  // Password suggestion
-  const [suggestedPw,    setSuggestedPw]    = useState(() => generatePassword())
-  const [showSuggestion, setShowSuggestion] = useState(false)
-  const suggRef = useRef()
-
-  // Close suggestion on outside click
-  useEffect(() => {
-    function onOut(e) { if (suggRef.current && !suggRef.current.contains(e.target)) setShowSuggestion(false) }
-    document.addEventListener('mousedown', onOut)
-    return () => document.removeEventListener('mousedown', onOut)
-  }, [])
-
-  function useSuggested() {
-    setForm(p => ({ ...p, password: suggestedPw, confirm: suggestedPw }))
-    setErrors(p => ({ ...p, password: '', confirm: '' }))
-    setShowPw(true)   // show the password so user can see / copy it
-    setShowSuggestion(false)
-  }
-  function refreshSuggestion() { setSuggestedPw(generatePassword()) }
 
   const [userId,      setUserId]      = useState(null)
   const [maskedEmail, setMaskedEmail] = useState('')
@@ -259,7 +213,10 @@ export default function Signup() {
         </p>
 
         <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 2px 24px rgba(0,0,0,0.08)', padding: 'clamp(36px,5vw,52px)', width: '100%', maxWidth: 520 }}>
-          <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {/* autoComplete="off" on the form as well as the fields: browsers and
+              password managers should not be offering to invent a password
+              here — people pick their own. */}
+          <form onSubmit={handleSubmit} noValidate autoComplete="off" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
             {/* Email */}
             <div>
@@ -291,7 +248,7 @@ export default function Signup() {
             </div>
 
             {/* Password */}
-            <div ref={suggRef} style={{ position: 'relative' }}>
+            <div style={{ position: 'relative' }}>
               <label style={labelStyle}>Password</label>
 
               <div style={{ position: 'relative' }}>
@@ -300,7 +257,7 @@ export default function Signup() {
                   value={form.password} placeholder="Min 8 chars, 1 uppercase, 1 number"
                   autoComplete="off"
                   onChange={e => set('password', e.target.value)}
-                  onFocus={e => { e.target.style.borderColor = NEON; if (!form.password) setShowSuggestion(true) }}
+                  onFocus={e => { e.target.style.borderColor = NEON }}
                   onBlur={e  => e.target.style.borderColor = errors.password ? '#ef4444' : '#e0e0e0'}
                   style={{ ...inputStyle, paddingRight: 46, borderColor: errors.password ? '#ef4444' : '#e0e0e0' }}
                 />
@@ -310,57 +267,6 @@ export default function Signup() {
                   {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
-
-              {/* Google-style suggestion popup — appears on focus */}
-              {showSuggestion && (
-                <div style={{
-                  position: 'absolute', top: 'calc(100% - 30px)', left: 0, zIndex: 9999,
-                  background: '#fff', borderRadius: 12,
-                  boxShadow: '0 2px 10px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.08)',
-                  width: '100%', overflow: 'hidden',
-                }}>
-                  {/* Use suggested password row */}
-                  <button type="button" onClick={useSuggested}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 12,
-                      width: '100%', padding: '12px 16px', background: 'none',
-                      border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
-                      borderBottom: '1px solid #f0f0f0',
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#f5f5f5'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                  >
-                    <GoogleIcon />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>Use suggested password</p>
-                      <p style={{ margin: '1px 0 0', fontSize: 12, color: '#888', fontFamily: 'monospace', letterSpacing: '0.04em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {suggestedPw}
-                      </p>
-                    </div>
-                    <button type="button" onClick={e => { e.stopPropagation(); refreshSuggestion() }}
-                      title="Generate new"
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 4, flexShrink: 0, display: 'flex', borderRadius: 4 }}>
-                      <RefreshCw size={13} />
-                    </button>
-                  </button>
-
-                  {/* Choose my own row */}
-                  <button type="button" onClick={() => setShowSuggestion(false)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 12,
-                      width: '100%', padding: '11px 16px', background: 'none',
-                      border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#f5f5f5'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                  >
-                    <div style={{ width: 18, height: 18, borderRadius: '50%', border: '2px solid #dadce0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <Eye size={10} color="#888" />
-                    </div>
-                    <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>Choose my own password</p>
-                  </button>
-                </div>
-              )}
 
               {form.password && (
                 <div style={{ marginTop: 8 }}>
@@ -554,13 +460,3 @@ function Spinner({ dark }) {
   return <span style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${dark ? 'rgba(60,64,67,0.2)' : 'rgba(255,255,255,0.3)'}`, borderTopColor: dark ? '#3c4043' : '#fff', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
 }
 
-function GoogleIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-      <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
-      <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z" fill="#34A853"/>
-      <path d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.348 2.825.957 4.039l3.007-2.332z" fill="#FBBC05"/>
-      <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
-    </svg>
-  )
-}

@@ -484,6 +484,9 @@ export default function Register() {
       .then(res => {
         if (res.data.valid) {
           setLinkPrefill({ name: res.data.name, email: res.data.email, phone: res.data.phone })
+          // Coming back via the email link resumes where they stopped too
+          if (res.data.draft) setResumeDraft(res.data.draft)
+          if (res.data.step > 1) setStep(res.data.step)
           setTokenState('valid')
         } else {
           setTokenState('invalid')
@@ -492,8 +495,12 @@ export default function Register() {
       .catch(() => setTokenState('invalid'))
   }, [urlToken, navToken])
 
-  // ── Always start at step 1 — name is now entered in the wizard ──────
-  const startStep = 1
+  // ── Resume point ─────────────────────────────────────────────────────
+  // Set when the applicant is coming back to an unfinished registration —
+  // either by signing in with the password they already created, or through
+  // the email link. Otherwise a fresh run starts at step 1.
+  const [resumeDraft, setResumeDraft] = useState(navState.resumeDraft || null)
+  const startStep = navState.resumeStep || 1
 
   const [step,    setStep]    = useState(startStep)
   const [showPw,  setShowPw]  = useState(false)
@@ -551,6 +558,8 @@ export default function Register() {
     vehicleType:'', vehicleMake:'', vehicleModel:'', vehicleColor:'', plateNumber:'', vehicleYear:'', driversLicenseNumber:'',
     // step 3
     agreeTerms: false, agreeBackground: false,
+    // Anything saved before the page was lost wins over the blanks above.
+    ...(navState.resumeDraft || {}),
   })
   const [files, setFiles] = useState({
     idDoc: null, otherIdDoc: null, selfie: null,
@@ -568,8 +577,10 @@ export default function Register() {
       lastName:  linkPrefill.name ? linkPrefill.name.split(' ').slice(1).join(' ') : p.lastName,
       email: linkPrefill.email || p.email,
       phone: linkPrefill.phone || p.phone,
+      // A saved draft is more recent than the signup values above
+      ...(resumeDraft || {}),
     }))
-  }, [linkPrefill])
+  }, [linkPrefill, resumeDraft])
 
   // Sync password from OTP nav-state prefill into form.
   // Always overwrite so empty initial state doesn't block the update.
@@ -653,12 +664,37 @@ export default function Register() {
     setErrors(e); return !Object.keys(e).length
   }
 
+  // Park progress on the server so losing the page (refresh, closed tab, PWA
+  // restart, flat battery) does not mean starting over. Best-effort by design:
+  // a failure here must never block someone who is filling the form in fine.
+  // Photos and the password are deliberately not included — see /auth/reg-draft.
+  const saveDraft = useCallback(async (atStep) => {
+    if (!regToken || isAddingRole) return
+    try {
+      await api.post('/auth/reg-draft', {
+        registrationToken: regToken,
+        step: atStep,
+        draft: form,
+      })
+    } catch { /* offline or expired token — the form carries on regardless */ }
+  }, [regToken, isAddingRole, form])
+
+  // Autosave while they type, so a page lost part-way through a step keeps that
+  // step's answers too — not just the steps already completed.
+  useEffect(() => {
+    if (!regToken || isAddingRole) return
+    const t = setTimeout(() => saveDraft(step), 1500)
+    return () => clearTimeout(t)
+  }, [form, step, regToken, isAddingRole, saveDraft])
+
   function nextStep() {
     let ok = false
     if (step === 1) ok = v1()
     if (step === 2) ok = role === 'rider' ? v2Rider() : v2Driver()
     if (!ok) return
-    setStep(s => s + 1)
+    const target = step + 1
+    setStep(target)
+    saveDraft(target)
     window.scrollTo(0, 0)
   }
 

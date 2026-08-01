@@ -60,6 +60,9 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (identifier, password) => {
     const res = await api.post('/auth/login', { identifier, password })
+    // Correct credentials, but the registration wizard was never finished —
+    // no session is issued. The caller sends them back in to complete it.
+    if (res.data.resumeRegistration) return res.data
     const { token, refreshToken, user } = res.data
     clearUserScopedState() // leftover payment state from a previous account
     const normalized = normalizeUser(user)

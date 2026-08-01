@@ -38,6 +38,20 @@ export default function Login() {
     setLoading(true); setError(''); setIdleNotice('')
     try {
       const user = await login(identifier, password)
+      // Signed up but never finished the wizard — drop them straight back on
+      // the step they stopped at, with what they had already typed.
+      if (user.resumeRegistration) {
+        navigate(`/register/${user.role}`, {
+          replace: true,
+          state: {
+            registrationToken: user.registrationToken,
+            resumeStep:  user.step,
+            resumeDraft: user.draft,
+            prefill: { name: user.name, email: user.email, phone: user.phone },
+          },
+        })
+        return
+      }
       if (user.role === 'admin') {
         navigate(user.forcePasswordChange ? '/admin/settings' : '/admin', { replace: true })
         return

@@ -75,6 +75,18 @@ async function runMigrations() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS is_online          BOOLEAN NOT NULL DEFAULT false;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS force_password_change BOOLEAN NOT NULL DEFAULT false;
 
+    -- Resumable registration: the account row exists from signup onward, so
+    -- is_pending alone cannot tell "still filling in the wizard" apart from
+    -- "submitted, waiting on an admin". These do.
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS reg_completed  BOOLEAN NOT NULL DEFAULT false;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS reg_step       SMALLINT NOT NULL DEFAULT 1;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS reg_draft      JSONB;
+    -- Backfill: a NULL registration_token means the wizard is not in progress,
+    -- so every existing account is "completed" and keeps the approval message.
+    -- Anyone genuinely mid-wizard still holds a token and stays resumable.
+    UPDATE users SET reg_completed = true
+     WHERE reg_completed = false AND registration_token IS NULL;
+
     -- Info collected at registration that previously had nowhere to live
     ALTER TABLE users ADD COLUMN IF NOT EXISTS id_type        VARCHAR(40);
     ALTER TABLE users ADD COLUMN IF NOT EXISTS id_number      VARCHAR(40);

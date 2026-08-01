@@ -24,7 +24,9 @@ const router = express.Router()
 
 const SALT_ROUNDS = 12  // bcrypt cost factor — NIST recommended minimum
 const OTP_EXPIRY_MINUTES = 5
-const REG_TOKEN_EXPIRY_HOURS = 24
+// 7 days: an unfinished registration stays resumable for a week, so losing the
+// page (refresh, closed tab, PWA restart) is recoverable rather than terminal.
+const REG_TOKEN_EXPIRY_HOURS = 24 * 7
 
 // What a newly registered account may do. The users table defaults are
 // rider-shaped (can_ride NOT NULL DEFAULT true), so any INSERT that omits
@@ -332,7 +334,7 @@ router.get('/validate-reg-token',
       }
 
       const result = await query(
-        `SELECT id, name, email, phone, role, reg_token_expires
+        `SELECT id, name, email, phone, role, reg_token_expires, reg_step, reg_draft
          FROM users
          WHERE registration_token = $1 AND email_verified = true AND is_pending = true`,
         [token.trim()]
@@ -343,7 +345,75 @@ router.get('/validate-reg-token',
         return res.status(400).json({ valid: false, message: 'This link has expired or is invalid. Please sign up again.' })
       }
 
-      res.json({ valid: true, userId: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role })
+      res.json({
+        valid: true, userId: user.id, name: user.name, email: user.email,
+        phone: user.phone, role: user.role,
+        // Resume point — the email link drops them back where they stopped too
+        step: user.reg_step || 1,
+        draft: user.reg_draft || null,
+      })
+    } catch (err) { next(err) }
+  }
+)
+
+// ── Save wizard progress (token-gated) ───────────────────────────────────────
+//
+// Called as the applicant moves between steps so a lost page costs nothing.
+// Stored server-side rather than in the browser so it survives a reinstall,
+// a cleared cache, or finishing on a different device.
+//
+// What is deliberately NOT stored:
+//   • password — the account already exists and holds a hash; a plaintext
+//     password has no reason to make a round trip
+//   • photos/documents — selfies are a liveness check, so a stored one defeats
+//     the purpose; these are re-captured on resume
+//
+const DRAFT_FIELDS = [
+  'firstName', 'lastName', 'email', 'phone', 'city', 'area',
+  'dobDay', 'dobMonth', 'dobYear', 'gender',
+  'idType', 'idNumber',
+  'vehicleType', 'vehicleMake', 'vehicleModel', 'vehicleColor',
+  'plateNumber', 'vehicleYear', 'driversLicenseNumber',
+  'agreeTerms', 'agreeBackground',
+]
+
+router.post('/reg-draft',
+  [
+    body('registrationToken').notEmpty().isString(),
+    body('step').isInt({ min: 1, max: 3 }),
+  ],
+  validate,
+  async (req, res, next) => {
+    try {
+      const { registrationToken, step, draft } = req.body
+
+      // Whitelist rather than storing whatever the client sends, so a stray
+      // field (or a password) can never end up parked in the drafts column.
+      const safeDraft = {}
+      if (draft && typeof draft === 'object') {
+        for (const key of DRAFT_FIELDS) {
+          if (draft[key] !== undefined) safeDraft[key] = draft[key]
+        }
+      }
+
+      const result = await query(
+        `UPDATE users
+            SET reg_step = $2, reg_draft = $3
+          WHERE registration_token = $1
+            AND email_verified = true
+            AND is_pending = true
+            AND reg_completed = false
+            AND reg_token_expires > NOW()
+        RETURNING id`,
+        [registrationToken, step, JSON.stringify(safeDraft)]
+      )
+
+      // A dead token here must not derail the applicant mid-form — the wizard
+      // treats this as best-effort and keeps going.
+      if (!result.rows[0]) {
+        return res.status(400).json({ saved: false, message: 'Registration session expired.' })
+      }
+      res.json({ saved: true })
     } catch (err) { next(err) }
   }
 )
@@ -412,6 +482,9 @@ router.post('/register',
       const result = await query(
         `UPDATE users
          SET registration_token = NULL, reg_token_expires = NULL,
+             -- Wizard is done: from here on a failed login means "awaiting
+             -- admin approval" for real, and the saved draft is dead weight.
+             reg_completed = true, reg_draft = NULL, reg_step = 3,
              name = $2,
              role          = $15,
              active_role   = $15,
@@ -685,6 +758,7 @@ router.post('/login',
       const result = await query(
         `SELECT id, name, email, phone, role, password_hash, wallet_balance, rating,
                 can_ride, can_drive, active_role, force_password_change, is_active, is_pending,
+                email_verified, reg_completed, reg_step, reg_draft,
                 bank_name, bank_account_number
          FROM users
          WHERE ${isEmail ? 'email = $1' : 'phone = $1'}`,
@@ -706,8 +780,42 @@ router.post('/login',
       if (!match) {
         return res.status(401).json({ message: 'Incorrect password. Please try again.' })
       }
-      // Pending: registration submitted but not yet reviewed by admin
+      // Pending covers two very different situations, and conflating them was
+      // locking people out: the account row is created at signup, long before
+      // the wizard is done. Someone who lost the page mid-registration was told
+      // to await approval for a registration they never actually submitted,
+      // with no way back in. Separate them.
       if (user.is_pending) {
+        // Never verified their email — the OTP step never completed, so there
+        // is nothing to resume. Re-signing up reissues a code (POST /signup
+        // clears unverified rows for the same email/phone).
+        if (!user.email_verified) {
+          return res.status(403).json({
+            message: 'Your email address was never verified. Please sign up again to get a new code.',
+          })
+        }
+        // Verified, but the wizard was never finished — let them back in to
+        // complete it. This hands back a registration token, NOT a session:
+        // an unapproved account still gets no access to the app itself.
+        if (!user.reg_completed) {
+          const regToken = uuidv4()
+          const tokenExp = new Date(Date.now() + REG_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000)
+          await query(
+            'UPDATE users SET registration_token = $1, reg_token_expires = $2 WHERE id = $3',
+            [regToken, tokenExp, user.id]
+          )
+          return res.json({
+            resumeRegistration: true,
+            registrationToken: regToken,
+            role:  user.role,
+            step:  user.reg_step || 1,
+            draft: user.reg_draft || null,
+            name:  user.name,
+            email: user.email,
+            phone: user.phone,
+          })
+        }
+        // Wizard genuinely finished — this is the real "waiting on an admin" case.
         return res.status(403).json({
           pending: true,
           message: 'Your account is awaiting admin approval. You will be notified once it is activated.',
