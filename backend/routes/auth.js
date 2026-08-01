@@ -472,13 +472,16 @@ router.post('/register',
       // NIN and FRSC lookups take several seconds and the applicant should not
       // sit on a spinner for them. The verdict lands before an admin reviews
       // the account, which is the only moment it actually matters.
+      // One document per role: riders by NIN, drivers by FRSC licence. Both are
+      // matched against the live photo captured at registration — riders take a
+      // selfie, drivers a headshot, and neither is a file chosen on a phone.
       const selfieBuffer = (uploaded.selfie?.[0] || uploaded.profilePhoto?.[0])?.buffer
       runIdentityCheck({
         userId: user.id,
         role,
-        registeredName: name,
-        nin: idNumber || null,
-        licenceNumber: req.body.driversLicenseNumber || null,
+        registeredName: finalName,
+        nin: role === 'driver' ? null : (idNumber || null),
+        licenceNumber: role === 'driver' ? (req.body.driversLicenseNumber || null) : null,
         dob: dateOfBirth || null,
         selfieBuffer,
       })

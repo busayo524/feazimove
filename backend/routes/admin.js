@@ -2147,9 +2147,14 @@ router.post('/users/:id/verify-identity',
       }
 
       const selfieBuffer = await readStored(req, u.face_key)
+      // Same role split as registration: riders by NIN, drivers by licence.
       const verdict = await prembly.verifyIdentity({
-        role: u.role, registeredName: u.name, nin: u.id_number,
-        licenceNumber: u.drivers_license_number, dob: u.date_of_birth, selfieBuffer,
+        role: u.role,
+        registeredName: u.name,
+        nin: u.role === 'driver' ? null : u.id_number,
+        licenceNumber: u.role === 'driver' ? u.drivers_license_number : null,
+        dob: u.date_of_birth,
+        selfieBuffer,
       })
       await query(
         `UPDATE users SET identity_status = $1, identity_summary = $2,

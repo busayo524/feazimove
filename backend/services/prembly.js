@@ -71,11 +71,15 @@ async function verifyIdentity({ role, registeredName, nin, licenceNumber, dob, s
   const checks = []
   const add = (name, passed, detail) => checks.push({ name, passed, detail })
   let ninName = null, licenceName = null
+  // One document per role: riders are identified by NIN, drivers by their FRSC
+  // licence (which they must hold anyway). Each is checked against the live
+  // selfie, so the document still has to belong to the person registering.
+  const isDriver = role === 'driver'
 
-  // ── NIN + face (both roles) ───────────────────────────────────────────────
-  if (!nin) {
+  // ── NIN + face (riders) ───────────────────────────────────────────────────
+  if (!isDriver && !nin) {
     add('NIN provided', false, 'No NIN was captured at registration')
-  } else {
+  } else if (!isDriver) {
     try {
       const { data } = await call('/verification/nin_w_face', { number: nin, image })
       const n = data.nin_data || data.data || {}
@@ -94,8 +98,8 @@ async function verifyIdentity({ role, registeredName, nin, licenceNumber, dob, s
     }
   }
 
-  // ── Driver's licence + face (drivers only) ────────────────────────────────
-  if (role === 'driver') {
+  // ── Driver's licence + face (drivers) ─────────────────────────────────────
+  if (isDriver) {
     if (!licenceNumber || !dob) {
       add('Licence details provided', false,
         !licenceNumber ? 'No licence number captured' : 'Date of birth is required for the licence check')
@@ -121,20 +125,15 @@ async function verifyIdentity({ role, registeredName, nin, licenceNumber, dob, s
         return { status: 'error', checks, summary: `Licence check failed: ${err.message}` }
       }
     }
-
-    // The point of running both: the two government records must describe the
-    // same human, not merely two valid documents.
-    if (ninName && licenceName) {
-      add('NIN and licence are the same person', namesAgree(ninName, licenceName),
-        `NIN "${ninName}" vs licence "${licenceName}"`)
-    }
   }
 
-  // Registered name is advisory — people abbreviate, and the government record
-  // is the authority. Recorded so an admin can see a deliberate mismatch.
-  if (ninName && registeredName) {
-    add('Matches the name they registered with', namesAgree(ninName, registeredName),
-      `registered "${registeredName}" vs NIN "${ninName}"`)
+  // Registered name vs the government record. Advisory — people abbreviate,
+  // and the document is the authority — but a wholly different name is worth
+  // an admin's eye.
+  const officialName = ninName || licenceName
+  if (officialName && registeredName) {
+    add('Matches the name they registered with', namesAgree(officialName, registeredName),
+      `registered "${registeredName}" vs document "${officialName}"`)
   }
 
   const required = checks.filter(c => c.name !== 'Matches the name they registered with')

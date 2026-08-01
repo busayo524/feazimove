@@ -1,7 +1,7 @@
 {
   "404": "404.html",
   "name": "feazimove",
-  "version": "1.2.25",
+  "version": "1.2.26",
   "homepage": "index.html",
   "login_redirect": "index.html"
 }

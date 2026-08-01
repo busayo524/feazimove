@@ -40,6 +40,108 @@ const NEON  = '#ccff00'   // lime — used for the CURRENT (active) step
 const G_BG  = '#eef6f1'   // light green tint
 
 /* ── sub-components ───────────────────────────────────────────────────── */
+/* Live face capture — the image Prembly compares against the government record.
+   Riders and drivers now share this exact component, so neither path is weaker
+   than the other. Phones get the camera only; the file fallback appears on
+   desktop alone, where webcams are often missing or blocked. */
+function FaceCapture({ title, subtitle, preview, onImage, error, isDesktop }) {
+  const inputRef = useRef(null)
+  const [showCamera, setShowCamera] = useState(false)
+
+  function fromFile(file) {
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = e => onImage(e.target.result)
+    reader.readAsDataURL(file)
+  }
+  const capture = dataUrl => { onImage(dataUrl); setShowCamera(false) }
+
+  return (
+    <>
+      {showCamera && <CameraModal onCapture={capture} onClose={() => setShowCamera(false)}/>}
+      <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 28, marginBottom: 28 }}>
+        <p style={secHead}>{title}</p>
+        <p style={secSub}>{subtitle}</p>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
+          <div
+            onClick={() => setShowCamera(true)}
+            style={{
+              width: 110, height: 110, borderRadius: '50%', flexShrink: 0,
+              background: preview ? 'transparent' : '#f8f8f8',
+              border: `2.5px dashed ${preview ? '#22c55e' : error ? '#e53935' : '#d1d5db'}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', overflow: 'hidden', position: 'relative',
+              transition: 'border-color 0.2s',
+            }}
+          >
+            {preview ? (
+              <img src={preview} alt="Face preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <div style={{ textAlign: 'center', padding: 8 }}>
+                <Camera size={30} color={error ? '#e53935' : '#aaa'} />
+                <p style={{ fontSize: 11, color: error ? '#e53935' : '#aaa', margin: '6px 0 0', lineHeight: 1.3 }}>Tap to open<br/>camera</p>
+              </div>
+            )}
+          </div>
+
+          <input ref={inputRef} type="file" accept="image/*" style={{ display: 'none' }}
+            onChange={e => fromFile(e.target.files[0])} />
+
+          <div style={{ flex: 1, minWidth: 200 }}>
+            {preview ? (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Check size={13} color="#fff" strokeWidth={3}/>
+                  </span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: '#15803d' }}>Photo captured!</span>
+                </div>
+                <p style={{ fontSize: 13, color: '#666', marginBottom: 12, lineHeight: 1.5 }}>
+                  Make sure your face is clearly visible and well lit.
+                </p>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <button type="button" onClick={() => setShowCamera(true)}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, background: '#ccff00', border: 'none', color: '#243800', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    <Camera size={13}/> Retake with camera
+                  </button>
+                  {isDesktop && (
+                    <button type="button" onClick={() => inputRef.current?.click()}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, background: '#fff', border: '1.5px solid #ddd', color: '#444', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      <Upload size={13}/> Upload photo
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div>
+                <p style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a', marginBottom: 6 }}>Take your photo</p>
+                <p style={{ fontSize: 13, color: '#666', marginBottom: 14, lineHeight: 1.6 }}>
+                  Opens your live camera — works on both <strong>desktop</strong> and mobile.<br/>
+                  The image is mirrored so it looks natural.
+                </p>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <button type="button" onClick={() => setShowCamera(true)}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, background: '#ccff00', border: 'none', color: '#243800', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(36,56,0,0.2)' }}>
+                    <Camera size={15}/> Open Camera
+                  </button>
+                  {isDesktop && (
+                    <button type="button" onClick={() => inputRef.current?.click()}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, background: '#fff', border: '1.5px solid #ddd', color: '#444', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      <Upload size={15}/> Upload Photo
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        {error && <p style={{ ...err, marginTop: 10 }}>{error}</p>}
+      </div>
+    </>
+  )
+}
+
 function UploadBox({ label, required, file, onFile, error }) {
   const ref = useRef()
   return (
@@ -401,6 +503,7 @@ export default function Register() {
   // Selfie
   const selfieInputRef   = useRef(null)
   const [selfiePreview, setSelfiePreview] = useState(null)
+  const [headshotPreview, setHeadshotPreview] = useState(null) // driver's live headshot
   const [showCamera, setShowCamera] = useState(false)
   // File upload is offered alongside the camera only for desktop/laptop —
   // phones/tablets already have a fast native camera, so we keep that flow simple.
@@ -422,11 +525,11 @@ export default function Register() {
   // ID format check — updates live as user types
   const [idVerified, setIdVerified] = useState(false)
 
+  // Riders are always NIN, so the live tick is simply "is this a valid NIN".
   function fId(field, val) {
     f(field, val)
-    const nextType   = field === 'idType'   ? val : form.idType
     const nextNumber = field === 'idNumber' ? val : form.idNumber
-    setIdVerified(!!(nextType && nextNumber && validateIdNumber(nextType, nextNumber)))
+    setIdVerified(/^\d{11}$/.test(String(nextNumber || '').replace(/\s/g, '')))
   }
 
   const [form, setForm] = useState({
@@ -519,13 +622,14 @@ export default function Register() {
     // Check the actual upload file, not just the preview — the preview can
     // exist even when the File conversion failed, and only the file is sent.
     if (!files.selfie) e.selfie = 'Please take a selfie photo to use as your profile picture.'
-    if (!form.idType) e.idType = 'Select an ID type.'
+    // Riders are always identified by NIN — no ID-type choice, no document
+    // upload. The number is verified against the national database and matched
+    // to the selfie.
     if (!form.idNumber) {
-      e.idNumber = 'Enter your ID number.'
-    } else if (form.idType && !validateIdNumber(form.idType, form.idNumber)) {
-      e.idNumber = `Invalid format. ${ID_FORMATS[form.idType]?.hint || ''}`
+      e.idNumber = 'Enter your NIN.'
+    } else if (!/^\d{11}$/.test(form.idNumber.replace(/\s/g, ''))) {
+      e.idNumber = 'Your NIN must be exactly 11 digits.'
     }
-    if (!files.otherIdDoc) e.otherIdDoc = 'Upload a valid government-issued ID document.'
     setErrors(e); return !Object.keys(e).length
   }
   function v2Driver() {
@@ -537,7 +641,6 @@ export default function Register() {
     if (!form.plateNumber)  e.plateNumber  = 'Enter plate number.'
     if (!form.driversLicenseNumber) e.driversLicenseNumber = "Enter your driver's licence number."
     if (!form.vehicleYear)  e.vehicleYear  = 'Enter year of manufacture.'
-    if (!files.driverLicense)   e.driverLicense   = "Upload your driver's license."
     if (!files.carFront)        e.carFront        = 'Upload a front-view photo of your car.'
     if (!files.profilePhoto)    e.profilePhoto    = 'Upload a clear profile / headshot photo.'
     setErrors(e); return !Object.keys(e).length
@@ -892,134 +995,37 @@ export default function Register() {
               <p style={{ fontSize: 14, color: '#666', marginBottom: 28 }}>Provide your government-issued ID to verify your identity.</p>
 
               {/* ── Selfie / Profile Photo ── */}
-              {showCamera && <CameraModal onCapture={handleSelfieDataUrl} onClose={() => setShowCamera(false)}/>}
-              <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 28, marginBottom: 28 }}>
-                <p style={secHead}>Profile Photo</p>
-                <p style={secSub}>Take a clear selfie — this will be your profile picture on FeaziMove.</p>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
-                  {/* Circle preview / camera trigger */}
-                  <div
-                    onClick={() => setShowCamera(true)}
-                    style={{
-                      width: 110, height: 110, borderRadius: '50%', flexShrink: 0,
-                      background: selfiePreview ? 'transparent' : '#f8f8f8',
-                      border: `2.5px dashed ${selfiePreview ? '#22c55e' : errors.selfie ? '#e53935' : '#d1d5db'}`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      cursor: 'pointer', overflow: 'hidden', position: 'relative',
-                      transition: 'border-color 0.2s',
-                    }}
-                  >
-                    {selfiePreview ? (
-                      <img src={selfiePreview} alt="Selfie preview"
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <div style={{ textAlign: 'center', padding: 8 }}>
-                        <Camera size={30} color={errors.selfie ? '#e53935' : '#aaa'} />
-                        <p style={{ fontSize: 11, color: errors.selfie ? '#e53935' : '#aaa', margin: '6px 0 0', lineHeight: 1.3 }}>Tap to open<br/>camera</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Hidden file input — fallback for retake from files */}
-                  <input
-                    ref={selfieInputRef}
-                    type="file"
-                    accept="image/*"
-                    style={{ display: 'none' }}
-                    onChange={e => handleSelfie(e.target.files[0])}
-                  />
-
-                  <div style={{ flex: 1, minWidth: 200 }}>
-                    {selfiePreview ? (
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                          <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <Check size={13} color="#fff" strokeWidth={3}/>
-                          </span>
-                          <span style={{ fontSize: 14, fontWeight: 700, color: '#15803d' }}>Photo uploaded!</span>
-                        </div>
-                        <p style={{ fontSize: 13, color: '#666', marginBottom: 12, lineHeight: 1.5 }}>
-                          This will be your profile picture. Make sure your face is clearly visible.
-                        </p>
-                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                          <button type="button"
-                            onClick={() => setShowCamera(true)}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, background: '#ccff00', border: 'none', color: '#243800', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                            <Camera size={13}/> Retake with camera
-                          </button>
-                          {isDesktop && (
-                            <button type="button"
-                              onClick={() => selfieInputRef.current?.click()}
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, background: '#fff', border: '1.5px solid #ddd', color: '#444', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                              <Upload size={13}/> Upload photo
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ) : (
-                      <div>
-                        <p style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a', marginBottom: 6 }}>Take your selfie</p>
-                        <p style={{ fontSize: 13, color: '#666', marginBottom: 14, lineHeight: 1.6 }}>
-                          Opens your live camera — works on both <strong>desktop</strong> and mobile.<br/>
-                          The image is mirrored so it looks natural.
-                        </p>
-                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                          <button type="button"
-                            onClick={() => setShowCamera(true)}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, background: '#ccff00', border: 'none', color: '#243800', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(36,56,0,0.2)' }}>
-                            <Camera size={15}/> Open Camera
-                          </button>
-                          {isDesktop && (
-                            <button type="button"
-                              onClick={() => selfieInputRef.current?.click()}
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, background: '#fff', border: '1.5px solid #ddd', color: '#444', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                              <Upload size={15}/> Upload Photo
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                {errors.selfie && (
-                  <p style={{ ...err, marginTop: 10 }}>{errors.selfie}</p>
-                )}
-              </div>
+              <FaceCapture
+                title="Profile Photo"
+                subtitle="Take a clear selfie — this is your profile picture, and we match it against your NIN."
+                preview={selfiePreview}
+                error={errors.selfie}
+                isDesktop={isDesktop}
+                onImage={dataUrl => {
+                  setSelfiePreview(dataUrl)
+                  setFile('selfie', dataUrlToFile(dataUrl, 'selfie.jpg'))
+                }}
+              />
 
               <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 28 }}>
-                <p style={secHead}>ID Information</p>
-                <p style={secSub}>Select your ID type and enter the number.</p>
+                <p style={secHead}>Identity Verification</p>
+                <p style={secSub}>
+                  Enter your NIN. We verify it against the national database and check that it
+                  belongs to you — no document upload needed.
+                </p>
 
-                {/* ID Type */}
+                {/* NIN — live format check with green tick. Riders are always
+                    identified by NIN, so there is no ID-type choice to make. */}
                 <div style={{ marginBottom: 18 }}>
-                  <label style={lbl}>ID Type <Req /></label>
-                  <select value={form.idType} onChange={e => fId('idType', e.target.value)} style={{ ...inp(!!errors.idType), cursor: 'pointer' }}>
-                    <option value="">Select ID type</option>
-                    {ID_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                  {form.idType && (
-                    <p style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
-                      Format: {ID_FORMATS[form.idType]?.hint}
-                    </p>
-                  )}
-                  {errors.idType && <p style={err}>{errors.idType}</p>}
-                </div>
-
-                {/* ID Number — live format check with green tick */}
-                <div style={{ marginBottom: 18 }}>
-                  <label style={lbl}>ID Number <Req /></label>
+                  <label style={lbl}>National Identification Number (NIN) <Req /></label>
                   <div style={{ position: 'relative' }}>
                     <input
                       type="text"
                       value={form.idNumber}
                       onChange={e => fId('idNumber', e.target.value)}
-                      placeholder={
-                        form.idType === 'National ID (NIN)' ? '12345678901' :
-                        form.idType === "Driver's License"   ? 'LAG290184543' :
-                        form.idType === "Voter's Card"       ? '9876GH7654321098765' :
-                        'Enter your ID number'
-                      }
+                      placeholder="12345678901"
+                      inputMode="numeric"
+                      maxLength={11}
                       style={{
                         ...inp(!!errors.idNumber && !idVerified),
                         paddingRight: idVerified ? 44 : 14,
@@ -1043,21 +1049,6 @@ export default function Register() {
                   {errors.idNumber && !idVerified && <p style={err}>{errors.idNumber}</p>}
                 </div>
 
-
-                {/* Other Valid ID Upload */}
-                <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 24 }}>
-                  <p style={{ ...secHead, marginBottom: 3 }}>Other Valid Means of ID</p>
-                  <p style={{ ...secSub, marginBottom: 14 }}>
-                    Upload a valid government-issued ID — e.g. National ID (NIN) slip, International Passport, Permanent Voter's Card, FRSC Driver's License, or CAC Business Certificate. Ensure the document is clear, well-lit, and fully visible with no blur or cut-off edges.
-                  </p>
-                  <UploadBox
-                    label="Valid ID Document"
-                    required
-                    file={files.otherIdDoc}
-                    onFile={v => setFile('otherIdDoc', v)}
-                    error={errors.otherIdDoc}
-                  />
-                </div>
 
               </div>
             </>}
@@ -1129,10 +1120,11 @@ export default function Register() {
                   <p style={secHead}>Required Documents</p>
                   <p style={secSub}>Driver's License, Vehicle Registration, Roadworthiness Certificate, car photos, and profile photo are mandatory. Insurance Certificate and Utility Bill are optional.</p>
 
-                  {/* Row 1 — License & Registration */}
-                  <p style={{ fontSize: 12, fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 14px' }}>License &amp; Registration</p>
+                  {/* Row 1 — Registration. The licence itself is no longer
+                      uploaded: the licence NUMBER above is verified directly
+                      against the FRSC record, which a photo never was. */}
+                  <p style={{ fontSize: 12, fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 14px' }}>Vehicle Registration</p>
                   <div className="reg-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 28 }}>
-                    <UploadBox label="Driver's License" required file={files.driverLicense} onFile={v => setFile('driverLicense', v)} error={errors.driverLicense} />
                     <UploadBox label="Vehicle Registration (Optional)" file={files.vehicleReg} onFile={v => setFile('vehicleReg', v)} />
                   </div>
 
@@ -1144,12 +1136,26 @@ export default function Register() {
                   </div>
 
                   {/* Row 3 — Compliance */}
-                  <p style={{ fontSize: 12, fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 14px' }}>Compliance &amp; Identity</p>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 14px' }}>Compliance</p>
                   <div className="reg-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                     <UploadBox label="Roadworthiness Certificate (Optional)" file={files.roadworthiness} onFile={v => setFile('roadworthiness', v)} />
-                    <UploadBox label="Profile / Headshot Photo" required file={files.profilePhoto} onFile={v => setFile('profilePhoto', v)} error={errors.profilePhoto} />
                   </div>
                 </div>
+
+                {/* Live headshot — the same camera step riders get. This is the
+                    face matched against the FRSC licence record, so it must be
+                    captured, not chosen from the device's photo library. */}
+                <FaceCapture
+                  title="Profile / Headshot Photo"
+                  subtitle="Take a clear photo of your face — we match it against your driver's licence record."
+                  preview={headshotPreview}
+                  error={errors.profilePhoto}
+                  isDesktop={isDesktop}
+                  onImage={dataUrl => {
+                    setHeadshotPreview(dataUrl)
+                    setFile('profilePhoto', dataUrlToFile(dataUrl, 'headshot.jpg'))
+                  }}
+                />
               </div>
             </>}
 
@@ -1176,8 +1182,9 @@ export default function Register() {
                       ['City',         form.city],
                       ['Account Type', role === 'driver' ? 'Driver' : 'Rider'],
                       ...(role === 'rider'
-                        ? [['ID Type', form.idType]]
-                        : [['Vehicle', `${form.vehicleMake} ${form.vehicleModel}, ${form.vehicleColor} (${form.vehicleType})`]]),
+                        ? [['NIN', form.idNumber]]
+                        : [['Vehicle', `${form.vehicleMake} ${form.vehicleModel}, ${form.vehicleColor} (${form.vehicleType})`],
+                           ["Driver's Licence", form.driversLicenseNumber]]),
                     ].filter(([,v]) => v).map(([k, v]) => (
                       <div key={k}>
                         <p style={{ fontSize: 11, color: '#888', margin: 0 }}>{k}</p>
