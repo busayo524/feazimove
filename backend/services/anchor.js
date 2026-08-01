@@ -208,14 +208,26 @@ async function createVirtualNuban({ settlementAccountId, provider } = {}) {
     })
     return res.data.data // attributes: { accountNumber, accountName, bank: { name }, permanent, status }
   }
+  // Which provider actually works differs per environment AND changes as Anchor
+  // provisions them: providus is the one proven in sandbox, ninepsb the one
+  // proven on live (providus returns 400 "Virtual Account not created" there).
+  // So try the configured provider first, then fall back to the other one
+  // rather than to a hardcoded name — whichever is enabled today, a rider still
+  // gets an account, and it self-corrects when Anchor enables the other.
+  const primary = provider || PROVIDER
+  const alternate = primary === 'providus' ? 'ninepsb' : 'providus'
   try {
-    return await attempt(provider || PROVIDER)
+    return await attempt(primary)
   } catch (first) {
-    // Providers differ per environment — providus is the one proven in sandbox
-    if ((provider || PROVIDER) !== 'providus') {
-      try { return await attempt('providus') } catch (err) { throw anchorError(err, 'Could not create an account number.') }
+    try {
+      const acct = await attempt(alternate)
+      console.warn(`Anchor: provider '${primary}' rejected the account, created via '${alternate}' instead`)
+      return acct
+    } catch {
+      // Report the CONFIGURED provider's error — the alternate is a safety net,
+      // and its failure is rarely the one worth debugging.
+      throw anchorError(first, 'Could not create an account number.')
     }
-    throw anchorError(first, 'Could not create an account number.')
   }
 }
 
