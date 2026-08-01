@@ -123,16 +123,24 @@ async function verifyIdentity({ role, registeredName, nin, licenceNumber, dob, s
         !licenceNumber ? 'No licence number captured' : 'Date of birth is required for the licence check')
     } else {
       try {
+        // first_name / last_name are REQUIRED even though the face endpoint's
+        // docs list only number/dob/image — omitting them returns
+        // 400 "Invalid request data" for every licence, valid or not.
+        const parts = String(registeredName || '').trim().split(/\s+/).filter(Boolean)
         const { httpStatus, data } = await call('/verification/drivers_license/face', {
           number: licenceNumber,
           dob: typeof dob === 'string' ? dob.slice(0, 10) : new Date(dob).toISOString().slice(0, 10),
+          first_name: parts[0] || '',
+          last_name: parts.length > 1 ? parts[parts.length - 1] : '',
           image,
         })
         if (ourFault(httpStatus, data)) {
           return { status: 'error', checks,
             summary: `Prembly rejected the request (HTTP ${httpStatus}): ${data?.message || 'check the API key and account balance'}` }
         }
-        const d = data.data || data.drivers_license || {}
+        // The licence record comes back under `frsc_data` (Prembly's docs) —
+        // the other keys are defensive fallbacks in case that ever changes.
+        const d = data.frsc_data || data.data || data.drivers_license || {}
         licenceName = joinName(d.firstName || d.firstname, d.middleName || d.middlename,
           d.lastName || d.lastname)
         const verified = (data.verification?.status || '').toUpperCase() === 'VERIFIED'

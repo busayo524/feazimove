@@ -17,9 +17,10 @@
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') })
 const axios = require('axios')
 
-const [licence, dob] = process.argv.slice(2)
-if (!licence || !dob) {
-  console.error('Usage: node scripts/test-licence.js <LICENCE_NUMBER> <YYYY-MM-DD>')
+const [licence, dob, firstName, lastName] = process.argv.slice(2)
+if (!licence || !dob || !firstName || !lastName) {
+  console.error('Usage: node scripts/test-licence.js <LICENCE_NUMBER> <YYYY-MM-DD> <FIRST_NAME> <LAST_NAME>')
+  console.error('first/last name are REQUIRED by Prembly even though the docs omit them.')
   process.exit(1)
 }
 if (!/^\d{4}-\d{2}-\d{2}$/.test(dob)) {
@@ -39,13 +40,14 @@ const mask = s => s.slice(0, 3) + '•'.repeat(Math.max(0, s.length - 6)) + s.sl
 
   const res = await axios.post(
     'https://api.prembly.com/verification/drivers_license/face',
-    { number: licence, dob, image: 'aW52YWxpZC1wbGFjZWhvbGRlcg==' },
+    { number: licence, dob, first_name: firstName, last_name: lastName,
+      image: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' },
     { headers: { 'x-api-key': key, 'Content-Type': 'application/json' },
       timeout: 45000, validateStatus: () => true }
   )
 
   const d = res.data || {}
-  const rec = d.data || d.drivers_license || {}
+  const rec = d.frsc_data || d.data || d.drivers_license || {}
   const face = d.face_data || {}
   const name = [rec.firstName || rec.firstname, rec.middleName || rec.middlename,
                 rec.lastName || rec.lastname].filter(Boolean).join(' ')
