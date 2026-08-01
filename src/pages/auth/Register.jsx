@@ -10,6 +10,7 @@ import { track } from '../../services/analytics'
 import faviconImg from '../../assets/favicon.png'
 import PhoneInput from '../../components/PhoneInput'
 import { dataUrlToFile } from '../../utils/dataUrlToFile'
+import { HomeLogoLink } from '../../components/StandaloneApp'
 import { compressImage } from '../../utils/compressImage'
 
 /* ── helpers ──────────────────────────────────────────────────────────── */
@@ -764,15 +765,16 @@ export default function Register() {
 
       {/* ── Top bar ── */}
       <div style={{ background: '#fff', borderBottom: '1px solid #e8e8e8', padding: '14px clamp(20px,5vw,60px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-          <img src={faviconImg} alt="FeaziMove" style={{ width: 38, height: 38, objectFit: 'contain' }} />
+        {/* Logo — links home in the browser, inert in the installed app. */}
+        <HomeLogoLink style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+          <img src={faviconImg} alt="FeaziMove" draggable={false} style={{ width: 38, height: 38, objectFit: 'contain' }} />
           <div>
             <p style={{ margin: 0, fontSize: 16, fontWeight: 900, color: '#1a1a1a', lineHeight: 1.15 }}>FeaziMove</p>
             <p style={{ margin: 0, fontSize: 11, color: '#888', lineHeight: 1.15 }}>
               {role === 'driver' ? 'Driver Registration Portal' : 'Rider Registration Portal'}
             </p>
           </div>
-        </Link>
+        </HomeLogoLink>
         <Link to="/login" style={{ fontSize: 13, fontWeight: 600, color: '#555', textDecoration: 'none' }}>
           Already have an account?{' '}
           <span style={{ color: G, textDecoration: 'underline' }}>Log in</span>
