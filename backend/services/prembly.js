@@ -22,7 +22,21 @@ const BASE_URL = (process.env.PREMBLY_BASE_URL || 'https://api.prembly.com').rep
 // barely-passing match still gets a human look.
 const FACE_MIN = Number(process.env.PREMBLY_FACE_MIN_CONFIDENCE) || 0.5
 
-const configured = () => !!process.env.PREMBLY_API_KEY
+// A placeholder left in .env is worse than nothing: it would make us attempt
+// real calls, get rejected, and record genuine applicants as FAILED.
+const configured = () => {
+  const k = (process.env.PREMBLY_API_KEY || '').trim()
+  return !!k && !/^your_|_here$|^replace/i.test(k)
+}
+
+// Distinguishes "Prembly refused US" from "this person's document is wrong".
+// Conflating them would accuse a real applicant of failing verification when
+// the fault is our key, our quota or their outage.
+function ourFault(httpStatus, data) {
+  if (httpStatus === 401 || httpStatus === 403 || httpStatus === 429 || httpStatus >= 500) return true
+  const msg = `${data?.message || ''} ${data?.detail || ''}`
+  return /api\s*key|unauthor|forbidden|not\s*permitted|insufficient|wallet|balance|subscri|quota/i.test(msg)
+}
 
 async function call(path, body) {
   const res = await axios.post(`${BASE_URL}${path}`, body, {
@@ -81,7 +95,11 @@ async function verifyIdentity({ role, registeredName, nin, licenceNumber, dob, s
     add('NIN provided', false, 'No NIN was captured at registration')
   } else if (!isDriver) {
     try {
-      const { data } = await call('/verification/nin_w_face', { number: nin, image })
+      const { httpStatus, data } = await call('/verification/nin_w_face', { number: nin, image })
+      if (ourFault(httpStatus, data)) {
+        return { status: 'error', checks,
+          summary: `Prembly rejected the request (HTTP ${httpStatus}): ${data?.message || 'check the API key and account balance'}` }
+      }
       const n = data.nin_data || data.data || {}
       ninName = joinName(n.firstname || n.firstName, n.middlename || n.middleName,
         n.surname || n.lastName || n.lastname)
@@ -105,11 +123,15 @@ async function verifyIdentity({ role, registeredName, nin, licenceNumber, dob, s
         !licenceNumber ? 'No licence number captured' : 'Date of birth is required for the licence check')
     } else {
       try {
-        const { data } = await call('/verification/drivers_license/face', {
+        const { httpStatus, data } = await call('/verification/drivers_license/face', {
           number: licenceNumber,
           dob: typeof dob === 'string' ? dob.slice(0, 10) : new Date(dob).toISOString().slice(0, 10),
           image,
         })
+        if (ourFault(httpStatus, data)) {
+          return { status: 'error', checks,
+            summary: `Prembly rejected the request (HTTP ${httpStatus}): ${data?.message || 'check the API key and account balance'}` }
+        }
         const d = data.data || data.drivers_license || {}
         licenceName = joinName(d.firstName || d.firstname, d.middleName || d.middlename,
           d.lastName || d.lastname)
