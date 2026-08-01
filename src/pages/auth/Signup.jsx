@@ -237,13 +237,13 @@ export default function Signup() {
   return (
     <div style={{ minHeight: '100vh', background: '#f2f3f4', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
 
-      {/* Logo */}
-      <Link to="/" style={{ display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: 12, textDecoration: 'none', marginBottom: 28 }}>
-        <img src={faviconImg} alt="FeaziMove" style={{ width: 52, height: 52, objectFit: 'contain' }} />
+      {/* Logo — not a link: purely decorative. */}
+      <div style={{ display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 28, userSelect: 'none', pointerEvents: 'none' }}>
+        <img src={faviconImg} alt="FeaziMove" draggable={false} style={{ width: 52, height: 52, objectFit: 'contain' }} />
         <span style={{ fontSize: 26, letterSpacing: '-0.02em', color: DARK }}>
           <span style={{ fontWeight: 500 }}>Feazi</span><span style={{ fontWeight: 900 }}>Move</span>
         </span>
-      </Link>
+      </div>
 
       {/* ══ PHASE 1 — FORM ══ */}
       {phase === 'form' && (<>

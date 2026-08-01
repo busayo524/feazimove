@@ -184,12 +184,13 @@ export default function VerifyOtp() {
         padding: '14px clamp(20px,5vw,60px)',
         display: 'flex', alignItems: 'center', gap: 10,
       }}>
-        <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-          <img src={faviconImg} alt="FeaziMove" style={{ width: 34, height: 34, objectFit: 'contain' }} />
+        {/* Logo — not a link: purely decorative. */}
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, userSelect: 'none', pointerEvents: 'none' }}>
+          <img src={faviconImg} alt="FeaziMove" draggable={false} style={{ width: 34, height: 34, objectFit: 'contain' }} />
           <span style={{ fontSize: 15, fontWeight: 900, color: DARK, letterSpacing: '-0.3px' }}>
             Feazi<span style={{ color: GREEN }}>Move</span>
           </span>
-        </Link>
+        </div>
       </nav>
 
       <main style={{

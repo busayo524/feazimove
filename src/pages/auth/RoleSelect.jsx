@@ -92,10 +92,11 @@ export default function RoleSelect() {
 
       {/* Nav */}
       <nav className="fm-nav">
-        <Link to="/" className="fm-logo">
-          <img src={faviconImg} alt="FeaziMove" style={{ width: 36, height: 36, objectFit: 'contain' }} />
+        {/* Logo — not a link: purely decorative. */}
+        <div className="fm-logo" style={{ userSelect: 'none', pointerEvents: 'none' }}>
+          <img src={faviconImg} alt="FeaziMove" draggable={false} style={{ width: 36, height: 36, objectFit: 'contain' }} />
           <span>Feazi<span style={{ color: LIME }}>Move</span></span>
-        </Link>
+        </div>
         <Link to="/login" className="fm-signin-nav">Sign in</Link>
       </nav>
 
