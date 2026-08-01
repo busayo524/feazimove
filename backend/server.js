@@ -559,6 +559,15 @@ async function runMigrations() {
     ) d
     WHERE u.id = d.user_id AND u.avatar_path IS NULL;
 
+    -- Prembly identity verification results (NIN + face; licence + face for
+    -- drivers). identity_detail stores the verdict breakdown only, never the
+    -- full Prembly payload with its biometric and next-of-kin data.
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS drivers_license_number VARCHAR(40);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS identity_status     VARCHAR(15);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS identity_summary    VARCHAR(300);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS identity_detail     JSONB;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS identity_checked_at TIMESTAMPTZ;
+
     -- Contact/feedback messages from the public site. Stored as well as
     -- emailed so an SMTP outage can never lose a customer's message.
     CREATE TABLE IF NOT EXISTS contact_messages (

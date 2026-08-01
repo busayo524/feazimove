@@ -556,6 +556,18 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS bvn_encrypted TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret     TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled_at TIMESTAMPTZ;
 
+-- ── Prembly identity verification ───────────────────────────────────────────
+-- Riders are checked as NIN + face; drivers additionally as licence + face,
+-- with both government records required to describe the same person.
+-- identity_detail holds ONLY the verdict breakdown an admin needs — never the
+-- full Prembly payload, which carries biometric and next-of-kin data we have
+-- no reason to keep.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS drivers_license_number VARCHAR(40);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS identity_status     VARCHAR(15);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS identity_summary    VARCHAR(300);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS identity_detail     JSONB;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS identity_checked_at TIMESTAMPTZ;
+
 -- ── Contact / feedback messages from the public site ────────────────────────
 -- Stored as well as emailed: an SMTP outage must not lose a customer's message,
 -- and support needs a queue it can work through rather than an inbox.

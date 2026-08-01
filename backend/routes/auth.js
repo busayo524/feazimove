@@ -16,6 +16,7 @@ const { saveUpload, sendStored } = require('../services/fileStorage')
 const { generateOtp, sendOtpEmail, sendActionCodeEmail, sendRegistrationLink, sendWelcomeEmail } = require('../services/emailService')
 const { issueRefreshToken, rotateRefreshToken, revokeRefreshToken, revokeAllForUser } = require('../services/refreshTokens')
 const { createChallenge, consumeChallenge } = require('../services/actionChallenges')
+const prembly = require('../services/prembly')
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
@@ -36,6 +37,34 @@ function capabilitiesFor(role) {
     canDrive: role === 'driver',
     activeRole: role,              // never leave this to the 'rider' default
   }
+}
+
+/**
+ * Fire-and-forget identity verification (Prembly). Stores the verdict on the
+ * user so the admin approval screen can show it. Any failure is recorded as
+ * 'error' rather than thrown — a Prembly outage must never stop someone
+ * registering, and an admin can re-run it.
+ */
+function runIdentityCheck({ userId, role, registeredName, nin, licenceNumber, dob, selfieBuffer }) {
+  ;(async () => {
+    let verdict
+    try {
+      verdict = await prembly.verifyIdentity({
+        role, registeredName, nin, licenceNumber, dob, selfieBuffer,
+      })
+    } catch (err) {
+      verdict = { status: 'error', checks: [], summary: `Verification error: ${err.message}` }
+    }
+    await query(
+      `UPDATE users SET identity_status = $1, identity_summary = $2,
+              identity_detail = $3, identity_checked_at = NOW()
+        WHERE id = $4`,
+      [verdict.status, (verdict.summary || '').slice(0, 300),
+       JSON.stringify({ checks: verdict.checks || [], ninName: verdict.ninName || null,
+                        licenceName: verdict.licenceName || null }),
+       userId]
+    )
+  })().catch(err => console.error('identity check write failed:', err.message))
 }
 
 // ── Endpoint-scoped rate limits ───────────────────────────────────────────────
@@ -346,6 +375,8 @@ router.post('/register',
     body('plateNumber').optional({ checkFalsy: true }).trim().isLength({ max: 20 }).escape(),
     body('vehicleYear').optional({ checkFalsy: true }).isInt({ min: 1980, max: 2100 }),
     body('vehicleColor').optional({ checkFalsy: true }).trim().isLength({ max: 30 }).escape(),
+    // FRSC licence number — drivers only; verified against Prembly with the DOB.
+    body('driversLicenseNumber').optional({ checkFalsy: true }).trim().isLength({ max: 40 }).escape(),
   ],
   validate,
   async (req, res, next) => {
@@ -397,7 +428,11 @@ router.post('/register',
              city          = COALESCE($11, city),
              area          = COALESCE($12, area),
              date_of_birth = COALESCE($13, date_of_birth),
-             gender        = COALESCE($14, gender)
+             gender        = COALESCE($14, gender),
+             -- FRSC licence number: needed by Prembly's licence check, which
+             -- takes the number + DOB. Previously only the licence IMAGE was
+             -- collected, which cannot be verified against anything.
+             drivers_license_number = COALESCE($16, drivers_license_number)
          WHERE id = $1
          RETURNING id, name, email, role`,
         [
@@ -407,6 +442,7 @@ router.post('/register',
           plateNumber || null, vehicleYear || null, vehicleColor || null,
           city || null, area || null, dateOfBirth || null, gender || null,
           role,
+          req.body.driversLicenseNumber || null,
         ]
       )
 
@@ -431,6 +467,21 @@ router.post('/register',
       if (facePhotoKey) {
         await query('UPDATE users SET avatar_path = $1 WHERE id = $2', [facePhotoKey, user.id])
       }
+
+      // Government identity verification (Prembly). Deliberately NOT awaited:
+      // NIN and FRSC lookups take several seconds and the applicant should not
+      // sit on a spinner for them. The verdict lands before an admin reviews
+      // the account, which is the only moment it actually matters.
+      const selfieBuffer = (uploaded.selfie?.[0] || uploaded.profilePhoto?.[0])?.buffer
+      runIdentityCheck({
+        userId: user.id,
+        role,
+        registeredName: name,
+        nin: idNumber || null,
+        licenceNumber: req.body.driversLicenseNumber || null,
+        dob: dateOfBirth || null,
+        selfieBuffer,
+      })
 
       // Return pending — no JWT yet. User must wait for admin approval.
       res.status(201).json({

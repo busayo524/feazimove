@@ -444,7 +444,7 @@ export default function Register() {
     // step 2 rider
     idType:'National ID (NIN)', idNumber:'',
     // step 2 driver
-    vehicleType:'', vehicleMake:'', vehicleModel:'', vehicleColor:'', plateNumber:'', vehicleYear:'',
+    vehicleType:'', vehicleMake:'', vehicleModel:'', vehicleColor:'', plateNumber:'', vehicleYear:'', driversLicenseNumber:'',
     // step 3
     agreeTerms: false, agreeBackground: false,
   })
@@ -535,6 +535,7 @@ export default function Register() {
     if (!form.vehicleModel) e.vehicleModel = 'Enter vehicle model.'
     if (!form.vehicleColor) e.vehicleColor = 'Enter vehicle color.'
     if (!form.plateNumber)  e.plateNumber  = 'Enter plate number.'
+    if (!form.driversLicenseNumber) e.driversLicenseNumber = "Enter your driver's licence number."
     if (!form.vehicleYear)  e.vehicleYear  = 'Enter year of manufacture.'
     if (!files.driverLicense)   e.driverLicense   = "Upload your driver's license."
     if (!files.carFront)        e.carFront        = 'Upload a front-view photo of your car.'
@@ -587,6 +588,7 @@ export default function Register() {
           if (form.vehicleModel) formData.append('vehicleModel', form.vehicleModel)
           if (form.vehicleColor) formData.append('vehicleColor', form.vehicleColor)
           if (form.plateNumber)  formData.append('plateNumber', form.plateNumber)
+          if (form.driversLicenseNumber) formData.append('driversLicenseNumber', form.driversLicenseNumber)
           if (form.vehicleYear)  formData.append('vehicleYear', form.vehicleYear)
         }
         // Shrink photos before upload — phone camera shots are 2–8MB and slow
@@ -1106,6 +1108,20 @@ export default function Register() {
                     <input type="number" value={form.vehicleYear} onChange={e => f('vehicleYear', e.target.value)}
                       placeholder="e.g. 2019" min="2000" max="2026" style={inp(!!errors.vehicleYear)} />
                     {errors.vehicleYear && <p style={err}>{errors.vehicleYear}</p>}
+                  </div>
+                  {/* The licence NUMBER (not just the photo) is what lets us
+                      verify the licence against the FRSC record and confirm the
+                      selfie is the same person. */}
+                  <div>
+                    <label style={lbl}>Driver's Licence Number <Req /></label>
+                    <input type="text" value={form.driversLicenseNumber}
+                      onChange={e => f('driversLicenseNumber', e.target.value.toUpperCase())}
+                      placeholder="e.g. AAD23208212298" style={inp(!!errors.driversLicenseNumber)} />
+                    {errors.driversLicenseNumber
+                      ? <p style={err}>{errors.driversLicenseNumber}</p>
+                      : <p style={{ fontSize:11.5, color:'#6b7280', marginTop:4 }}>
+                          Exactly as printed on your licence — we verify it against the FRSC record.
+                        </p>}
                   </div>
                 </div>
 

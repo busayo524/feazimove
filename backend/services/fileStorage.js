@@ -160,6 +160,19 @@ async function sendStored(req, res, key) {
   return res.send(buf)
 }
 
+// Read a stored file into a Buffer, whatever backend it lives in. Same
+// resolution as sendStored but returns bytes instead of writing a response —
+// needed by server-side consumers such as the Prembly face comparison, which
+// has to base64 the selfie. Returns null when the file is missing.
+async function readStored(req, key) {
+  if (String(key).startsWith('fs:')) {
+    const [, fileId] = String(key).split(':')
+    return await getVerifiedBuffer(req, fileId)
+  }
+  const filePath = path.join(UPLOAD_DIR, path.basename(key)) // basename defeats traversal
+  return fs.existsSync(filePath) ? fs.readFileSync(filePath) : null
+}
+
 // Best-effort delete — callers must not fail if the file is already gone.
 async function deleteStored(req, key) {
   try {
@@ -173,4 +186,4 @@ async function deleteStored(req, key) {
   } catch { /* already gone or store unreachable — DB is the source of truth */ }
 }
 
-module.exports = { saveUpload, sendStored, deleteStored }
+module.exports = { saveUpload, sendStored, readStored, deleteStored }

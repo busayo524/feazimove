@@ -8,9 +8,10 @@ const { body, param } = require('express-validator')
 const { query, pool } = require('../db')
 const { requireAuth, requireRole } = require('../middleware/auth')
 const { validate } = require('../middleware/validate')
-const { sendStored, deleteStored } = require('../services/fileStorage')
+const { sendStored, readStored, deleteStored } = require('../services/fileStorage')
 const { sendAccountCredentialsEmail, sendWelcomeEmail } = require('../services/emailService')
 const anchor = require('../services/anchor')
+const prembly = require('../services/prembly')
 const kycVault = require('../services/kycVault')
 const { payoutAllowed, sandboxRails, active: paymentsGateActive } = require('../services/paymentsGate')
 const totp = require('../services/totp')
@@ -471,6 +472,8 @@ router.get('/users/:id',
                   is_active, is_pending, rating, wallet_balance, created_at,
                   city, area, date_of_birth, gender,
                   id_type, id_number,
+                  drivers_license_number,
+                  identity_status, identity_summary, identity_detail, identity_checked_at,
                   bvn_submitted, bvn_last4, residential_address, anchor_kyc_status,
                   reserved_account_number, reserved_account_bank,
                   vehicle_type, vehicle_make, vehicle_model, plate_number, vehicle_year, vehicle_color,
@@ -502,6 +505,18 @@ router.get('/users/:id',
           city: u.city, area: u.area, dateOfBirth: u.date_of_birth, gender: u.gender,
           bankName: u.bank_name, bankAccountNumber: u.bank_account_number,
           idType: u.id_type, idNumber: u.id_number,
+          driversLicenseNumber: u.drivers_license_number,
+          // Government identity verification (Prembly). Advisory by design:
+          // it flags, an admin decides — a poor selfie must not auto-reject a
+          // real driver.
+          identity: {
+            status: u.identity_status,          // verified | failed | error | skipped
+            summary: u.identity_summary,
+            checks: u.identity_detail?.checks || [],
+            ninName: u.identity_detail?.ninName || null,
+            licenceName: u.identity_detail?.licenceName || null,
+            checkedAt: u.identity_checked_at,
+          },
           // Wallet/CBN KYC. Only the last 4 BVN digits are ever stored, so
           // this is a confirmation aid, not a retrievable BVN.
           bvnSubmitted: u.bvn_submitted,
@@ -2100,6 +2115,53 @@ router.post('/users/:id/kyc/reveal',
           revealedBy: admin.rows[0].email || req.user.id,
         },
       })
+    } catch (err) { next(err) }
+  }
+)
+
+// ── Re-run identity verification for one user ───────────────────────────────
+// Each call costs money, so this is deliberately manual: used when the first
+// attempt errored, or the applicant has since uploaded a better selfie.
+router.post('/users/:id/verify-identity',
+  [param('id').isUUID()],
+  validate,
+  async (req, res, next) => {
+    try {
+      if (!prembly.configured()) {
+        return res.status(503).json({ message: 'Prembly is not configured on this server.' })
+      }
+      const r = await query(
+        `SELECT u.id, u.name, u.role, u.id_number, u.drivers_license_number, u.date_of_birth,
+                COALESCE(
+                  (SELECT file_path FROM user_documents d WHERE d.user_id = u.id AND d.doc_type = 'selfie' ORDER BY uploaded_at DESC LIMIT 1),
+                  (SELECT file_path FROM user_documents d WHERE d.user_id = u.id AND d.doc_type = 'profilePhoto' ORDER BY uploaded_at DESC LIMIT 1),
+                  u.avatar_path
+                ) AS face_key
+           FROM users u WHERE u.id = $1`,
+        [req.params.id]
+      )
+      const u = r.rows[0]
+      if (!u) return res.status(404).json({ message: 'User not found.' })
+      if (!u.face_key) {
+        return res.status(422).json({ message: 'This user has no selfie on file to compare against.' })
+      }
+
+      const selfieBuffer = await readStored(req, u.face_key)
+      const verdict = await prembly.verifyIdentity({
+        role: u.role, registeredName: u.name, nin: u.id_number,
+        licenceNumber: u.drivers_license_number, dob: u.date_of_birth, selfieBuffer,
+      })
+      await query(
+        `UPDATE users SET identity_status = $1, identity_summary = $2,
+                identity_detail = $3, identity_checked_at = NOW() WHERE id = $4`,
+        [verdict.status, (verdict.summary || '').slice(0, 300),
+         JSON.stringify({ checks: verdict.checks || [], ninName: verdict.ninName || null,
+                          licenceName: verdict.licenceName || null }), u.id]
+      )
+      logActivity(req.user.id, 'Identity Re-verified', 'security', verdict.summary,
+        { req, target: { id: u.id, name: u.name } })
+      res.json({ identity: { status: verdict.status, summary: verdict.summary,
+        checks: verdict.checks, ninName: verdict.ninName, licenceName: verdict.licenceName } })
     } catch (err) { next(err) }
   }
 )

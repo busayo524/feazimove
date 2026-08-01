@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
 import { api } from '../../services/api'
 import { ArrowLeft, Ban, CheckCircle2, XCircle, FileText, AlertCircle, Car, Trash2,
-  Eye, EyeOff, ShieldCheck, Download } from 'lucide-react'
+  Eye, EyeOff, ShieldCheck, ShieldAlert, RefreshCw, Download } from 'lucide-react'
 
 const CARD = '#ffffff', BORDER = '#e5e7eb', TEXT = '#1a1a1a', MUTED = '#6b7280', BG = '#f5f7f2'
 const GREEN = '#2a6048', NEON = '#ccff00', OLIVE = '#243800'
@@ -131,6 +131,91 @@ function KycRevealModal({ userId, onRevealed, onClose }) {
           </form>
         )}
       </div>
+    </div>
+  )
+}
+
+/* The Prembly verdict. Advisory by design — it never blocks approval, but a
+   failure is loud enough that approving anyway is a deliberate act. */
+function IdentityVerdict({ identity, userId, onRerun }) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  const TONE = {
+    verified: { bg:'#f0fdf4', bd:'#86efac', fg:'#15803d', label:'IDENTITY VERIFIED',
+      icon:<ShieldCheck size={17} color="#15803d"/> },
+    failed:   { bg:'#fef2f2', bd:'#fca5a5', fg:'#b91c1c', label:'IDENTITY CHECK FAILED',
+      icon:<ShieldAlert size={17} color="#b91c1c"/> },
+    error:    { bg:'#fffbeb', bd:'#fcd34d', fg:'#b45309', label:'VERIFICATION COULD NOT RUN',
+      icon:<AlertCircle size={17} color="#b45309"/> },
+    skipped:  { bg:BG, bd:BORDER, fg:MUTED, label:'NOT VERIFIED',
+      icon:<AlertCircle size={17} color={MUTED}/> },
+  }
+  const t = TONE[identity.status] || TONE.skipped
+
+  async function rerun() {
+    setBusy(true); setError('')
+    try {
+      await api.post(`/admin/users/${userId}/verify-identity`)
+      onRerun()
+    } catch (err) {
+      setError(err.data?.message || 'Could not re-run verification.')
+    } finally { setBusy(false) }
+  }
+
+  return (
+    <div style={{ background:t.bg, border:`1.5px solid ${t.bd}`, borderRadius:14, padding:'16px 20px', marginBottom:20 }}>
+      <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap', marginBottom:10 }}>
+        {t.icon}
+        <p style={{ margin:0, fontWeight:900, fontSize:13, color:t.fg, letterSpacing:'0.04em' }}>{t.label}</p>
+        <span style={{ flex:1 }}/>
+        <button onClick={rerun} disabled={busy}
+          style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:8,
+            border:`1px solid ${BORDER}`, background:CARD, color:MUTED, fontWeight:700, fontSize:11.5,
+            cursor: busy?'wait':'pointer', fontFamily:'inherit' }}>
+          <RefreshCw size={12}/> {busy ? 'Checking…' : 'Re-run'}
+        </button>
+      </div>
+
+      <p style={{ fontSize:13.5, color:t.fg, lineHeight:1.55, marginBottom:12 }}>{identity.summary}</p>
+
+      {/* Each individual check, so a failure says exactly what disagreed. */}
+      {identity.checks?.length > 0 && (
+        <div style={{ display:'flex', flexDirection:'column', gap:6, marginBottom:10 }}>
+          {identity.checks.map((c, i) => (
+            <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:8 }}>
+              {c.passed
+                ? <CheckCircle2 size={14} color="#15803d" style={{ flexShrink:0, marginTop:2 }}/>
+                : <XCircle size={14} color="#b91c1c" style={{ flexShrink:0, marginTop:2 }}/>}
+              <div>
+                <p style={{ fontSize:13, fontWeight:600, color:TEXT }}>{c.name}</p>
+                {c.detail && <p style={{ fontSize:12, color:MUTED, marginTop:1 }}>{c.detail}</p>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {(identity.ninName || identity.licenceName) && (
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:'6px 20px',
+          borderTop:`1px solid ${t.bd}`, paddingTop:10 }}>
+          {identity.ninName && (
+            <div><p style={{ fontSize:11, color:MUTED, fontWeight:600 }}>NAME ON NIN</p>
+              <p style={{ fontSize:13, color:TEXT, fontWeight:700 }}>{identity.ninName}</p></div>
+          )}
+          {identity.licenceName && (
+            <div><p style={{ fontSize:11, color:MUTED, fontWeight:600 }}>NAME ON LICENCE</p>
+              <p style={{ fontSize:13, color:TEXT, fontWeight:700 }}>{identity.licenceName}</p></div>
+          )}
+        </div>
+      )}
+
+      {identity.checkedAt && (
+        <p style={{ fontSize:11.5, color:MUTED, marginTop:10 }}>
+          Checked {new Date(identity.checkedAt).toLocaleString('en-NG', { timeZone:'Africa/Lagos' })}
+        </p>
+      )}
+      {error && <p style={{ fontSize:12.5, color:'#ef4444', marginTop:8 }}>{error}</p>}
     </div>
   )
 }
@@ -392,6 +477,11 @@ export default function AdminUserDetail() {
           ['Wallet Balance', `₦${(user.walletBalance||0).toLocaleString()}`],
         ]}/>
       </Section>
+
+      {/* Government identity verification. Sits ABOVE the KYC section and the
+          approve/reject buttons' reach because it is the single most important
+          thing to read before approving someone. */}
+      {user.identity?.status && <IdentityVerdict identity={user.identity} userId={user.id} onRerun={load}/>}
 
       {/* Identity + wallet KYC — shown for riders AND drivers. Registration
           ID details and the CBN/BVN wallet check are one compliance story, so
