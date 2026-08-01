@@ -154,6 +154,10 @@ function IdentityVerdict({ identity, userId, onRerun }) {
   const t = TONE[identity.status] || TONE.skipped
 
   async function rerun() {
+    // Prembly bills per lookup (~₦120) and charges even when the record is not
+    // found, so a mistyped NIN costs the same as a real one. Never let this be
+    // a stray click.
+    if (!window.confirm('Re-run identity verification?\n\nThis performs a fresh government lookup and charges your Prembly wallet (about ₦120), even if no record is found.')) return
     setBusy(true); setError('')
     try {
       await api.post(`/admin/users/${userId}/verify-identity`)
