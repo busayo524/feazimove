@@ -289,6 +289,7 @@ export default function AdminUserDetail() {
       ['Gender', kyc.gender || ''], ['City', kyc.city || ''], ['Area', kyc.area || ''],
       ['Residential Address', kyc.residentialAddress || ''],
       ['ID Type', kyc.idType || ''], ['ID Number', kyc.idNumber || ''],
+      ["Driver's Licence Number", user?.driversLicenseNumber || ''],
       ['BVN (full)', kyc.bvn || (kyc.bvnUnavailable ? 'not recoverable' : '')],
       ['Wallet KYC Status', kyc.kycStatus || ''],
       ['Anchor Customer ID', kyc.anchorCustomerId || ''],
@@ -490,7 +491,11 @@ export default function AdminUserDetail() {
       {/* Identity + wallet KYC — shown for riders AND drivers. Registration
           ID details and the CBN/BVN wallet check are one compliance story, so
           they live in one section even when only half of it is filled in. */}
-      {(user.idType || user.idNumber || user.bvnSubmitted || user.residentialAddress) && (
+      {/* driversLicenseNumber must be in this condition: drivers are identified
+          by their licence, not a NIN, so idType/idNumber are empty for them and
+          the whole section used to vanish on exactly the accounts an admin most
+          needs to vet. */}
+      {(user.idType || user.idNumber || user.driversLicenseNumber || user.bvnSubmitted || user.residentialAddress) && (
         <Section
           title="Identity Verification/KYC"
           action={
@@ -524,6 +529,12 @@ export default function AdminUserDetail() {
           <InfoGrid rows={[
             ['ID Type',   user.idType || '—'],
             ['ID Number', kyc?.idNumber || user.idNumber || '—'],
+            // The number the applicant typed, alongside the verdict panel above
+            // that says whether it checked out. Shown for any driver even when
+            // blank, so a missing licence is visible rather than merely absent.
+            ...(user.driversLicenseNumber || user.role === 'driver'
+              ? [["Driver's Licence Number", user.driversLicenseNumber || '—']]
+              : []),
             // Masked until an authenticator code releases the real number.
             ['BVN', kyc
               ? (kyc.bvn || (kyc.bvnUnavailable

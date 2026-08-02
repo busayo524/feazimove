@@ -102,7 +102,11 @@ export default function AdminDriverDetail() {
               <Info label="Email" value={driver.email}/>
               <Info label="Phone" value={driver.phone}/>
               <Info label="Joined" value={new Date(driver.joinedAt).toLocaleDateString()}/>
+              {/* Drivers are identified by licence number rather than a document
+                  scan, so this is the only ID an admin has to check. */}
+              <Info label="Driver's Licence Number" value={driver.driversLicenseNumber}/>
             </div>
+            {driver.identity?.status && <IdentityLine identity={driver.identity}/>}
           </div>
 
           {/* Vehicle */}
@@ -158,6 +162,39 @@ export default function AdminDriverDetail() {
 
       <style>{`@media (max-width:860px){ .admin-detail-grid{ grid-template-columns:1fr !important; } }`}</style>
     </AdminLayout>
+  )
+}
+
+// Compact verdict of the government licence check. The full breakdown, with
+// every individual check and a re-run button, lives on the user detail page —
+// this is the at-a-glance version so nobody approves a driver from here without
+// knowing whether the licence held up.
+const ID_TONE = {
+  verified: { fg:'#15803d', bg:'#f0fdf4', bd:'#86efac', label:'Identity verified' },
+  failed:   { fg:'#b91c1c', bg:'#fef2f2', bd:'#fca5a5', label:'Identity check failed' },
+  error:    { fg:'#b45309', bg:'#fffbeb', bd:'#fcd34d', label:'Verification could not run' },
+  skipped:  { fg:MUTED,     bg:'#f9fafb', bd:BORDER,    label:'Not verified' },
+}
+
+function IdentityLine({ identity }) {
+  const t = ID_TONE[identity.status] || ID_TONE.skipped
+  return (
+    <div style={{ marginTop:14, background:t.bg, border:`1px solid ${t.bd}`, borderRadius:10, padding:'11px 14px' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:7 }}>
+        {identity.status === 'verified'
+          ? <CheckCircle2 size={14} color={t.fg}/>
+          : <AlertCircle size={14} color={t.fg}/>}
+        <p style={{ margin:0, fontWeight:800, fontSize:12, color:t.fg, letterSpacing:'0.03em' }}>{t.label}</p>
+      </div>
+      {identity.summary && (
+        <p style={{ margin:'6px 0 0', fontSize:12.5, color:t.fg, lineHeight:1.5 }}>{identity.summary}</p>
+      )}
+      {identity.licenceName && (
+        <p style={{ margin:'6px 0 0', fontSize:12, color:MUTED }}>
+          Name on licence: <span style={{ color:TEXT, fontWeight:700 }}>{identity.licenceName}</span>
+        </p>
+      )}
+    </div>
   )
 }
 

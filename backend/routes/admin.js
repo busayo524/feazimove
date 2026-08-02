@@ -280,6 +280,8 @@ async function getUserDetail(userId, ridesClause) {
     `SELECT id, name, email, phone, role, active_role, can_ride, can_drive,
             wallet_balance, rating, is_active, is_online, created_at,
             id_type, id_number, vehicle_type, vehicle_make, vehicle_model, plate_number, vehicle_year, vehicle_color,
+            drivers_license_number,
+            identity_status, identity_summary, identity_detail, identity_checked_at,
             bank_name, bank_account_number
      FROM users WHERE id = $1`,
     [userId]
@@ -324,6 +326,17 @@ async function getUserDetail(userId, ridesClause) {
     walletBalance: fmt(user.wallet_balance), rating: user.rating,
     isActive: user.is_active, isOnline: user.is_online, joinedAt: user.created_at,
     idType: user.id_type, idNumber: user.id_number,
+    // Drivers are identified by licence number, not a NIN or a document scan,
+    // so without these the driver detail page showed no identity at all.
+    driversLicenseNumber: user.drivers_license_number,
+    identity: {
+      status:      user.identity_status || 'skipped',
+      summary:     user.identity_summary || null,
+      checks:      user.identity_detail?.checks || [],
+      ninName:     user.identity_detail?.ninName || null,
+      licenceName: user.identity_detail?.licenceName || null,
+      checkedAt:   user.identity_checked_at,
+    },
     vehicleType: user.vehicle_type, vehicleMake: user.vehicle_make, vehicleModel: user.vehicle_model,
     plateNumber: user.plate_number, vehicleYear: user.vehicle_year, vehicleColor: user.vehicle_color,
     bankName: user.bank_name, bankAccountNumber: user.bank_account_number,
