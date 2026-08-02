@@ -99,15 +99,15 @@ export default function Login() {
           {/* Email / Phone */}
           <div>
             <label htmlFor="login-id" style={{ display: 'block', fontSize: 15, fontWeight: 600, color: '#1a1a1a', marginBottom: 8 }}>
-              Email or Phone Number
+              Email
             </label>
             <input
               id="login-id"
               type="text"
               value={identifier}
               onChange={e => setIdentifier(e.target.value)}
-              placeholder="you@example.com or +234 800 000 0000"
-              autoComplete="username"
+              placeholder="you@example.com"
+              autoComplete="email"
               style={inputStyle()}
               onFocus={e => e.target.style.borderColor = NEON}
               onBlur={e  => e.target.style.borderColor = '#e0e0e0'}

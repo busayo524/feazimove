@@ -13,6 +13,13 @@ function fetchStopCoords() {
     .then(res => {
       cache = {}
       for (const s of res.data.stops) {
+        // A stop created from the Add Route modal has no lat/lng — that form
+        // never collects them. Storing { lat: null, lng: null } still produced
+        // a TRUTHY object, so every consumer's `!coords[name]` guard passed and
+        // the static-map URL became pin-l+…(null,null). Mapbox rejects that and
+        // the browser renders a broken image instead of the "map unavailable"
+        // placeholder. Omitting the stop makes those guards see it correctly.
+        if (s.lat == null || s.lng == null) continue
         cache[s.name] = { lat: s.lat, lng: s.lng }
       }
       return cache
