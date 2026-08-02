@@ -4,15 +4,23 @@ import { MapPin, ChevronDown, Check, Clock } from 'lucide-react'
 const OLIVE='#243800', MOSS='#4C6900'
 const CARD='#ffffff', BORDER='#e9ecef', TEXT='#1a2800', MUTED='#4C6900', BG='#f6f7f9'
 
-export const MORNING_SLOTS = [
-  '5:00 AM','5:30 AM','6:00 AM','6:30 AM','7:00 AM',
-  '7:30 AM','8:00 AM','8:30 AM','9:00 AM','9:30 AM','10:00 AM',
-]
-export const EVENING_SLOTS = [
-  '3:00 PM','3:30 PM','4:00 PM','4:30 PM','5:00 PM',
-  '5:30 PM','6:00 PM','6:30 PM','7:00 PM','7:30 PM','8:00 PM',
-  '8:30 PM','9:00 PM','9:30 PM','10:00 PM',
-]
+// Riders and drivers are matched on an EXACT time_slot string, so both sides
+// must produce byte-identical labels — they share these constants rather than
+// formatting times independently.
+// 5-minute granularity. Every old 30-minute slot ('7:30 AM') is still a member
+// of this list, so availability and bookings saved before the change stay valid.
+function buildSlots(startHour24, endHour24, stepMinutes = 5) {
+  const out = []
+  for (let mins = startHour24 * 60; mins <= endHour24 * 60; mins += stepMinutes) {
+    const h24 = Math.floor(mins / 60)
+    const h12 = h24 % 12 === 0 ? 12 : h24 % 12
+    out.push(`${h12}:${String(mins % 60).padStart(2, '0')} ${h24 < 12 ? 'AM' : 'PM'}`)
+  }
+  return out
+}
+
+export const MORNING_SLOTS = buildSlots(5, 10)   // 5:00 AM – 10:00 AM
+export const EVENING_SLOTS = buildSlots(15, 22)  // 3:00 PM – 10:00 PM
 
 // Decides whether an open dropdown should drop down or flip upward, and how
 // tall it can safely be, based on the trigger's actual position on screen —

@@ -469,7 +469,7 @@ export default function Profile(){
                 You sign in with this number, so keep it one you can access.
               </p>
             </div>
-            <p style={{fontWeight:700,fontSize:13,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em',marginTop:6}}>Bank Account Details</p>
+            <p style={{fontWeight:700,fontSize:13,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em',marginTop:6}}>Bank Account Details (For Withdrawals)</p>
             <div>
               <label style={{display:'block',fontSize:13,fontWeight:600,color:TEXT,marginBottom:6}}>Bank Name</label>
               <input value={form.bankName} onChange={e=>set('bankName',e.target.value)} placeholder="e.g. GTBank"
