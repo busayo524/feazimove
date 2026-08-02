@@ -1548,10 +1548,16 @@ router.post('/stops',
       if (!zone.rows[0]) { await client.query('ROLLBACK'); return res.status(404).json({ message: 'Category not found.' }) }
       const side = zone.rows[0].side
       const result = await client.query(
+        // $6 repeats the side instead of reusing $2. Postgres deduces a
+        // parameter's type from EVERY position it appears in, and $2 sits both
+        // in a SELECT list and in a varchar comparison — it deduces text in one
+        // and character varying in the other and refuses the statement outright
+        // ("inconsistent types deduced for parameter $2", SQLSTATE 42P08).
+        // A distinct placeholder gives each position one unambiguous type.
         `INSERT INTO stops (name, group_name, chain_position, zone_id, lat, lng)
-         SELECT $1, $2, COALESCE(MAX(chain_position), -1) + 1, $3, $4, $5 FROM stops WHERE group_name = $2
+         SELECT $1, $2, COALESCE(MAX(chain_position), -1) + 1, $3, $4, $5 FROM stops WHERE group_name = $6
          RETURNING id`,
-        [name, side, zoneId, lat || null, lng || null]
+        [name, side, zoneId, lat || null, lng || null, side]
       )
       // Slot the new stop after the last stop of its zone, not the side's tail
       await recomputeChainPositions(client, side)
@@ -1772,9 +1778,12 @@ router.post('/routes-pricing',
           // New hand-typed stop goes to the last zone of its side (end of the
           // walk chain) — admin can drag it to the right category later.
           await client.query(
+            // $4 repeats the group rather than reusing $2 — see the note on the
+            // stops-add query above: one parameter in two type contexts is a
+            // hard 42P08 failure, not a coercion.
             `INSERT INTO stops (name, group_name, chain_position, zone_id)
-             VALUES ($1, $2, $3, (SELECT id FROM stop_zones WHERE side = $2 ORDER BY position DESC LIMIT 1))`,
-            [dropoff, dropoffGroup, pos.rows[0].next])
+             VALUES ($1, $2, $3, (SELECT id FROM stop_zones WHERE side = $4 ORDER BY position DESC LIMIT 1))`,
+            [dropoff, dropoffGroup, pos.rows[0].next, dropoffGroup])
         }
       }
       const result = await client.query(
@@ -1837,9 +1846,10 @@ router.post('/routes-bulk',
         // New hand-typed stop goes to the last zone of its side (end of the
         // walk chain) — admin can drag it to the right category later.
         await client.query(
+          // $4 repeats the group rather than reusing $2 — same 42P08 issue.
           `INSERT INTO stops (name, group_name, chain_position, zone_id)
-           VALUES ($1, $2, $3, (SELECT id FROM stop_zones WHERE side = $2 ORDER BY position DESC LIMIT 1))`,
-          [name, group, pos.rows[0].next])
+           VALUES ($1, $2, $3, (SELECT id FROM stop_zones WHERE side = $4 ORDER BY position DESC LIMIT 1))`,
+          [name, group, pos.rows[0].next, group])
       }
       await ensureStop(pickupName, pickupGroup)
 
