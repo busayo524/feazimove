@@ -546,6 +546,13 @@
 html, body {
   overflow-x: hidden;
   max-width: 100vw;
+  /* Installed apps should not navigate history on a sideways swipe. Without
+     this, a horizontal drag overscrolls and Chrome hands the gesture to
+     back/forward — so brushing the screen sideways slides an already-finished
+     page (e.g. "Registration Submitted") back into view, which reads as the
+     app breaking rather than as navigation. Vertical scrolling is untouched,
+     and the system back button/gesture still works as users expect. */
+  overscroll-behavior-x: none;
 }
 
 /* ── SafetyPage pill row ─────────────────────────────────────────────────── */

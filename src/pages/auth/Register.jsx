@@ -744,14 +744,16 @@ export default function Register() {
       track('Registration Submitted', { role: urlRole })
       // Registration is now pending admin approval — no token returned
       if (user?.pending) {
-        navigate('/register/pending')
+        // replace, not push: the wizard is finished and must not be reachable
+        // by going back — its state is gone and the submission already landed.
+        navigate('/register/pending', { replace: true })
         return
       }
       // Save selfie as profile avatar to localStorage
       if (selfiePreview && user?.id) {
         localStorage.setItem(`feazi_avatar_${user.id}`, selfiePreview)
       }
-      navigate(user.role === 'driver' ? '/driver' : '/book')
+      navigate(user.role === 'driver' ? '/driver' : '/book', { replace: true })
     } catch (e) {
       setApiError(!e.status
         ? 'Cannot connect to server. Make sure the backend is running on port 4000.'

@@ -22,7 +22,7 @@ export default function RegisterPending() {
         <p style={{ fontSize:15, color:'#555', lineHeight:1.7, margin:'0 0 32px' }}>
           Our team will verify your details and documents within <strong>24 hours</strong>. You will receive an email notification once your account is approved.
         </p>
-        <button onClick={() => navigate('/login')}
+        <button onClick={() => navigate('/login', { replace: true })}
           style={{ width:'100%', padding:'14px', borderRadius:50, background:'#ccff00',
             color:'#243800', fontWeight:800, fontSize:16, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
           Back to Login
