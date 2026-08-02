@@ -214,6 +214,11 @@ function AddRouteModal({ period, onClose, onCreated }) {
   const [newDropoffName, setNewDropoffName] = useState('')      // fan-out: hand-typed new destination
   const [newDropoffChecked, setNewDropoffChecked] = useState(false)
   const [newDropoffSingle, setNewDropoffSingle] = useState('')  // single-route: hand-typed new dropoff
+  // Coordinates for a hand-typed dropoff. Without them the stop is created
+  // blank and every map that references it falls back to "preview unavailable",
+  // so they are collected here rather than needing a second trip to Stops.
+  const [newDropoffLat, setNewDropoffLat] = useState('')
+  const [newDropoffLng, setNewDropoffLng] = useState('')
   const [poolFareKobo, setPoolFareKobo] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -259,12 +264,31 @@ function AddRouteModal({ period, onClose, onCreated }) {
         const finalDropoff = dropoffIsNew ? newDropoffSingle.trim() : dropoff
         if (dropoffIsNew && !finalDropoff) throw { data: { message: 'Enter the new dropoff name.' } }
         if (dropoffIsNew && !singleDropoffGroup) throw { data: { message: 'Choose a pickup first, then add the new dropoff.' } }
+        if (dropoffIsNew && !!newDropoffLat !== !!newDropoffLng) {
+          throw { data: { message: 'Enter both latitude and longitude, or leave both blank.' } }
+        }
         await api.post('/admin/routes-pricing', {
           period, pickup, dropoff: finalDropoff,
           dropoffGroup: dropoffIsNew ? singleDropoffGroup : undefined,
           poolFareKobo: poolFareKobo ? parseInt(poolFareKobo, 10) * 100 : null,
           packageFareKobo: null,
         })
+        // The route endpoint creates the stop but has no coordinate fields, so
+        // they are set on the stop itself once it exists. Deliberately after
+        // the route call and non-fatal: the route is already saved, and a stop
+        // without coordinates degrades to "map preview unavailable" rather than
+        // breaking anything — losing the pin must not fail the whole action.
+        if (dropoffIsNew && newDropoffLat && newDropoffLng) {
+          try {
+            const fresh = await api.get('/admin/stops')
+            const created = fresh.data.stops.find(s => s.name === finalDropoff)
+            if (created) {
+              await api.patch(`/admin/stops/${created.id}`, {
+                lat: parseFloat(newDropoffLat), lng: parseFloat(newDropoffLng),
+              })
+            }
+          } catch { /* route stands; coordinates can be added later */ }
+        }
       }
       onCreated(); onClose()
     } catch (err) {
@@ -284,7 +308,7 @@ function AddRouteModal({ period, onClose, onCreated }) {
         </div>
         <form onSubmit={handleSubmit}>
           <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Pickup</label>
-          <select value={pickup} onChange={e => { setPickup(e.target.value); setDropoff(''); setSelectedDropoffs([]); setNewDropoffSingle('') }} required
+          <select value={pickup} onChange={e => { setPickup(e.target.value); setDropoff(''); setSelectedDropoffs([]); setNewDropoffSingle(''); setNewDropoffLat(''); setNewDropoffLng('') }} required
             style={{ ...fld, marginBottom:14 }}>
             <option value="">Select…</option>
             <option value={NEW_STOP}>+ Add new location…</option>
@@ -344,7 +368,7 @@ function AddRouteModal({ period, onClose, onCreated }) {
           ) : (
             <>
               <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Dropoff</label>
-              <select value={dropoff} onChange={e => { setDropoff(e.target.value); setNewDropoffSingle('') }} required
+              <select value={dropoff} onChange={e => { setDropoff(e.target.value); setNewDropoffSingle(''); setNewDropoffLat(''); setNewDropoffLng('') }} required
                 style={{ ...fld, marginBottom: dropoff === NEW_STOP ? 8 : 14 }}>
                 <option value="">Select…</option>
                 <option value={NEW_STOP}>+ Add new location…</option>
@@ -360,6 +384,23 @@ function AddRouteModal({ period, onClose, onCreated }) {
                     {singleDropoffGroup
                       ? `Saved as a new ${singleDropoffGroup} location (opposite side of ${pickup}), then the route is created.`
                       : 'Choose a pickup first — the new dropoff is placed on the opposite side.'}
+                  </p>
+
+                  <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>
+                    Map Coordinates
+                  </label>
+                  <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) minmax(0,1fr)', gap:10, marginBottom:6 }}>
+                    <input type="number" step="0.0001" value={newDropoffLat}
+                      onChange={e => setNewDropoffLat(e.target.value)}
+                      placeholder="Latitude — e.g. 6.4281" style={fld}/>
+                    <input type="number" step="0.0001" value={newDropoffLng}
+                      onChange={e => setNewDropoffLng(e.target.value)}
+                      placeholder="Longitude — e.g. 3.4219" style={fld}/>
+                  </div>
+                  <p style={{ fontSize:12, color:MUTED, marginBottom:14, lineHeight:1.5 }}>
+                    Used for the rider and driver map previews. Right-click the spot in Google Maps
+                    and copy the pair — latitude first. Leave blank to add them later from Stops;
+                    the route still works, but its map preview stays unavailable.
                   </p>
                 </>
               )}
