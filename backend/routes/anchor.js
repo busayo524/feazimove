@@ -15,11 +15,15 @@
  * the AUTHENTICATED response is processed. A claimed type with no pull-back
  * branch here is rejected 401, so new event types must be added deliberately.
  *
- * Money idempotency is keyed on the PAYMENT id ('pay-<paymentId>' rows in
- * anchor_events), shared by the signed path and the pull path — so the same
- * payment arriving once organically and once as a signed resend can only
- * ever credit once. A failed credit releases its claim so a later delivery
- * can retry; a processed claim is permanent.
+ * Money idempotency is keyed on the PAYMENT id and lives in
+ * services/payinSettlement.js, shared by the signed path, the pull path AND
+ * the rider's reconciliation poll — so the same payment arriving three ways
+ * can only ever credit once.
+ *
+ * A MONEY EVENT IS NEVER ACKNOWLEDGED UNLESS IT SETTLED. 200 tells Anchor
+ * "delivered" and ends AtLeastOnce redelivery forever; an unsettled payin
+ * answers 5xx so it comes back. (Returning 200 on a failed settle is how a
+ * rider's ₦1,300 could have been acknowledged and then silently dropped.)
  *
  * NO auth middleware here — Anchor is not a logged-in user. The signature
  * (or the authenticated API pull) IS the authentication.
@@ -28,7 +32,8 @@ const express = require('express')
 const rateLimit = require('express-rate-limit')
 const { query } = require('../db')
 const anchor = require('../services/anchor')
-const { creditTransaction, creditPendingForUser, directCredit, refundPayout } = require('../services/walletLedger')
+const { userByCustomerId, userByNuban, settlePayment } = require('../services/payinSettlement')
+const { refundPayout } = require('../services/walletLedger')
 
 const router = express.Router()
 
@@ -49,65 +54,17 @@ const included = (payload, type) =>
   (payload?.included || []).find(r => r?.type === type || r?.type?.toUpperCase?.() === type?.toUpperCase?.())
 const relId = (resource, name) => resource?.relationships?.[name]?.data?.id || null
 
-async function userByCustomerId(customerId) {
-  if (!customerId) return null
-  const r = await query('SELECT id FROM users WHERE anchor_customer_id = $1', [customerId])
-  return r.rows[0]?.id || null
-}
-
-async function userByNuban(nubanId, nubanNumber) {
-  if (nubanId) {
-    const r = await query('SELECT id FROM users WHERE anchor_reserved_account_id = $1', [nubanId])
-    if (r.rows[0]) return r.rows[0].id
-  }
-  if (nubanNumber) {
-    const r = await query('SELECT id FROM users WHERE reserved_account_number = $1', [nubanNumber])
-    if (r.rows[0]) return r.rows[0].id
-  }
-  return null
-}
-
-// ── The single money gate for incoming payments ──────────────────────────────
-// Claims the payment id, credits through exactly one path, marks the claim
-// processed on success, releases it on failure (so a later delivery retries
-// once e.g. a NUBAN→user mapping exists). Returns true when settled (now or
-// previously), false when the recipient can't be resolved yet.
-async function settlePayment({ paymentId, amountKobo, currency, ourRef, userId, signatureValid, source }) {
-  if (!amountKobo || amountKobo <= 0 || (currency && currency !== 'NGN')) return false
-  if (!paymentId) {
-    // No stable payment id (very old/odd payloads) — reference crediting only,
-    // which is itself idempotent via the pending-row status flip.
-    return ourRef
-      ? creditTransaction(ourRef, { paidKobo: amountKobo, currency, gateway: 'anchor', paymentMethod: 'bank_transfer' })
-      : false
-  }
-  const claim = await query(
-    `INSERT INTO anchor_events (event_id, event_type, resource_id, signature_valid, payload)
-     VALUES ($1, 'payment.processed', $2, $3, $4) ON CONFLICT (event_id) DO NOTHING RETURNING id`,
-    [`pay-${paymentId}`, paymentId, !!signatureValid, JSON.stringify({ source, userId: userId || null, amountKobo })]
-  )
-  if (!claim.rows[0]) return true // already settled via the other delivery path
-  try {
-    let ok = false
-    if (ourRef) {
-      ok = await creditTransaction(ourRef, { paidKobo: amountKobo, currency, gateway: 'anchor', paymentMethod: 'bank_transfer' })
-    }
-    if (!ok && userId) {
-      ok = await creditPendingForUser(userId, amountKobo, currency, paymentId)
-      if (!ok) ok = await directCredit(userId, amountKobo, `anchor-payin-${paymentId}`, 'Wallet top-up — bank transfer')
-    }
-    if (ok) {
-      await query('UPDATE anchor_events SET processed = true WHERE id = $1', [claim.rows[0].id])
-    } else {
-      // Recipient unresolved — release the claim so redelivery can retry
-      await query('DELETE FROM anchor_events WHERE id = $1', [claim.rows[0].id])
-    }
-    return ok
-  } catch (err) {
-    await query('DELETE FROM anchor_events WHERE id = $1', [claim.rows[0].id]).catch(() => {})
-    throw err
-  }
-}
+// Every event type that means "money landed on one of our accounts". Anchor
+// enables all of these on our webhook and uses different ones per rail, so
+// matching only 'payment.received' left the others to be rejected as
+// unrecognised — with the money already in the account.
+const PAYIN_EVENT_TYPES = new Set([
+  'payin.received', 'payment.received', 'payment.settled',
+  'nip.inbound.received', 'nip.inbound.completed', 'nip.inbound.settled',
+  'nip.incomingTransfer.received', 'virtual.account.transaction.settlement',
+  'realTimePayment.inbound.received', 'realTimePayment.inbound.completed',
+  'realTimePayment.inbound.settled',
+])
 
 // ── Money arrived (payin.received / payment.received), signed path ───────────
 // Two payload dialects exist: REAL deliveries (observed Jul 24, 2026) inline
@@ -234,29 +191,61 @@ async function handleKyc(payload, status) {
   return true
 }
 
+// The payment id is the only thing we take from an unsigned body, and Anchor
+// puts it in a different place per event type. Try the documented spots, then
+// fall back to scanning for an inbound-payment resource id anywhere in the
+// body. A wrong guess is harmless: the id is verified by an authenticated pull
+// and an unknown one simply throws.
+const PAYMENT_ID_RE = /\b\d{6,}-anc_(?:inb_trsf|payin|pay)\b/
+function claimedPaymentId(parsed) {
+  const d = parsed?.data || {}
+  const direct = d.attributes?.payment?.paymentId
+    || d.attributes?.paymentId
+    || d.relationships?.payment?.data?.id
+    || d.relationships?.payIn?.data?.id
+  if (typeof direct === 'string' && direct.length <= 80) return direct
+  let text = ''
+  try { text = JSON.stringify(parsed) } catch { return null }
+  return PAYMENT_ID_RE.exec(text)?.[0] || null
+}
+
 // ── Unsigned deliveries: verify-by-pullback ──────────────────────────────────
 // The unsigned body is treated ONLY as a hint naming a resource id; the data
 // we act on comes from Anchor's API, authenticated with our key. Dedup runs
 // BEFORE any outbound call so crafted garbage can't burn our Anchor quota.
+// Returns 'ok' (acknowledge), 'retry' (real money we could not settle — must
+// come back), or false (not recognised → 401).
 async function handleUnsigned(rawBody) {
   let parsed = null
   try { parsed = JSON.parse(rawBody.toString('utf8')) } catch { return false }
   const claimedType = parsed?.data?.type || ''
   if (!anchor.configured()) return false
 
-  if (claimedType === 'payment.received') {
-    const claimedPayId = parsed?.data?.attributes?.payment?.paymentId
-    if (!claimedPayId || typeof claimedPayId !== 'string' || claimedPayId.length > 80) return false
+  if (PAYIN_EVENT_TYPES.has(claimedType)) {
+    const claimedPayId = claimedPaymentId(parsed)
+    if (!claimedPayId) return false
     const already = await query(
       "SELECT 1 FROM anchor_events WHERE event_id = $1 AND processed = true", [`pay-${claimedPayId}`]
     )
-    if (already.rows[0]) return true // settled — no Anchor call needed
-    const pulled = await anchor.getPayment(claimedPayId) // throws on unknown id
-    const userId = await userByNuban(
+    if (already.rows[0]) return 'ok' // settled — no Anchor call needed
+    // Virtual-NUBAN payins live under /payments, Pay-with-Transfer ones under
+    // /payin; which product fired the event isn't knowable from the type alone.
+    let pulled
+    try { pulled = await anchor.getPayment(claimedPayId) }
+    catch (err) { pulled = await anchor.getPayin(claimedPayId).catch(() => { throw err }) }
+    let userId = await userByNuban(
       pulled?.relationships?.virtualNuban?.data?.id || null,
       pulled?.attributes?.virtualNuban?.accountNumber || null
     )
-    await settlePayment({
+    // Same customer fallback the signed path has always had — without it a
+    // payin whose NUBAN we can't match is dropped even when Anchor told us
+    // exactly which customer paid.
+    if (!userId) {
+      userId = await userByCustomerId(
+        pulled?.relationships?.customer?.data?.id || pulled?.attributes?.customer?.customerId || null
+      )
+    }
+    const settled = await settlePayment({
       paymentId: claimedPayId,
       amountKobo: Number(pulled?.attributes?.amount),
       currency: pulled?.attributes?.currency || 'NGN',
@@ -265,7 +254,9 @@ async function handleUnsigned(rawBody) {
       signatureValid: false,
       source: 'api-pull',
     })
-    return true // hint led to a real payment — acknowledged regardless of settle outcome (retries release-claim path)
+    // Real money that did not credit must NOT be acknowledged — settlePayment
+    // released its claim, so a redelivery settles it once the gap is closed.
+    return settled ? 'ok' : 'retry'
   }
 
   if (claimedType.startsWith('nip.transfer.')) {
@@ -352,7 +343,11 @@ router.post('/webhook', webhookLimiter, async (req, res) => {
 
   if (!valid) {
     try {
-      if (await handleUnsigned(req.rawBody)) return res.sendStatus(200)
+      const outcome = await handleUnsigned(req.rawBody)
+      // 503 (not 200, not 401) keeps Anchor's AtLeastOnce redelivery alive for
+      // money we verified but could not credit.
+      if (outcome === 'retry') return res.sendStatus(503)
+      if (outcome) return res.sendStatus(200)
     } catch { /* pull failed / unknown resource — fall through to rejection */ }
     // Log invalid attempts too — they're part of the monitoring story. Body
     // kept (capped) for offline diagnosis; old junk pruned opportunistically
@@ -390,7 +385,8 @@ router.post('/webhook', webhookLimiter, async (req, res) => {
     }
 
     let processed = false
-    if (eventType === 'payin.received' || eventType === 'payment.received') processed = await handlePayin(payload)
+    const isMoneyIn = PAYIN_EVENT_TYPES.has(eventType)
+    if (isMoneyIn) processed = await handlePayin(payload)
     else if (eventType === 'reservedAccount.created') processed = await handleReservedAccount(payload, true)
     else if (eventType === 'reservedAccount.failed') processed = await handleReservedAccount(payload, false)
     else if (eventType.startsWith('nip.transfer.')) processed = await handleTransfer(payload, eventType.split('.').pop())
@@ -399,6 +395,13 @@ router.post('/webhook', webhookLimiter, async (req, res) => {
 
     if (eventId && processed) {
       await query('UPDATE anchor_events SET processed = true WHERE event_id = $1', [eventId])
+    }
+    // An unsettled payin must come back. Drop the stored event row first, or
+    // the UNIQUE event_id would make the redelivery look like a duplicate and
+    // swallow it before it ever reaches handlePayin again.
+    if (isMoneyIn && !processed) {
+      if (eventRowId) await query('DELETE FROM anchor_events WHERE id = $1', [eventRowId]).catch(() => {})
+      return res.sendStatus(503)
     }
     res.sendStatus(200)
   } catch (err) {

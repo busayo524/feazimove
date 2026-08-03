@@ -20,6 +20,7 @@ const analytics = require('../services/analytics')
 const anchor = require('../services/anchor')
 const kycVault = require('../services/kycVault')
 const { requireTestAccount } = require('../services/paymentsGate')
+const { reconcileUserPayins } = require('../services/payinSettlement')
 const { runAmlChecksOnPayout, escrowWithdrawal } = require('../services/walletLedger')
 
 const router = express.Router()
@@ -130,8 +131,23 @@ async function ensureFundingNuban(userId) {
 }
 
 // ── Get wallet balance ────────────────────────────────────────────────────────
+// A rider who gave up waiting and closed the app stops polling /fund/status,
+// so that route's reconciliation never runs for them. Catch it here instead:
+// if they have a top-up that never completed, check Anchor once before
+// answering. Guarded on that row existing so the ordinary balance read — which
+// every screen makes — never costs an Anchor call.
 router.get('/balance', async (req, res, next) => {
   try {
+    const unsettled = await query(
+      `SELECT 1 FROM wallet_transactions
+        WHERE user_id = $1 AND type = 'credit' AND gateway = 'anchor'
+          AND status IN ('pending', 'failed') AND created_at >= NOW() - INTERVAL '7 days' LIMIT 1`,
+      [req.user.id]
+    )
+    if (unsettled.rows[0]) {
+      try { await reconcileUserPayins(req.user.id) }
+      catch (err) { console.error('Payin reconciliation failed:', err.message) }
+    }
     const result = await query('SELECT wallet_balance FROM users WHERE id = $1', [req.user.id])
     res.json({
       balance: Math.round(result.rows[0].wallet_balance / 100), // kobo → naira (legacy display value)
@@ -245,18 +261,38 @@ router.post('/fund',
 )
 
 // ── Poll payment status — frontend calls this while showing the transfer UI ──
-// Credit happens in the webhook; this simply reports the row's state.
+// Credit normally happens in the Anchor webhook. But webhook delivery is not
+// something we control, and on 3 Aug 2026 a rider's ₦1,300 landed at Anchor
+// with no delivery EVER reaching us — the wallet stayed empty and the ride
+// could not be booked, with no way for the rider or the system to recover.
+//
+// So while a payment is still pending, this asks Anchor directly whether the
+// money has arrived and settles it through the same idempotent money gate the
+// webhook uses (services/payinSettlement.js). The webhook is now the fast
+// path, not the only path. Reconciliation is throttled per rider and can never
+// double-credit — the payment id is claimed exactly once either way.
 router.get('/fund/status/:reference',
   [param('reference').trim().notEmpty()],
   validate,
   async (req, res, next) => {
     try {
-      const result = await query(
+      const read = async () => (await query(
         'SELECT status, amount_kobo FROM wallet_transactions WHERE reference = $1 AND user_id = $2',
         [req.params.reference, req.user.id]
-      )
-      if (!result.rows[0]) return res.status(404).json({ message: 'Transaction not found.' })
-      const t = result.rows[0]
+      )).rows[0]
+
+      let t = await read()
+      if (!t) return res.status(404).json({ message: 'Transaction not found.' })
+
+      if (t.status === 'pending') {
+        // Never let a reconciliation problem break the poll itself — the rider
+        // keeps polling and the webhook may still land.
+        try {
+          if (await reconcileUserPayins(req.user.id)) t = (await read()) || t
+        } catch (err) {
+          console.error('Payin reconciliation failed:', err.message)
+        }
+      }
       res.json({ status: t.status, amount: Math.round(t.amount_kobo / 100) })
     } catch (err) { next(err) }
   }

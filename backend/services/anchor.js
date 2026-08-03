@@ -184,6 +184,23 @@ async function getPayment(paymentId) {
   } catch (err) { throw anchorError(err, 'Could not fetch the payment.') }
 }
 
+// Every payment that has landed on ONE virtual NUBAN. This is the fallback
+// source of truth when a payin webhook never arrives (see
+// services/payinSettlement.js) — Anchor knows the money came in even when it
+// never told us.
+//
+// `virtualNubanId` is the filter Anchor actually honours; `virtualNuban` is
+// silently IGNORED and returns the whole organization's payments. The result
+// is re-filtered here regardless, so a param rename on Anchor's side can never
+// credit one rider with another rider's money.
+async function listPaymentsForNuban(nubanId) {
+  if (!nubanId) return []
+  try {
+    const res = await http.get(`/api/v1/payments?virtualNubanId=${encodeURIComponent(nubanId)}`)
+    return (res.data.data || []).filter(p => p?.relationships?.virtualNuban?.data?.id === nubanId)
+  } catch (err) { throw anchorError(err, 'Could not list payments for that account.') }
+}
+
 // The /pay/* product (Pay-with-Transfer, Reserved Accounts) only exists for
 // organizations approved for the payment program IN PRODUCTION — sandbox
 // returns "Endpoint not found". Callers use this to fall back to Virtual
@@ -369,6 +386,7 @@ module.exports = {
   isUnavailable,
   getPayin,
   getPayment,
+  listPaymentsForNuban,
   getCustomer,
   getReservedAccount,
   findCustomerByEmail,
