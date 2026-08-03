@@ -48,7 +48,19 @@ function ReservedAccountCard({ showForm, setShowForm, onStatus }) {
     return () => clearInterval(id)
   }, [pending, account, load])
 
-  const canSubmit = !busy && bvn.length === 11 && address.trim().length >= 5
+  // Mirrors the server's validators on POST /wallet/reserved-account, which
+  // requires all four fields. Date of birth and gender were missing here, so
+  // the button could enable on a request the API would reject.
+  // `missing` exists because a silently greyed-out button is indistinguishable
+  // from a broken one — it names whatever is still outstanding.
+  const today = new Date().toISOString().slice(0, 10)
+  const missing = []
+  if (bvn.length !== 11)             missing.push('BVN (11 digits)')
+  if (address.trim().length < 5)     missing.push('residential address')
+  if (!dob)                          missing.push('date of birth')
+  else if (dob >= today)             missing.push('a valid date of birth')
+  if (!gender)                       missing.push('gender')
+  const canSubmit = !busy && missing.length === 0
 
   async function submit(e) {
     e.preventDefault()
@@ -121,7 +133,7 @@ function ReservedAccountCard({ showForm, setShowForm, onStatus }) {
               <label htmlFor="wallet-dob" style={{ display:'block', fontSize:12, fontWeight:600, color:MUTED, marginBottom:5 }}>
                 Date of Birth
               </label>
-              <input id="wallet-dob" type="date" value={dob} onChange={e => setDob(e.target.value)} required
+              <input id="wallet-dob" type="date" value={dob} onChange={e => setDob(e.target.value)} required max={today}
                 style={{ width:'100%', minWidth:0, maxWidth:'100%', padding:'11px 12px', borderRadius:10, fontSize:14, border:`1.5px solid ${BORDER}`, boxSizing:'border-box', background:CARD, color:TEXT, fontFamily:'inherit', WebkitAppearance:'none', appearance:'none' }}/>
             </div>
             <div style={{ minWidth:0 }}>
@@ -137,6 +149,11 @@ function ReservedAccountCard({ showForm, setShowForm, onStatus }) {
             </div>
           </div>
           {error && <p style={{ fontSize:12.5, color:'#ef4444', marginBottom:10 }}>{error}</p>}
+          {!busy && missing.length > 0 && (
+            <p style={{ fontSize:12, color:MUTED, marginBottom:10, lineHeight:1.5 }}>
+              Still needed: {missing.join(', ')}.
+            </p>
+          )}
           <div style={{ display:'flex', gap:10 }}>
             <button type="submit" disabled={!canSubmit}
               style={{ flex:1, padding:'11px', borderRadius:10, background:!canSubmit?BORDER:NEON, color:!canSubmit?MUTED:OLIVE, border:'none', fontWeight:800, fontSize:13.5, cursor:!canSubmit?'not-allowed':'pointer', fontFamily:'inherit' }}>
