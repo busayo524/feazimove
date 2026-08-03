@@ -110,20 +110,26 @@ function ReservedAccountCard({ showForm, setShowForm, onStatus }) {
               so this field rendered as a blank box with nothing telling the
               user what it wanted. Gender is labelled too, to keep the two
               columns aligned. */}
-          <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) minmax(0,1fr)', gap:10, marginBottom:10 }}>
-            <div>
+          {/* auto-fit + a 150px floor so the pair sits side by side when there
+              is room and stacks on narrow phones instead of colliding.
+              minWidth:0 on the cells is what actually stops the overlap: grid
+              items default to min-width:auto, and type="date" has a wide
+              intrinsic minimum (it must fit dd/mm/yyyy plus the picker icon),
+              so without it the cell pushes past its track onto its neighbour. */}
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(150px, 1fr))', gap:10, marginBottom:10 }}>
+            <div style={{ minWidth:0 }}>
               <label htmlFor="wallet-dob" style={{ display:'block', fontSize:12, fontWeight:600, color:MUTED, marginBottom:5 }}>
                 Date of Birth
               </label>
               <input id="wallet-dob" type="date" value={dob} onChange={e => setDob(e.target.value)} required
-                style={{ width:'100%', padding:'11px 14px', borderRadius:10, fontSize:14, border:`1.5px solid ${BORDER}`, boxSizing:'border-box', background:CARD, color:TEXT, fontFamily:'inherit' }}/>
+                style={{ width:'100%', minWidth:0, maxWidth:'100%', padding:'11px 12px', borderRadius:10, fontSize:14, border:`1.5px solid ${BORDER}`, boxSizing:'border-box', background:CARD, color:TEXT, fontFamily:'inherit', WebkitAppearance:'none', appearance:'none' }}/>
             </div>
-            <div>
+            <div style={{ minWidth:0 }}>
               <label htmlFor="wallet-gender" style={{ display:'block', fontSize:12, fontWeight:600, color:MUTED, marginBottom:5 }}>
                 Gender
               </label>
               <select id="wallet-gender" value={gender} onChange={e => setGender(e.target.value)} required
-                style={{ width:'100%', padding:'11px 14px', borderRadius:10, fontSize:14, border:`1.5px solid ${BORDER}`, boxSizing:'border-box', background:CARD, color:TEXT, fontFamily:'inherit' }}>
+                style={{ width:'100%', minWidth:0, maxWidth:'100%', padding:'11px 12px', borderRadius:10, fontSize:14, border:`1.5px solid ${BORDER}`, boxSizing:'border-box', background:CARD, color:TEXT, fontFamily:'inherit' }}>
                 <option value="">Select…</option>
                 <option value="male">Male</option>
                 <option value="female">Female</option>
