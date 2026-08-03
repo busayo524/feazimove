@@ -17,10 +17,13 @@ const axios = require('axios')
 const crypto = require('crypto')
 
 const BASE_URL = (process.env.ANCHOR_BASE_URL || 'https://api.sandbox.getanchor.co').replace(/\/+$/, '')
-// Providus is FeaziMove's provider — confirmed with Anchor. It is also the one
-// proven to work in sandbox, where ninepsb returned 412s. Kept as the default
-// so a missing env var can't silently route accounts to the wrong bank.
-const PROVIDER = process.env.ANCHOR_PROVIDER || 'providus'
+// 9 Payment Service Bank is the ONLY provider Anchor offers FeaziMove
+// (confirmed with Anchor, Aug 2026) — an earlier note here claimed providus,
+// which was wrong. Every account on the live org sits on 9PSB, reached only
+// because createVirtualNuban retries after providus rejects it; the reserved
+// account and pay-with-transfer calls have no such retry, so a providus value
+// here makes them fail outright with no fallback. Default accordingly.
+const PROVIDER = process.env.ANCHOR_PROVIDER || 'ninepsb'
 
 const http = axios.create({
   baseURL: BASE_URL,
@@ -238,7 +241,7 @@ function isUnavailable(err) {
 // ── Virtual NUBANs (docs.getanchor.co/docs/virtual-nubans) ───────────────────
 // "A pointer to a bank account" — a real account number that settles into one
 // of our deposit accounts. Payments to it fire `payment.received` with a
-// virtualNuban relationship. Verified working in sandbox (provider providus).
+// virtualNuban relationship. Live accounts are issued by 9PSB.
 async function createVirtualNuban({ settlementAccountId, provider } = {}) {
   const accountId = settlementAccountId || await getMasterAccountId()
   const attempt = async prov => {
@@ -251,12 +254,11 @@ async function createVirtualNuban({ settlementAccountId, provider } = {}) {
     })
     return res.data.data // attributes: { accountNumber, accountName, bank: { name }, permanent, status }
   }
-  // Which provider actually works differs per environment AND changes as Anchor
-  // provisions them: providus is the one proven in sandbox, ninepsb the one
-  // proven on live (providus returns 400 "Virtual Account not created" there).
-  // So try the configured provider first, then fall back to the other one
-  // rather than to a hardcoded name — whichever is enabled today, a rider still
-  // gets an account, and it self-corrects when Anchor enables the other.
+  // 9PSB is the provider Anchor has enabled for us on live; providus was only
+  // ever reachable in sandbox and returns 400 "Virtual Account not created"
+  // here. The retry stays as a safety net so a rider still gets an account if
+  // Anchor swaps which provider is enabled — but it should not normally fire,
+  // and a warning in the logs means the configured provider has gone stale.
   const primary = provider || PROVIDER
   const alternate = primary === 'providus' ? 'ninepsb' : 'providus'
   try {

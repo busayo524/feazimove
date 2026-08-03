@@ -103,7 +103,10 @@ async function ensureFundingNuban(userId) {
   const nuban = await anchor.createVirtualNuban()
   const a = nuban?.attributes || {}
   const details = {
-    bankName: a.bank?.name || a.bankName || 'PROVIDUS BANK',
+    // Last-resort label only — but it MUST name the bank the account actually
+    // sits at. Every live account is 9PSB; showing "PROVIDUS BANK" would send
+    // the rider to pick the wrong institution in their banking app.
+    bankName: a.bank?.name || a.bankName || '9 Payment Service Bank',
     accountNumber: a.accountNumber,
     accountName: a.accountName,
   }
