@@ -32,7 +32,7 @@ const express = require('express')
 const rateLimit = require('express-rate-limit')
 const { query } = require('../db')
 const anchor = require('../services/anchor')
-const { userByCustomerId, userByNuban, settlePayment } = require('../services/payinSettlement')
+const { userByCustomerId, userByNuban, settlePayment, normalizeInbound } = require('../services/payinSettlement')
 const { refundPayout } = require('../services/walletLedger')
 
 const router = express.Router()
@@ -228,28 +228,28 @@ async function handleUnsigned(rawBody) {
       "SELECT 1 FROM anchor_events WHERE event_id = $1 AND processed = true", [`pay-${claimedPayId}`]
     )
     if (already.rows[0]) return 'ok' // settled — no Anchor call needed
-    // Virtual-NUBAN payins live under /payments, Pay-with-Transfer ones under
-    // /payin; which product fired the event isn't knowable from the type alone.
+    // Bank transfers are richest under /inbound-transfers (it alone carries a
+    // status); Pay-with-Transfer payins live under /payin. Which product fired
+    // the event isn't knowable from the type alone, so try in that order.
     let pulled
-    try { pulled = await anchor.getPayment(claimedPayId) }
-    catch (err) { pulled = await anchor.getPayin(claimedPayId).catch(() => { throw err }) }
-    let userId = await userByNuban(
-      pulled?.relationships?.virtualNuban?.data?.id || null,
-      pulled?.attributes?.virtualNuban?.accountNumber || null
-    )
+    try { pulled = await anchor.getInboundTransfer(claimedPayId) }
+    catch (err) {
+      pulled = await anchor.getPayment(claimedPayId).catch(
+        () => anchor.getPayin(claimedPayId).catch(() => { throw err })
+      )
+    }
+    const p = normalizeInbound(pulled)
+    // Anchor says this transfer has not settled (pending, reversed). Ask for a
+    // redelivery rather than crediting money the bank may still pull back.
+    if (!p.settled) return 'retry'
+    let userId = await userByNuban(p.nubanId, p.nubanNumber)
     // Same customer fallback the signed path has always had — without it a
     // payin whose NUBAN we can't match is dropped even when Anchor told us
     // exactly which customer paid.
-    if (!userId) {
-      userId = await userByCustomerId(
-        pulled?.relationships?.customer?.data?.id || pulled?.attributes?.customer?.customerId || null
-      )
-    }
+    if (!userId) userId = await userByCustomerId(p.customerId)
     const settled = await settlePayment({
+      ...p,
       paymentId: claimedPayId,
-      amountKobo: Number(pulled?.attributes?.amount),
-      currency: pulled?.attributes?.currency || 'NGN',
-      ourRef: pulled?.attributes?.paymentReference || null,
       userId,
       signatureValid: false,
       source: 'api-pull',

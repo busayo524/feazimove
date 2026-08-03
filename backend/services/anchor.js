@@ -184,21 +184,37 @@ async function getPayment(paymentId) {
   } catch (err) { throw anchorError(err, 'Could not fetch the payment.') }
 }
 
-// Every payment that has landed on ONE virtual NUBAN. This is the fallback
-// source of truth when a payin webhook never arrives (see
-// services/payinSettlement.js) — Anchor knows the money came in even when it
-// never told us.
+// ── Inbound transfers — money arriving on our account numbers ────────────────
+// The same ledger the Anchor dashboard shows under Money Movement → Inbound
+// Transfers, and the fallback source of truth when a payin webhook never
+// arrives (see services/payinSettlement.js).
 //
-// `virtualNubanId` is the filter Anchor actually honours; `virtualNuban` is
-// silently IGNORED and returns the whole organization's payments. The result
-// is re-filtered here regardless, so a param rename on Anchor's side can never
-// credit one rider with another rider's money.
-async function listPaymentsForNuban(nubanId) {
+// Preferred over /api/v1/payments, which returns the SAME records (identical
+// '-anc_inb_trsf' ids) but omits `status` entirely — so it cannot distinguish
+// settled money from a transfer that is still pending or was reversed. These
+// records also carry the NIP `sessionId`, the bank-grade identifier needed to
+// trace a disputed transfer with the sending bank.
+//
+// `accountNumberId` is the ONLY filter Anchor honours here: `virtualNubanId`,
+// `accountNumber` and `status` are silently ignored and return the whole
+// organization's transfers. The result is re-filtered locally regardless, so a
+// param rename on Anchor's side can never credit one rider with another's
+// money.
+async function listInboundTransfersForNuban(nubanId) {
   if (!nubanId) return []
   try {
-    const res = await http.get(`/api/v1/payments?virtualNubanId=${encodeURIComponent(nubanId)}`)
-    return (res.data.data || []).filter(p => p?.relationships?.virtualNuban?.data?.id === nubanId)
-  } catch (err) { throw anchorError(err, 'Could not list payments for that account.') }
+    const res = await http.get(`/api/v1/inbound-transfers?accountNumberId=${encodeURIComponent(nubanId)}`)
+    return (res.data.data || []).filter(t => t?.relationships?.accountNumber?.data?.id === nubanId)
+  } catch (err) { throw anchorError(err, 'Could not list inbound transfers for that account.') }
+}
+
+// Authenticated pull of one inbound transfer — the trusted source for a payin
+// webhook whose signature can't be checked.
+async function getInboundTransfer(transferId) {
+  try {
+    const res = await http.get(`/api/v1/inbound-transfers/${encodeURIComponent(transferId)}`)
+    return res.data.data
+  } catch (err) { throw anchorError(err, 'Could not fetch the inbound transfer.') }
 }
 
 // The /pay/* product (Pay-with-Transfer, Reserved Accounts) only exists for
@@ -386,7 +402,8 @@ module.exports = {
   isUnavailable,
   getPayin,
   getPayment,
-  listPaymentsForNuban,
+  listInboundTransfersForNuban,
+  getInboundTransfer,
   getCustomer,
   getReservedAccount,
   findCustomerByEmail,

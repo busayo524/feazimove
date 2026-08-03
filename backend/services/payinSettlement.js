@@ -23,6 +23,39 @@ const { query } = require('../db')
 const anchor = require('./anchor')
 const { creditTransaction, creditPendingForUser, directCredit } = require('./walletLedger')
 
+// Anchor describes one arriving payment two ways: an InboundNIPTransfer
+// (/inbound-transfers — carries status, sessionId and the sending account) and
+// a Payment (/payments — same id, no status). Flatten both to one shape so
+// every settlement path reads the same fields.
+//
+// `status` is absent on the Payment view. Treat absent as settled: that view
+// only ever lists money Anchor has accepted, and refusing to credit it would
+// strand a rider's transfer over a missing field.
+const SETTLED_STATUSES = new Set(['COMPLETED', 'SUCCESSFUL', 'SUCCESS', 'SETTLED'])
+
+function normalizeInbound(r) {
+  const a = r?.attributes || {}
+  const rel = r?.relationships || {}
+  const status = (a.status || '').toUpperCase()
+  return {
+    paymentId: r?.id || null,
+    amountKobo: Number(a.amount),
+    currency: a.currency || 'NGN',
+    // Anchor's own reference on the NUBAN rail; ours only on Pay-with-Transfer.
+    // Harmless either way — an unmatched reference just falls through.
+    ourRef: a.paymentReference || a.reference || null,
+    nubanId: rel.accountNumber?.data?.id || rel.virtualNuban?.data?.id || null,
+    nubanNumber: a.virtualNuban?.accountNumber || null,
+    customerId: rel.customer?.data?.id || a.customer?.customerId || null,
+    settled: !status || SETTLED_STATUSES.has(status),
+    status: status || null,
+    // Kept on the settlement row so the Back Office can trace a disputed
+    // transfer back to the sending bank without a trip to Anchor's dashboard.
+    detail: [a.sessionId && `session ${a.sessionId}`, a.sourceAccountName, a.sourceBank?.name]
+      .filter(Boolean).join(' · ') || null,
+  }
+}
+
 async function userByCustomerId(customerId) {
   if (!customerId) return null
   const r = await query('SELECT id FROM users WHERE anchor_customer_id = $1', [customerId])
@@ -43,7 +76,7 @@ async function userByNuban(nubanId, nubanNumber) {
 
 // Returns true when settled (now or previously), false when the recipient
 // can't be resolved yet — callers treat false as "do not acknowledge".
-async function settlePayment({ paymentId, amountKobo, currency, ourRef, userId, signatureValid, source }) {
+async function settlePayment({ paymentId, amountKobo, currency, ourRef, userId, signatureValid, source, detail }) {
   if (!amountKobo || amountKobo <= 0 || (currency && currency !== 'NGN')) return false
   if (!paymentId) {
     // No stable payment id (very old/odd payloads) — reference crediting only,
@@ -55,7 +88,8 @@ async function settlePayment({ paymentId, amountKobo, currency, ourRef, userId, 
   const claim = await query(
     `INSERT INTO anchor_events (event_id, event_type, resource_id, signature_valid, payload)
      VALUES ($1, 'payment.processed', $2, $3, $4) ON CONFLICT (event_id) DO NOTHING RETURNING id`,
-    [`pay-${paymentId}`, paymentId, !!signatureValid, JSON.stringify({ source, userId: userId || null, amountKobo })]
+    [`pay-${paymentId}`, paymentId, !!signatureValid,
+     JSON.stringify({ source, userId: userId || null, amountKobo, detail: detail || null })]
   )
   if (!claim.rows[0]) return true // already settled via another delivery path
   try {
@@ -108,16 +142,16 @@ async function reconcileUserPayins(userId, { force = false } = {}) {
   const nubanId = u.rows[0]?.anchor_reserved_account_id
   if (!nubanId) return false
 
-  const payments = await anchor.listPaymentsForNuban(nubanId)
+  const transfers = await anchor.listInboundTransfersForNuban(nubanId)
   let credited = false
-  for (const p of payments) {
+  for (const t of transfers) {
+    const p = normalizeInbound(t)
+    // Only money Anchor has actually settled. A PENDING or REVERSED transfer
+    // must never credit a wallet — the rider could otherwise spend a balance
+    // that the bank later takes back.
+    if (!p.settled) continue
     const settled = await settlePayment({
-      paymentId: p.id,
-      amountKobo: Number(p.attributes?.amount),
-      currency: p.attributes?.currency || 'NGN',
-      // Anchor stamps its OWN reference on virtual-NUBAN payins, never ours, so
-      // there is nothing to match by reference — settle by user + amount.
-      ourRef: null,
+      ...p,
       userId,
       signatureValid: false,
       source: 'reconcile-poll',
@@ -127,4 +161,4 @@ async function reconcileUserPayins(userId, { force = false } = {}) {
   return credited
 }
 
-module.exports = { userByCustomerId, userByNuban, settlePayment, reconcileUserPayins }
+module.exports = { userByCustomerId, userByNuban, settlePayment, reconcileUserPayins, normalizeInbound }
