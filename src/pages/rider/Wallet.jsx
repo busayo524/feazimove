@@ -119,9 +119,14 @@ function ReservedAccountCard({ showForm, setShowForm, onStatus }) {
           <p style={{ fontSize:12, color:MUTED, lineHeight:1.5, marginBottom: kyc.verifying ? 0 : 10 }}>
             {kyc.verifying
               ? 'Our banking partner is checking your BVN. This account works normally in the meantime — it moves into your own name as soon as they approve it.'
-              : kyc.reason
-                ? `Our banking partner could not verify your details: ${kyc.reason}. Check your BVN, and that your name and phone number here match your bank records.`
-                : 'Your details have not been verified yet, so this account is still in FeaziMove’s name. It works normally — but you can verify to get one in your own name.'}
+              // 'verification_unsent' means the check never reached our banking
+              // partner — our problem. Blaming the rider's BVN for it would
+              // send them off re-typing details that were never read.
+              : kyc.status === 'verification_unsent'
+                ? `${kyc.reason || 'We could not complete the check with our banking partner.'} Your wallet works normally in the meantime.`
+                : kyc.reason
+                  ? `Our banking partner could not verify your details: ${kyc.reason}. Check your BVN, and that your name and phone number here match your bank records.`
+                  : 'Your details have not been verified yet, so this account is still in FeaziMove’s name. It works normally — but you can verify to get one in your own name.'}
           </p>
           {!kyc.verifying && (
             <button onClick={() => setShowForm(true)}
@@ -389,6 +394,11 @@ export default function Wallet() {
       watchPending(pending)
     } catch (err) {
       setFundError(err.data?.message || 'Could not start the top-up. Please try again.')
+      // The server turns away a top-up from a rider who never completed wallet
+      // setup. Leaving them with only the sentence would be a dead end — the
+      // form they need is further down the same page, so open it and take them
+      // there instead of making them hunt for it.
+      if (err.data?.needsWalletSetup) goToSetup()
     } finally {
       setFunding(false)
     }

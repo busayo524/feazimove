@@ -203,6 +203,23 @@ router.post('/fund',
       }
       const { amount } = req.body
       const isRidePayment = req.body.context === 'ride'
+
+      // Wallet setup is the gate on money coming IN, not just going out.
+      // Without this a rider who had never given us a BVN could still top up,
+      // and the fallback below would quietly mint them a PERMANENT funding
+      // NUBAN — one rider reached a live 9PSB account number with
+      // bvn_submitted = false and no CBN KYC behind it. Drivers are exempt:
+      // they are KYC'd through admin approval and their wallet fills from
+      // earnings, not transfers.
+      const setup = await query(
+        'SELECT can_drive, bvn_submitted FROM users WHERE id = $1', [req.user.id]
+      )
+      if (!setup.rows[0]?.can_drive && !setup.rows[0]?.bvn_submitted) {
+        return res.status(403).json({
+          message: 'Set up your wallet with your BVN before adding money. It only takes a minute.',
+          needsWalletSetup: true,
+        })
+      }
       // Anchor references: unique, lowercase alphanumeric, ≤100 chars
       const reference = `fm${crypto.randomUUID().replace(/-/g, '')}`
 
@@ -370,17 +387,18 @@ router.post('/reserved-account',
       // everyone: an unverified customer cannot hold an account in their name.
       const { customerId } = await ensureAnchorCustomer(req.user.id)
 
+      let verificationSent = false
       try {
         await anchor.verifyIndividualCustomer(customerId, {
           bvn: req.body.bvn,
           dateOfBirth: req.body.dateOfBirth,
           gender: req.body.gender,
         })
+        verificationSent = true
       } catch (err) {
         // A 422 is Anchor judging the rider's details — usually the name or
         // phone number not matching their BVN record. That is actionable, so
-        // it goes back to them verbatim. Anything else is our problem or
-        // Anchor's: log it and let the rider carry on funding meanwhile.
+        // it goes back to them verbatim.
         if (err.status === 422) {
           logWalletEvent(req.user.id, {
             eventId: `wsetup-${attempt}-rejected`,
@@ -394,15 +412,36 @@ router.post('/reserved-account',
           )
           return res.status(422).json({ message: err.message })
         }
+        // ANY other failure means Anchor never ran the check. This was
+        // swallowed into a console.error, after which the rider was recorded as
+        // 'submitted' and told "your details are with Anchor" — while Anchor
+        // held nothing at all. On 4 Aug 2026 every rider's KYC was failing with
+        // HTTP 400 "Insufficient balance" (Anchor bills per BVN lookup) and
+        // nothing anywhere said so: riders sat on company-named accounts, the
+        // Back Office showed a clean setup, and the real cause was invisible
+        // until the endpoint was called by hand. A verification we could not
+        // send is now recorded as exactly that, loudly.
         console.error('Anchor KYC verification failed:', err.message)
+        logWalletEvent(req.user.id, {
+          eventId: `wsetup-${attempt}-unsent`,
+          eventType: 'wallet.setup.error',
+          action: 'Wallet Setup — Anchor Did Not Accept The Check',
+          detail: `Anchor refused the Tier 2 verification: ${(err.message || 'unknown error').slice(0, 200)}`,
+        })
       }
 
-      // A fresh attempt clears the previous rejection reason — the rider is
-      // looking at a new decision now, not the one they just corrected.
+      // bvn_submitted records what the RIDER did — they handed over their BVN —
+      // so it stays true either way and their funding keeps working. What the
+      // status must never claim is that Anchor is deciding when Anchor was
+      // never asked. The rider-facing reason stays plain: the fault is ours,
+      // and telling them their details failed would be a lie in the other
+      // direction. The technical cause is in the event above.
       await query(
-        `UPDATE users SET bvn_submitted = true, anchor_kyc_status = 'submitted',
-            anchor_kyc_reason = NULL WHERE id = $1`,
-        [req.user.id]
+        `UPDATE users SET bvn_submitted = true, anchor_kyc_status = $1,
+            anchor_kyc_reason = $2 WHERE id = $3`,
+        [verificationSent ? 'submitted' : 'verification_unsent',
+         verificationSent ? null : 'We could not complete the check with our banking partner. Nothing is wrong with your details — please try again shortly.',
+         req.user.id]
       )
       analytics.track(req.user.id, 'reserved_account_requested', {})
 
@@ -430,14 +469,22 @@ router.post('/reserved-account',
         action: 'Wallet Setup Completed',
         detail: upgrade.provisioned
           ? `Reserved account ${upgrade.account.accountNumber} issued in the rider's own name`
-          : `BVN sent to Anchor for Tier 2 verification — awaiting decision (${upgrade.reason})`,
+          : verificationSent
+            ? `BVN sent to Anchor for Tier 2 verification — awaiting decision (${upgrade.reason})`
+            : 'Anchor never accepted the verification — the rider is on a company-named account and no decision is coming',
       })
       res.status(202).json({
+        // Three genuinely different outcomes, and the middle one used to speak
+        // for all of them. Promising a rider that a decision is coming, when we
+        // know no check was ever sent, is the failure this whole route existed
+        // to stop.
         message: upgrade.provisioned
           ? 'Your personal funding account is ready.'
-          : 'Your details are with Anchor for verification. You can keep funding your wallet — your account moves into your own name as soon as they approve it.',
+          : verificationSent
+            ? 'Your details are with Anchor for verification. You can keep funding your wallet — your account moves into your own name as soon as they approve it.'
+            : 'We could not complete your identity check just now — this is on our side, not your details. Your wallet works normally; please try again shortly.',
         account: details,
-        verificationPending: !upgrade.provisioned,
+        verificationPending: !upgrade.provisioned && verificationSent,
       })
     } catch (err) {
       // A rejected BVN or an Anchor outage now leaves a row too — previously

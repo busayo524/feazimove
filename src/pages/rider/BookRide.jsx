@@ -400,6 +400,10 @@ export default function BookRide(){
     } catch (err) {
       setShowPreview(false)
       setBookError(err.data?.message || 'Could not start the payment. Please try again.')
+      // Paying for a ride is the moment most riders first meet the wallet-setup
+      // requirement. The form lives on the Wallet page, so send them straight
+      // there rather than stranding them on a booking they cannot complete.
+      if (err.data?.needsWalletSetup) setTimeout(() => navigate('/wallet'), 1800)
     } finally {
       setPayBusy(false)
     }
