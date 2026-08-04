@@ -33,6 +33,7 @@ const rateLimit = require('express-rate-limit')
 const { query } = require('../db')
 const anchor = require('../services/anchor')
 const { userByCustomerId, userByNuban, settlePayment, normalizeInbound } = require('../services/payinSettlement')
+const { tryProvisionReservedAccount, isApproved } = require('../services/reservedAccounts')
 const { refundPayout } = require('../services/walletLedger')
 
 const router = express.Router()
@@ -188,6 +189,10 @@ async function handleKyc(payload, status) {
   const userId = await userByCustomerId(customerId)
   if (!userId) return false
   await query('UPDATE users SET anchor_kyc_status = $1 WHERE id = $2', [status, userId])
+  // Approval is the trigger for the account the rider is actually waiting for.
+  // Non-fatal: provisioning re-checks approval against Anchor itself, and the
+  // rider's funding-account poll retries if this attempt fails.
+  if (isApproved(status)) await tryProvisionReservedAccount(userId)
   return true
 }
 
@@ -300,6 +305,9 @@ async function handleUnsigned(rawBody) {
       [`kyc-${claimedId}-${status}`, `customer.identification.${status}`, claimedId,
        JSON.stringify({ verifiedByApiPull: true, detail: `KYC ${status}` })]
     )
+    // Approved here means the rider can finally hold an account in their own
+    // name — do it now rather than making them wait for their next app open.
+    if (isApproved(status)) await tryProvisionReservedAccount(userId)
     return true
   }
 

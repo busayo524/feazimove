@@ -554,6 +554,13 @@ async function runMigrations() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret     TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled_at TIMESTAMPTZ;
 
+    -- Account numbers previously issued to this user. A BVN-KYC upgrade swaps
+    -- the org-named Virtual NUBAN for a rider-named reserved account with a
+    -- DIFFERENT number; the old one stays open, so keep it mapped or money
+    -- sent to it can no longer be matched to anyone.
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS legacy_nuban_ids     TEXT[] DEFAULT '{}';
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS legacy_nuban_numbers TEXT[] DEFAULT '{}';
+
     -- ── Late-ordered statements: these reference tables/columns created above,
     -- so they MUST run last — the whole migration executes as one implicit
     -- transaction, and on a FRESH database an early reference to a

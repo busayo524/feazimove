@@ -21,6 +21,7 @@ const anchor = require('../services/anchor')
 const kycVault = require('../services/kycVault')
 const { requireTestAccount } = require('../services/paymentsGate')
 const { reconcileUserPayins } = require('../services/payinSettlement')
+const { tryProvisionReservedAccount } = require('../services/reservedAccounts')
 const { runAmlChecksOnPayout, escrowWithdrawal } = require('../services/walletLedger')
 
 const router = express.Router()
@@ -323,10 +324,16 @@ router.post('/reserved-account',
         return res.status(503).json({ message: 'Payment system not configured. Please contact support.' })
       }
       const existing = await query(
-        'SELECT reserved_account_number, reserved_account_bank, reserved_account_name, anchor_reserved_account_id, bvn_submitted FROM users WHERE id = $1',
+        `SELECT reserved_account_number, reserved_account_bank, reserved_account_name,
+                anchor_reserved_account_id, bvn_submitted, anchor_kyc_status
+           FROM users WHERE id = $1`,
         [req.user.id]
       )
-      if (existing.rows[0]?.reserved_account_number && existing.rows[0]?.bvn_submitted) {
+      // Only a rider who already holds an account in their OWN name is finished.
+      // This used to also turn away anyone who had submitted a BVN and been
+      // given an org-named Virtual NUBAN — which was every rider, and it is
+      // precisely what made the upgrade to a named account unreachable.
+      if (existing.rows[0]?.anchor_kyc_status === 'account_named') {
         return res.status(409).json({ message: 'You already have a personal funding account.' })
       }
       // KYC evidence, recorded BEFORE the Anchor call so it survives whichever
@@ -335,10 +342,18 @@ router.post('/reserved-account',
       // AES-256-GCM encrypted, because Anchor can demand complete KYC on any
       // user and we must be able to produce it. Reading it back needs an
       // authenticator code (see /admin/users/:id/kyc/reveal).
+      //
+      // Date of birth and gender are kept too: Anchor needs them for Tier 2
+      // verification, and storing them means a retry after a rejection doesn't
+      // have to ask the rider for everything again. They were previously
+      // validated and then thrown away.
       await query(
-        `UPDATE users SET bvn_last4 = $1, residential_address = $2, bvn_encrypted = $3
-          WHERE id = $4`,
-        [req.body.bvn.slice(-4), req.body.address, kycVault.encrypt(req.body.bvn), req.user.id]
+        `UPDATE users SET bvn_last4 = $1, residential_address = $2, bvn_encrypted = $3,
+            date_of_birth = COALESCE($4::date, date_of_birth),
+            gender        = COALESCE($5, gender)
+          WHERE id = $6`,
+        [req.body.bvn.slice(-4), req.body.address, kycVault.encrypt(req.body.bvn),
+         String(req.body.dateOfBirth).slice(0, 10), req.body.gender, req.user.id]
       )
       // Logged BEFORE the Anchor call so an attempt that Anchor rejects is still
       // visible in the Back Office — a silent failure was the whole problem.
@@ -349,125 +364,74 @@ router.post('/reserved-account',
         detail: 'BVN, date of birth, gender and residential address sent to Anchor for CBN KYC',
       })
 
-      // An account number may already exist WITHOUT setup (auto-created behind
-      // a pay-by-transfer) — completing setup just claims it: record the BVN
-      // step and present the account as theirs. When Anchor enables production
-      // reserved accounts, this upgrades to a real named account.
-      if (existing.rows[0]?.reserved_account_number) {
-        // COALESCE so a decision that already arrived by webhook is never
-        // overwritten by our own "awaiting decision" placeholder.
-        await query(
-          `UPDATE users SET bvn_submitted = true,
-              anchor_kyc_status = COALESCE(anchor_kyc_status, 'submitted') WHERE id = $1`,
-          [req.user.id]
-        )
-        analytics.track(req.user.id, 'reserved_account_requested', {})
-        logWalletEvent(req.user.id, {
-          eventId: `wsetup-${attempt}-completed`,
-          eventType: 'wallet.setup.completed',
-          action: 'Wallet Setup Completed',
-          detail: `Existing funding account claimed — ${existing.rows[0].reserved_account_number}`,
-        })
-        return res.status(202).json({
-          message: 'Your personal funding account is ready.',
-          account: {
-            bankName: existing.rows[0].reserved_account_bank,
-            accountNumber: existing.rows[0].reserved_account_number,
-            accountName: existing.rows[0].reserved_account_name,
-          },
-        })
-      }
+      // Anchor's required order (confirmed with them, Aug 2026):
+      //   customer exists → Tier 2 KYC verification → reserved account.
+      // Creating the account first is what produced org-named NUBANs for
+      // everyone: an unverified customer cannot hold an account in their name.
+      const { customerId } = await ensureAnchorCustomer(req.user.id)
 
-      const u = await query('SELECT name, email, anchor_customer_id FROM users WHERE id = $1', [req.user.id])
-      const user = u.rows[0]
-      if (!user.email) return res.status(422).json({ message: 'Please add an email to your profile first.' })
-      const parts = (user.name || '').trim().split(/\s+/)
-
-      let acct
       try {
-        if (user.anchor_customer_id) {
-          acct = await anchor.createReservedAccount({ customerId: user.anchor_customer_id })
-        } else {
-          // Single-request path: Anchor creates customer + account together
-          acct = await anchor.createReservedAccount({
-            firstName: parts[0] || 'FeaziMove',
-            lastName: parts.slice(1).join(' ') || 'User',
-            email: user.email,
-            bvn: req.body.bvn,
-          })
-          const customerId = acct?.relationships?.customer?.data?.id
-          if (customerId) await query('UPDATE users SET anchor_customer_id = $1 WHERE id = $2', [customerId, req.user.id])
-        }
+        await anchor.verifyIndividualCustomer(customerId, {
+          bvn: req.body.bvn,
+          dateOfBirth: req.body.dateOfBirth,
+          gender: req.body.gender,
+        })
       } catch (err) {
-        // Reserved accounts are production-only — in sandbox the permanent
-        // Virtual NUBAN plays the same role (account in our org's name).
-        if (!anchor.isUnavailable(err)) throw err
-        const details = await ensureFundingNuban(req.user.id)
-        // Register the Anchor customer even on this path. Without it the rider
-        // finishes wallet setup with anchor_customer_id still NULL and never
-        // appears in the Back Office Customers registry (it filters on that
-        // column) — invisible despite having completed KYC. Non-fatal: the
-        // funding account works regardless of whether the customer call lands.
-        await ensureAnchorCustomer(req.user.id).catch(
-          e => console.error('Anchor customer registration failed:', e.message)
-        )
-        // 'pending_provider' = BVN captured by us, but this environment has no
-        // reserved-account product, so Anchor never ran the CBN check. Distinct
-        // from 'submitted', which means a real decision is genuinely pending.
-        await query(
-          `UPDATE users SET bvn_submitted = true,
-              anchor_kyc_status = COALESCE(anchor_kyc_status, 'pending_provider') WHERE id = $1`,
-          [req.user.id]
-        )
-        analytics.track(req.user.id, 'reserved_account_requested', {})
-        logWalletEvent(req.user.id, {
-          eventId: `wsetup-${attempt}-completed`,
-          eventType: 'wallet.setup.completed',
-          action: 'Wallet Setup Completed',
-          detail: `Virtual NUBAN assigned (reserved accounts unavailable) — ${details.accountNumber}`,
-        })
-        return res.status(202).json({
-          message: 'Your personal funding account is ready.',
-          account: details,
-        })
+        // A 422 is Anchor judging the rider's details — usually the name or
+        // phone number not matching their BVN record. That is actionable, so
+        // it goes back to them verbatim. Anything else is our problem or
+        // Anchor's: log it and let the rider carry on funding meanwhile.
+        if (err.status === 422) {
+          logWalletEvent(req.user.id, {
+            eventId: `wsetup-${attempt}-rejected`,
+            eventType: 'wallet.setup.rejected',
+            action: 'Wallet Setup Rejected',
+            detail: (err.message || '').slice(0, 280),
+          })
+          await query("UPDATE users SET anchor_kyc_status = 'rejected' WHERE id = $1", [req.user.id])
+          return res.status(422).json({ message: err.message })
+        }
+        console.error('Anchor KYC verification failed:', err.message)
       }
 
-      // Some responses carry the account details synchronously; otherwise the
-      // reservedAccount.created webhook fills them in moments later.
-      const a = acct?.attributes || {}
-      const details = a.accountDetails || a
       await query(
-        `UPDATE users SET anchor_reserved_account_id = COALESCE($1, anchor_reserved_account_id),
-            reserved_account_number = COALESCE($2, reserved_account_number),
-            reserved_account_bank   = COALESCE($3, reserved_account_bank),
-            reserved_account_name   = COALESCE($4, reserved_account_name)
-          WHERE id = $5`,
-        [acct?.id || null, details.accountNumber || null,
-         details.bankName || details.bank?.name || null, details.accountName || null, req.user.id]
-      )
-      await query(
-        `UPDATE users SET bvn_submitted = true,
-            anchor_kyc_status = COALESCE(anchor_kyc_status, 'submitted') WHERE id = $1`,
+        `UPDATE users SET bvn_submitted = true, anchor_kyc_status = 'submitted' WHERE id = $1`,
         [req.user.id]
       )
       analytics.track(req.user.id, 'reserved_account_requested', {})
+
+      // The rider must still be able to fund while verification runs, so make
+      // sure they hold SOME account now — the org-named one is fine meanwhile.
+      let details = existing.rows[0]?.reserved_account_number
+        ? {
+            bankName: existing.rows[0].reserved_account_bank,
+            accountNumber: existing.rows[0].reserved_account_number,
+            accountName: existing.rows[0].reserved_account_name,
+          }
+        : await ensureFundingNuban(req.user.id).catch(e => {
+            console.error('Funding NUBAN creation failed:', e.message); return null
+          })
+
+      // Tier 2 validation is normally immediate, so attempt the upgrade right
+      // away. If Anchor is still deciding, the customer.identification.approved
+      // webhook or the rider's next funding-account poll finishes the job.
+      const upgrade = await tryProvisionReservedAccount(req.user.id)
+      if (upgrade.provisioned) details = upgrade.account
+
       logWalletEvent(req.user.id, {
         eventId: `wsetup-${attempt}-completed`,
         eventType: 'wallet.setup.completed',
         action: 'Wallet Setup Completed',
-        detail: details.accountNumber
-          ? `Reserved account ${details.accountNumber} — awaiting Anchor KYC decision`
-          : 'Reserved account requested — awaiting reservedAccount.created webhook',
+        detail: upgrade.provisioned
+          ? `Reserved account ${upgrade.account.accountNumber} issued in the rider's own name`
+          : `BVN sent to Anchor for Tier 2 verification — awaiting decision (${upgrade.reason})`,
       })
       res.status(202).json({
-        message: details.accountNumber
+        message: upgrade.provisioned
           ? 'Your personal funding account is ready.'
-          : 'Your personal funding account is being created — it will appear here shortly.',
-        account: details.accountNumber ? {
-          bankName: details.bankName || details.bank?.name,
-          accountNumber: details.accountNumber,
-          accountName: details.accountName,
-        } : null,
+          : 'Your details are with Anchor for verification. You can keep funding your wallet — your account moves into your own name as soon as they approve it.',
+        account: details,
+        verificationPending: !upgrade.provisioned,
       })
     } catch (err) {
       // A rejected BVN or an Anchor outage now leaves a row too — previously
@@ -489,10 +453,28 @@ router.post('/reserved-account',
 // exists behind their payments already (the setup funnel matters).
 router.get('/funding-account', async (req, res, next) => {
   try {
-    const r = await query(
-      'SELECT reserved_account_number, reserved_account_bank, reserved_account_name, anchor_reserved_account_id, bvn_submitted FROM users WHERE id = $1',
+    // Finish a pending upgrade if Anchor has approved the rider since we last
+    // looked. Anchor's verdict arrives by webhook, and a webhook that never
+    // lands is exactly how a rider's ₦1,300 went missing — so the rider's own
+    // poll is a second, independent way to complete the job. No-op unless they
+    // are verified and still on an org-named account.
+    let r = await query(
+      `SELECT reserved_account_number, reserved_account_bank, reserved_account_name,
+              anchor_reserved_account_id, bvn_submitted, anchor_kyc_status
+         FROM users WHERE id = $1`,
       [req.user.id]
     )
+    if (r.rows[0]?.bvn_submitted && r.rows[0]?.anchor_kyc_status !== 'account_named') {
+      const upgrade = await tryProvisionReservedAccount(req.user.id)
+      if (upgrade.provisioned) {
+        r = await query(
+          `SELECT reserved_account_number, reserved_account_bank, reserved_account_name,
+                  anchor_reserved_account_id, bvn_submitted, anchor_kyc_status
+             FROM users WHERE id = $1`,
+          [req.user.id]
+        )
+      }
+    }
     const u = r.rows[0]
     const setUp = !!u?.bvn_submitted
     res.json({

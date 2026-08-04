@@ -62,13 +62,19 @@ async function userByCustomerId(customerId) {
   return r.rows[0]?.id || null
 }
 
+// Matches the CURRENT account and every account this user has previously held.
+// A BVN-KYC upgrade issues a new, rider-named account number; riders keep the
+// old one saved in their banking app and transfers to it must still credit
+// them (see legacy_nuban_ids in db/migrate.js).
 async function userByNuban(nubanId, nubanNumber) {
   if (nubanId) {
-    const r = await query('SELECT id FROM users WHERE anchor_reserved_account_id = $1', [nubanId])
+    const r = await query(
+      `SELECT id FROM users WHERE anchor_reserved_account_id = $1 OR $1 = ANY(legacy_nuban_ids)`, [nubanId])
     if (r.rows[0]) return r.rows[0].id
   }
   if (nubanNumber) {
-    const r = await query('SELECT id FROM users WHERE reserved_account_number = $1', [nubanNumber])
+    const r = await query(
+      `SELECT id FROM users WHERE reserved_account_number = $1 OR $1 = ANY(legacy_nuban_numbers)`, [nubanNumber])
     if (r.rows[0]) return r.rows[0].id
   }
   return null
@@ -138,11 +144,15 @@ function throttled(userId) {
 async function reconcileUserPayins(userId, { force = false } = {}) {
   if (!anchor.configured()) return false
   if (!force && throttled(userId)) return false
-  const u = await query('SELECT anchor_reserved_account_id FROM users WHERE id = $1', [userId])
-  const nubanId = u.rows[0]?.anchor_reserved_account_id
-  if (!nubanId) return false
+  const u = await query(
+    'SELECT anchor_reserved_account_id, legacy_nuban_ids FROM users WHERE id = $1', [userId])
+  // Sweep the current account AND any the rider held before a KYC upgrade —
+  // money can still arrive on an old number they have saved as a beneficiary.
+  const nubanIds = [u.rows[0]?.anchor_reserved_account_id, ...(u.rows[0]?.legacy_nuban_ids || [])]
+    .filter(Boolean)
+  if (!nubanIds.length) return false
 
-  const transfers = await anchor.listInboundTransfersForNuban(nubanId)
+  const transfers = (await Promise.all(nubanIds.map(id => anchor.listInboundTransfersForNuban(id)))).flat()
   let credited = false
   for (const t of transfers) {
     const p = normalizeInbound(t)

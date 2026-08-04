@@ -111,15 +111,55 @@ async function createPayWithTransfer({ reference, fullName, email, amountKobo, e
   } catch (err) { throw anchorError(err, 'Could not create a payment account.') }
 }
 
+// ── Individual customer KYC (docs.getanchor.co/reference/kyc-validation) ─────
+// Upgrades a Tier 0 customer (name/email/phone/address only) to Tier 2 by
+// submitting BVN + date of birth + gender. REQUIRED before Anchor will issue a
+// reserved account in the rider's own name — without it every account falls
+// back to one in the organization's name (confirmed with Anchor, Aug 2026).
+//
+// The result is ASYNCHRONOUS: this returns "KYC initiated", and the verdict
+// arrives as customer.identification.approved / .rejected / .error.
+//
+// Anchor requires the name and phone number on the BVN to MATCH the ones given
+// at customer creation, so a rider whose profile name differs from their bank
+// records is rejected — the reason is surfaced rather than swallowed.
+async function verifyIndividualCustomer(customerId, { bvn, dateOfBirth, gender }) {
+  // Anchor expects 'Male'/'Female'/'Others'; we collect lowercase.
+  const g = String(gender || '').trim()
+  const normalizedGender = g ? g[0].toUpperCase() + g.slice(1).toLowerCase() : undefined
+  try {
+    const res = await http.post(
+      `/api/v1/customers/${encodeURIComponent(customerId)}/verification/individual`,
+      {
+        data: {
+          type: 'Verification',
+          attributes: {
+            level: 'TIER_2',
+            level2: {
+              bvn,
+              dateOfBirth: String(dateOfBirth || '').slice(0, 10), // YYYY-MM-DD
+              gender: normalizedGender,
+            },
+          },
+        },
+      }
+    )
+    return res.data.data
+  } catch (err) { throw anchorError(err, 'Could not submit your details for verification.') }
+}
+
 // ── Reserved Accounts (docs.getanchor.co/docs/reserved-accounts) ─────────────
 // Permanent NUBAN in the customer's own name — requires BVN (CBN KYC).
 // Result arrives via `reservedAccount.created` / `reservedAccount.failed`.
+//
+// The BVN is passed even when the customer already exists: Anchor asks for it
+// on this call in addition to the customer's completed KYC verification.
 async function createReservedAccount({ customerId, firstName, lastName, email, bvn }) {
   const body = customerId
     ? {
         data: {
           type: 'ReservedAccount',
-          attributes: { provider: PROVIDER },
+          attributes: { provider: PROVIDER, ...(bvn ? { bvn } : {}) },
           relationships: { customer: { data: { id: customerId, type: 'IndividualCustomer' } } },
         },
       }
@@ -398,6 +438,7 @@ function verifyWebhookSignature(rawBody, signature) {
 module.exports = {
   configured,
   createIndividualCustomer,
+  verifyIndividualCustomer,
   createPayWithTransfer,
   createReservedAccount,
   createVirtualNuban,

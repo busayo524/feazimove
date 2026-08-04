@@ -569,6 +569,15 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS bvn_encrypted TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret     TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled_at TIMESTAMPTZ;
 
+-- Account numbers this user has previously been given. Completing BVN KYC
+-- upgrades a rider from an org-named Virtual NUBAN to a reserved account in
+-- their OWN name — a DIFFERENT account number. The old one stays open at
+-- Anchor and riders keep it saved as a beneficiary, so the mapping from it
+-- back to the user must survive the upgrade or a transfer to the old number
+-- becomes unattributable money.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS legacy_nuban_ids     TEXT[] DEFAULT '{}';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS legacy_nuban_numbers TEXT[] DEFAULT '{}';
+
 -- ── Prembly identity verification ───────────────────────────────────────────
 -- Riders are checked as NIN + face; drivers additionally as licence + face,
 -- with both government records required to describe the same person.
