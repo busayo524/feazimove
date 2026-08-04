@@ -590,6 +590,13 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS identity_summary    VARCHAR(300);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS identity_detail     JSONB;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS identity_checked_at TIMESTAMPTZ;
 
+-- The portrait printed on the driver's licence, base64, straight from FRSC.
+-- Kept in its own column rather than inside identity_detail because that JSONB
+-- is read for every row of the admin user list — tens of kilobytes of face per
+-- driver would be dragged along on every page load. Nothing selects this except
+-- the one endpoint that streams it to an admin, and deleting the user drops it.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS licence_photo TEXT;
+
 -- ── Contact / feedback messages from the public site ────────────────────────
 -- Stored as well as emailed: an SMTP outage must not lose a customer's message,
 -- and support needs a queue it can work through rather than an inbox.

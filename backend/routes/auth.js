@@ -58,12 +58,17 @@ function runIdentityCheck({ userId, role, registeredName, nin, licenceNumber, do
       verdict = { status: 'error', checks: [], summary: `Verification error: ${err.message}` }
     }
     await query(
+      // licence_photo is only written when the lookup actually reached FRSC —
+      // an outage must not wipe a portrait an admin is relying on.
       `UPDATE users SET identity_status = $1, identity_summary = $2,
-              identity_detail = $3, identity_checked_at = NOW()
-        WHERE id = $4`,
+              identity_detail = $3, identity_checked_at = NOW(),
+              licence_photo = CASE WHEN $5 THEN $4 ELSE licence_photo END
+        WHERE id = $6`,
       [verdict.status, (verdict.summary || '').slice(0, 300),
        JSON.stringify({ checks: verdict.checks || [], ninName: verdict.ninName || null,
-                        licenceName: verdict.licenceName || null }),
+                        licenceName: verdict.licenceName || null,
+                        licence: verdict.licence || null }),
+       verdict.licencePhoto || null, verdict.status !== 'error',
        userId]
     )
   })().catch(err => console.error('identity check write failed:', err.message))

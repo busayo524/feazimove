@@ -282,6 +282,9 @@ async function getUserDetail(userId, ridesClause) {
             id_type, id_number, vehicle_type, vehicle_make, vehicle_model, plate_number, vehicle_year, vehicle_color,
             drivers_license_number,
             identity_status, identity_summary, identity_detail, identity_checked_at,
+            -- the photo itself is streamed separately; here we only need to know
+            -- whether there is one to ask for
+            (licence_photo IS NOT NULL) AS has_licence_photo,
             bank_name, bank_account_number
      FROM users WHERE id = $1`,
     [userId]
@@ -335,6 +338,10 @@ async function getUserDetail(userId, ridesClause) {
       checks:      user.identity_detail?.checks || [],
       ninName:     user.identity_detail?.ninName || null,
       licenceName: user.identity_detail?.licenceName || null,
+      // The FRSC record verbatim — name, date of birth, issue and expiry —
+      // so an admin approves on the document's own evidence, not on our verdict.
+      licence:     user.identity_detail?.licence || null,
+      hasLicencePhoto: user.has_licence_photo,
       checkedAt:   user.identity_checked_at,
     },
     vehicleType: user.vehicle_type, vehicleMake: user.vehicle_make, vehicleModel: user.vehicle_model,
@@ -418,6 +425,39 @@ router.get('/avatar/:userId',
       if (!filename) return res.status(404).json({ message: 'No photo on file.' })
 
       await sendStored(req, res, filename)
+    } catch (err) { next(err) }
+  }
+)
+
+// ── The portrait printed on the driver's licence (from FRSC via Prembly) ────
+//
+// Served on its own so the heavy base64 never rides along with the profile
+// JSON, and so there is exactly one audited door to it. Placed beside the
+// registration selfie in the admin UI, this is what lets a human — not a
+// confidence score — decide whether the same person is in both photographs.
+router.get('/users/:id/licence-photo',
+  [param('id').isUUID()], validate,
+  async (req, res, next) => {
+    try {
+      const r = await query('SELECT licence_photo FROM users WHERE id = $1', [req.params.id])
+      if (!r.rows[0]) return res.status(404).json({ message: 'User not found.' })
+      const b64 = r.rows[0].licence_photo
+      if (!b64) return res.status(404).json({ message: 'No licence photo on file.' })
+
+      const buf = Buffer.from(b64, 'base64')
+      // FRSC sends JPEG or PNG with no content type of its own — read it from
+      // the bytes rather than guessing, so the browser renders it either way.
+      const png = buf.length > 8 && buf[0] === 0x89 && buf[1] === 0x50
+      // Same slice protocol as sendStored: Catalyst's edge truncates larger
+      // bodies, and api.getBlob asks for the size before fetching.
+      if (req.query.sizeinfo === '1') return res.json({ size: buf.length })
+      res.type(png ? 'png' : 'jpg')
+      const start = parseInt(req.query.start, 10)
+      const end   = parseInt(req.query.end, 10)
+      if (Number.isInteger(start) && Number.isInteger(end) && start >= 0 && start <= end) {
+        return res.send(buf.slice(start, Math.min(end + 1, buf.length)))
+      }
+      res.send(buf)
     } catch (err) { next(err) }
   }
 )
@@ -2180,16 +2220,25 @@ router.post('/users/:id/verify-identity',
         selfieBuffer,
       })
       await query(
+        // licence_photo is only written when the lookup actually reached FRSC —
+        // a failed re-run must not wipe a portrait an admin is relying on.
         `UPDATE users SET identity_status = $1, identity_summary = $2,
-                identity_detail = $3, identity_checked_at = NOW() WHERE id = $4`,
+                identity_detail = $3, identity_checked_at = NOW(),
+                licence_photo = CASE WHEN $5 THEN $4 ELSE licence_photo END
+          WHERE id = $6`,
         [verdict.status, (verdict.summary || '').slice(0, 300),
          JSON.stringify({ checks: verdict.checks || [], ninName: verdict.ninName || null,
-                          licenceName: verdict.licenceName || null }), u.id]
+                          licenceName: verdict.licenceName || null,
+                          licence: verdict.licence || null }),
+         verdict.licencePhoto || null, verdict.status !== 'error', u.id]
       )
       logActivity(req.user.id, 'Identity Re-verified', 'security', verdict.summary,
         { req, target: { id: u.id, name: u.name } })
+      // The photo itself is never returned here — the page fetches it from the
+      // one endpoint that serves it.
       res.json({ identity: { status: verdict.status, summary: verdict.summary,
-        checks: verdict.checks, ninName: verdict.ninName, licenceName: verdict.licenceName } })
+        checks: verdict.checks, ninName: verdict.ninName, licenceName: verdict.licenceName,
+        licence: verdict.licence || null, hasLicencePhoto: !!verdict.licencePhoto } })
     } catch (err) { next(err) }
   }
 )

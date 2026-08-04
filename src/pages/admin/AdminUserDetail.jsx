@@ -135,6 +135,113 @@ function KycRevealModal({ userId, onRevealed, onClose }) {
   )
 }
 
+/* One photograph, fetched through the authenticated API — none of these images
+   have a public URL — and released when it leaves the screen. */
+function IdPhoto({ path, caption, note }) {
+  const [src, setSrc] = useState(null)
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    setSrc(null); setFailed(false)
+    if (!path) return
+    let url, cancelled = false
+    api.getBlob(path)
+      .then(blob => { if (cancelled) return; url = URL.createObjectURL(blob); setSrc(url) })
+      .catch(() => { if (!cancelled) setFailed(true) })
+    return () => { cancelled = true; if (url) URL.revokeObjectURL(url) }
+  }, [path])
+
+  return (
+    <div style={{ width:104, flexShrink:0 }}>
+      <div style={{ width:104, height:130, borderRadius:10, overflow:'hidden', background:BG,
+        border:`1px solid ${BORDER}`, display:'flex', alignItems:'center', justifyContent:'center',
+        textAlign:'center', padding:6, boxSizing:'border-box' }}>
+        {src
+          ? <img src={src} alt={caption} style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
+          : <span style={{ fontSize:11, color:MUTED, lineHeight:1.4 }}>
+              {failed ? 'Could not load' : note || 'Not available'}
+            </span>}
+      </div>
+      <p style={{ margin:'6px 0 0', fontSize:10.5, fontWeight:700, color:MUTED,
+        textTransform:'uppercase', letterSpacing:'0.05em', textAlign:'center' }}>{caption}</p>
+    </div>
+  )
+}
+
+const fmtDate = s => {
+  const d = new Date(s)
+  return isNaN(d) ? s : d.toLocaleDateString('en-NG', { day:'numeric', month:'short', year:'numeric' })
+}
+
+/* The licence exactly as FRSC holds it, printed photo included.
+   The verdict above is a machine's opinion; this is the evidence it formed the
+   opinion from. An admin who can read the name, the date of birth, the expiry
+   and the face on the card can overrule a failed face match on sight — and can
+   see when there is nothing behind the verdict at all. */
+function LicenceRecord({ identity, userId }) {
+  const rec = identity.licence
+  // Checks run before the full record was captured stored only a name — and
+  // sometimes stored Prembly's failure text in its place. Keep the name if it
+  // is one; a string with digits in it never was.
+  const legacyName = !/\d/.test(identity.licenceName || '') ? identity.licenceName : null
+  const name = rec?.name || legacyName
+  if (!rec?.found && !identity.hasLicencePhoto && !name) return null
+
+  const rows = [
+    ['Name on licence',  name],
+    ['Licence number',   rec?.number],
+    ['Date of birth',    rec?.dateOfBirth && fmtDate(rec.dateOfBirth)],
+    ['Gender',           rec?.gender],
+    ['State of issue',   rec?.stateOfIssue],
+    ['Issued',           rec?.issuedDate && fmtDate(rec.issuedDate)],
+  ].filter(([, v]) => v)
+
+  return (
+    <div style={{ marginTop:14, paddingTop:14, borderTop:`1px solid ${BORDER}` }}>
+      <p style={{ margin:'0 0 12px', fontSize:11, fontWeight:700, color:MUTED,
+        textTransform:'uppercase', letterSpacing:'0.06em' }}>What the licence itself says</p>
+
+      <div style={{ display:'flex', gap:16, flexWrap:'wrap', alignItems:'flex-start' }}>
+        <div style={{ display:'flex', gap:12 }}>
+          <IdPhoto path={`/admin/users/${userId}/licence-photo`} caption="Photo on licence"
+            note="FRSC returned no photo"/>
+          <IdPhoto path={`/admin/avatar/${userId}`} caption="Selfie they uploaded"
+            note="No selfie on file"/>
+        </div>
+
+        <div style={{ flex:'1 1 260px', minWidth:0 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))', gap:'10px 18px' }}>
+            {rows.map(([label, value]) => (
+              <div key={label}>
+                <p style={{ margin:'0 0 2px', fontSize:10.5, fontWeight:700, color:MUTED,
+                  textTransform:'uppercase', letterSpacing:'0.05em' }}>{label}</p>
+                <p style={{ margin:0, fontSize:13.5, fontWeight:700, color:TEXT }}>{value}</p>
+              </div>
+            ))}
+            {rec?.expiryDate && (
+              <div>
+                <p style={{ margin:'0 0 2px', fontSize:10.5, fontWeight:700, color:MUTED,
+                  textTransform:'uppercase', letterSpacing:'0.05em' }}>
+                  {rec.expired ? 'Expired' : 'Expires'}
+                </p>
+                <p style={{ margin:0, fontSize:13.5, fontWeight:800,
+                  color:rec.expired ? '#b91c1c' : '#15803d' }}>
+                  {fmtDate(rec.expiryDate)}
+                </p>
+              </div>
+            )}
+          </div>
+          {rec?.expired && (
+            <p style={{ margin:'12px 0 0', fontSize:12.5, color:'#b91c1c', lineHeight:1.5 }}>
+              FRSC records this licence as expired. They cannot legally drive on it until it is renewed.
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /* The Prembly verdict. Advisory by design — it never blocks approval, but a
    failure is loud enough that approving anyway is a deliberate act. */
 function IdentityVerdict({ identity, userId, onRerun }) {
@@ -200,19 +307,16 @@ function IdentityVerdict({ identity, userId, onRerun }) {
         </div>
       )}
 
-      {(identity.ninName || identity.licenceName) && (
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:'6px 20px',
-          borderTop:`1px solid ${t.bd}`, paddingTop:10 }}>
-          {identity.ninName && (
-            <div><p style={{ fontSize:11, color:MUTED, fontWeight:600 }}>NAME ON NIN</p>
-              <p style={{ fontSize:13, color:TEXT, fontWeight:700 }}>{identity.ninName}</p></div>
-          )}
-          {identity.licenceName && (
-            <div><p style={{ fontSize:11, color:MUTED, fontWeight:600 }}>NAME ON LICENCE</p>
-              <p style={{ fontSize:13, color:TEXT, fontWeight:700 }}>{identity.licenceName}</p></div>
-          )}
+      {identity.ninName && (
+        <div style={{ borderTop:`1px solid ${t.bd}`, paddingTop:10 }}>
+          <p style={{ fontSize:11, color:MUTED, fontWeight:600 }}>NAME ON NIN</p>
+          <p style={{ fontSize:13, color:TEXT, fontWeight:700 }}>{identity.ninName}</p>
         </div>
       )}
+
+      {/* The licence record replaces the old bare "NAME ON LICENCE" line — a
+          name alone could not be checked against anything. */}
+      <LicenceRecord identity={identity} userId={userId}/>
 
       {identity.checkedAt && (
         <p style={{ fontSize:11.5, color:MUTED, marginTop:10 }}>

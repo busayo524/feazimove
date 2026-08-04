@@ -66,12 +66,76 @@ function joinName(...parts) {
   return parts.filter(Boolean).join(' ').trim()
 }
 
+const text = v => {
+  const s = String(v ?? '').trim()
+  return s && s.toLowerCase() !== 'null' ? s : null
+}
+
+// When a lookup fails, Prembly puts its explanation where the record normally
+// goes ("Licence number EKY77620AA21 has expired"). Read as a name it produced
+// an admin screen showing NAME ON LICENCE: "Licence number EKY77620AA21 has
+// expired" — software inventing a person out of an error message, and then
+// failing him for not being called that. A name carries no digits, is short,
+// and is at most a few words.
+function nameField(v) {
+  const s = text(v)
+  if (!s || s.length > 40 || /\d/.test(s) || s.split(/\s+/).length > 3) return null
+  return s
+}
+
+// FRSC dates arrive as YYYY-MM-DD. Returns null when there is no usable date —
+// "we don't know" must never be reported as "expired".
+function isExpired(dateStr) {
+  const t = Date.parse(text(dateStr) || '')
+  return Number.isFinite(t) ? t < Date.now() : null
+}
+
+/**
+ * The FRSC record exactly as Prembly documents it (frsc_data), minus the
+ * portrait, which is returned separately because it is stored separately.
+ * This is what lets an admin judge the driver on the facts — the name printed
+ * on the licence, when it expires, where it was issued — instead of taking our
+ * pass/fail on trust.
+ */
+function licenceRecord(d) {
+  const rec = {
+    number:       text(d.licenseNo || d.license_no || d.licenseNumber),
+    firstName:    nameField(d.firstName || d.firstname),
+    middleName:   nameField(d.middleName || d.middlename),
+    lastName:     nameField(d.lastName || d.lastname),
+    gender:       nameField(d.gender),
+    dateOfBirth:  text(d.birthDate || d.birth_date || d.dob),
+    issuedDate:   text(d.issuedDate || d.issued_date),
+    expiryDate:   text(d.expiryDate || d.expiry_date),
+    stateOfIssue: text(d.stateOfIssue || d.state_of_issue),
+  }
+  rec.name = joinName(rec.firstName, rec.middleName, rec.lastName) || null
+  rec.expired = isExpired(rec.expiryDate)
+  // A record is "found" only if FRSC returned actual cardholder data. An error
+  // string in the payload is not a record, however cheerful the HTTP status.
+  rec.found = !!(rec.name || rec.dateOfBirth || rec.expiryDate)
+  return rec
+}
+
+// The portrait printed on the licence, base64. Rejected unless it is big
+// enough to be a real photograph — placeholder strings and stray flags in this
+// field would otherwise reach the admin screen as a broken image.
+function licencePhotoOf(d) {
+  const p = String(d.photo || d.image || d.picture || '').replace(/^data:image\/\w+;base64,/, '').trim()
+  return p.length > 500 ? p : null
+}
+
 /**
  * Runs every check the user's role requires and returns ONE verdict.
  * Never throws — a Prembly outage must not block someone registering; it is
  * recorded as 'error' for an admin to retry.
  *
- * Returns { status, checks[], ninName, licenceName, summary }
+ * Returns { status, checks[], ninName, licenceName, licence, licencePhoto, summary }
+ *   licence      — the FRSC record itself (name, dob, issue/expiry, state), so
+ *                  an admin can decide on the facts rather than on our verdict
+ *   licencePhoto — the portrait printed on the licence, base64, for the only
+ *                  face comparison that carries real weight: a human's
+ *
  *   verified — every required check passed
  *   failed   — a government record or a face comparison disagreed
  *   error    — we could not reach Prembly, or it returned something unusable
@@ -84,7 +148,7 @@ async function verifyIdentity({ role, registeredName, nin, licenceNumber, dob, s
   const image = selfieBuffer.toString('base64')
   const checks = []
   const add = (name, passed, detail) => checks.push({ name, passed, detail })
-  let ninName = null, licenceName = null
+  let ninName = null, licenceName = null, licence = null, licencePhoto = null
   // One document per role: riders are identified by NIN, drivers by their FRSC
   // licence (which they must hold anyway). Each is checked against the live
   // selfie, so the document still has to belong to the person registering.
@@ -101,8 +165,8 @@ async function verifyIdentity({ role, registeredName, nin, licenceNumber, dob, s
           summary: `Prembly rejected the request (HTTP ${httpStatus}): ${data?.message || 'check the API key and account balance'}` }
       }
       const n = data.nin_data || data.data || {}
-      ninName = joinName(n.firstname || n.firstName, n.middlename || n.middleName,
-        n.surname || n.lastName || n.lastname)
+      ninName = joinName(nameField(n.firstname || n.firstName), nameField(n.middlename || n.middleName),
+        nameField(n.surname || n.lastName || n.lastname)) || null
       const f = faceOf(data)
       if (data.status === false && !n.firstname && !n.firstName) {
         add('NIN found', false, data.message || 'NIN could not be verified')
@@ -141,15 +205,32 @@ async function verifyIdentity({ role, registeredName, nin, licenceNumber, dob, s
         // The licence record comes back under `frsc_data` (Prembly's docs) —
         // the other keys are defensive fallbacks in case that ever changes.
         const d = data.frsc_data || data.data || data.drivers_license || {}
-        licenceName = joinName(d.firstName || d.firstname, d.middleName || d.middlename,
-          d.lastName || d.lastname)
-        const verified = (data.verification?.status || '').toUpperCase() === 'VERIFIED'
-          || !!licenceName
+        const why = text(data.detail) || text(data.message) || 'FRSC returned no record'
+        licence = licenceRecord(typeof d === 'object' && d ? d : {})
+        licenceName = licence.name
+        licencePhoto = licencePhotoOf(typeof d === 'object' && d ? d : {})
+
         const f = faceOf(data)
-        add('Driver’s licence found', verified, licenceName || data.message || 'no record returned')
-        if (verified) {
+        add('Driver’s licence found', licence.found, licence.found
+          ? joinName(licence.name, licence.number && `(${licence.number})`) || 'record returned'
+          : why)
+
+        if (licence.found) {
+          // An expired licence is a real disqualification, not a footnote:
+          // FRSC's own record says this person may not currently drive.
+          if (licence.expired !== null) {
+            add('Licence is still valid', !licence.expired,
+              `${licence.expired ? 'expired' : 'expires'} ${licence.expiryDate}`)
+          }
           add('Face matches licence photo', facePassed(f),
             `${f.message || 'no result'} (confidence ${f.confidence ?? 'n/a'})`)
+        } else {
+          // Nothing came back to compare a face against, so no face check is
+          // recorded — a phantom "face did not match" would read as an accusation
+          // when the truth is that FRSC had nothing to show. Logged because the
+          // shape of a failure response is not documented anywhere.
+          console.warn('prembly licence: no record returned —',
+            JSON.stringify({ httpStatus, keys: Object.keys(data), detail: data.detail, message: data.message }))
         }
       } catch (err) {
         return { status: 'error', checks, summary: `Licence check failed: ${err.message}` }
@@ -174,6 +255,8 @@ async function verifyIdentity({ role, registeredName, nin, licenceNumber, dob, s
     checks,
     ninName,
     licenceName,
+    licence,
+    licencePhoto,
     summary: status === 'verified'
       ? 'All identity checks passed'
       : `Failed: ${failed.join('; ')}`,
