@@ -105,8 +105,8 @@ async function ensureFundingNuban(userId) {
   const a = nuban?.attributes || {}
   const details = {
     // Last-resort label only — but it MUST name the bank the account actually
-    // sits at. Every live account is 9PSB; showing "PROVIDUS BANK" would send
-    // the rider to pick the wrong institution in their banking app.
+    // sits at, because the rider picks that institution in their banking app.
+    // 9PSB is the only provider Anchor issues to us, so it is the safe default.
     bankName: a.bank?.name || a.bankName || '9 Payment Service Bank',
     accountNumber: a.accountNumber,
     accountName: a.accountName,

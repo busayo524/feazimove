@@ -11,18 +11,16 @@
  *   live     https://api.getanchor.co
  *
  * Env vars: ANCHOR_BASE_URL, ANCHOR_API_KEY, ANCHOR_WEBHOOK_TOKEN,
- *           ANCHOR_PROVIDER (ninepsb|providus), ANCHOR_MASTER_ACCOUNT_ID
+ *           ANCHOR_PROVIDER (ninepsb), ANCHOR_MASTER_ACCOUNT_ID
  */
 const axios = require('axios')
 const crypto = require('crypto')
 
 const BASE_URL = (process.env.ANCHOR_BASE_URL || 'https://api.sandbox.getanchor.co').replace(/\/+$/, '')
-// 9 Payment Service Bank is the ONLY provider Anchor offers FeaziMove
-// (confirmed with Anchor, Aug 2026) — an earlier note here claimed providus,
-// which was wrong. Every account on the live org sits on 9PSB, reached only
-// because createVirtualNuban retries after providus rejects it; the reserved
-// account and pay-with-transfer calls have no such retry, so a providus value
-// here makes them fail outright with no fallback. Default accordingly.
+// 9 Payment Service Bank is the ONLY provider Anchor issues to FeaziMove
+// (confirmed with them, Aug 2026). Anything else is rejected on every account
+// call, so this is not a preference to tune — it is the single valid value,
+// and the env var exists only so Anchor can move us without a code change.
 const PROVIDER = process.env.ANCHOR_PROVIDER || 'ninepsb'
 
 const http = axios.create({
@@ -294,25 +292,15 @@ async function createVirtualNuban({ settlementAccountId, provider } = {}) {
     })
     return res.data.data // attributes: { accountNumber, accountName, bank: { name }, permanent, status }
   }
-  // 9PSB is the provider Anchor has enabled for us on live; providus was only
-  // ever reachable in sandbox and returns 400 "Virtual Account not created"
-  // here. The retry stays as a safety net so a rider still gets an account if
-  // Anchor swaps which provider is enabled — but it should not normally fire,
-  // and a warning in the logs means the configured provider has gone stale.
-  const primary = provider || PROVIDER
-  const alternate = primary === 'providus' ? 'ninepsb' : 'providus'
+  // 9PSB is the ONLY provider Anchor issues to FeaziMove. There used to be a
+  // retry against a second provider here, from a period when it was unclear
+  // which one was enabled — it is gone: with one provider the retry could only
+  // ever be a doomed second call that slowed every failure down and buried the
+  // real error behind a second one.
   try {
-    return await attempt(primary)
-  } catch (first) {
-    try {
-      const acct = await attempt(alternate)
-      console.warn(`Anchor: provider '${primary}' rejected the account, created via '${alternate}' instead`)
-      return acct
-    } catch {
-      // Report the CONFIGURED provider's error — the alternate is a safety net,
-      // and its failure is rarely the one worth debugging.
-      throw anchorError(first, 'Could not create an account number.')
-    }
+    return await attempt(provider || PROVIDER)
+  } catch (err) {
+    throw anchorError(err, 'Could not create an account number.')
   }
 }
 
