@@ -591,6 +591,11 @@ async function runMigrations() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS identity_detail     JSONB;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS identity_checked_at TIMESTAMPTZ;
 
+    -- The portrait printed on the driver's licence, base64 from FRSC. Its own
+    -- column, not part of identity_detail, because that JSONB is read for every
+    -- row of the admin user list and a face per driver would ride along with it.
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS licence_photo TEXT;
+
     -- Contact/feedback messages from the public site. Stored as well as
     -- emailed so an SMTP outage can never lose a customer's message.
     CREATE TABLE IF NOT EXISTS contact_messages (
