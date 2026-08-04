@@ -388,14 +388,20 @@ router.post('/reserved-account',
             action: 'Wallet Setup Rejected',
             detail: (err.message || '').slice(0, 280),
           })
-          await query("UPDATE users SET anchor_kyc_status = 'rejected' WHERE id = $1", [req.user.id])
+          await query(
+            "UPDATE users SET anchor_kyc_status = 'rejected', anchor_kyc_reason = $1 WHERE id = $2",
+            [(err.message || '').slice(0, 500), req.user.id]
+          )
           return res.status(422).json({ message: err.message })
         }
         console.error('Anchor KYC verification failed:', err.message)
       }
 
+      // A fresh attempt clears the previous rejection reason — the rider is
+      // looking at a new decision now, not the one they just corrected.
       await query(
-        `UPDATE users SET bvn_submitted = true, anchor_kyc_status = 'submitted' WHERE id = $1`,
+        `UPDATE users SET bvn_submitted = true, anchor_kyc_status = 'submitted',
+            anchor_kyc_reason = NULL WHERE id = $1`,
         [req.user.id]
       )
       analytics.track(req.user.id, 'reserved_account_requested', {})
@@ -458,25 +464,22 @@ router.get('/funding-account', async (req, res, next) => {
     // lands is exactly how a rider's ₦1,300 went missing — so the rider's own
     // poll is a second, independent way to complete the job. No-op unless they
     // are verified and still on an org-named account.
-    let r = await query(
-      `SELECT reserved_account_number, reserved_account_bank, reserved_account_name,
-              anchor_reserved_account_id, bvn_submitted, anchor_kyc_status
-         FROM users WHERE id = $1`,
-      [req.user.id]
-    )
+    const COLS = `reserved_account_number, reserved_account_bank, reserved_account_name,
+                  anchor_reserved_account_id, bvn_submitted, anchor_kyc_status, anchor_kyc_reason`
+    let r = await query(`SELECT ${COLS} FROM users WHERE id = $1`, [req.user.id])
     if (r.rows[0]?.bvn_submitted && r.rows[0]?.anchor_kyc_status !== 'account_named') {
       const upgrade = await tryProvisionReservedAccount(req.user.id)
       if (upgrade.provisioned) {
-        r = await query(
-          `SELECT reserved_account_number, reserved_account_bank, reserved_account_name,
-                  anchor_reserved_account_id, bvn_submitted, anchor_kyc_status
-             FROM users WHERE id = $1`,
-          [req.user.id]
-        )
+        r = await query(`SELECT ${COLS} FROM users WHERE id = $1`, [req.user.id])
       }
     }
     const u = r.rows[0]
     const setUp = !!u?.bvn_submitted
+    const kycStatus = u?.anchor_kyc_status || null
+    const named = kycStatus === 'account_named'
+    // Anchor is still deciding — the rider should wait, not resubmit.
+    const inFlight = ['submitted', 'pending', 'manualreview', 'awaitingdocument']
+      .includes(String(kycStatus || '').toLowerCase())
     res.json({
       bvnSetUp: setUp,
       account: setUp && u?.reserved_account_number ? {
@@ -485,6 +488,16 @@ router.get('/funding-account', async (req, res, next) => {
         accountName: u.reserved_account_name,
       } : null,
       pending: setUp && !!(u?.anchor_reserved_account_id && !u?.reserved_account_number),
+      // Verification state, so the rider is never stuck staring at an account
+      // in the company's name with no idea why or what to do about it.
+      kycStatus,
+      kycReason: u?.anchor_kyc_reason || null,
+      accountIsNamed: named,
+      verificationPending: setUp && !named && inFlight,
+      // People mistype BVNs and register under names their bank doesn't hold,
+      // so re-running verification stays open until the account is actually in
+      // their name. The only thing that closes it is success.
+      canReverify: setUp && !named,
     })
   } catch (err) { next(err) }
 })

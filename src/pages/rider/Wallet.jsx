@@ -22,6 +22,7 @@ const PENDING_KEY = 'fm_pending_fund' // survives switching to the bank app
 function ReservedAccountCard({ showForm, setShowForm, onStatus }) {
   const [account, setAccount] = useState(null)
   const [pending, setPending] = useState(false)
+  const [kyc, setKyc] = useState(null) // { status, reason, isNamed, verifying, canReverify }
   const [bvn, setBvn] = useState('')
   const [address, setAddress] = useState('')
   const [dob, setDob] = useState('')
@@ -35,18 +36,27 @@ function ReservedAccountCard({ showForm, setShowForm, onStatus }) {
       .then(res => {
         setAccount(res.data.account)
         setPending(res.data.pending)
+        setKyc({
+          status: res.data.kycStatus || null,
+          reason: res.data.kycReason || null,
+          isNamed: !!res.data.accountIsNamed,
+          verifying: !!res.data.verificationPending,
+          canReverify: !!res.data.canReverify,
+        })
         onStatus?.(!!res.data.bvnSetUp)
       })
       .catch(() => {})
   }, [onStatus])
   useEffect(() => { load() }, [load])
 
-  // While Anchor finishes creating the account, refresh every few seconds
+  // While Anchor finishes creating the account, refresh every few seconds.
+  // Also poll while verification is in flight: the decision arrives from Anchor
+  // asynchronously, and each poll is what completes the upgrade server-side.
   useEffect(() => {
-    if (!pending || account) return
+    if (!((pending && !account) || kyc?.verifying)) return
     const id = setInterval(load, 5000)
     return () => clearInterval(id)
-  }, [pending, account, load])
+  }, [pending, account, kyc?.verifying, load])
 
   // Mirrors the server's validators on POST /wallet/reserved-account, which
   // requires all four fields. Date of birth and gender were missing here, so
@@ -70,9 +80,11 @@ function ReservedAccountCard({ showForm, setShowForm, onStatus }) {
         bvn, dateOfBirth: dob, gender, address: address.trim(),
       })
       setShowForm(false)
+      setBvn('') // don't leave a BVN sitting in component state after submit
+      setNotice(res.data.message || '')
       if (res.data.account) setAccount(res.data.account)
-      else { setPending(true); setNotice(res.data.message) }
       onStatus?.(true)
+      load() // pull the authoritative verification state back
       track('Reserved Account Requested', {})
     } catch (err) {
       setError(err.data?.message || 'Could not create your account. Please try again.')
@@ -86,7 +98,44 @@ function ReservedAccountCard({ showForm, setShowForm, onStatus }) {
         <p style={{ fontWeight: 700, fontSize: 13, color: MOSS, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Your Personal Funding Account</p>
       </div>
 
-      {account ? (
+      {/* An account that is not yet in the rider's own name is a half-finished
+          state they can act on. Without this they saw a company-named account,
+          no explanation, and no way back to the form — the setup card only ever
+          appears when there is NO account at all. A rejected BVN lands here
+          too: people mistype it, or register under a name their bank does not
+          hold, and they must be able to correct it and try again. */}
+      {account && kyc && !kyc.isNamed && kyc.canReverify && !showForm && (
+        <div style={{ background: kyc.verifying ? '#f7ffe0' : '#fff7ed',
+          border: `1px solid ${kyc.verifying ? NEON : '#fdba74'}`,
+          borderRadius: 12, padding: 12, marginBottom: 12 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:7, marginBottom:6 }}>
+            {kyc.verifying
+              ? <RefreshCw size={13} color={MOSS} style={{ animation:'spin 1.2s linear infinite' }}/>
+              : <AlertCircle size={13} color="#c2410c"/>}
+            <p style={{ fontSize:12.5, fontWeight:800, color: kyc.verifying ? MOSS : '#9a3412' }}>
+              {kyc.verifying ? 'Verifying your identity…' : 'This account is not in your name yet'}
+            </p>
+          </div>
+          <p style={{ fontSize:12, color:MUTED, lineHeight:1.5, marginBottom: kyc.verifying ? 0 : 10 }}>
+            {kyc.verifying
+              ? 'Our banking partner is checking your BVN. This account works normally in the meantime — it moves into your own name as soon as they approve it.'
+              : kyc.reason
+                ? `Our banking partner could not verify your details: ${kyc.reason}. Check your BVN, and that your name and phone number here match your bank records.`
+                : 'Your details have not been verified yet, so this account is still in FeaziMove’s name. It works normally — but you can verify to get one in your own name.'}
+          </p>
+          {!kyc.verifying && (
+            <button onClick={() => setShowForm(true)}
+              style={{ padding:'9px 16px', borderRadius:10, background:'none', border:`1.5px solid ${OLIVE}`, color:OLIVE, fontWeight:700, fontSize:12.5, cursor:'pointer', fontFamily:'inherit' }}>
+              {kyc.status === 'rejected' ? 'Try Again' : 'Verify My Identity'}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* showForm wins over everything: a rider re-verifying already HAS an
+          account, so checking `account` first would render the details and
+          never let them back to the form. */}
+      {!showForm && account ? (
         <>
           {[['Bank', account.bankName], ['Account Number', account.accountNumber, true], ['Account Name', account.accountName]].map(([label, value, copy]) => (
             <div key={label} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'7px 0', borderBottom:'1px solid #f2f4ee' }}>
@@ -100,7 +149,7 @@ function ReservedAccountCard({ showForm, setShowForm, onStatus }) {
             Transfer any amount to this account any time — it lands in your FeaziMove wallet automatically.
           </p>
         </>
-      ) : pending ? (
+      ) : !showForm && pending ? (
         <p style={{ fontSize:13, color:MOSS, display:'flex', alignItems:'center', gap:8 }}>
           <RefreshCw size={13} style={{ animation:'spin 1.2s linear infinite' }}/>
           {notice || 'Your account is being created — it will appear here shortly.'}
@@ -110,8 +159,9 @@ function ReservedAccountCard({ showForm, setShowForm, onStatus }) {
         // request the API will reject (address must be at least 5 chars).
         <form onSubmit={submit}>
           <p style={{ fontSize:12.5, color:MUTED, marginBottom:12, lineHeight:1.5 }}>
-            Get a permanent account number in your own name — fund your wallet by transferring to it any time.
-            Your BVN is required by CBN KYC policy; it is verified by our banking partner.
+            {account
+              ? 'Re-enter your details to try verification again. Your BVN must match the name and phone number on your bank records — a single wrong digit is enough to fail the check.'
+              : 'Get a permanent account number in your own name — fund your wallet by transferring to it any time. Your BVN is required by CBN KYC policy; it is verified by our banking partner.'}
           </p>
           <input value={bvn} onChange={e => setBvn(e.target.value.replace(/[^0-9]/g, '').slice(0, 11))} placeholder="BVN (11 digits)" inputMode="numeric" required
             style={{ width:'100%', padding:'11px 14px', borderRadius:10, fontSize:14, border:`1.5px solid ${BORDER}`, marginBottom:10, boxSizing:'border-box', background:CARD, color:TEXT, fontFamily:'inherit' }}/>
@@ -157,7 +207,7 @@ function ReservedAccountCard({ showForm, setShowForm, onStatus }) {
           <div style={{ display:'flex', gap:10 }}>
             <button type="submit" disabled={!canSubmit}
               style={{ flex:1, padding:'11px', borderRadius:10, background:!canSubmit?BORDER:NEON, color:!canSubmit?MUTED:OLIVE, border:'none', fontWeight:800, fontSize:13.5, cursor:!canSubmit?'not-allowed':'pointer', fontFamily:'inherit' }}>
-              {busy ? 'Creating…' : 'Create My Account'}
+              {busy ? (account ? 'Verifying…' : 'Creating…') : (account ? 'Try Again' : 'Create My Account')}
             </button>
             <button type="button" onClick={() => setShowForm(false)}
               style={{ padding:'11px 16px', borderRadius:10, background:'none', border:`1.5px solid ${BORDER}`, color:MUTED, fontWeight:700, fontSize:13.5, cursor:'pointer', fontFamily:'inherit' }}>

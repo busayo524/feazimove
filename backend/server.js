@@ -561,6 +561,10 @@ async function runMigrations() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS legacy_nuban_ids     TEXT[] DEFAULT '{}';
     ALTER TABLE users ADD COLUMN IF NOT EXISTS legacy_nuban_numbers TEXT[] DEFAULT '{}';
 
+    -- Anchor's own words on why a KYC attempt failed, so the rider is told
+    -- what to correct instead of just "rejected".
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS anchor_kyc_reason TEXT;
+
     -- ── Late-ordered statements: these reference tables/columns created above,
     -- so they MUST run last — the whole migration executes as one implicit
     -- transaction, and on a FRESH database an early reference to a

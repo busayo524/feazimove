@@ -76,10 +76,18 @@ async function provisionReservedAccount(userId) {
   const customer = await anchor.getCustomer(u.anchor_customer_id)
   const status = customer?.attributes?.verification?.status || ''
   if (!isApproved(status)) {
-    // Keep our mirror honest so the Back Office shows the real state.
+    // Keep our mirror honest so the Back Office shows the real state, and carry
+    // Anchor's own wording across so a rejected rider is told what to correct.
     if (status) {
-      await query('UPDATE users SET anchor_kyc_status = $1 WHERE id = $2', [String(status).slice(0, 30), userId])
-        .catch(() => {})
+      const details = customer?.attributes?.verification?.details
+      const why = Array.isArray(details)
+        ? details.filter(d => d?.status && d.status !== 'approved')
+            .map(d => `${d.type || 'check'}: ${d.status}`).join(', ')
+        : null
+      await query(
+        'UPDATE users SET anchor_kyc_status = $1, anchor_kyc_reason = COALESCE($2, anchor_kyc_reason) WHERE id = $3',
+        [String(status).slice(0, 30), why || null, userId]
+      ).catch(() => {})
     }
     return { provisioned: false, reason: `kyc-${status || 'unknown'}` }
   }
@@ -113,7 +121,8 @@ async function provisionReservedAccount(userId) {
         reserved_account_number = COALESCE($2, reserved_account_number),
         reserved_account_bank   = COALESCE($3, reserved_account_bank),
         reserved_account_name   = COALESCE($4, reserved_account_name),
-        anchor_kyc_status = 'account_named'
+        anchor_kyc_status = 'account_named',
+        anchor_kyc_reason = NULL
       WHERE id = $5`,
     [acct?.id || null, d.accountNumber || null,
      d.bankName || d.bank?.name || null, d.accountName || null, userId]

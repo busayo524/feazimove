@@ -578,6 +578,11 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled_at TIMESTAMPTZ;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS legacy_nuban_ids     TEXT[] DEFAULT '{}';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS legacy_nuban_numbers TEXT[] DEFAULT '{}';
 
+-- Why Anchor turned a rider's KYC down, in their words. People mistype a BVN
+-- or register under a name their bank doesn't have; without the reason the
+-- rider is told "rejected" and has no idea what to correct.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS anchor_kyc_reason TEXT;
+
 -- ── Prembly identity verification ───────────────────────────────────────────
 -- Riders are checked as NIN + face; drivers additionally as licence + face,
 -- with both government records required to describe the same person.
