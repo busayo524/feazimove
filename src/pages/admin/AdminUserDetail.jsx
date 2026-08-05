@@ -242,6 +242,57 @@ function LicenceRecord({ identity, userId }) {
   )
 }
 
+/* Anchor names a funding account "FeaziMove Technologies Ltd / <rider>". This
+   asks the only question that matters: does the rider's own name actually
+   appear after the slash? Accounts issued before we sent the customer block
+   came back as "FeaziMove Technologies Ltd / " — correct-looking until you
+   notice there is nothing there. */
+function nameOnAccountLooksRight(accountName, riderName) {
+  const label = String(accountName || '')
+  const after = label.includes('/') ? label.slice(label.indexOf('/') + 1) : label
+  const surname = String(riderName || '').trim().split(/\s+/).filter(Boolean).pop() || ''
+  return !!surname && after.toUpperCase().includes(surname.toUpperCase())
+}
+
+/* Replaces a funding account whose label never carried the rider's name. The
+   old number keeps routing to them, so this is additive, not destructive. */
+function ReissueFundingAccount({ userId, account, onDone }) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  async function reissue() {
+    if (!window.confirm(
+      `Issue a NEW funding account for this rider?\n\nAnchor cannot rename an existing account, so the current one (${account.number}) is replaced. Transfers to the old number still reach them.`
+    )) return
+    setBusy(true); setError('')
+    try {
+      await api.post(`/admin/users/${userId}/reissue-funding-account`)
+      onDone()
+    } catch (err) {
+      setError(err.data?.message || 'Could not issue a new account.')
+    } finally { setBusy(false) }
+  }
+
+  return (
+    <div style={{ marginTop:14, background:'#fff7ed', border:'1px solid #fdba74', borderRadius:12, padding:12 }}>
+      <div style={{ display:'flex', alignItems:'center', gap:7, marginBottom:6 }}>
+        <AlertCircle size={14} color="#c2410c"/>
+        <p style={{ fontSize:12.5, fontWeight:800, color:'#9a3412' }}>This account is not in the rider’s name</p>
+      </div>
+      <p style={{ fontSize:12, color:MUTED, lineHeight:1.5, marginBottom:10 }}>
+        Anchor issued it as “{account.name || '—'}”. Their KYC has since been approved, so a new
+        account will carry their own name. Anchor cannot relabel the existing one.
+      </p>
+      {error && <p style={{ fontSize:12, color:'#ef4444', marginBottom:8 }}>{error}</p>}
+      <button onClick={reissue} disabled={busy}
+        style={{ padding:'9px 16px', borderRadius:10, background:'none', border:`1.5px solid ${OLIVE}`,
+          color:OLIVE, fontWeight:700, fontSize:12.5, cursor:busy?'wait':'pointer', fontFamily:'inherit' }}>
+        {busy ? 'Issuing…' : 'Issue New Funding Account'}
+      </button>
+    </div>
+  )
+}
+
 /* The Prembly verdict. Advisory by design — it never blocks approval, but a
    failure is loud enough that approving anyway is a deliberate act. */
 function IdentityVerdict({ identity, userId, onRerun }) {
@@ -658,6 +709,14 @@ export default function AdminUserDetail() {
               ? `${user.fundingAccount.number}${user.fundingAccount.bank ? ` · ${user.fundingAccount.bank}` : ''}`
               : '—'],
           ]}/>
+          {/* Anchor cannot relabel an account once issued, so a funding account
+              that is not in the rider's own name can only be replaced. Shown
+              only when there is something to replace and the rider is verified. */}
+          {user.fundingAccount && user.kycStatus === 'account_named'
+            && !nameOnAccountLooksRight(user.fundingAccount.name, user.name) && (
+            <ReissueFundingAccount userId={user.id} account={user.fundingAccount} onDone={load}/>
+          )}
+
           {kyc && (
             <p style={{ fontSize:11.5, color:'#b45309', marginTop:14, lineHeight:1.5 }}>
               Full KYC revealed {new Date(kyc.revealedAt).toLocaleString('en-NG', { timeZone:'Africa/Lagos' })}.

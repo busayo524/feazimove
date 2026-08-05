@@ -13,6 +13,7 @@ const { sendAccountCredentialsEmail, sendWelcomeEmail } = require('../services/e
 const anchor = require('../services/anchor')
 const prembly = require('../services/prembly')
 const kycVault = require('../services/kycVault')
+const { provisionReservedAccount } = require('../services/reservedAccounts')
 const { payoutAllowed, sandboxRails, active: paymentsGateActive } = require('../services/paymentsGate')
 const totp = require('../services/totp')
 const QRCode = require('qrcode')
@@ -288,6 +289,11 @@ async function getUserDetail(userId, ridesClause) {
             -- the photo itself is streamed separately; here we only need to know
             -- whether there is one to ask for
             (licence_photo IS NOT NULL) AS has_licence_photo,
+            -- Wallet/KYC state. The detail page has always rendered these rows
+            -- but never asked for the columns, so every one of them read "—"
+            -- unless an admin ran the authenticator reveal.
+            bvn_submitted, bvn_last4, residential_address, anchor_kyc_status,
+            reserved_account_number, reserved_account_bank, reserved_account_name,
             bank_name, bank_account_number
      FROM users WHERE id = $1`,
     [userId]
@@ -348,6 +354,16 @@ async function getUserDetail(userId, ridesClause) {
       hasLicencePhoto: user.has_licence_photo,
       checkedAt:   user.identity_checked_at,
     },
+    bvnSubmitted: user.bvn_submitted,
+    bvnMasked: user.bvn_last4 ? `•••••••${user.bvn_last4}` : null,
+    residentialAddress: user.residential_address,
+    kycStatus: user.anchor_kyc_status,
+    // `name` is what a payer actually sees — and the only way to tell an
+    // account that carries the rider's name from one that does not.
+    fundingAccount: user.reserved_account_number
+      ? { number: user.reserved_account_number, bank: user.reserved_account_bank,
+          name: user.reserved_account_name }
+      : null,
     vehicleType: user.vehicle_type, vehicleMake: user.vehicle_make, vehicleModel: user.vehicle_model,
     plateNumber: user.plate_number, vehicleYear: user.vehicle_year, vehicleColor: user.vehicle_color,
     bankName: user.bank_name, bankAccountNumber: user.bank_account_number,
@@ -2184,6 +2200,44 @@ router.post('/users/:id/kyc/reveal',
           revealedBy: admin.rows[0].email || req.user.id,
         },
       })
+    } catch (err) { next(err) }
+  }
+)
+
+// ── Reissue a rider's funding account ───────────────────────────────────────
+//
+// Anchor labels a reserved account "Merchant Name / Customer Name" and takes
+// the customer half from the creation request. Accounts created before that
+// block was sent came out as "FeaziMove Technologies Ltd / " with nothing after
+// the slash, and Anchor offers no way to relabel an existing account — a new
+// one is the only cure. The old number is retired into legacy_nuban_numbers by
+// the provisioning code, so transfers a rider already scheduled to it still
+// reach them.
+router.post('/users/:id/reissue-funding-account',
+  [param('id').isUUID()],
+  validate,
+  async (req, res, next) => {
+    try {
+      const r = await query(
+        `SELECT id, name, anchor_kyc_status, reserved_account_number, reserved_account_name
+           FROM users WHERE id = $1`, [req.params.id]
+      )
+      const u = r.rows[0]
+      if (!u) return res.status(404).json({ message: 'User not found.' })
+      if (u.anchor_kyc_status !== 'account_named' && u.anchor_kyc_status !== 'approved' && u.anchor_kyc_status !== 'verified') {
+        return res.status(409).json({
+          message: 'This rider has no approved KYC yet, so Anchor cannot issue an account in their name.',
+        })
+      }
+      const before = u.reserved_account_number
+      const result = await provisionReservedAccount(u.id, { force: true })
+      if (!result.provisioned) {
+        return res.status(502).json({ message: `Anchor did not issue a new account (${result.reason}).` })
+      }
+      logActivity(req.user.id, 'Funding Account Reissued', 'payment',
+        `${before || 'none'} → ${result.account.accountNumber} (${result.account.accountName || 'name pending'})`,
+        { req, target: { id: u.id, name: u.name } })
+      res.json({ account: result.account, previousAccountNumber: before })
     } catch (err) { next(err) }
   }
 )

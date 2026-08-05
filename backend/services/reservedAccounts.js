@@ -177,11 +177,11 @@ async function resubmitStalledVerification(userId) {
  * reason } — never throws for the ordinary "not ready yet" cases, because it
  * runs inside routes that must still answer the rider.
  */
-async function provisionReservedAccount(userId) {
+async function provisionReservedAccount(userId, { force = false } = {}) {
   if (!anchor.configured()) return { provisioned: false, reason: 'anchor-not-configured' }
 
   const r = await query(
-    `SELECT anchor_customer_id, bvn_encrypted, bvn_submitted, anchor_kyc_status,
+    `SELECT name, email, anchor_customer_id, bvn_encrypted, bvn_submitted, anchor_kyc_status,
             reserved_account_number, reserved_account_name, anchor_reserved_account_id
        FROM users WHERE id = $1`, [userId]
   )
@@ -192,7 +192,10 @@ async function provisionReservedAccount(userId) {
   // Already upgraded? A named account is one whose name is NOT the org's. We
   // can't compare against a constant (the org name could change), so the
   // marker is anchor_kyc_status — set to 'account_named' once provisioned.
-  if (u.anchor_kyc_status === 'account_named') return { provisioned: false, reason: 'already-named' }
+  // `force` exists for accounts Anchor issued under a wrong or blank label —
+  // they are "named" as far as this flag knows, but not with the rider's name,
+  // and only a fresh account can carry a corrected one.
+  if (u.anchor_kyc_status === 'account_named' && !force) return { provisioned: false, reason: 'already-named' }
 
   // Trust Anchor, not our cached status: a rejected or still-pending customer
   // must never reach the account call.
@@ -219,7 +222,16 @@ async function provisionReservedAccount(userId) {
     return { provisioned: false, reason: 'bvn-unreadable' }
   }
 
-  const acct = await anchor.createReservedAccount({ customerId: u.anchor_customer_id, bvn })
+  // The name here is what a payer will read after the slash, so it comes from
+  // the registered name — the same one Anchor matched against the BVN.
+  const parts = String(u.name || '').trim().split(/\s+/).filter(Boolean)
+  const acct = await anchor.createReservedAccount({
+    customerId: u.anchor_customer_id,
+    firstName: parts[0] || '',
+    lastName: parts.length > 1 ? parts[parts.length - 1] : (parts[0] || ''),
+    email: u.email,
+    bvn,
+  })
   const a = acct?.attributes || {}
   const d = a.accountDetails || a
 
@@ -266,8 +278,8 @@ async function provisionReservedAccount(userId) {
 
 // Same thing, but never throws — for callers on a request path where an Anchor
 // outage must not break the response.
-async function tryProvisionReservedAccount(userId) {
-  try { return await provisionReservedAccount(userId) }
+async function tryProvisionReservedAccount(userId, opts) {
+  try { return await provisionReservedAccount(userId, opts) }
   catch (err) {
     console.error('Reserved account provisioning failed:', err.message)
     return { provisioned: false, reason: 'error' }

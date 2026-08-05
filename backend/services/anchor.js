@@ -172,24 +172,26 @@ async function verifyIndividualCustomer(customerId, { bvn, dateOfBirth, gender }
 //
 // The BVN is passed even when the customer already exists: Anchor asks for it
 // on this call in addition to the customer's completed KYC verification.
+// Anchor composes the name a payer sees as "Merchant Name / Customer Name",
+// and it takes the customer half from THIS block — not from the linked customer
+// record. Sending only the relationship (which is what the customerId branch
+// used to do) produced Femi Odunuga's account, labelled literally
+// "FeaziMove Technologies Ltd / " with nothing after the slash. The identity is
+// therefore always sent; the relationship is kept as well, so the account stays
+// tied to the customer whose KYC was actually approved.
 async function createReservedAccount({ customerId, firstName, lastName, email, bvn }) {
-  const body = customerId
-    ? {
-        data: {
-          type: 'ReservedAccount',
-          attributes: { provider: PROVIDER, ...(bvn ? { bvn } : {}) },
-          relationships: { customer: { data: { id: customerId, type: 'IndividualCustomer' } } },
-        },
-      }
-    : {
-        data: {
-          type: 'ReservedAccount',
-          attributes: {
-            provider: PROVIDER,
-            customer: { individualCustomer: { fullName: { firstName, lastName }, email, bvn } },
-          },
-        },
-      }
+  const body = {
+    data: {
+      type: 'ReservedAccount',
+      attributes: {
+        provider: PROVIDER,
+        customer: { individualCustomer: { fullName: { firstName, lastName }, email, bvn } },
+      },
+      ...(customerId
+        ? { relationships: { customer: { data: { id: customerId, type: 'IndividualCustomer' } } } }
+        : {}),
+    },
+  }
   try {
     const res = await http.post('/pay/reserved-account', body)
     return res.data.data
