@@ -21,7 +21,7 @@ const anchor = require('../services/anchor')
 const kycVault = require('../services/kycVault')
 const { requireTestAccount } = require('../services/paymentsGate')
 const { reconcileUserPayins } = require('../services/payinSettlement')
-const { tryProvisionReservedAccount } = require('../services/reservedAccounts')
+const { tryProvisionReservedAccount, resubmitStalledVerification } = require('../services/reservedAccounts')
 const { runAmlChecksOnPayout, escrowWithdrawal } = require('../services/walletLedger')
 
 const router = express.Router()
@@ -204,17 +204,22 @@ router.post('/fund',
       const { amount } = req.body
       const isRidePayment = req.body.context === 'ride'
 
-      // Wallet setup is the gate on money coming IN, not just going out.
-      // Without this a rider who had never given us a BVN could still top up,
-      // and the fallback below would quietly mint them a PERMANENT funding
-      // NUBAN — one rider reached a live 9PSB account number with
-      // bvn_submitted = false and no CBN KYC behind it. Drivers are exempt:
-      // they are KYC'd through admin approval and their wallet fills from
-      // earnings, not transfers.
+      // Wallet setup gates money coming IN, not just going out — but only for
+      // topping up a balance. Paying for a specific ride is exempt: demanding a
+      // BVN at the moment someone is trying to take their first trip is the
+      // worst possible time to ask, and that payment is a one-off temporary
+      // account, not an account they hold.
+      //
+      // What is NEVER allowed without a BVN is a PERMANENT funding account.
+      // The fallback below used to mint one silently, and a rider reached a
+      // live 9PSB account number with bvn_submitted = false and no CBN KYC
+      // behind it. Drivers are exempt throughout: they are KYC'd through admin
+      // approval and their wallet fills from earnings, not transfers.
       const setup = await query(
         'SELECT can_drive, bvn_submitted FROM users WHERE id = $1', [req.user.id]
       )
-      if (!setup.rows[0]?.can_drive && !setup.rows[0]?.bvn_submitted) {
+      const walletSetUp = !!(setup.rows[0]?.can_drive || setup.rows[0]?.bvn_submitted)
+      if (!walletSetUp && !isRidePayment) {
         return res.status(403).json({
           message: 'Set up your wallet with your BVN before adding money. It only takes a minute.',
           needsWalletSetup: true,
@@ -256,6 +261,16 @@ router.post('/fund',
         // Virtual NUBAN — the webhook matches the incoming amount to this
         // pending top-up by user instead of by reference.
         if (!anchor.isUnavailable(err)) throw err
+        // But never mint that permanent account for someone we have not
+        // identified. Failing the payment is the correct outcome: a live NUBAN
+        // with no CBN KYC behind it is a compliance problem that outlasts the
+        // ride it was created for.
+        if (!walletSetUp) {
+          return res.status(503).json({
+            message: 'We could not set up a payment just now. Please set up your wallet with your BVN, or try again shortly.',
+            needsWalletSetup: true,
+          })
+        }
         transfer = await ensureFundingNuban(req.user.id)
       }
 
@@ -436,9 +451,11 @@ router.post('/reserved-account',
       // never asked. The rider-facing reason stays plain: the fault is ours,
       // and telling them their details failed would be a lie in the other
       // direction. The technical cause is in the event above.
+      // anchor_kyc_last_attempt is stamped here too, so the hourly auto-retry
+      // cannot buy a second lookup moments after the rider paid for one.
       await query(
         `UPDATE users SET bvn_submitted = true, anchor_kyc_status = $1,
-            anchor_kyc_reason = $2 WHERE id = $3`,
+            anchor_kyc_reason = $2, anchor_kyc_last_attempt = NOW() WHERE id = $3`,
         [verificationSent ? 'submitted' : 'verification_unsent',
          verificationSent ? null : 'We could not complete the check with our banking partner. Nothing is wrong with your details — please try again shortly.',
          req.user.id]
@@ -515,6 +532,12 @@ router.get('/funding-account', async (req, res, next) => {
                   anchor_reserved_account_id, bvn_submitted, anchor_kyc_status, anchor_kyc_reason`
     let r = await query(`SELECT ${COLS} FROM users WHERE id = $1`, [req.user.id])
     if (r.rows[0]?.bvn_submitted && r.rows[0]?.anchor_kyc_status !== 'account_named') {
+      // A check Anchor refused outright (billing, outage) is sent again from
+      // the vaulted BVN — at most hourly. Without this the rider would have to
+      // re-type their BVN to recover from a fault that was never theirs.
+      if (await resubmitStalledVerification(req.user.id)) {
+        r = await query(`SELECT ${COLS} FROM users WHERE id = $1`, [req.user.id])
+      }
       const upgrade = await tryProvisionReservedAccount(req.user.id)
       if (upgrade.provisioned) {
         r = await query(`SELECT ${COLS} FROM users WHERE id = $1`, [req.user.id])

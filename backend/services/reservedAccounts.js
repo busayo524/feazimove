@@ -43,6 +43,102 @@ function logEvent(userId, { eventId, eventType, action, detail }) {
   ).catch(err => console.error('activity_log write failed:', err.message))
 }
 
+// Statuses meaning "Anchor never took the check" — as opposed to took it and
+// is deciding ('submitted'), or took it and said no ('rejected'). Only these
+// are worth sending again: resubmitting the same BVN after a real rejection
+// costs money and cannot change the answer.
+//   verification_unsent — we saw the refusal (routes/wallet.js)
+//   unverified          — Anchor's own word for a customer with no check on file
+const RESUBMIT_WHEN = new Set(['verification_unsent', 'unverified'])
+const RESUBMIT_COOLDOWN_MINUTES = 60
+
+/**
+ * Re-send a Tier 2 check that never reached Anchor.
+ *
+ * On 4 Aug 2026 every rider's KYC was being refused with HTTP 400 "Insufficient
+ * balance" — Anchor bills per BVN lookup and the wallet was empty. Nothing
+ * retried, because the rest of this file only ever ASKS Anchor for a verdict;
+ * it never re-asks the question. So funding the Anchor wallet would have fixed
+ * nothing on its own: every affected rider would have had to be told, one by
+ * one, to type their BVN in again.
+ *
+ * The BVN is already in the vault, so the rider need not be involved at all.
+ * Throttled to one attempt an hour per rider, and the timestamp is claimed
+ * atomically BEFORE the call — two concurrent wallet polls must not buy two
+ * lookups.
+ *
+ * Returns true if a check was sent. Never throws.
+ */
+async function resubmitStalledVerification(userId) {
+  try {
+    if (!anchor.configured()) return false
+    const r = await query(
+      `SELECT anchor_customer_id, bvn_encrypted, bvn_submitted, anchor_kyc_status,
+              date_of_birth, gender
+         FROM users WHERE id = $1`, [userId]
+    )
+    const u = r.rows[0]
+    if (!u?.bvn_submitted || !u.anchor_customer_id || !u.bvn_encrypted) return false
+    if (!RESUBMIT_WHEN.has(String(u.anchor_kyc_status || '').toLowerCase())) return false
+    if (!u.date_of_birth || !u.gender) return false // Anchor requires both
+
+    // Atomic claim: whoever sets the timestamp owns this hour's attempt.
+    const claimed = await query(
+      `UPDATE users SET anchor_kyc_last_attempt = NOW()
+        WHERE id = $1
+          AND (anchor_kyc_last_attempt IS NULL
+               OR anchor_kyc_last_attempt < NOW() - INTERVAL '${RESUBMIT_COOLDOWN_MINUTES} minutes')
+        RETURNING id`, [userId]
+    )
+    if (!claimed.rows[0]) return false
+
+    const bvn = kycVault.decrypt(u.bvn_encrypted)
+    if (!bvn) {
+      console.error(`KYC resubmission blocked for ${userId}: BVN could not be decrypted`)
+      return false
+    }
+
+    try {
+      await anchor.verifyIndividualCustomer(u.anchor_customer_id, {
+        bvn,
+        dateOfBirth: new Date(u.date_of_birth).toISOString().slice(0, 10),
+        gender: u.gender,
+      })
+      await query(
+        "UPDATE users SET anchor_kyc_status = 'submitted', anchor_kyc_reason = NULL WHERE id = $1",
+        [userId]
+      )
+      logEvent(userId, {
+        eventId: `kyc-resent-${userId}-${Date.now()}`,
+        eventType: 'wallet.setup.resent',
+        action: 'KYC Re-sent To Anchor',
+        detail: 'A verification that Anchor had refused was automatically sent again',
+      })
+      return true
+    } catch (err) {
+      const rejected = err.status === 422
+      await query(
+        'UPDATE users SET anchor_kyc_status = $1, anchor_kyc_reason = $2 WHERE id = $3',
+        [rejected ? 'rejected' : 'verification_unsent',
+         rejected
+           ? (err.message || '').slice(0, 500)
+           : 'We could not complete the check with our banking partner. Nothing is wrong with your details — we will keep trying.',
+         userId]
+      )
+      logEvent(userId, {
+        eventId: `kyc-resend-failed-${userId}-${Date.now()}`,
+        eventType: rejected ? 'wallet.setup.rejected' : 'wallet.setup.error',
+        action: rejected ? 'KYC Rejected On Retry' : 'KYC Retry Refused By Anchor',
+        detail: (err.message || 'unknown error').slice(0, 280),
+      })
+      return false
+    }
+  } catch (err) {
+    console.error('KYC resubmission failed:', err.message)
+    return false
+  }
+}
+
 /**
  * Issue the rider-named reserved account, if Anchor has approved their KYC.
  *
@@ -155,4 +251,7 @@ async function tryProvisionReservedAccount(userId) {
   }
 }
 
-module.exports = { provisionReservedAccount, tryProvisionReservedAccount, isApproved }
+module.exports = {
+  provisionReservedAccount, tryProvisionReservedAccount, isApproved,
+  resubmitStalledVerification,
+}

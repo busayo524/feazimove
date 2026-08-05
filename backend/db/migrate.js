@@ -602,6 +602,11 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS identity_checked_at TIMESTAMPTZ;
 -- the one endpoint that streams it to an admin, and deleting the user drops it.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS licence_photo TEXT;
 
+-- When we last SENT a Tier 2 KYC check to Anchor. Anchor bills per attempt, so
+-- the automatic retry of a check that never reached them is throttled on this
+-- rather than firing on every wallet poll.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS anchor_kyc_last_attempt TIMESTAMPTZ;
+
 -- ── Contact / feedback messages from the public site ────────────────────────
 -- Stored as well as emailed: an SMTP outage must not lose a customer's message,
 -- and support needs a queue it can work through rather than an inbox.

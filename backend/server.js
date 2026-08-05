@@ -596,6 +596,11 @@ async function runMigrations() {
     -- row of the admin user list and a face per driver would ride along with it.
     ALTER TABLE users ADD COLUMN IF NOT EXISTS licence_photo TEXT;
 
+    -- When we last SENT a Tier 2 KYC check to Anchor. Anchor bills per attempt,
+    -- so the automatic retry of a check that never reached them is throttled on
+    -- this rather than firing on every wallet poll.
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS anchor_kyc_last_attempt TIMESTAMPTZ;
+
     -- Contact/feedback messages from the public site. Stored as well as
     -- emailed so an SMTP outage can never lose a customer's message.
     CREATE TABLE IF NOT EXISTS contact_messages (
