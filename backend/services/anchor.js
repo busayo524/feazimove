@@ -109,6 +109,26 @@ async function createPayWithTransfer({ reference, fullName, email, amountKobo, e
   } catch (err) { throw anchorError(err, 'Could not create a payment account.') }
 }
 
+// ── Update a customer's registered name (docs.getanchor.co/docs/manage-individual)
+//
+// Anchor matches the BVN against the name on the CUSTOMER record — not against
+// anything sent in the KYC call. So a customer created under a shortened name
+// ("Femi Odunuga") can never pass a BVN that reads "Olorunfemi Odunuga", and
+// every retry re-asks the same question for another ₦50. Correcting the record
+// is the only thing that changes the answer.
+//
+// Anchor refuses this once KYC has COMPLETED, which is why it only ever runs
+// before verification succeeds.
+async function updateIndividualCustomerName(customerId, { firstName, lastName }) {
+  try {
+    const res = await http.put(
+      `/api/v1/customers/update/${encodeURIComponent(customerId)}`,
+      { data: { type: 'IndividualCustomer', attributes: { fullName: { firstName, lastName } } } }
+    )
+    return res.data.data
+  } catch (err) { throw anchorError(err, 'Could not update your name with our banking partner.') }
+}
+
 // ── Individual customer KYC (docs.getanchor.co/reference/kyc-validation) ─────
 // Upgrades a Tier 0 customer (name/email/phone/address only) to Tier 2 by
 // submitting BVN + date of birth + gender. REQUIRED before Anchor will issue a
@@ -426,6 +446,7 @@ function verifyWebhookSignature(rawBody, signature) {
 module.exports = {
   configured,
   createIndividualCustomer,
+  updateIndividualCustomerName,
   verifyIndividualCustomer,
   createPayWithTransfer,
   createReservedAccount,

@@ -415,7 +415,61 @@ router.post('/reserved-account',
       //   customer exists → Tier 2 KYC verification → reserved account.
       // Creating the account first is what produced org-named NUBANs for
       // everyone: an unverified customer cannot hold an account in their name.
-      const { customerId } = await ensureAnchorCustomer(req.user.id)
+      const { customerId, user: anchorUser } = await ensureAnchorCustomer(req.user.id)
+
+      // Anchor checks the BVN against the name on the CUSTOMER record — not
+      // against anything sent in the check itself. Femi Odunuga's record said
+      // "Femi Odunuga" while his BVN and his FeaziMove account both said
+      // "Olorunfemi Odunuga", so four attempts were each rejected on FULL_NAME,
+      // ₦50 apiece, while the one thing that could have changed the outcome was
+      // never touched. Reconcile it before spending anything.
+      let nameCorrected = false
+      try {
+        const current = await anchor.getCustomer(customerId)
+        const onFile = [current?.attributes?.fullName?.firstName,
+                        current?.attributes?.fullName?.lastName].filter(Boolean).join(' ').trim()
+        const parts = String(anchorUser?.name || '').trim().split(/\s+/).filter(Boolean)
+        const ours = [parts[0], parts.length > 1 ? parts[parts.length - 1] : ''].filter(Boolean).join(' ')
+        if (ours && onFile && onFile.toUpperCase() !== ours.toUpperCase()) {
+          await anchor.updateIndividualCustomerName(customerId, {
+            firstName: parts[0],
+            lastName: parts.length > 1 ? parts[parts.length - 1] : parts[0],
+          })
+          nameCorrected = true
+          logWalletEvent(req.user.id, {
+            eventId: `wsetup-${attempt}-namefix`,
+            eventType: 'wallet.setup.namecorrected',
+            action: 'Anchor Customer Name Corrected',
+            detail: `Anchor held "${onFile}" — updated to "${ours}" to match the registered name before re-checking the BVN`,
+          })
+        }
+      } catch (err) {
+        // Not fatal: the check below may still pass, and if it fails its reason
+        // describes the mismatch more precisely than a guess here could.
+        console.error('Anchor customer name sync failed:', err.message)
+      }
+
+      // A rejection Anchor has already issued, re-asked with identical details,
+      // returns the identical answer and bills ₦50 for it. Only pay when
+      // something has actually changed.
+      if (existing.rows[0]?.anchor_kyc_status === 'rejected' && !nameCorrected) {
+        const p = (await query(
+          'SELECT bvn_encrypted, date_of_birth, gender, anchor_kyc_reason FROM users WHERE id = $1',
+          [req.user.id]
+        )).rows[0] || {}
+        const sameBvn = kycVault.decrypt(p.bvn_encrypted) === req.body.bvn
+        const sameDob = p.date_of_birth
+          && new Date(p.date_of_birth).toISOString().slice(0, 10) === String(req.body.dateOfBirth).slice(0, 10)
+        const sameGender = (p.gender || '') === req.body.gender
+        if (sameBvn && sameDob && sameGender) {
+          return res.status(409).json({
+            message: p.anchor_kyc_reason
+              ? `We already checked these exact details with our banking partner and ${p.anchor_kyc_reason}. Please correct that before trying again.`
+              : 'These exact details were already checked and could not be matched. Please correct them before trying again.',
+            unchanged: true,
+          })
+        }
+      }
 
       let verificationSent = false
       try {

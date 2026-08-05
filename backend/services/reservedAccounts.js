@@ -49,6 +49,33 @@ function logEvent(userId, { eventId, eventType, action, detail }) {
 // costs money and cannot change the answer.
 //   verification_unsent — we saw the refusal (routes/wallet.js)
 //   unverified          — Anchor's own word for a customer with no check on file
+// Anchor names the exact fields that failed. "BVN: rejected" — all we used to
+// keep — tells a rider nothing they can act on, while the payload underneath
+// says plainly which of name, phone or date of birth disagreed with their bank
+// record. Each rejection costs ₦50, so the reason has to be worth the money.
+const ITEM_LABELS = {
+  FULL_NAME: 'the full name',
+  PHONE_NUMBER: 'the phone number',
+  DATE_OF_BIRTH: 'the date of birth',
+  GENDER: 'the gender',
+}
+
+function explainVerification(customer) {
+  const details = customer?.attributes?.verification?.details
+  if (!Array.isArray(details)) return null
+  const parts = []
+  for (const d of details) {
+    if (!d?.status || String(d.status).toLowerCase() === 'approved') continue
+    const failed = (d.validatedItems || [])
+      .filter(i => String(i?.status || '').toUpperCase() !== 'APPROVED')
+      .map(i => ITEM_LABELS[i.item] || String(i.item || '').toLowerCase().replace(/_/g, ' '))
+    parts.push(failed.length
+      ? `${failed.join(' and ')} on the BVN does not match this account`
+      : `${d.type || 'check'}: ${d.comment || d.status}`)
+  }
+  return parts.join('; ') || null
+}
+
 const RESUBMIT_WHEN = new Set(['verification_unsent', 'unverified'])
 const RESUBMIT_COOLDOWN_MINUTES = 60
 
@@ -175,11 +202,7 @@ async function provisionReservedAccount(userId) {
     // Keep our mirror honest so the Back Office shows the real state, and carry
     // Anchor's own wording across so a rejected rider is told what to correct.
     if (status) {
-      const details = customer?.attributes?.verification?.details
-      const why = Array.isArray(details)
-        ? details.filter(d => d?.status && d.status !== 'approved')
-            .map(d => `${d.type || 'check'}: ${d.status}`).join(', ')
-        : null
+      const why = explainVerification(customer)
       await query(
         'UPDATE users SET anchor_kyc_status = $1, anchor_kyc_reason = COALESCE($2, anchor_kyc_reason) WHERE id = $3',
         [String(status).slice(0, 30), why || null, userId]
