@@ -189,6 +189,19 @@ router.get('/transactions', async (req, res, next) => {
 // and history labels; the frontend polls /fund/status/:reference as before.
 const FUND_EXPIRY_SECONDS = 30 * 60
 
+// Whose name the ONE-TIME payment account is opened in.
+//
+// It used to be the rider's own, which made a throwaway collection slip look
+// exactly like a bank account they owned — while riders who had done no KYC at
+// all saw their name on it. The rider's name belongs on ONE account only: the
+// permanent one they earn by passing the BVN check. Everything else is
+// FeaziMove collecting a payment, and should say so.
+//
+// Verified against Anchor (5 Aug 2026): they open the account under whatever
+// name we send, so the beneficiary shown in the rider's banking app matches
+// this screen. A mismatch there would look like fraud and stop the transfer.
+const COLLECTION_ACCOUNT_NAME = process.env.ANCHOR_COLLECTION_NAME || 'FeaziMove Technologies Ltd'
+
 router.post('/fund',
   requireTestAccount, // no-op unless sandbox rails + an allowlist are configured
   [
@@ -243,7 +256,9 @@ router.post('/fund',
       try {
         const pwt = await anchor.createPayWithTransfer({
           reference,
-          fullName: user.name,
+          // The rider is still identified by `reference` and the metadata
+          // below — the settlement path never reads this name.
+          fullName: COLLECTION_ACCOUNT_NAME,
           email: user.email,
           amountKobo: amount * 100,
           expirySeconds: FUND_EXPIRY_SECONDS,
@@ -254,7 +269,7 @@ router.post('/fund',
         transfer = {
           bankName: details.bankName || details.bank?.name || '9 Payment Service Bank',
           accountNumber: details.accountNumber,
-          accountName: details.accountName || `FeaziMove / ${user.name}`,
+          accountName: details.accountName || COLLECTION_ACCOUNT_NAME,
         }
       } catch (err) {
         // Sandbox (or /pay not yet enabled): fall back to the user's permanent

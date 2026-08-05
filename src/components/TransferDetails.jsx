@@ -23,10 +23,20 @@ export default function TransferDetails({ transfer, secondsLeft, onCancel, waiti
   const secs = Math.max(0, secondsLeft % 60)
   return (
     <div style={{ background:'#f7ffe0', border:`1.5px solid ${NEON}`, borderRadius:14, padding:16 }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
-        <p style={{ fontWeight:800, fontSize:13, color:OLIVE }}>Transfer to this account</p>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10 }}>
+        <div>
+          <p style={{ fontWeight:800, fontSize:13, color:OLIVE }}>Transfer to this account</p>
+          {/* This number is good for ONE payment and dies with the countdown
+              below. It carries the rider's own name, so it reads like an
+              account they own — save it, transfer to it next week, and the
+              money goes nowhere anyone can find. Say so where they are
+              reading the number, not in a footnote. */}
+          <p style={{ fontSize:11.5, color:MUTED, marginTop:2, lineHeight:1.4 }}>
+            One-time payment account — it expires below. Don’t save it for later.
+          </p>
+        </div>
         {onCancel && (
-          <button onClick={onCancel} aria-label="Dismiss" style={{ background:'none', border:'none', cursor:'pointer', color:MUTED, padding:2 }}><X size={15}/></button>
+          <button onClick={onCancel} aria-label="Dismiss" style={{ background:'none', border:'none', cursor:'pointer', color:MUTED, padding:2, flexShrink:0 }}><X size={15}/></button>
         )}
       </div>
       {[['Bank', transfer.bankName], ['Account Number', transfer.accountNumber, true], ['Account Name', transfer.accountName]].map(([label, value, copy]) => (
