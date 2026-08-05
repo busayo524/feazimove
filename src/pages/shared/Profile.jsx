@@ -8,6 +8,7 @@ import { dataUrlToFile } from '../../utils/dataUrlToFile'
 import { compressImage } from '../../utils/compressImage'
 import { rememberAvatar } from '../../utils/avatarCache'
 import StepUpModal from '../../components/StepUpModal'
+import { CITIES, LAGOS_AREAS } from '../../constants/areas'
 import { User, Phone, Mail, Shield, Bell, ChevronRight, LogOut, Camera, CheckCircle, X, RefreshCw, Car, MapPin, AlertCircle, Landmark } from 'lucide-react'
 
 const NEON='#ccff00', NT='#0a0a0a'
@@ -350,7 +351,7 @@ export default function Profile(){
   const navigate=useNavigate()
   const [editing,setEditing]=useState(false)
   const [saved,setSaved]=useState(false)
-  const [form,setForm]=useState({firstName:user?.firstName||'',lastName:user?.lastName||'',phone:user?.phone||'',bankName:user?.bankName||'',bankAccountNumber:user?.bankAccountNumber||''})
+  const [form,setForm]=useState({firstName:user?.firstName||'',lastName:user?.lastName||'',phone:user?.phone||'',bankName:user?.bankName||'',bankAccountNumber:user?.bankAccountNumber||'',city:user?.city||'',area:user?.area||'',workArea:user?.workArea||''})
   const [saving,setSaving]=useState(false)
   const [saveError,setSaveError]=useState('')
   const [avatarUrl,setAvatarUrl]=useMyAvatar(user?.id)
@@ -390,12 +391,18 @@ export default function Profile(){
       // Name is intentionally NOT sent — the registered name is locked for
       // KYC (BVN verification + first-party payout matching) and the server
       // ignores it anyway.
+      const commute={
+        city:(form.city||'').trim(),
+        area:(form.area||'').trim(),
+        workArea:(form.workArea||'').trim(),
+      }
       await api.patch('/auth/profile',{
         phone,
         bankName:(form.bankName||'').trim(),
         bankAccountNumber:acct,
+        ...commute,
       })
-      updateUser({phone,bankName:(form.bankName||'').trim(),bankAccountNumber:acct})
+      updateUser({phone,bankName:(form.bankName||'').trim(),bankAccountNumber:acct,...commute})
       setSaved(true);setEditing(false);setTimeout(()=>setSaved(false),2500)
     }catch(err){
       // 409 = the number belongs to someone else; show the server's wording.
@@ -469,6 +476,38 @@ export default function Profile(){
                 You sign in with this number, so keep it one you can access.
               </p>
             </div>
+            {/* Commute. The work area was added to registration after these
+                members had already signed up, so for them this form is the only
+                place it can ever be filled in. */}
+            <p style={{fontWeight:700,fontSize:13,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em',marginTop:6}}>Your Commute</p>
+            <div>
+              <label style={{display:'block',fontSize:13,fontWeight:600,color:TEXT,marginBottom:6}}>City</label>
+              <select value={form.city} onChange={e=>{set('city',e.target.value);set('area','');set('workArea','')}}
+                style={{width:'100%',padding:'12px 14px',borderRadius:10,fontSize:15,border:`1.5px solid ${BORDER}`,outline:'none',color:TEXT,background:CARD,fontFamily:'inherit',boxSizing:'border-box',cursor:'pointer'}}>
+                <option value="">Select city</option>
+                {CITIES.map(c=><option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            {[['Home Area','area','Enter your area / neighbourhood','Select area in Lagos'],
+              ['Work / Office Area','workArea','Where do you work / commute to?','Select work area in Lagos']].map(([label,key,ph,selectPh])=>(
+              <div key={key}>
+                <label style={{display:'block',fontSize:13,fontWeight:600,color:TEXT,marginBottom:6}}>{label}</label>
+                {form.city==='Lagos' ? (
+                  <select value={form[key]} onChange={e=>set(key,e.target.value)}
+                    style={{width:'100%',padding:'12px 14px',borderRadius:10,fontSize:15,border:`1.5px solid ${BORDER}`,outline:'none',color:TEXT,background:CARD,fontFamily:'inherit',boxSizing:'border-box',cursor:'pointer'}}>
+                    <option value="">{selectPh}</option>
+                    {LAGOS_AREAS.map(a=><option key={a} value={a}>{a}</option>)}
+                  </select>
+                ) : (
+                  <input value={form[key]} onChange={e=>set(key,e.target.value)} placeholder={ph}
+                    style={{width:'100%',padding:'12px 14px',borderRadius:10,fontSize:15,border:`1.5px solid ${BORDER}`,outline:'none',color:TEXT,background:CARD,fontFamily:'inherit',boxSizing:'border-box'}}
+                    onFocus={e=>e.target.style.borderColor=MOSS} onBlur={e=>e.target.style.borderColor=BORDER}/>
+                )}
+              </div>
+            ))}
+            <p style={{fontSize:12,color:MUTED,marginTop:-4,lineHeight:1.45}}>
+              Where you travel between. It helps us match you to the right routes.
+            </p>
             <p style={{fontWeight:700,fontSize:13,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em',marginTop:6}}>Bank Account Details (For Withdrawals)</p>
             <div>
               <label style={{display:'block',fontSize:13,fontWeight:600,color:TEXT,marginBottom:6}}>Bank Name</label>

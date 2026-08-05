@@ -941,7 +941,10 @@ router.post('/logout', logoutLimiter, async (req, res, next) => {
 router.get('/me', requireAuth, async (req, res, next) => {
   try {
     const result = await query(
-      'SELECT id, name, email, phone, role, wallet_balance, rating, can_ride, can_drive, active_role, force_password_change, bank_name, bank_account_number FROM users WHERE id = $1',
+      `SELECT id, name, email, phone, role, wallet_balance, rating, can_ride, can_drive,
+              active_role, force_password_change, bank_name, bank_account_number,
+              city, area, work_area
+         FROM users WHERE id = $1`,
       [req.user.id]
     )
     if (!result.rows[0]) return res.status(404).json({ message: 'User not found.' })
@@ -1009,6 +1012,9 @@ router.patch('/profile',
     body('phone').optional({ nullable: true }).trim()
       .matches(/^\+\d{6,15}$|^(\+?234|0)[789][01]\d{8}$/)
       .withMessage('Enter a valid phone number.'),
+    body('city').optional({ nullable: true }).trim().isLength({ max: 60 }).escape(),
+    body('area').optional({ nullable: true }).trim().isLength({ max: 100 }).escape(),
+    body('workArea').optional({ nullable: true }).trim().isLength({ max: 100 }).escape(),
   ],
   validate,
   async (req, res, next) => {
@@ -1033,12 +1039,19 @@ router.patch('/profile',
         }
         add('phone', req.body.phone.trim())
       }
+      // Commute details. Editable because they are preferences, not KYC anchors
+      // — and because every member who registered before the work-area field
+      // existed has no other way to supply it.
+      if (req.body.city !== undefined)     add('city', req.body.city || null)
+      if (req.body.area !== undefined)     add('area', req.body.area || null)
+      if (req.body.workArea !== undefined) add('work_area', req.body.workArea || null)
       if (!sets.length) return res.json({ message: 'Nothing to update.' })
       vals.push(req.user.id)
       const result = await query(
         `UPDATE users SET ${sets.join(', ')} WHERE id = $${vals.length}
          RETURNING id, name, email, phone, role, wallet_balance, rating, can_ride, can_drive,
-                   active_role, force_password_change, bank_name, bank_account_number`,
+                   active_role, force_password_change, bank_name, bank_account_number,
+                   city, area, work_area`,
         vals
       )
       res.json({ message: 'Profile updated.', user: safeUser(result.rows[0]) })
@@ -1167,6 +1180,12 @@ function safeUser(user) {
     forcePasswordChange: user.force_password_change ?? false,
     bankName:          user.bank_name || null,
     bankAccountNumber: user.bank_account_number || null,
+    // Commute details. `?? null` rather than a required field: several callers
+    // build this from a SELECT that never asked for these columns, and a
+    // missing column must read as "not loaded", not crash the response.
+    city:     user.city ?? null,
+    area:     user.area ?? null,
+    workArea: user.work_area ?? null,
   }
 }
 

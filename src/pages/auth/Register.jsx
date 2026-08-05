@@ -12,6 +12,7 @@ import PhoneInput from '../../components/PhoneInput'
 import { dataUrlToFile } from '../../utils/dataUrlToFile'
 import { HomeLogoLink } from '../../components/StandaloneApp'
 import { compressImage } from '../../utils/compressImage'
+import { CITIES, LAGOS_AREAS } from '../../constants/areas'
 
 /* ── helpers ──────────────────────────────────────────────────────────── */
 function validatePhone(p) {
@@ -243,29 +244,9 @@ const DRIVER_STEPS = [
   { id: 3, label: 'Certification',          sub: 'Terms & signature',          icon: Shield   },
 ]
 
-const CITIES    = ['Lagos','Abuja','Port Harcourt','Kano','Ibadan','Enugu','Benin City','Accra','Nairobi','Cape Town','Dakar']
 const ID_TYPES  = ['National ID (NIN)']
 const VEH_TYPES = ['Car','Motorcycle','Tricycle (Keke)','Minibus','Bus']
 
-const LAGOS_AREAS = [
-  // ── Islands & Upscale ──
-  'Victoria Island', 'Ikoyi', 'Lekki Phase 1', 'Lekki Phase 2', 'Lekki-Epe Expressway',
-  'Ajah', 'Sangotedo', 'Chevron / Idado', 'Ikate', 'Osapa London', 'Abraham Adesanya',
-  'Badore', 'Ibeju-Lekki', 'Eleko', 'Epe',
-  // ── Mainland — Central ──
-  'Yaba', 'Surulere', 'Ojuelegba', 'Ikeja', 'Maryland', 'Gbagada', 'Shomolu', 'Bariga',
-  'Ketu', 'Ojota', 'Mile 12', 'Alapere', 'Magodo', 'Oregun', 'Omole', 'Agidingbi', 'Ogudu',
-  // ── Mainland — West ──
-  'Agege', 'Ogba', 'Ojodu Berger', 'Ifako-Ijaiye', 'Dopemu', 'Iyana Ipaja', 'Ipaja',
-  'Egbeda', 'Idimu', 'Alimosho', 'Akowonjo', 'Isheri', 'Abule Egba', 'Meiran',
-  // ── Mainland — East ──
-  'Mushin', 'Oshodi', 'Isolo', 'Ejigbo', 'Ikotun', 'Mile 2', 'Amuwo-Odofin',
-  'Festac Town', 'Satellite Town', 'Okota', 'Ilasamaja',
-  // ── Lagos Island ──
-  'Lagos Island', 'Lagos Mainland', 'Apapa', 'Badia', 'Ajegunle',
-  // ── Outskirts ──
-  'Badagry', 'Ikorodu', 'Ojo', 'Ijede', 'Agbowa',
-].sort()
 
 /* ── Webcam Capture Modal ─────────────────────────────────────────────── */
 function CameraModal({ onCapture, onClose }) {
