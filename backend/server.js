@@ -601,6 +601,10 @@ async function runMigrations() {
     -- this rather than firing on every wallet poll.
     ALTER TABLE users ADD COLUMN IF NOT EXISTS anchor_kyc_last_attempt TIMESTAMPTZ;
 
+    -- The area they commute TO, captured at registration alongside their home
+    -- area. Together the two describe the route a member actually needs.
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS work_area VARCHAR(100);
+
     -- Contact/feedback messages from the public site. Stored as well as
     -- emailed so an SMTP outage can never lose a customer's message.
     CREATE TABLE IF NOT EXISTS contact_messages (

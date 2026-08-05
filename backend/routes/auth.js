@@ -374,7 +374,7 @@ router.get('/validate-reg-token',
 //     the purpose; these are re-captured on resume
 //
 const DRAFT_FIELDS = [
-  'firstName', 'lastName', 'email', 'phone', 'city', 'area',
+  'firstName', 'lastName', 'email', 'phone', 'city', 'area', 'workArea',
   'dobDay', 'dobMonth', 'dobYear', 'gender',
   'idType', 'idNumber',
   'vehicleType', 'vehicleMake', 'vehicleModel', 'vehicleColor',
@@ -438,6 +438,7 @@ router.post('/register',
     // Location + demographics from step 1
     body('city').optional({ checkFalsy: true }).trim().isLength({ max: 60 }).escape(),
     body('area').optional({ checkFalsy: true }).trim().isLength({ max: 100 }).escape(),
+    body('workArea').optional({ checkFalsy: true }).trim().isLength({ max: 100 }).escape(),
     body('dateOfBirth').optional({ checkFalsy: true }).isISO8601(),
     body('gender').optional({ checkFalsy: true }).isIn(['male', 'female', 'prefer_not_to_say']),
     // Rider identity (optional — only rider step 2 sends these)
@@ -458,7 +459,7 @@ router.post('/register',
     try {
       const {
         registrationToken, role, name,
-        city, area, dateOfBirth, gender,
+        city, area, workArea, dateOfBirth, gender,
         idType, idNumber,
         vehicleType, vehicleMake, vehicleModel, plateNumber, vehicleYear, vehicleColor,
       } = req.body
@@ -510,7 +511,10 @@ router.post('/register',
              -- FRSC licence number: needed by Prembly's licence check, which
              -- takes the number + DOB. Previously only the licence IMAGE was
              -- collected, which cannot be verified against anything.
-             drivers_license_number = COALESCE($16, drivers_license_number)
+             drivers_license_number = COALESCE($16, drivers_license_number),
+             -- Where they commute TO. With home area, this is the route they
+             -- actually need, known before they ever open the booking screen.
+             work_area     = COALESCE($17, work_area)
          WHERE id = $1
          RETURNING id, name, email, role`,
         [
@@ -521,6 +525,7 @@ router.post('/register',
           city || null, area || null, dateOfBirth || null, gender || null,
           role,
           req.body.driversLicenseNumber || null,
+          workArea || null,
         ]
       )
 

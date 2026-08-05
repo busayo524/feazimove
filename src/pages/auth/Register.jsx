@@ -548,6 +548,7 @@ export default function Register() {
     phone:   prefill.phone   || '',
     city:    '',
     area:    '',
+    workArea: '',
     dobDay:  '', dobMonth: '', dobYear: '',
     gender:  '',
     password: prefill.password || '',
@@ -627,6 +628,7 @@ export default function Register() {
     // City and area always required
     if (!form.city)  e.city = 'Select your city.'
     if (!form.area)  e.area = form.city === 'Lagos' ? 'Select your area in Lagos.' : 'Enter your area / neighbourhood.'
+    if (!form.workArea) e.workArea = form.city === 'Lagos' ? 'Select your work area in Lagos.' : 'Enter the area you commute to.'
     setErrors(e); return !Object.keys(e).length
   }
   function v2Rider() {
@@ -714,6 +716,7 @@ export default function Register() {
         formData.append('name', [form.firstName, form.lastName].filter(Boolean).join(' '))
         if (form.city)   formData.append('city', form.city)
         if (form.area)   formData.append('area', form.area)
+        if (form.workArea) formData.append('workArea', form.workArea)
         if (form.gender) formData.append('gender', form.gender)
         if (form.dobYear && form.dobMonth && form.dobDay) {
           formData.append('dateOfBirth',
@@ -908,16 +911,20 @@ export default function Register() {
                   </div>
                   <div>
                     <label style={lbl}>City <Req /></label>
-                    <select value={form.city} onChange={e => { f('city', e.target.value); f('area', '') }} style={{ ...inp(!!errors.city), cursor: 'pointer' }}>
+                    {/* Changing city clears BOTH areas — the Lagos list would
+                        otherwise leave a Lagos neighbourhood attached to Abuja. */}
+                    <select value={form.city} onChange={e => { f('city', e.target.value); f('area', ''); f('workArea', '') }} style={{ ...inp(!!errors.city), cursor: 'pointer' }}>
                       <option value="">Select city</option>
                       {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                     {errors.city && <p style={err}>{errors.city}</p>}
                   </div>
 
-                  {/* Area — always visible */}
+                  {/* Area — always visible. Labelled "Home Area" now that a work
+                      area sits beside it; a bare "Area" next to "Work / Office
+                      Area" reads as though one of them is the general case. */}
                   <div>
-                    <label style={lbl}>Area <Req /></label>
+                    <label style={lbl}>Home Area <Req /></label>
                     {form.city === 'Lagos' ? (
                       <select value={form.area} onChange={e => f('area', e.target.value)} style={{ ...inp(!!errors.area), cursor: 'pointer' }}>
                         <option value="">Select area in Lagos</option>
@@ -929,6 +936,24 @@ export default function Register() {
                         style={inp(!!errors.area)} />
                     )}
                     {errors.area && <p style={err}>{errors.area}</p>}
+                  </div>
+
+                  {/* Where they travel TO. This is a commuting service — the pair
+                      (home area, work area) IS the route someone needs, so it is
+                      asked once here rather than rebuilt from their bookings. */}
+                  <div>
+                    <label style={lbl}>Work / Office Area <Req /></label>
+                    {form.city === 'Lagos' ? (
+                      <select value={form.workArea} onChange={e => f('workArea', e.target.value)} style={{ ...inp(!!errors.workArea), cursor: 'pointer' }}>
+                        <option value="">Select work area in Lagos</option>
+                        {LAGOS_AREAS.map(a => <option key={a} value={a}>{a}</option>)}
+                      </select>
+                    ) : (
+                      <input type="text" value={form.workArea} onChange={e => f('workArea', e.target.value)}
+                        placeholder="Where do you work / commute to?"
+                        style={inp(!!errors.workArea)} />
+                    )}
+                    {errors.workArea && <p style={err}>{errors.workArea}</p>}
                   </div>
                 </div>
 

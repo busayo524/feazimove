@@ -280,6 +280,9 @@ async function getUserDetail(userId, ridesClause) {
     `SELECT id, name, email, phone, role, active_role, can_ride, can_drive,
             wallet_balance, rating, is_active, is_online, created_at,
             id_type, id_number, vehicle_type, vehicle_make, vehicle_model, plate_number, vehicle_year, vehicle_color,
+            -- City/area were rendered by the detail page but never selected, so
+            -- every profile read "—" for both.
+            city, area, work_area,
             drivers_license_number,
             identity_status, identity_summary, identity_detail, identity_checked_at,
             -- the photo itself is streamed separately; here we only need to know
@@ -328,6 +331,7 @@ async function getUserDetail(userId, ridesClause) {
     canRide: user.can_ride, canDrive: user.can_drive,
     walletBalance: fmt(user.wallet_balance), rating: user.rating,
     isActive: user.is_active, isOnline: user.is_online, joinedAt: user.created_at,
+    city: user.city, area: user.area, workArea: user.work_area,
     idType: user.id_type, idNumber: user.id_number,
     // Drivers are identified by licence number, not a NIN or a document scan,
     // so without these the driver detail page showed no identity at all.
@@ -523,7 +527,7 @@ router.get('/users/:id',
         query(
           `SELECT id, name, email, phone, role, active_role, can_ride, can_drive,
                   is_active, is_pending, rating, wallet_balance, created_at,
-                  city, area, date_of_birth, gender,
+                  city, area, work_area, date_of_birth, gender,
                   id_type, id_number,
                   drivers_license_number,
                   identity_status, identity_summary, identity_detail, identity_checked_at,
@@ -555,7 +559,8 @@ router.get('/users/:id',
           rating: u.rating ? parseFloat(u.rating) : null,
           walletBalance: fmt(u.wallet_balance),
           joinedAt: u.created_at,
-          city: u.city, area: u.area, dateOfBirth: u.date_of_birth, gender: u.gender,
+          city: u.city, area: u.area, workArea: u.work_area,
+          dateOfBirth: u.date_of_birth, gender: u.gender,
           bankName: u.bank_name, bankAccountNumber: u.bank_account_number,
           idType: u.id_type, idNumber: u.id_number,
           driversLicenseNumber: u.drivers_license_number,
@@ -1414,7 +1419,7 @@ router.get('/export/:type', async (req, res, next) => {
       // through the authenticator-gated reveal, never in a bulk download.
       const result = await query(
         `SELECT id, name, email, phone, role, active_role, is_active, is_pending,
-                city, area, residential_address, date_of_birth, gender,
+                city, area, work_area, residential_address, date_of_birth, gender,
                 id_type, id_number, bvn_submitted, bvn_last4, anchor_kyc_status,
                 reserved_account_number, reserved_account_bank,
                 bank_name, bank_account_number, wallet_balance, rating, created_at
@@ -1435,7 +1440,8 @@ router.get('/export/:type', async (req, res, next) => {
           { key:'email', label:'Email' }, { key:'phone', label:'Phone' },
           { key:'role', label:'Role' }, { key:'active_role', label:'Active Role' },
           { key:'status', label:'Status' },
-          { key:'city', label:'City' }, { key:'area', label:'Area' },
+          { key:'city', label:'City' }, { key:'area', label:'Home Area' },
+          { key:'work_area', label:'Work / Office Area' },
           { key:'residential_address', label:'Residential Address' },
           { key:'date_of_birth', label:'Date of Birth', date:true },
           { key:'gender', label:'Gender' },

@@ -575,7 +575,8 @@ export default function AdminUserDetail() {
           ['Phone',        user.phone],
           ['Role',         user.role?.charAt(0).toUpperCase() + user.role?.slice(1)],
           ['City',         user.city || '—'],
-          ['Area',         user.area || '—'],
+          ['Home Area',    user.area || '—'],
+          ['Work / Office Area', user.workArea || '—'],
           ['Date of Birth', user.dateOfBirth
             ? new Date(user.dateOfBirth).toLocaleDateString('en-NG', { day:'numeric', month:'long', year:'numeric' })
             : '—'],
