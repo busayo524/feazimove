@@ -1,8 +1,9 @@
 const express = require('express')
 const { query, pool } = require('../db')
 const { requireAuth, requireRole } = require('../middleware/auth')
-const { body } = require('express-validator')
+const { body, param } = require('express-validator')
 const { validate } = require('../middleware/validate')
+const scheduling = require('../services/scheduling')
 
 const router = express.Router()
 router.use(requireAuth, requireRole('driver'))
@@ -257,7 +258,235 @@ router.post('/go-live',
         [req.user.id, period, timeSlot, pickup, dropoff, seats, comment || null]
       )
 
+      // Going live by hand on a route this driver had also SCHEDULED for today
+      // retires that schedule — it's being served right now, by this session, so
+      // leaving it open would keep prompting them to start a drive they started.
+      const superseded = await query(
+        `UPDATE driver_availability SET status = 'fulfilled'
+          WHERE driver_id = $1 AND status = 'scheduled'
+            AND scheduled_date = ${scheduling.TODAY_SQL}
+            AND period = $2 AND time_slot = $3 AND dropoff = $4
+          RETURNING id`,
+        [req.user.id, period, timeSlot, dropoff]
+      )
+      for (const s of superseded.rows) {
+        await scheduling.releaseReservationsForAvailability(s.id, 'fulfilled')
+      }
+
       res.status(201).json({ availabilityId: result.rows[0].id })
+    } catch (err) { next(err) }
+  }
+)
+
+// ── Schedule a route for a day inside the coming week ─────────────────────────
+// Deliberately does NOT require the driver to be online: scheduling is a
+// commitment for later, not a search happening now. The row is parked with
+// status 'scheduled' and only joins the live queue when the driver activates it
+// on the day (or goes live on the same route by hand).
+router.post('/schedule',
+  [
+    body('period').isIn(['morning', 'evening']),
+    body('timeSlot').trim().notEmpty().isLength({ max: 20 }).escape(),
+    body('pickup').trim().notEmpty().isLength({ max: 100 }).escape(),
+    body('dropoff').trim().notEmpty().isLength({ max: 100 }).escape(),
+    body('seats').isInt({ min: 1, max: 8 }),
+    body('scheduledDate').matches(/^\d{4}-\d{2}-\d{2}$/).withMessage('Pick a date for your scheduled drive.'),
+    body('comment').optional({ checkFalsy: true }).trim().isLength({ max: 200 }).escape(),
+  ],
+  validate,
+  async (req, res, next) => {
+    try {
+      const { period, timeSlot, pickup, dropoff, seats, scheduledDate, comment } = req.body
+
+      const dateError = scheduling.scheduleDateError(scheduledDate)
+      if (dateError) return res.status(422).json({ message: dateError })
+
+      const approval = await query('SELECT is_active, is_pending FROM users WHERE id = $1', [req.user.id])
+      if (approval.rows[0]?.is_pending) {
+        return res.status(403).json({ message: 'Your account is pending admin approval. You cannot schedule drives yet.' })
+      }
+      if (!approval.rows[0]?.is_active) {
+        return res.status(403).json({ message: 'Your account is not active. Please contact support.' })
+      }
+
+      const routeCheck = await query(
+        `SELECT 1 FROM routes WHERE period = $1 AND pickup = $2 AND dropoff = $3 AND is_active = true AND pool_fare_kobo IS NOT NULL`,
+        [period, pickup, dropoff]
+      )
+      if (!routeCheck.rows[0]) {
+        return res.status(422).json({ message: 'That route is not currently available.' })
+      }
+
+      // One schedule per day+slot — re-scheduling the same slot replaces it
+      // rather than stacking two commitments the driver can't both honour.
+      const replaced = await query(
+        `UPDATE driver_availability SET status = 'cancelled'
+          WHERE driver_id = $1 AND status = 'scheduled'
+            AND scheduled_date = $2::date AND period = $3 AND time_slot = $4
+          RETURNING id`,
+        [req.user.id, scheduledDate, period, timeSlot]
+      )
+      for (const r of replaced.rows) {
+        await scheduling.releaseReservationsForAvailability(r.id)
+      }
+
+      // expires_at is only meaningful for a live session; park it at the end of
+      // the scheduled day so a schedule never looks stale before its turn.
+      const result = await query(
+        `INSERT INTO driver_availability
+           (driver_id, period, time_slot, pickup, dropoff, origin_pickup, seats, comment,
+            status, scheduled_date, expires_at)
+         VALUES ($1, $2, $3, $4, $5, $4, $6, $7, 'scheduled', $8::date, ($8::date + INTERVAL '1 day'))
+         RETURNING id`,
+        [req.user.id, period, timeSlot, pickup, dropoff, seats, comment || null, scheduledDate]
+      )
+      const availabilityId = result.rows[0].id
+
+      // Pick up any riders who already scheduled this exact day/slot/route
+      let reservedRiders = []
+      try { reservedRiders = await scheduling.reserveForAvailability(availabilityId) }
+      catch (reserveErr) { console.error('Advance pairing failed:', reserveErr.message) }
+
+      res.status(201).json({
+        availabilityId,
+        scheduledDate,
+        isToday: scheduledDate === scheduling.lagosToday(),
+        reservedRiders,
+      })
+    } catch (err) { next(err) }
+  }
+)
+
+// ── The driver's own upcoming scheduled drives ────────────────────────────────
+router.get('/schedules', async (req, res, next) => {
+  try {
+    const result = await query(
+      `SELECT da.id, da.scheduled_date::text AS scheduled_date, da.period, da.time_slot,
+              da.pickup, da.dropoff, da.seats, da.comment,
+              COUNT(sr.id) FILTER (WHERE sr.status = 'reserved') AS reserved_count
+         FROM driver_availability da
+         LEFT JOIN scheduled_reservations sr ON sr.availability_id = da.id
+        WHERE da.driver_id = $1 AND da.status = 'scheduled'
+          AND da.scheduled_date >= ${scheduling.TODAY_SQL}
+        GROUP BY da.id
+        ORDER BY da.scheduled_date ASC, da.created_at ASC`,
+      [req.user.id]
+    )
+
+    // Riders already paired to each schedule, so the driver knows who's coming
+    const ids = result.rows.map(r => r.id)
+    const riders = ids.length ? (await query(
+      `SELECT sr.availability_id, u.id AS rider_id, u.name, u.rating, rb.pickup
+         FROM scheduled_reservations sr
+         JOIN rider_bookings rb ON rb.id = sr.booking_id
+         JOIN users u           ON u.id = rb.rider_id
+        WHERE sr.availability_id = ANY($1) AND sr.status = 'reserved'
+        ORDER BY sr.created_at ASC`,
+      [ids]
+    )).rows : []
+
+    const today = scheduling.lagosToday()
+    res.json({
+      schedules: result.rows.map(r => ({
+        availabilityId: r.id,
+        scheduledDate: r.scheduled_date,
+        isToday: r.scheduled_date === today,
+        period: r.period,
+        timeSlot: r.time_slot,
+        pickup: r.pickup,
+        dropoff: r.dropoff,
+        seats: r.seats,
+        comment: r.comment || null,
+        reservedCount: parseInt(r.reserved_count, 10) || 0,
+        riders: riders.filter(x => x.availability_id === r.id).map(x => ({
+          riderId: x.rider_id, riderName: x.name, pickup: x.pickup,
+          riderRating: x.rating != null ? parseFloat(x.rating) : 5.0,
+        })),
+      })),
+    })
+  } catch (err) { next(err) }
+})
+
+// ── Cancel a scheduled drive ──────────────────────────────────────────────────
+router.post('/schedule/:availabilityId/cancel',
+  [param('availabilityId').isUUID()],
+  validate,
+  async (req, res, next) => {
+    try {
+      const result = await query(
+        `UPDATE driver_availability SET status = 'cancelled'
+          WHERE id = $1 AND driver_id = $2 AND status = 'scheduled'
+          RETURNING id`,
+        [req.params.availabilityId, req.user.id]
+      )
+      if (!result.rows[0]) return res.status(409).json({ message: 'This scheduled drive can no longer be cancelled.' })
+      // The riders paired to it go back to being unpaired, free to be picked up
+      // by another driver's schedule — or matched normally on the day.
+      await scheduling.releaseReservationsForAvailability(req.params.availabilityId)
+      res.json({ message: 'Scheduled drive cancelled.' })
+    } catch (err) { next(err) }
+  }
+)
+
+// ── Start a scheduled drive on its day ────────────────────────────────────────
+// Flips the parked schedule into a live 'waiting' session, so it starts matching
+// exactly like a route the driver had just filled in by hand — including riders
+// who booked this slot minutes ago, not only the ones reserved in advance.
+router.post('/activate-schedule',
+  [body('availabilityId').isUUID()],
+  validate,
+  async (req, res, next) => {
+    try {
+      const { availabilityId } = req.body
+
+      const sched = await query(
+        `SELECT id, period, time_slot, pickup, dropoff, seats, origin_pickup,
+                scheduled_date::text AS scheduled_date
+           FROM driver_availability
+          WHERE id = $1 AND driver_id = $2 AND status = 'scheduled'`,
+        [availabilityId, req.user.id]
+      )
+      if (!sched.rows[0]) return res.status(404).json({ message: 'Scheduled drive not found.' })
+      const s = sched.rows[0]
+
+      if (s.scheduled_date !== scheduling.lagosToday()) {
+        return res.status(409).json({
+          message: 'This drive is scheduled for a later day — you can start it on the day itself.',
+        })
+      }
+
+      const onlineCheck = await query('SELECT is_online FROM users WHERE id = $1', [req.user.id])
+      if (!onlineCheck.rows[0]?.is_online) {
+        return res.status(409).json({ message: 'Go online before starting your scheduled drive.' })
+      }
+
+      // Any other session ends — a driver can only run one route at a time
+      await query(
+        `UPDATE driver_availability SET status = 'cancelled'
+          WHERE driver_id = $1 AND id <> $2 AND status IN ('waiting','active','in_progress')`,
+        [req.user.id, availabilityId]
+      )
+      // expires_at was parked at the end of the scheduled day; give the live
+      // session the same 8-hour window a fresh go-live gets.
+      const live = await query(
+        `UPDATE driver_availability
+            SET status = 'waiting', expires_at = NOW() + INTERVAL '8 hours'
+          WHERE id = $1 AND driver_id = $2 AND status = 'scheduled'
+          RETURNING id, period, time_slot, pickup, dropoff, seats, origin_pickup`,
+        [availabilityId, req.user.id]
+      )
+      if (!live.rows[0]) return res.status(409).json({ message: 'This scheduled drive is no longer available.' })
+      const l = live.rows[0]
+
+      res.json({
+        availabilityId: l.id,
+        period: l.period,
+        timeSlot: l.time_slot,
+        originPickup: l.origin_pickup || l.pickup,
+        currentPickup: l.pickup,
+        dropoff: l.dropoff,
+        seats: l.seats,
+      })
     } catch (err) { next(err) }
   }
 )
@@ -278,10 +507,14 @@ router.get('/matches', async (req, res, next) => {
     const a = avail.rows[0]
 
     // Find pending riders at ANY stop the driver has covered so far (origin →
-    // current) — expanding forward accumulates riders, it never drops them
+    // current) — expanding forward accumulates riders, it never drops them.
+    // The date filter is what automatically folds scheduled riders in: a rider
+    // who booked this slot for TODAY, days ago, is indistinguishable here from
+    // one who booked it minutes ago — while their Friday booking stays out.
     const pickups = await visitedPickups(a.period, a.origin_pickup, a.pickup)
     const matches = await query(
       `SELECT rb.id, rb.rider_id, rb.pickup, rb.dropoff, rb.service, rb.created_at,
+              rb.scheduled_date::text AS scheduled_date,
               u.name AS rider_name, u.phone AS rider_phone, u.rating AS rider_rating
        FROM rider_bookings rb
        JOIN users u ON rb.rider_id = u.id
@@ -291,6 +524,7 @@ router.get('/matches', async (req, res, next) => {
          AND rb.dropoff   = $4
          AND rb.status    = 'pending'
          AND rb.rider_id != $5
+         AND ${scheduling.inPlayToday('rb')}
        ORDER BY rb.created_at ASC
        LIMIT $6`,
       [a.period, a.time_slot, pickups, a.dropoff, req.user.id, a.seats]
@@ -305,6 +539,8 @@ router.get('/matches', async (req, res, next) => {
         pickup:      r.pickup,
         dropoff:     r.dropoff,
         service:     r.service,
+        // Set when this rider booked the slot in advance rather than just now
+        scheduledDate: r.scheduled_date,
         riderName:   r.rider_name,
         riderRating: parseFloat(r.rider_rating) || 5.0,
         waitingSince: new Date(r.created_at).toLocaleTimeString('en-NG', {
@@ -390,20 +626,41 @@ router.post('/confirm-route',
       // own pickup stop and their own locked-in quoted fare.
       const visitedList = await visitedPickups(a.period, a.origin_pickup, a.pickup)
       const matchesRes = await query(
-        `SELECT id, rider_id, pickup, service, quoted_fare_kobo,
-                recipient_name, recipient_phone, package_size, notes, comment
-         FROM rider_bookings
-         WHERE period = $1 AND time_slot = $2 AND pickup = ANY($3) AND dropoff = $4
-           AND status = 'pending' AND rider_id != $5
-         ORDER BY created_at ASC LIMIT $6`,
+        `SELECT rb.id, rb.rider_id, rb.pickup, rb.service, rb.quoted_fare_kobo,
+                rb.recipient_name, rb.recipient_phone, rb.package_size, rb.notes, rb.comment,
+                rb.scheduled_date::text AS scheduled_date,
+                u.wallet_balance
+         FROM rider_bookings rb
+         JOIN users u ON u.id = rb.rider_id
+         WHERE rb.period = $1 AND rb.time_slot = $2 AND rb.pickup = ANY($3) AND rb.dropoff = $4
+           AND rb.status = 'pending' AND rb.rider_id != $5
+           AND ${scheduling.inPlayToday('rb')}
+         ORDER BY rb.created_at ASC LIMIT $6`,
         [a.period, a.time_slot, visitedList, a.dropoff, req.user.id, a.seats]
       )
       if (!matchesRes.rows[0]) return res.status(409).json({ message: 'No riders currently matched on this route.' })
 
+      // A scheduled fare was checked against the rider's wallet when they booked
+      // — up to a week ago. Re-check it now and skip anyone who has since spent
+      // below it, rather than starting a trip that can't be paid for. They stay
+      // pending, so topping up and matching with a later driver still works.
+      const canStillPay = b => !(
+        b.scheduled_date && b.quoted_fare_kobo != null &&
+        Number(b.wallet_balance) < Number(b.quoted_fare_kobo)
+      )
+      let bookings = matchesRes.rows.filter(canStillPay)
+      const unfunded = matchesRes.rows.length - bookings.length
+      if (!bookings[0]) {
+        return res.status(409).json({
+          message: unfunded === 1
+            ? "Your matched rider's wallet no longer covers this fare, so the trip wasn't started. They'll re-appear once they top up."
+            : "The matched riders' wallets no longer cover this fare, so the trip wasn't started. They'll re-appear once they top up.",
+        })
+      }
+
       // A solo rider buys out the whole car: if the oldest match is solo, the
       // trip is theirs alone. Solo bookings queued behind pool riders stay
       // pending for the next driver — they can't share a car.
-      let bookings = matchesRes.rows
       if (bookings[0].service === 'solo') bookings = [bookings[0]]
       else bookings = bookings.filter(b => b.service !== 'solo')
 
@@ -497,6 +754,12 @@ router.post('/confirm-route',
         }
 
         await client.query(`UPDATE driver_availability SET status = 'in_progress' WHERE id = $1`, [availabilityId])
+        // Advance pairings for the riders now on board have served their purpose
+        await client.query(
+          `UPDATE scheduled_reservations SET status = 'fulfilled'
+            WHERE booking_id = ANY($1) AND status = 'reserved'`,
+          [claimed.map(c => c.id)]
+        )
         await client.query('COMMIT')
 
         const rideIds = inserted.map(r => r.id)

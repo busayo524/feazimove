@@ -5,6 +5,7 @@ import {
   Sun, Moon, ChevronDown, Check,
   Wifi, ChevronRight, AlertCircle, UserCheck,
   Phone, MessageSquare, CheckCircle, X,
+  CalendarDays, CalendarCheck, Trash2, Zap,
 } from 'lucide-react'
 import AppLayout from '../../components/AppLayout'
 import ActiveRideMap from '../../components/ActiveRideMap'
@@ -16,6 +17,7 @@ import { track } from '../../services/analytics'
 import { useStopCoords } from '../../hooks/useStopCoords'
 import { useUnreadChat } from '../../hooks/useUnreadChat'
 import { usePanelPlacement, MORNING_SLOTS, EVENING_SLOTS } from '../../components/RouteDropdowns'
+import ScheduleDatePicker, { formatScheduleDate } from '../../components/ScheduleDatePicker'
 
 const NEON='#ccff00', NT='#0a0a0a'
 const OLIVE='#243800', MOSS='#4C6900'
@@ -189,7 +191,7 @@ function OnlineToggle({ online, busy, onToggle }) {
 // ── Route preview — a blocking popup before going live; once live it stays
 // on the page as a plain (non-blocking) card through matching/matched/no-
 // riders, so it's always visible and the cards below it stay clickable ────
-function RoutePreviewModal({ pickup, dropoff, timeSlot, seats, poolFareKobo, stopCoords, onClose, onGoLive, goingLive, phase, onCancel }) {
+function RoutePreviewModal({ pickup, dropoff, timeSlot, seats, poolFareKobo, stopCoords, onClose, onGoLive, goingLive, phase, onCancel, scheduleMode, scheduleDate, onSchedule, schedulingRoute }) {
   const seatCount = parseInt(seats, 10) || 0
   const totalKobo = poolFareKobo != null ? poolFareKobo * seatCount : null
   const pc = stopCoords[pickup]
@@ -264,6 +266,16 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, seats, poolFareKobo, sto
               <span style={{ fontSize:14, fontWeight:800, color:OLIVE }}>{totalKobo!=null ? `₦${Math.round(totalKobo/100).toLocaleString()}` : '—'}</span>
             </div>
           </div>
+
+          {/* The day this drive is being committed to — the one field that makes
+              it a schedule rather than a route the driver is starting now */}
+          {scheduleMode && scheduleDate && (
+            <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:8, background:'#f6faee',
+              border:`1.5px solid ${NEON}`, borderRadius:10, padding:'8px 10px' }}>
+              <CalendarDays size={13} color={OLIVE}/>
+              <span style={{ fontSize:12, fontWeight:800, color:OLIVE }}>{formatScheduleDate(scheduleDate, { long:true })}</span>
+            </div>
+          )}
         </div>
 
         <div style={{ padding:'0 14px 12px' }}>
@@ -290,6 +302,25 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, seats, poolFareKobo, sto
               }}>
                 Cancel Request
               </button>
+            </>
+          ) : scheduleMode ? (
+            <>
+            <p style={{fontSize:11,fontStyle:'italic',color:MUTED,textAlign:'center',margin:'0 0 8px'}}>
+              *You'll start this drive on the day — riders scheduled for it are held for you*
+            </p>
+            <button onClick={onSchedule} disabled={schedulingRoute} style={{
+              width:'100%', padding:'11px', borderRadius:50,
+              background:schedulingRoute?BORDER:NEON, color:schedulingRoute?MUTED:OLIVE,
+              fontWeight:800, fontSize:14, border:'none',
+              cursor:schedulingRoute?'not-allowed':'pointer',
+              fontFamily:'inherit', transition:'all 0.2s',
+              display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+              boxShadow:schedulingRoute?'none':'0 4px 12px rgba(204,255,0,0.3)' }}>
+              {schedulingRoute
+                ? <><span style={{ width:16, height:16, border:'2px solid rgba(36,56,0,0.3)', borderTopColor:OLIVE, borderRadius:'50%', animation:'feazi-spin 0.8s linear infinite', display:'inline-block' }}/> Scheduling…</>
+                : <><CalendarCheck size={16}/>Schedule {scheduleDate ? formatScheduleDate(scheduleDate) : 'This Drive'}</>
+              }
+            </button>
             </>
           ) : (
             <>
@@ -383,6 +414,27 @@ export default function DriverDashboard() {
   const [comment, setComment] = useState('')
   const [seats, setSeats]     = useState('')
 
+  // ── Drive now vs schedule for a day this week ─────────────────────────────
+  // Same form either way; scheduling just adds the date and parks the route
+  // instead of going live with it, so it can be done while offline.
+  const [formMode, setFormMode]         = useState('now') // 'now' | 'schedule'
+  const [scheduleDate, setScheduleDate] = useState('')
+  const [schedules, setSchedules]       = useState([])
+  const [schedulingRoute, setSchedulingRoute] = useState(false)
+  const [scheduleOk, setScheduleOk]     = useState(null)  // just-saved confirmation
+  const [scheduleError, setScheduleError] = useState(null)
+  const [cancellingScheduleId, setCancellingScheduleId] = useState(null)
+  const [activatingId, setActivatingId] = useState(null)
+  const scheduleMode = formMode === 'schedule'
+
+  async function loadSchedules(){
+    try {
+      const res = await api.get('/driver/schedules')
+      setSchedules(res.data.schedules || [])
+    } catch { /* supplementary — never block the main dashboard on it */ }
+  }
+  useEffect(() => { loadSchedules() }, [])
+
   // Active, priced routes for the selected period — replaces the old hardcoded
   // location arrays. Pickup/dropoff dropdowns are derived from this.
   const [routes, setRoutes] = useState([])
@@ -408,7 +460,7 @@ export default function DriverDashboard() {
   // Route preview is opened manually via the "Preview Route" button below —
   // not auto-shown — so the driver gets a chance to type a comment first.
   const [showRoutePreview, setShowRoutePreview] = useState(false)
-  const canPreviewRoute = !!(pickup && dropoff && timeSlot && seats)
+  const canPreviewRoute = !!(pickup && dropoff && timeSlot && seats && (!scheduleMode || scheduleDate))
 
   const previewRoute = routes.find(r => r.pickup === pickup && r.dropoff === dropoff)
 
@@ -705,10 +757,83 @@ export default function DriverDashboard() {
       setCurrentPickup(pickup)
       setCountdown(180)
       setMatchPhase('matching')
+      loadSchedules() // going live by hand can retire a schedule for today
     } catch (err) {
       setGoLiveError(err.data?.message || 'Could not go live. Check your connection.')
     } finally {
       setIsGoingLive(false)
+    }
+  }
+
+  // Park this route for a day inside the coming week. Riders who scheduled the
+  // same day, slot and route are reserved immediately, up to the seat count.
+  async function handleScheduleRoute() {
+    if (!canPreviewRoute || schedulingRoute) return
+    setScheduleError(null)
+    setScheduleOk(null)
+    setSchedulingRoute(true)
+    try {
+      const res = await api.post('/driver/schedule', {
+        period, timeSlot, pickup, dropoff, seats: parseInt(seats, 10), comment,
+        scheduledDate: scheduleDate,
+      })
+      track('Driver Scheduled Drive', { period, timeSlot, scheduledDate: scheduleDate })
+      setScheduleOk({ date: res.data.scheduledDate, riders: res.data.reservedRiders || [] })
+      setShowRoutePreview(false)
+      setScheduleDate('')
+      setTimeSlot('')
+      setPickup('')
+      setDropoff('')
+      setComment('')
+      setSeats('')
+      loadSchedules()
+    } catch (err) {
+      setShowRoutePreview(false)
+      setScheduleError(err.data?.message || 'Could not schedule this drive. Please try again.')
+    } finally {
+      setSchedulingRoute(false)
+    }
+  }
+
+  // The scheduled day has arrived — turn the parked route into a live session.
+  // From here it matches exactly like a route filled in by hand, so riders who
+  // booked this slot minutes ago show up alongside the ones reserved in advance.
+  async function activateSchedule(s) {
+    if (activatingId) return
+    setActivatingId(s.availabilityId)
+    setScheduleError(null)
+    try {
+      const res = await api.post('/driver/activate-schedule', { availabilityId: s.availabilityId })
+      setAvailabilityId(res.data.availabilityId)
+      setPeriod(res.data.period)
+      setTimeSlot(res.data.timeSlot)
+      setPickup(res.data.originPickup)
+      setCurrentPickup(res.data.currentPickup)
+      setDropoff(res.data.dropoff)
+      setSeats(String(res.data.seats))
+      setFormMode('now')
+      setScheduleOk(null)
+      setCountdown(180)
+      setMatchPhase('matching')
+      loadSchedules()
+    } catch (err) {
+      setScheduleError(err.data?.message || 'Could not start your scheduled drive.')
+    } finally {
+      setActivatingId(null)
+    }
+  }
+
+  async function cancelSchedule(availabilityId) {
+    if (cancellingScheduleId) return
+    setCancellingScheduleId(availabilityId)
+    setScheduleError(null)
+    try {
+      await api.post(`/driver/schedule/${availabilityId}/cancel`)
+      setSchedules(list => list.filter(s => s.availabilityId !== availabilityId))
+    } catch (err) {
+      setScheduleError(err.data?.message || 'Could not cancel that scheduled drive.')
+    } finally {
+      setCancellingScheduleId(null)
     }
   }
 
@@ -1206,7 +1331,9 @@ export default function DriverDashboard() {
             <RoutePreviewModal pickup={pickup} dropoff={dropoff} timeSlot={timeSlot} seats={seats}
               poolFareKobo={previewRoute?.poolFareKobo} stopCoords={stopCoords}
               onClose={()=>setShowRoutePreview(false)} onGoLive={handleGoLive} goingLive={isGoingLive}
-              phase={matchPhase} onCancel={()=>setShowCancelConfirm(true)}/>
+              phase={matchPhase} onCancel={()=>setShowCancelConfirm(true)}
+              scheduleMode={scheduleMode} scheduleDate={scheduleDate}
+              onSchedule={handleScheduleRoute} schedulingRoute={schedulingRoute}/>
           )}
 
           <div>
@@ -1218,17 +1345,70 @@ export default function DriverDashboard() {
             </div>
           )}
 
-          {/* ── Matching states or route form — only while online ── */}
-          {!online ? (
-            <div style={{ background:BG, border:`1.5px dashed ${BORDER}`, borderRadius:16, padding:24,
-              textAlign:'center', marginBottom:16 }}>
-              <Wifi size={28} color={BORDER} style={{ marginBottom:10 }}/>
-              <p style={{ fontWeight:700, fontSize:14, color:TEXT, marginBottom:4 }}>You're offline</p>
-              <p style={{ fontSize:13, color:MUTED }}>Go online above to set your route and start receiving bookings.</p>
-            </div>
-          ) : matchPhase !== 'idle'
-            ? renderMatching()
-            : (
+          {/* ── Matching states, or the route form ────────────────────────────
+              Driving now needs the driver online; scheduling a later day does
+              not — it's a commitment, not a search running right now. ─────── */}
+          {online && matchPhase !== 'idle' ? renderMatching() : (
+            <>
+              {/* Drive now / Schedule toggle */}
+              <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) minmax(0,1fr)', gap:8, marginBottom:10 }}>
+                {[
+                  { val:'now',      icon:<Zap size={15}/>,          label:'Drive Now',     sub:'Match riders live' },
+                  { val:'schedule', icon:<CalendarDays size={15}/>, label:'Schedule Drive', sub:'Pick a day ahead' },
+                ].map(({ val, icon, label, sub }) => (
+                  <button key={val} onClick={() => { setFormMode(val); setScheduleOk(null); setScheduleError(null) }}
+                    style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 12px', borderRadius:12,
+                      border:`1.5px solid ${formMode===val ? NEON : BORDER}`,
+                      background:formMode===val ? NEON : CARD,
+                      cursor:'pointer', textAlign:'left', fontFamily:'inherit', transition:'all 0.2s',
+                      boxShadow:formMode===val ? '0 4px 12px rgba(204,255,0,0.3)' : 'none' }}>
+                    <span style={{ color:formMode===val ? OLIVE : MUTED, flexShrink:0 }}>{icon}</span>
+                    <div style={{ minWidth:0 }}>
+                      <p style={{ fontWeight:800, fontSize:12.5, color:formMode===val ? OLIVE : TEXT }}>{label}</p>
+                      <p style={{ fontSize:10, color:formMode===val ? 'rgba(36,56,0,0.55)' : MUTED, marginTop:0 }}>{sub}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Just-scheduled confirmation */}
+              {scheduleOk && (
+                <div style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'12px 14px',
+                  background:'#f6faee', border:`1.5px solid ${NEON}`, borderRadius:12, marginBottom:10 }}>
+                  <CalendarCheck size={17} color={OLIVE} style={{ flexShrink:0, marginTop:1 }}/>
+                  <div style={{ minWidth:0 }}>
+                    <p style={{ fontSize:13, fontWeight:800, color:OLIVE }}>
+                      Drive scheduled for {formatScheduleDate(scheduleOk.date, { long:true })}
+                    </p>
+                    <p style={{ fontSize:11.5, color:MUTED, marginTop:2, lineHeight:1.4 }}>
+                      {scheduleOk.riders.length
+                        ? `${scheduleOk.riders.length} rider${scheduleOk.riders.length>1?'s':''} already scheduled this trip — ${scheduleOk.riders.map(r=>r.riderName).join(', ')} ${scheduleOk.riders.length>1?'are':'is'} reserved for you.`
+                        : "We'll hold riders for you as they schedule this trip. Start the drive from below on the day."}
+                    </p>
+                  </div>
+                  <button onClick={()=>setScheduleOk(null)} aria-label="Dismiss"
+                    style={{ background:'none', border:'none', cursor:'pointer', color:MUTED, padding:2, marginLeft:'auto', flexShrink:0 }}>
+                    <X size={15}/>
+                  </button>
+                </div>
+              )}
+
+              {scheduleError && (
+                <div style={{ display:'flex', gap:8, padding:'10px 14px', background:'#fef2f2',
+                  border:'1px solid #fca5a5', borderRadius:10, marginBottom:10 }}>
+                  <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
+                  <p style={{ fontSize:13, color:'#ef4444' }}>{scheduleError}</p>
+                </div>
+              )}
+
+              {!online && !scheduleMode ? (
+                <div style={{ background:BG, border:`1.5px dashed ${BORDER}`, borderRadius:16, padding:24,
+                  textAlign:'center', marginBottom:16 }}>
+                  <Wifi size={28} color={BORDER} style={{ marginBottom:10 }}/>
+                  <p style={{ fontWeight:700, fontSize:14, color:TEXT, marginBottom:4 }}>You're offline</p>
+                  <p style={{ fontSize:13, color:MUTED }}>Go online above to set your route and start receiving bookings — or schedule a drive for a later day.</p>
+                </div>
+              ) : (
                 <div style={{ background:CARD, border:`1.5px solid ${BORDER}`, borderRadius:14, padding:14,
                   boxShadow:'0 2px 8px rgba(36,56,0,0.06)' }}>
 
@@ -1236,9 +1416,17 @@ export default function DriverDashboard() {
                   <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
                     <div style={{ width:4, height:16, borderRadius:2, background:NEON }}/>
                     <p style={{ fontWeight:800, fontSize:13, color:OLIVE, textTransform:'uppercase', letterSpacing:'0.06em' }}>
-                      Set Departure & Route
+                      {scheduleMode ? 'Schedule Departure & Route' : 'Set Departure & Route'}
                     </p>
                   </div>
+
+                  {/* Which day — scheduling only. Everything below is the same
+                      form a drive-now session uses. */}
+                  {scheduleMode && (
+                    <div style={{ marginBottom:10 }}>
+                      <ScheduleDatePicker label="Drive Date" value={scheduleDate} onChange={setScheduleDate}/>
+                    </div>
+                  )}
 
                   {/* Morning / Evening */}
                   <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) minmax(0,1fr)', gap:8, marginBottom:8 }}>
@@ -1316,8 +1504,87 @@ export default function DriverDashboard() {
                       <p style={{ fontSize:13, color:'#ef4444' }}>{goLiveError}</p>
                     </div>
                   )}
-              </div>
-            )}
+                </div>
+              )}
+
+              {/* ── Drives already scheduled ─────────────────────────────────
+                  Today's schedule is the one that can actually be started —
+                  the rest are commitments waiting for their day. */}
+              {schedules.length > 0 && (
+                <div style={{ background:CARD, border:`1.5px solid ${BORDER}`, borderRadius:14, padding:14,
+                  marginTop:10, boxShadow:'0 2px 8px rgba(36,56,0,0.06)' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
+                    <div style={{ width:4, height:16, borderRadius:2, background:NEON }}/>
+                    <p style={{ fontWeight:800, fontSize:13, color:OLIVE, textTransform:'uppercase', letterSpacing:'0.06em' }}>
+                      Your Scheduled Drives
+                    </p>
+                  </div>
+
+                  {schedules.map(s => (
+                    <div key={s.availabilityId} style={{ border:`1.5px solid ${s.isToday ? NEON : BORDER}`,
+                      borderRadius:12, padding:'10px 12px', marginBottom:8, background:s.isToday ? '#f6faee' : CARD }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
+                        <CalendarDays size={13} color={OLIVE} style={{ flexShrink:0 }}/>
+                        <p style={{ fontSize:12.5, fontWeight:800, color:OLIVE }}>
+                          {formatScheduleDate(s.scheduledDate, { long:true })} · {s.timeSlot}
+                        </p>
+                        <span style={{ marginLeft:'auto', fontSize:11, fontWeight:700, color:MUTED,
+                          border:`1.5px solid ${BORDER}`, borderRadius:8, padding:'1px 7px', flexShrink:0, whiteSpace:'nowrap' }}>
+                          {s.reservedCount}/{s.seats} seat{s.seats === 1 ? '' : 's'}
+                        </span>
+                      </div>
+                      <p style={{ fontSize:11.5, color:MUTED, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                        {s.pickup} → {s.dropoff}
+                      </p>
+
+                      {s.riders.length > 0 ? (
+                        <div style={{ marginTop:8 }}>
+                          {s.riders.map(r => (
+                            <div key={r.riderId} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+                              <PersonAvatar userId={r.riderId} name={r.riderName} size={28} fontSize={11} radius={8}/>
+                              <div style={{ minWidth:0, flex:1 }}>
+                                <p style={{ fontSize:12, fontWeight:700, color:TEXT, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                                  {r.riderName}
+                                </p>
+                                <p style={{ fontSize:10.5, color:MUTED }}>⭐ {r.riderRating.toFixed(1)} · from {r.pickup}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p style={{ fontSize:11, color:MUTED, marginTop:6, fontStyle:'italic' }}>
+                          No riders scheduled on this trip yet
+                        </p>
+                      )}
+
+                      <div style={{ display:'flex', gap:8, marginTop:8 }}>
+                        {s.isToday && (
+                          <button onClick={() => activateSchedule(s)} disabled={!online || activatingId === s.availabilityId}
+                            title={online ? undefined : 'Go online first'}
+                            style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6,
+                              padding:'9px', borderRadius:10, border:'none',
+                              background:online ? NEON : BORDER, color:online ? OLIVE : MUTED,
+                              fontWeight:800, fontSize:12.5, fontFamily:'inherit',
+                              cursor:(!online || activatingId === s.availabilityId) ? 'not-allowed' : 'pointer' }}>
+                            <Wifi size={13}/>
+                            {activatingId === s.availabilityId ? 'Starting…' : online ? 'Start this drive' : 'Go online to start'}
+                          </button>
+                        )}
+                        <button onClick={() => cancelSchedule(s.availabilityId)} disabled={cancellingScheduleId === s.availabilityId}
+                          style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6,
+                            padding:'9px 12px', borderRadius:10, background:'none', border:`1.5px solid ${BORDER}`,
+                            color:cancellingScheduleId === s.availabilityId ? MUTED : '#ef4444',
+                            fontWeight:700, fontSize:12, fontFamily:'inherit',
+                            cursor:cancellingScheduleId === s.availabilityId ? 'not-allowed' : 'pointer' }}>
+                          <Trash2 size={12}/>{cancellingScheduleId === s.availabilityId ? 'Cancelling…' : 'Cancel'}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
           </div>
         </>
       )}

@@ -248,6 +248,32 @@ CREATE INDEX IF NOT EXISTS idx_routes_period ON routes(period, is_active);
 -- confirmation time (see routes table comment above).
 ALTER TABLE rider_bookings ADD COLUMN IF NOT EXISTS quoted_fare_kobo BIGINT;
 
+-- Scheduled rides. A NULL scheduled_date means "right now" — every pool/solo/
+-- send booking and every go-live session, as before. A date makes the row a
+-- commitment for that day: it stays out of the live matching queue until the
+-- day arrives, then behaves exactly like a booking placed that morning.
+ALTER TABLE rider_bookings      ADD COLUMN IF NOT EXISTS scheduled_date DATE;
+ALTER TABLE driver_availability ADD COLUMN IF NOT EXISTS scheduled_date DATE;
+CREATE INDEX IF NOT EXISTS idx_rb_scheduled
+  ON rider_bookings(scheduled_date, period, time_slot, status);
+CREATE INDEX IF NOT EXISTS idx_avail_scheduled
+  ON driver_availability(scheduled_date, period, time_slot, status);
+
+-- Advance pairing between a scheduled rider and a scheduled driver on the same
+-- day, slot and route — recorded when the second of the two schedules is
+-- created, so both sides know who they're travelling with days ahead. No ride
+-- row exists yet: the trip is created on the day the driver goes live.
+CREATE TABLE IF NOT EXISTS scheduled_reservations (
+  id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  booking_id      UUID        NOT NULL REFERENCES rider_bookings(id) ON DELETE CASCADE,
+  availability_id UUID        NOT NULL REFERENCES driver_availability(id) ON DELETE CASCADE,
+  scheduled_date  DATE        NOT NULL,
+  status          VARCHAR(20) NOT NULL DEFAULT 'reserved',
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (booking_id)
+);
+CREATE INDEX IF NOT EXISTS idx_sched_res_avail ON scheduled_reservations(availability_id, status);
+
 -- Driver's last-reported live GPS position on an active ride.
 ALTER TABLE rides ADD COLUMN IF NOT EXISTS driver_lat NUMERIC(9,6);
 ALTER TABLE rides ADD COLUMN IF NOT EXISTS driver_lng NUMERIC(9,6);

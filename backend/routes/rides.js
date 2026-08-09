@@ -7,6 +7,7 @@ const { requireAuth, requireRole } = require('../middleware/auth')
 const { validate } = require('../middleware/validate')
 const { sendStored } = require('../services/fileStorage')
 const analytics = require('../services/analytics')
+const scheduling = require('../services/scheduling')
 
 const router = express.Router()
 
@@ -24,11 +25,18 @@ router.get('/avatar/:userId',
       const { userId } = req.params
       // Linked = an actual ride together, OR a live booking↔availability pair
       // in EITHER direction (driver previewing a matched rider, or a rider
-      // previewing a candidate driver whose covered chain includes their stop).
+      // previewing a candidate driver whose covered chain includes their stop),
+      // OR an advance pairing on a scheduled day that hasn't arrived yet.
       const linked = await query(
         `SELECT 1 WHERE EXISTS (
            SELECT 1 FROM rides
            WHERE (rider_id = $2 AND driver_id = $1) OR (driver_id = $2 AND rider_id = $1)
+         ) OR EXISTS (
+           SELECT 1 FROM scheduled_reservations sr
+           JOIN rider_bookings rb      ON rb.id = sr.booking_id
+           JOIN driver_availability da ON da.id = sr.availability_id
+           WHERE sr.status = 'reserved'
+             AND ((da.driver_id = $1 AND rb.rider_id = $2) OR (da.driver_id = $2 AND rb.rider_id = $1))
          ) OR EXISTS (
            SELECT 1 FROM rider_bookings rb
            JOIN driver_availability da
@@ -36,6 +44,7 @@ router.get('/avatar/:userId',
             AND da.period = rb.period AND da.time_slot = rb.time_slot AND da.dropoff = rb.dropoff
            WHERE rb.status IN ('pending', 'matched')
              AND da.status IN ('waiting', 'active', 'in_progress')
+             AND ${scheduling.inPlayToday('rb')}
              AND EXISTS (
                SELECT 1 FROM stops sb, stops so, stops sc
                WHERE sb.name = rb.pickup
@@ -79,7 +88,12 @@ router.post('/book-intent',
     body('timeSlot').trim().notEmpty().isLength({ max: 20 }).escape(),
     body('pickup').trim().notEmpty().isLength({ max: 100 }).escape(),
     body('dropoff').trim().notEmpty().isLength({ max: 100 }).escape(),
-    body('service').isIn(['pool', 'solo', 'send']),
+    body('service').isIn(['pool', 'solo', 'send', 'scheduled']),
+    // A scheduled ride is a pooled ride placed for a specific day inside the
+    // coming week. The window itself is checked below, so the rider gets a
+    // sentence explaining what's wrong rather than a bare 422.
+    body('scheduledDate').if(body('service').equals('scheduled'))
+      .matches(/^\d{4}-\d{2}-\d{2}$/).withMessage('Pick a date for your scheduled ride.'),
     // Only required/validated when sending a package — same route structure
     // as a ride, just with a recipient instead of a second rider.
     body('recipientName').if(body('service').equals('send')).trim().notEmpty().isLength({ max: 100 }).escape(),
@@ -92,6 +106,14 @@ router.post('/book-intent',
   async (req, res, next) => {
     try {
       const { period, timeSlot, pickup, dropoff, service, recipientName, recipientPhone, packageSize, notes, comment } = req.body
+
+      // Only a scheduled ride carries a date; everything else is "right now"
+      // and stores NULL, which is what keeps it in the live matching queue.
+      const scheduledDate = service === 'scheduled' ? req.body.scheduledDate : null
+      if (scheduledDate) {
+        const dateError = scheduling.scheduleDateError(scheduledDate)
+        if (dateError) return res.status(422).json({ message: dateError })
+      }
 
       // Block unapproved riders from booking
       const approval = await query('SELECT is_active, is_pending FROM users WHERE id = $1', [req.user.id])
@@ -120,16 +142,19 @@ router.post('/book-intent',
         [period, pickup, dropoff]
       )
       const route = routeRes.rows[0]
-      // Reject unpriced routes too — pool/solo need a pool fare, send needs a
-      // package fare. An unpriced route isn't bookable until an admin prices it.
-      const needsPool = service === 'pool' || service === 'solo'
+      // Reject unpriced routes too — pool/solo/scheduled need a pool fare, send
+      // needs a package fare. An unpriced route isn't bookable until an admin
+      // prices it.
+      const needsPool = service === 'pool' || service === 'solo' || service === 'scheduled'
       if (!route || (needsPool && route.pool_fare_kobo == null) || (service === 'send' && route.package_fare_kobo == null)) {
         analytics.track(req.user.id, 'reservation_failed', {
           route_name: `${pickup}_to_${dropoff}`, reason: 'no_route_available',
         })
         return res.status(422).json({ message: 'That route is not currently available.' })
       }
-      const quotedFareKobo = service === 'pool' ? route.pool_fare_kobo
+      // A scheduled ride is a pooled ride on a future day, so it's priced at the
+      // pool fare and locked in now — the day's admin price edits don't move it.
+      const quotedFareKobo = (service === 'pool' || service === 'scheduled') ? route.pool_fare_kobo
         : service === 'send' ? route.package_fare_kobo
         : null // solo — determined at match time
 
@@ -151,33 +176,56 @@ router.post('/book-intent',
         }
       }
 
-      // Cancel any existing pending intent for same period+slot (prevent duplicates)
+      // Cancel any existing pending intent for the same period+slot on the same
+      // DAY (prevent duplicates). Compared on the effective day — a dateless
+      // "book now" and a ride scheduled for today are both today, so they
+      // collapse into one rather than both matching and charging the rider
+      // twice. Scheduling next Friday's 6 AM leaves today's 6 AM alone.
       await query(
         `UPDATE rider_bookings SET status = 'cancelled'
-         WHERE rider_id = $1 AND status = 'pending' AND period = $2 AND time_slot = $3`,
-        [req.user.id, period, timeSlot]
+         WHERE rider_id = $1 AND status = 'pending' AND period = $2 AND time_slot = $3
+           AND COALESCE(scheduled_date, ${scheduling.TODAY_SQL})
+             = COALESCE($4::date, ${scheduling.TODAY_SQL})`,
+        [req.user.id, period, timeSlot, scheduledDate]
       )
 
       const result = await query(
         `INSERT INTO rider_bookings
           (rider_id, period, time_slot, pickup, dropoff, service, quoted_fare_kobo,
-           recipient_name, recipient_phone, package_size, notes, comment)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
+           recipient_name, recipient_phone, package_size, notes, comment, scheduled_date)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::date) RETURNING id`,
         [req.user.id, period, timeSlot, pickup, dropoff, service, quotedFareKobo,
-         recipientName || null, recipientPhone || null, packageSize || null, notes || null, comment || null]
+         recipientName || null, recipientPhone || null, packageSize || null, notes || null, comment || null,
+         scheduledDate]
       )
+      const bookingId = result.rows[0].id
+
+      // Pair the schedule against a driver who already committed to the same
+      // day/slot/route. Nothing rides on this succeeding — an unpaired schedule
+      // simply matches normally once its day arrives.
+      let reservedDriver = null
+      if (scheduledDate) {
+        try { reservedDriver = await scheduling.reserveForBooking(bookingId) }
+        catch (reserveErr) { console.error('Advance pairing failed:', reserveErr.message) }
+      }
 
       analytics.track(req.user.id, 'reserve_seat', {
         route_name: `${pickup}_to_${dropoff}`,
         departure_time_slot: timeSlot,
         period, service,
+        scheduled_date: scheduledDate || undefined,
         booking_window: analytics.bookingWindow(timeSlot),
       })
       analytics.setProfile(req.user.id, { primary_route: `${pickup}_to_${dropoff}` })
 
       res.status(201).json({
-        bookingId: result.rows[0].id,
+        bookingId,
         quotedFare: quotedFareKobo != null ? Math.round(quotedFareKobo / 100) : null,
+        scheduledDate,
+        // True when the booking is for a day still to come — the client shows a
+        // "scheduled" confirmation instead of opening the matching spinner.
+        isFutureSchedule: !!scheduledDate && scheduledDate > scheduling.lagosToday(),
+        reservedDriver,
       })
     } catch (err) { next(err) }
   }
@@ -196,10 +244,57 @@ router.patch('/book-intent/:bookingId/cancel',
         [req.params.bookingId, req.user.id]
       )
       if (!result.rows[0]) return res.status(409).json({ message: 'This request can no longer be cancelled.' })
+      // Frees the driver's reserved seat so another scheduled rider can take it
+      await scheduling.releaseReservationForBooking(req.params.bookingId)
       res.json({ message: 'Request cancelled.' })
     } catch (err) { next(err) }
   }
 )
+
+// ── The rider's own upcoming scheduled rides ──────────────────────────────────
+// Days still to come plus today, with the driver already reserved for each (if
+// any). Today's schedules are included because they're the ones about to enter
+// the live queue — the rider should see them right up to departure.
+router.get('/scheduled/mine', async (req, res, next) => {
+  try {
+    const result = await query(
+      `SELECT rb.id, rb.scheduled_date::text AS scheduled_date, rb.period, rb.time_slot,
+              rb.pickup, rb.dropoff, rb.quoted_fare_kobo, rb.comment,
+              u.id AS driver_id, u.name AS driver_name, u.rating AS driver_rating,
+              u.vehicle_make, u.vehicle_model, u.vehicle_color, u.plate_number
+         FROM rider_bookings rb
+         LEFT JOIN scheduled_reservations sr ON sr.booking_id = rb.id AND sr.status = 'reserved'
+         LEFT JOIN driver_availability da    ON da.id = sr.availability_id
+         LEFT JOIN users u                   ON u.id = da.driver_id
+        WHERE rb.rider_id = $1 AND rb.status = 'pending'
+          AND rb.scheduled_date IS NOT NULL
+          AND rb.scheduled_date >= ${scheduling.TODAY_SQL}
+        ORDER BY rb.scheduled_date ASC, rb.created_at ASC`,
+      [req.user.id]
+    )
+    const today = scheduling.lagosToday()
+    res.json({
+      scheduled: result.rows.map(r => ({
+        bookingId: r.id,
+        scheduledDate: r.scheduled_date,
+        isToday: r.scheduled_date === today,
+        period: r.period,
+        timeSlot: r.time_slot,
+        pickup: r.pickup,
+        dropoff: r.dropoff,
+        fare: r.quoted_fare_kobo != null ? Math.round(r.quoted_fare_kobo / 100) : null,
+        comment: r.comment || null,
+        driver: r.driver_id ? {
+          id: r.driver_id,
+          name: r.driver_name,
+          rating: r.driver_rating != null ? parseFloat(r.driver_rating) : 5.0,
+          vehicleMake: r.vehicle_make, vehicleModel: r.vehicle_model,
+          vehicleColor: r.vehicle_color, plateNumber: r.plate_number,
+        } : null,
+      })),
+    })
+  } catch (err) { next(err) }
+})
 
 // ── Latest still-pending booking for this rider — lets the booking screen
 // restore its "Matching you with a driver…" state after a reload, or after a
@@ -207,10 +302,14 @@ router.patch('/book-intent/:bookingId/cancel',
 // (Declared before GET /:rideId so "book-intent" isn't parsed as a rideId.)
 router.get('/book-intent/mine', async (req, res, next) => {
   try {
+    // Only bookings in play TODAY — a ride scheduled for later in the week must
+    // not put this rider into the matching state on the booking screen. Once its
+    // day arrives the same row qualifies here and behaves like any live booking.
     const result = await query(
-      `SELECT id, period, time_slot, pickup, dropoff, service
+      `SELECT id, period, time_slot, pickup, dropoff, service, scheduled_date::text AS scheduled_date
        FROM rider_bookings
        WHERE rider_id = $1 AND status = 'pending'
+         AND ${scheduling.inPlayToday('rider_bookings')}
        ORDER BY created_at DESC LIMIT 1`,
       [req.user.id]
     )
@@ -255,6 +354,7 @@ router.get('/book-intent/mine', async (req, res, next) => {
       booking: b ? {
         bookingId: b.id, period: b.period, timeSlot: b.time_slot,
         pickup: b.pickup, dropoff: b.dropoff, service: b.service,
+        scheduledDate: b.scheduled_date,
       } : null,
       candidateDrivers,
     })

@@ -565,6 +565,34 @@ async function runMigrations() {
     -- what to correct instead of just "rejected".
     ALTER TABLE users ADD COLUMN IF NOT EXISTS anchor_kyc_reason TEXT;
 
+    -- ── Scheduled rides ──────────────────────────────────────────────────────
+    -- A NULL scheduled_date means "right now" — that's every pool/solo/send
+    -- booking and every go-live session, exactly as before. A date makes the row
+    -- a commitment for that day: it stays out of the live matching queue until
+    -- the day arrives, then behaves identically to a booking placed that morning.
+    ALTER TABLE rider_bookings      ADD COLUMN IF NOT EXISTS scheduled_date DATE;
+    ALTER TABLE driver_availability ADD COLUMN IF NOT EXISTS scheduled_date DATE;
+    CREATE INDEX IF NOT EXISTS idx_rb_scheduled
+      ON rider_bookings(scheduled_date, period, time_slot, status);
+    CREATE INDEX IF NOT EXISTS idx_avail_scheduled
+      ON driver_availability(scheduled_date, period, time_slot, status);
+
+    -- Advance pairing between a scheduled rider and a scheduled driver on the
+    -- same day, slot and route — recorded the moment the second of the two
+    -- schedules is created, so both sides see who they're travelling with days
+    -- ahead. No ride row exists yet: the trip is only created on the day, when
+    -- the driver actually goes live (see /driver/activate-schedule).
+    CREATE TABLE IF NOT EXISTS scheduled_reservations (
+      id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+      booking_id      UUID        NOT NULL REFERENCES rider_bookings(id) ON DELETE CASCADE,
+      availability_id UUID        NOT NULL REFERENCES driver_availability(id) ON DELETE CASCADE,
+      scheduled_date  DATE        NOT NULL,
+      status          VARCHAR(20) NOT NULL DEFAULT 'reserved',
+      created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (booking_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_sched_res_avail ON scheduled_reservations(availability_id, status);
+
     -- ── Late-ordered statements: these reference tables/columns created above,
     -- so they MUST run last — the whole migration executes as one implicit
     -- transaction, and on a FRESH database an early reference to a

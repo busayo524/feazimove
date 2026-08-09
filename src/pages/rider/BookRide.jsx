@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/AppLayout'
 import RideTracker from '../../components/RideTracker'
 import { LocationDropdown, TimeDropdown, MORNING_SLOTS, EVENING_SLOTS } from '../../components/RouteDropdowns'
-import { MapPin, ArrowRight, Users, Navigation, Sun, Moon, X, Clock, Landmark, Wallet as WalletIcon, Star, Car } from 'lucide-react'
+import ScheduleDatePicker, { formatScheduleDate } from '../../components/ScheduleDatePicker'
+import { MapPin, ArrowRight, Users, Navigation, Sun, Moon, X, Clock, Landmark, Wallet as WalletIcon, Star, Car, CalendarDays, CalendarCheck, Trash2 } from 'lucide-react'
 import TransferDetails from '../../components/TransferDetails'
 import { useAuth } from '../../context/AuthContext'
 import PersonAvatar from '../../components/PersonAvatar'
@@ -19,6 +20,7 @@ const CARD='#ffffff', BORDER='#e9ecef', TEXT='#1a2800', MUTED='#4C6900', BG='#f6
 const SERVICES=[
   { id:'pool', icon:<Users size={18}/>,     label:'Pool Ride',   desc:'Share route, split cost' },
   { id:'solo', icon:<Navigation size={18}/>, label:'Solo Ride',   desc:'Private, direct route' },
+  { id:'scheduled', icon:<CalendarDays size={18}/>, label:'Schedule Ride', desc:'Book a day ahead' },
 ]
 
 /* ── Route preview popup — auto-shown once pickup/dropoff/time are all set ──
@@ -50,7 +52,7 @@ function CandidateDriverCard({ d }) {
   )
 }
 
-function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, onClose, onBook, booking, matching, onCancel, cancelling, insufficient, walletKobo, shortfallKobo, onPayNow, payBusy, confirmingPay, payPending, paySecondsLeft, onCancelPay, onSetupWallet, candidateDrivers }){
+function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, onClose, onBook, booking, matching, onCancel, cancelling, insufficient, walletKobo, shortfallKobo, onPayNow, payBusy, confirmingPay, payPending, paySecondsLeft, onCancelPay, onSetupWallet, candidateDrivers, scheduleDate }){
   const pc = stopCoords[pickup]
   const dc = stopCoords[dropoff]
   const token = import.meta.env.VITE_MAPBOX_TOKEN
@@ -104,6 +106,16 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, on
                 : <span style={{fontSize:11,fontWeight:600,color:MUTED}}>Set once matched</span>}
             </div>
           </div>
+
+          {/* The day a scheduled ride is for — the one thing that separates it
+              from a booking placed for right now, so it gets its own row */}
+          {scheduleDate && (
+            <div style={{display:'flex',alignItems:'center',gap:6,marginTop:8,background:'#f6faee',
+              border:`1.5px solid ${NEON}`,borderRadius:10,padding:'8px 10px'}}>
+              <CalendarDays size={13} color={OLIVE}/>
+              <span style={{fontSize:12,fontWeight:800,color:OLIVE}}>{formatScheduleDate(scheduleDate,{long:true})}</span>
+            </div>
+          )}
         </div>
 
         <div style={{padding:'0 14px 12px'}}>
@@ -156,7 +168,9 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, on
           ) : insufficient ? (
             /* Fare not covered by wallet — two ways to pay */
             <>
-              <p style={{fontSize:11,fontStyle:'italic',color:MUTED,textAlign:'center',margin:'0 0 8px'}}>*Booking should be within 24hrs*</p>
+              <p style={{fontSize:11,fontStyle:'italic',color:MUTED,textAlign:'center',margin:'0 0 8px'}}>
+                {scheduleDate ? `*Your seat is held for ${formatScheduleDate(scheduleDate)}*` : '*Booking should be within 24hrs*'}
+              </p>
               <button onClick={onPayNow} disabled={payBusy} style={{
                 width:'100%',padding:'11px',borderRadius:50,
                 background:payBusy?BORDER:NEON,color:payBusy?MUTED:OLIVE,
@@ -167,7 +181,8 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, on
                 boxShadow:payBusy?'none':'0 4px 16px rgba(204,255,0,0.35)'
               }}>
                 <Landmark size={16}/>
-                {payBusy ? 'Preparing your payment…' : `Pay ₦${Math.max(Math.ceil(shortfallKobo/100),100).toLocaleString()} by transfer & book`}
+                {payBusy ? 'Preparing your payment…'
+                  : `Pay ₦${Math.max(Math.ceil(shortfallKobo/100),100).toLocaleString()} by transfer & ${scheduleDate ? 'schedule' : 'book'}`}
               </button>
               <button onClick={onSetupWallet} style={{
                 width:'100%',padding:'11px',borderRadius:50,marginTop:8,
@@ -185,7 +200,9 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, on
             </>
           ) : (
             <>
-            <p style={{fontSize:11,fontStyle:'italic',color:MUTED,textAlign:'center',margin:'0 0 8px'}}>*Booking should be within 24hrs*</p>
+            <p style={{fontSize:11,fontStyle:'italic',color:MUTED,textAlign:'center',margin:'0 0 8px'}}>
+              {scheduleDate ? `*Matching starts ${formatScheduleDate(scheduleDate)}*` : '*Booking should be within 24hrs*'}
+            </p>
             <button onClick={onBook} disabled={booking} style={{
               width:'100%',padding:'11px',borderRadius:50,
               background:booking?BORDER:NEON,color:booking?MUTED:OLIVE,
@@ -195,7 +212,9 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, on
               transition:'all 0.2s',
               boxShadow:booking?'none':'0 4px 16px rgba(204,255,0,0.35)'
             }}>
-              {booking?'Scheduling…':'Schedule a Ride'}<ArrowRight size={16}/>
+              {booking ? 'Scheduling…'
+                : scheduleDate ? `Schedule for ${formatScheduleDate(scheduleDate)}`
+                : 'Schedule a Ride'}<ArrowRight size={16}/>
             </button>
             </>
           )}
@@ -230,6 +249,35 @@ export default function BookRide(){
   const [payPending,setPayPending]=useState(null)  // { reference, transfer, expiresAt, booking }
   const [paySecondsLeft,setPaySecondsLeft]=useState(0)
   const [candidateDrivers,setCandidateDrivers]=useState([]) // live drivers covering this route while matching
+  const [scheduleDate,setScheduleDate]=useState('')  // yyyy-mm-dd, only for service 'scheduled'
+  const [upcoming,setUpcoming]=useState([])          // this rider's scheduled rides, soonest first
+  const [scheduledOk,setScheduledOk]=useState(null)  // confirmation banner after scheduling a future day
+  const [cancellingId,setCancellingId]=useState(null)
+
+  // Only a scheduled booking carries a date — the value is dropped for pool and
+  // solo so a leftover selection can't quietly turn a "now" ride into a future
+  // one. A date of today is not really a schedule: the server puts it straight
+  // into the live matching queue, like a pool booking placed this minute.
+  const effectiveDate = service === 'scheduled' ? scheduleDate : ''
+
+  async function loadUpcoming(){
+    try {
+      const res = await api.get('/rides/scheduled/mine')
+      setUpcoming(res.data.scheduled || [])
+    } catch { /* the list is supplementary — a failure shouldn't break booking */ }
+  }
+  useEffect(() => { loadUpcoming() }, [])
+
+  async function cancelScheduled(bookingId){
+    if (cancellingId) return
+    setCancellingId(bookingId)
+    try {
+      await api.patch(`/rides/book-intent/${bookingId}/cancel`)
+      setUpcoming(u => u.filter(s => s.bookingId !== bookingId))
+    } catch (err) {
+      setBookError(err.data?.message || 'Could not cancel that scheduled ride.')
+    } finally { setCancellingId(null) }
+  }
 
   // While matching, poll for drivers whose published route covers this stop —
   // the rider sees who's found them (photo, rating, car) while the driver
@@ -288,7 +336,11 @@ export default function BookRide(){
     api.get('/rides/book-intent/mine')
       .then(res => {
         const b = res.data.booking
-        if (cancelled || !b || (b.service !== 'pool' && b.service !== 'solo')) return
+        if (cancelled || !b || !['pool', 'solo', 'scheduled'].includes(b.service)) return
+        // Only today's bookings come back from this endpoint, so a ride
+        // scheduled for today resumes the matching modal like any other.
+        setService(b.service)
+        setScheduleDate(b.scheduledDate || '')
         setPeriod(b.period)
         setTimeSlot(b.timeSlot)
         setPickup(b.pickup)
@@ -310,17 +362,37 @@ export default function BookRide(){
     setComment('')
     setBookingId(null)
     setBookError(null)
+    setScheduledOk(null)
   }
 
   async function handleSearch(){
     if(!pickup||!dropoff||!timeSlot)return
+    if(service==='scheduled'&&!scheduleDate)return
     setSearching(true)
     setBookingId(null)
     setBookError(null)
+    setScheduledOk(null)
     try {
       track('search_route', { pickup_zone: pickup, dropoff_zone: dropoff, service })
-      const res = await api.post('/rides/book-intent', { period, timeSlot, pickup, dropoff, service, comment })
-      setBookingId(res.data.bookingId)
+      const res = await api.post('/rides/book-intent', {
+        period, timeSlot, pickup, dropoff, service, comment,
+        ...(effectiveDate ? { scheduledDate: effectiveDate } : {}),
+      })
+      // A ride scheduled for a LATER day has nothing to wait for right now — it
+      // is saved, possibly already paired with a driver who scheduled the same
+      // slot, and rejoins this screen's live matching flow on the day itself.
+      if (res.data.isFutureSchedule) {
+        setShowPreview(false)
+        setScheduledOk({ date: res.data.scheduledDate, driver: res.data.reservedDriver })
+        setScheduleDate('')
+        setTimeSlot('')
+        setPickup('')
+        setDropoff('')
+        setComment('')
+        loadUpcoming()
+      } else {
+        setBookingId(res.data.bookingId)
+      }
     } catch(err) {
       setBookError(err.data?.message || 'Could not register your booking. Please try again.')
       setShowPreview(false) // the error banner lives on the page — don't hide it behind the modal
@@ -356,13 +428,16 @@ export default function BookRide(){
   // Route preview is opened manually via the "Preview Route" button below —
   // not auto-shown — so the rider gets a chance to type a comment first.
   const [showPreview, setShowPreview] = useState(false)
-  const canPreview = !!(pickup && dropoff && timeSlot)
+  const canPreview = !!(pickup && dropoff && timeSlot && (service !== 'scheduled' || scheduleDate))
 
   const previewRoute = routes.find(r => r.pickup === pickup && r.dropoff === dropoff)
   // Solo fare depends on which driver's car a rider ends up matched with (its
   // seat count) — it's never known upfront, only once /driver/confirm-route
   // actually pairs them, so there's nothing to preview here for that service.
-  const previewFareKobo = previewRoute && service === 'pool' ? previewRoute.poolFareKobo : null
+  // A scheduled ride is pooled, so it carries the ordinary pool fare, locked in
+  // when it's scheduled rather than on the day.
+  const previewFareKobo = previewRoute && (service === 'pool' || service === 'scheduled')
+    ? previewRoute.poolFareKobo : null
 
   // Pull the live wallet balance whenever the preview opens, so the
   // insufficient-funds note reflects reality (not a stale login-time value).
@@ -391,7 +466,8 @@ export default function BookRide(){
         reference: res.data.reference,
         transfer: res.data.transfer,
         expiresAt: Date.now() + (res.data.transfer?.expiresInSeconds || 1800) * 1000,
-        booking: { period, timeSlot, pickup, dropoff, service, comment },
+        booking: { period, timeSlot, pickup, dropoff, service, comment,
+          ...(effectiveDate ? { scheduledDate: effectiveDate } : {}) },
       }
       sessionStorage.setItem(RIDE_PAY_KEY, JSON.stringify(pending))
       setPaySecondsLeft(Math.round((pending.expiresAt - Date.now()) / 1000)) // no stale first frame
@@ -459,6 +535,7 @@ export default function BookRide(){
             // Sync the form to what was ACTUALLY booked (the snapshot) so the
             // matching modal can never display edits made during payment
             setService(b.service || 'pool')
+            setScheduleDate(b.scheduledDate || '')
             setPeriod(b.period)
             setTimeSlot(b.timeSlot)
             setPickup(b.pickup)
@@ -466,8 +543,17 @@ export default function BookRide(){
             setWalletKobo(null) // stale now — refetched next time the preview opens
             setPayPending(null)
             setConfirmingPay(false)
-            setShowPreview(true) // may have been closed while waiting
-            setBookingId(booked.data.bookingId)
+            // A ride paid for and scheduled for a LATER day has nothing to match
+            // yet — confirm it and leave the matching modal closed.
+            if (booked.data.isFutureSchedule) {
+              setShowPreview(false)
+              setScheduledOk({ date: booked.data.scheduledDate, driver: booked.data.reservedDriver })
+              setScheduleDate('')
+              loadUpcoming()
+            } else {
+              setShowPreview(true) // may have been closed while waiting
+              setBookingId(booked.data.bookingId)
+            }
           } catch (err) {
             fail(err.data?.message || 'Payment received (it\'s in your wallet) but the booking could not be placed — please try booking again.')
           }
@@ -504,6 +590,7 @@ export default function BookRide(){
     if (Date.now() > (saved.expiresAt || 0) + 60_000) { sessionStorage.removeItem(RIDE_PAY_KEY); return }
     const b = saved.booking
     setService(b.service || 'pool')
+    setScheduleDate(b.scheduledDate || '')
     setPeriod(b.period)
     setTimeSlot(b.timeSlot)
     setPickup(b.pickup)
@@ -545,7 +632,8 @@ export default function BookRide(){
               matching={!!bookingId} onCancel={cancelBooking} cancelling={cancelling} insufficient={insufficientFunds}
               walletKobo={walletKobo} shortfallKobo={shortfallKobo} onPayNow={payNow} payBusy={payBusy}
               confirmingPay={confirmingPay} payPending={payPending} paySecondsLeft={paySecondsLeft}
-              onCancelPay={cancelPay} onSetupWallet={()=>navigate('/wallet')} candidateDrivers={candidateDrivers}/>
+              onCancelPay={cancelPay} onSetupWallet={()=>navigate('/wallet')} candidateDrivers={candidateDrivers}
+              scheduleDate={payPending ? (payPending.booking?.scheduledDate || '') : effectiveDate}/>
           )}
 
           {/* Payment in flight but modal dismissed — a persistent way back */}
@@ -563,28 +651,59 @@ export default function BookRide(){
             {/* Service selector */}
             <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:14,padding:12,marginBottom:10,boxShadow:'0 2px 8px rgba(36,56,0,0.06)'}}>
               <p style={{fontWeight:700,fontSize:12,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:8}}>What do you need?</p>
-              <div style={{display:'grid',gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:8}}>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:6}}>
                 {SERVICES.map(s=>{
                   const active=service===s.id
                   return(
-                    <button key={s.id} onClick={()=>setService(s.id)} style={{
-                      padding:'10px 8px',borderRadius:10,
+                    <button key={s.id} onClick={()=>{ setService(s.id); setScheduledOk(null) }} style={{
+                      padding:'10px 6px',borderRadius:10,
                       border:`2px solid ${active?NEON:BORDER}`,
                       background:active?NEON:CARD,
                       cursor:'pointer',textAlign:'center',transition:'all 0.15s',
                       boxShadow:active?'0 4px 16px rgba(204,255,0,0.35)':'none'
                     }}>
                       <div style={{display:'flex',justifyContent:'center',marginBottom:4,color:active?OLIVE:MOSS}}>{s.icon}</div>
-                      <p style={{fontWeight:700,fontSize:12,color:active?OLIVE:TEXT,marginBottom:1}}>{s.label}</p>
-                      <p style={{fontSize:10,color:active?'rgba(36,56,0,0.65)':MUTED,lineHeight:1.2}}>{s.desc}</p>
+                      <p style={{fontWeight:700,fontSize:11.5,color:active?OLIVE:TEXT,marginBottom:1,lineHeight:1.15}}>{s.label}</p>
+                      <p style={{fontSize:9.5,color:active?'rgba(36,56,0,0.65)':MUTED,lineHeight:1.2}}>{s.desc}</p>
                     </button>
                   )
                 })}
               </div>
             </div>
 
+            {/* Just-scheduled confirmation — the only feedback for a future day,
+                since there is nothing to match against until it arrives */}
+            {scheduledOk && (
+              <div style={{display:'flex',alignItems:'flex-start',gap:10,padding:'12px 14px',
+                background:'#f6faee',border:`1.5px solid ${NEON}`,borderRadius:12,marginBottom:10}}>
+                <CalendarCheck size={17} color={OLIVE} style={{flexShrink:0,marginTop:1}}/>
+                <div style={{minWidth:0}}>
+                  <p style={{fontSize:13,fontWeight:800,color:OLIVE}}>
+                    Scheduled for {formatScheduleDate(scheduledOk.date,{long:true})}
+                  </p>
+                  <p style={{fontSize:11.5,color:MUTED,marginTop:2,lineHeight:1.4}}>
+                    {scheduledOk.driver
+                      ? `${scheduledOk.driver.name} has scheduled the same trip and is reserved for you. Your ride starts matching on the day.`
+                      : "We'll match you with a driver on that day — and pair you early if one schedules the same trip."}
+                  </p>
+                </div>
+                <button onClick={()=>setScheduledOk(null)} aria-label="Dismiss"
+                  style={{background:'none',border:'none',cursor:'pointer',color:MUTED,padding:2,marginLeft:'auto',flexShrink:0}}>
+                  <X size={15}/>
+                </button>
+              </div>
+            )}
+
             {/* Route form */}
             <div>
+              {/* Which day — scheduled rides only. Everything below is the same
+                  form a "now" booking uses; the date is the only addition. */}
+              {service==='scheduled' && (
+                <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:14,padding:12,marginBottom:10,boxShadow:'0 2px 8px rgba(36,56,0,0.06)'}}>
+                  <ScheduleDatePicker value={scheduleDate} onChange={setScheduleDate}/>
+                </div>
+              )}
+
               {/* Time slot */}
               <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:14,padding:12,marginBottom:10,boxShadow:'0 2px 8px rgba(36,56,0,0.06)'}}>
                 {/* Morning / Evening toggle */}
@@ -664,6 +783,65 @@ export default function BookRide(){
                   background:'#fef2f2',border:'1px solid #fca5a5',borderRadius:12,marginBottom:10}}>
                   <span style={{fontSize:16,flexShrink:0}}>⚠️</span>
                   <p style={{fontSize:13,color:'#ef4444'}}>{bookError}</p>
+                </div>
+              )}
+
+              {/* ── Rides already scheduled ─────────────────────────────────
+                  Today's entries are included: they're the ones about to start
+                  matching, and the rider can still call them off from here. */}
+              {upcoming.length > 0 && (
+                <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:14,padding:12,marginBottom:10,boxShadow:'0 2px 8px rgba(36,56,0,0.06)'}}>
+                  <p style={{fontWeight:700,fontSize:12,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:8}}>
+                    Your Scheduled Rides
+                  </p>
+                  {upcoming.map(s=>(
+                    <div key={s.bookingId} style={{border:`1.5px solid ${s.isToday?NEON:BORDER}`,borderRadius:12,
+                      padding:'10px 12px',marginBottom:8,background:s.isToday?'#f6faee':CARD}}>
+                      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+                        <CalendarDays size={13} color={OLIVE} style={{flexShrink:0}}/>
+                        <p style={{fontSize:12.5,fontWeight:800,color:OLIVE}}>
+                          {formatScheduleDate(s.scheduledDate,{long:true})} · {s.timeSlot}
+                        </p>
+                        {s.fare!=null && (
+                          <span style={{marginLeft:'auto',fontSize:12,fontWeight:800,color:OLIVE,
+                            border:`1.5px solid ${BORDER}`,borderRadius:8,padding:'1px 7px',flexShrink:0,whiteSpace:'nowrap'}}>
+                            ₦{s.fare.toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                      <p style={{fontSize:11.5,color:MUTED,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                        {s.pickup} → {s.dropoff}
+                      </p>
+                      {s.driver ? (
+                        <div style={{display:'flex',alignItems:'center',gap:8,marginTop:8}}>
+                          <PersonAvatar userId={s.driver.id} name={s.driver.name} size={30} fontSize={12} radius={9}/>
+                          <div style={{minWidth:0,flex:1}}>
+                            <p style={{fontSize:12,fontWeight:700,color:TEXT,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                              {s.driver.name} reserved for you
+                            </p>
+                            <p style={{fontSize:10.5,color:MUTED,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                              <Star size={9} fill="#eab308" color="#eab308" style={{display:'inline',verticalAlign:'-1px'}}/> {s.driver.rating.toFixed(1)}
+                              {[s.driver.vehicleMake,s.driver.vehicleModel].filter(Boolean).length
+                                ? ` · ${[s.driver.vehicleMake,s.driver.vehicleModel,s.driver.vehicleColor].filter(Boolean).join(' ')}` : ''}
+                              {s.driver.plateNumber ? ` · ${s.driver.plateNumber}` : ''}
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <p style={{fontSize:11,color:MUTED,marginTop:6,fontStyle:'italic'}}>
+                          {s.isToday ? 'Matching with drivers today' : 'Waiting for a driver on this day'}
+                        </p>
+                      )}
+                      <button onClick={()=>cancelScheduled(s.bookingId)} disabled={cancellingId===s.bookingId}
+                        style={{marginTop:8,display:'flex',alignItems:'center',gap:6,padding:'6px 10px',borderRadius:8,
+                          background:'none',border:`1.5px solid ${BORDER}`,
+                          color:cancellingId===s.bookingId?MUTED:'#ef4444',
+                          fontWeight:700,fontSize:11.5,fontFamily:'inherit',
+                          cursor:cancellingId===s.bookingId?'not-allowed':'pointer'}}>
+                        <Trash2 size={12}/>{cancellingId===s.bookingId?'Cancelling…':'Cancel this ride'}
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
