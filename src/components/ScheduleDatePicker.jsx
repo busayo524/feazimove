@@ -83,7 +83,7 @@ function MonthGrid({ monthDate, value, allowed, onPick }) {
               fontWeight: selected ? 800 : selectable ? 700 : 400,
               border: selected ? `1.5px solid ${OLIVE}` : selectable ? `1.5px solid ${BORDER}` : '1.5px solid transparent',
               background: selected ? NEON : selectable ? CARD : 'transparent',
-              color: selected ? OLIVE : selectable ? TEXT : '#c8cdd3',
+              color: selected ? OLIVE : selectable ? TEXT : '#aab0b7',
               cursor: selectable ? 'pointer' : 'not-allowed',
               transition:'background 0.12s, border-color 0.12s',
             }}>
@@ -155,9 +155,15 @@ export default function ScheduleDatePicker({ label = 'Ride Date', value, onChang
             position:'absolute',
             ...(openUpward ? { bottom:'calc(100% + 6px)' } : { top:'calc(100% + 6px)' }),
             left:0, right:0, zIndex:150,
+            // The trigger is a full-width form field, but the panel must NOT be:
+            // its day cells are square, so a container-wide panel on desktop
+            // gives ~230px cells and a calendar taller than the screen.
+            maxWidth:340,
             background:CARD, border:`1.5px solid ${BORDER}`, borderRadius:12,
             boxShadow:'0 8px 24px rgba(36,56,0,0.14)',
-            padding:12, maxHeight:Math.max(maxHeight, 320), overflowY:'auto',
+            // 472px is the calendar's natural height at this width — anything
+            // less puts a scrollbar over a grid that has nothing to scroll to.
+            padding:12, maxHeight:Math.max(maxHeight, 480), overflowY:'auto',
           }}>
             {/* Month header */}
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
