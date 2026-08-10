@@ -53,6 +53,30 @@ function scheduleDateError(iso) {
 // hasn't moved anywhere yet, so their covered chain is that single stop — the
 // wider chain matching happens on the day, once they're live.
 
+// Hold a seat for one rider. A rider keeps at most one reservation row ever
+// (UNIQUE on booking_id), so releasing one only crosses it out — re-pairing has
+// to revive that row rather than insert a second. The WHERE guard is what keeps
+// this from stealing a rider who is currently reserved to somebody else: for an
+// already-'reserved' row the update is skipped and nothing is returned.
+// Returns true when the seat was taken.
+async function claimReservation(bookingId, availabilityId, scheduledDate) {
+  const done = await query(
+    `INSERT INTO scheduled_reservations (booking_id, availability_id, scheduled_date)
+     VALUES ($1, $2, $3::date)
+     ON CONFLICT (booking_id) DO UPDATE
+        SET availability_id = EXCLUDED.availability_id,
+            scheduled_date  = EXCLUDED.scheduled_date,
+            status          = 'reserved',
+            -- reserved-rider lists order by this, so it has to be the moment
+            -- this pairing happened, not the moment the released one did
+            created_at      = NOW()
+      WHERE scheduled_reservations.status <> 'reserved'
+     RETURNING id`,
+    [bookingId, availabilityId, scheduledDate]
+  )
+  return !!done.rows[0]
+}
+
 // A rider just scheduled: find them a driver who already scheduled the same
 // day/slot/route with a seat still unreserved. Returns the driver, or null.
 async function reserveForBooking(bookingId) {
@@ -84,14 +108,7 @@ async function reserveForBooking(bookingId) {
   )).rows[0]
   if (!a) return null
 
-  const done = await query(
-    `INSERT INTO scheduled_reservations (booking_id, availability_id, scheduled_date)
-     VALUES ($1, $2, $3::date)
-     ON CONFLICT (booking_id) DO NOTHING
-     RETURNING id`,
-    [b.id, a.id, b.scheduled_date]
-  )
-  if (!done.rows[0]) return null
+  if (!await claimReservation(b.id, a.id, b.scheduled_date)) return null
 
   return {
     driverId: a.driver_id,
@@ -140,14 +157,7 @@ async function reserveForAvailability(availabilityId) {
 
   const reserved = []
   for (const r of riders) {
-    const done = await query(
-      `INSERT INTO scheduled_reservations (booking_id, availability_id, scheduled_date)
-       VALUES ($1, $2, $3::date)
-       ON CONFLICT (booking_id) DO NOTHING
-       RETURNING id`,
-      [r.id, a.id, a.scheduled_date]
-    )
-    if (done.rows[0]) {
+    if (await claimReservation(r.id, a.id, a.scheduled_date)) {
       reserved.push({
         bookingId: r.id, riderId: r.rider_id, riderName: r.name,
         riderRating: r.rating != null ? parseFloat(r.rating) : 5.0,
