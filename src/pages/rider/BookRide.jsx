@@ -19,8 +19,8 @@ const CARD='#ffffff', BORDER='#e9ecef', TEXT='#1a2800', MUTED='#4C6900', BG='#f6
 
 const SERVICES=[
   { id:'pool', icon:<Users size={18}/>,     label:'Pool Ride',   desc:'Share route, split cost' },
-  { id:'solo', icon:<Navigation size={18}/>, label:'Solo Ride',   desc:'Private, direct route' },
   { id:'scheduled', icon:<CalendarDays size={18}/>, label:'Schedule Ride', desc:'Book a day ahead' },
+  { id:'solo', icon:<Navigation size={18}/>, label:'Solo Ride',   desc:'Private, direct route' },
 ]
 
 /* ── Route preview popup — auto-shown once pickup/dropoff/time are all set ──
