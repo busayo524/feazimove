@@ -56,6 +56,17 @@ function normalizeInbound(r) {
   }
 }
 
+// Whose top-up is this Pay-with-Transfer payin? Anchor quotes only its own
+// session reference on a payin, so this is the one link back to a rider.
+async function userByPayinRef(payinRef) {
+  if (!payinRef) return null
+  const r = await query(
+    'SELECT user_id FROM wallet_transactions WHERE anchor_payin_ref = $1 ORDER BY created_at DESC LIMIT 1',
+    [payinRef]
+  )
+  return r.rows[0]?.user_id || null
+}
+
 async function userByCustomerId(customerId) {
   if (!customerId) return null
   const r = await query('SELECT id FROM users WHERE anchor_customer_id = $1', [customerId])
@@ -138,22 +149,79 @@ function throttled(userId) {
   return false
 }
 
+// ── Pay-with-Transfer sweep ──────────────────────────────────────────────────
+// The reserved-account sweep below cannot see this rail at all: a PWT payin is
+// its own resource and is absent from /inbound-transfers. Every live ride
+// payment and top-up uses PWT, so without this the "webhook is not the only
+// path" guarantee covered only the rail riders don't use (9 Aug 2026 — ₦1,300
+// arrived, no webhook was ever sent, and nothing on our side could find it).
+//
+// Money that Anchor received but has NOT applied to the session (status
+// NOT_STARTED, which is what an unconfigured payout account produces) is never
+// credited — the funds are not ours to spend until Anchor settles them. It is
+// recorded instead, so the Back Office shows a payment stuck at Anchor rather
+// than showing nothing at all.
+async function reconcilePayWithTransfer(userId) {
+  // Only ask Anchor when this rider actually has a PWT session outstanding.
+  const pending = await query(
+    `SELECT anchor_payin_ref FROM wallet_transactions
+      WHERE user_id = $1 AND status = 'pending' AND anchor_payin_ref IS NOT NULL`,
+    [userId]
+  )
+  if (!pending.rows.length) return false
+  const wanted = new Set(pending.rows.map(r => r.anchor_payin_ref))
+
+  const payins = await anchor.listPayins()
+  let credited = false
+  for (const raw of payins) {
+    const p = normalizeInbound(raw)
+    if (!wanted.has(p.ourRef)) continue
+    if (!p.settled) {
+      await query(
+        `INSERT INTO anchor_events (event_id, event_type, resource_id, signature_valid, processed, payload)
+         VALUES ($1, 'payin.unapplied', $2, false, false, $3) ON CONFLICT (event_id) DO NOTHING`,
+        [`payin-unapplied-${p.paymentId}`, p.paymentId, JSON.stringify({
+          source: 'reconcile-poll',
+          userId,
+          amountKobo: p.amountKobo,
+          detail: `₦${Math.round(Number(p.amountKobo) / 100).toLocaleString()} reached Anchor but is `
+            + `unapplied (status ${p.status}) — not credited${p.detail ? ` · ${p.detail}` : ''}`,
+        })]
+      ).catch(() => {})
+      continue
+    }
+    const settled = await settlePayment({ ...p, userId, signatureValid: false, source: 'pwt-reconcile' })
+    credited = credited || settled
+  }
+  return credited
+}
+
 // Settles every payment Anchor has recorded against this rider's funding
 // account. Already-settled payments are no-ops (the anchor_events claim), so
 // this is safe to call repeatedly. Returns true if anything credited now.
 async function reconcileUserPayins(userId, { force = false } = {}) {
   if (!anchor.configured()) return false
   if (!force && throttled(userId)) return false
+
+  // Both rails are swept — a rider can have a PWT session open AND money
+  // arriving on their permanent account. One rail failing must not stop the
+  // other from settling.
+  let credited = false
+  try {
+    credited = await reconcilePayWithTransfer(userId)
+  } catch (err) {
+    console.error('Pay-with-Transfer reconciliation failed:', err.message)
+  }
+
   const u = await query(
     'SELECT anchor_reserved_account_id, legacy_nuban_ids FROM users WHERE id = $1', [userId])
   // Sweep the current account AND any the rider held before a KYC upgrade —
   // money can still arrive on an old number they have saved as a beneficiary.
   const nubanIds = [u.rows[0]?.anchor_reserved_account_id, ...(u.rows[0]?.legacy_nuban_ids || [])]
     .filter(Boolean)
-  if (!nubanIds.length) return false
+  if (!nubanIds.length) return credited
 
   const transfers = (await Promise.all(nubanIds.map(id => anchor.listInboundTransfersForNuban(id)))).flat()
-  let credited = false
   for (const t of transfers) {
     const p = normalizeInbound(t)
     // Only money Anchor has actually settled. A PENDING or REVERSED transfer
@@ -171,4 +239,7 @@ async function reconcileUserPayins(userId, { force = false } = {}) {
   return credited
 }
 
-module.exports = { userByCustomerId, userByNuban, settlePayment, reconcileUserPayins, normalizeInbound }
+module.exports = {
+  userByCustomerId, userByNuban, userByPayinRef,
+  settlePayment, reconcileUserPayins, normalizeInbound,
+}

@@ -32,7 +32,7 @@ const express = require('express')
 const rateLimit = require('express-rate-limit')
 const { query } = require('../db')
 const anchor = require('../services/anchor')
-const { userByCustomerId, userByNuban, settlePayment, normalizeInbound } = require('../services/payinSettlement')
+const { userByCustomerId, userByNuban, userByPayinRef, settlePayment, normalizeInbound } = require('../services/payinSettlement')
 const { tryProvisionReservedAccount, isApproved } = require('../services/reservedAccounts')
 const { refundPayout } = require('../services/walletLedger')
 
@@ -102,6 +102,10 @@ async function handlePayin(payload) {
 
   let userId = await userByNuban(nubanId, nubanNumber)
   if (!userId) userId = await userByCustomerId(customerId)
+  // Pay-with-Transfer resolves through NEITHER of the above: the payin has no
+  // virtual NUBAN and its payer is a throwaway GuestCustomer, not the rider's
+  // Anchor customer. Its session reference is the only usable link.
+  if (!userId) userId = await userByPayinRef(ourRef)
   return settlePayment({ paymentId, amountKobo, currency, ourRef, userId, signatureValid: true, source: 'signed-webhook' })
 }
 
@@ -201,7 +205,12 @@ async function handleKyc(payload, status) {
 // fall back to scanning for an inbound-payment resource id anywhere in the
 // body. A wrong guess is harmless: the id is verified by an authenticated pull
 // and an unknown one simply throws.
-const PAYMENT_ID_RE = /\b\d{6,}-anc_(?:inb_trsf|payin|pay)\b/
+// '-anc_py' is what a LIVE Pay-with-Transfer payin id actually ends in (verified
+// 10 Aug 2026); the earlier list matched only the NUBAN rail's suffixes, so a
+// PWT id fell through to "not recognised" → 401. The trailing \b is what keeps
+// 'py' from also swallowing a GuestCustomer id ('…-anc_py_gus_cst'), since the
+// underscore after it is a word character.
+const PAYMENT_ID_RE = /\b\d{6,}-anc_(?:inb_trsf|payin|pwt|pay|py)\b/
 function claimedPaymentId(parsed) {
   const d = parsed?.data || {}
   const direct = d.attributes?.payment?.paymentId
@@ -252,6 +261,7 @@ async function handleUnsigned(rawBody) {
     // payin whose NUBAN we can't match is dropped even when Anchor told us
     // exactly which customer paid.
     if (!userId) userId = await userByCustomerId(p.customerId)
+    if (!userId) userId = await userByPayinRef(p.ourRef) // Pay-with-Transfer
     const settled = await settlePayment({
       ...p,
       paymentId: claimedPayId,

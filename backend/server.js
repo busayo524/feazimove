@@ -670,6 +670,14 @@ async function runMigrations() {
       applied_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
       detail     VARCHAR(200)
     );
+    -- Pay-with-Transfer payins carry neither our reference nor the rider's
+    -- Anchor customer id (Anchor mints its own reference and a throwaway
+    -- GuestCustomer). The PWT session reference is the only field that joins
+    -- the payin back to the top-up it was created for.
+    ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS anchor_payin_ref TEXT;
+    CREATE INDEX IF NOT EXISTS idx_wallet_payin_ref
+      ON wallet_transactions(anchor_payin_ref) WHERE anchor_payin_ref IS NOT NULL;
+
     -- Drivers were force-flagged can_ride = true on every boot; undo that for
     -- anyone with no actual rider history.
     DO $$

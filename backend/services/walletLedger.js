@@ -37,14 +37,22 @@ function trackCredit(userId, amountKobo, balanceKobo, method) {
 // Credits a still-pending transaction and marks it completed — guarded by the
 // 'pending' check in the UPDATE (concurrency-safe: re-checked after any lock
 // wait) and by the amount check so a short-paid transfer never credits.
+//
+// `reference` is matched against OUR reference or the Anchor-side
+// Pay-with-Transfer reference, because a PWT payin only ever quotes the latter.
+// The two namespaces cannot collide — ours is 'fm<uuid-hex>', Anchor's is
+// '<digits>-anc_va-ref' — so one lookup safely serves both rails.
 async function creditTransaction(reference, { paymentMethod, paidKobo, currency, gateway } = {}) {
   if (currency != null && currency !== 'NGN') return false
   const result = await tx(async client => {
     const txRes = await client.query(
       `UPDATE wallet_transactions SET status = 'completed', gateway = COALESCE($3, gateway)
-        WHERE reference = $1 AND status = 'pending'
-          AND ($2::bigint IS NULL OR amount_kobo <= $2::bigint)
-        RETURNING user_id, amount_kobo`,
+        WHERE status = 'pending' AND id = (
+          SELECT id FROM wallet_transactions
+           WHERE (reference = $1 OR anchor_payin_ref = $1) AND status = 'pending'
+             AND ($2::bigint IS NULL OR amount_kobo <= $2::bigint)
+           ORDER BY created_at DESC LIMIT 1
+        ) RETURNING user_id, amount_kobo`,
       [reference, paidKobo ?? null, gateway ?? null]
     )
     if (!txRes.rows[0]) return null

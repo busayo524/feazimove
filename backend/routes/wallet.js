@@ -253,6 +253,13 @@ router.post('/fund',
       )
 
       let transfer
+      // Anchor's OWN reference for the Pay-with-Transfer session. Kept because
+      // it is the only field that survives onto the payin: Anchor does not echo
+      // our `reference` there (it lands as `customerReference` on the session
+      // and is dropped from the payin), and the payer is recorded as a
+      // throwaway GuestCustomer rather than the rider's Anchor customer. Null
+      // on the Virtual-NUBAN fallback below, which matches by account instead.
+      let payinRef = null
       try {
         const pwt = await anchor.createPayWithTransfer({
           reference,
@@ -265,6 +272,7 @@ router.post('/fund',
           metadata: { feazimoveUserId: req.user.id, context: isRidePayment ? 'ride' : 'wallet' },
         })
         const a = pwt?.attributes || {}
+        payinRef = a.reference || null
         const details = a.accountDetails || a.virtualAccountDetails || a
         transfer = {
           bankName: details.bankName || details.bank?.name || '9 Payment Service Bank',
@@ -292,8 +300,9 @@ router.post('/fund',
       // Record as pending only AFTER the payment account exists — flipped to
       // 'completed' by the webhook (routes/anchor.js) once the transfer lands.
       await query(
-        'INSERT INTO wallet_transactions (user_id, type, amount_kobo, description, reference, status, gateway) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-        [req.user.id, 'credit', amount * 100, isRidePayment ? 'Ride payment' : 'Wallet top-up', reference, 'pending', 'anchor']
+        `INSERT INTO wallet_transactions (user_id, type, amount_kobo, description, reference, status, gateway, anchor_payin_ref)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [req.user.id, 'credit', amount * 100, isRidePayment ? 'Ride payment' : 'Wallet top-up', reference, 'pending', 'anchor', payinRef]
       )
 
       res.json({

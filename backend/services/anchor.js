@@ -205,6 +205,29 @@ async function getPayin(payinId) {
   } catch (err) { throw anchorError(err, 'Could not fetch payment details.') }
 }
 
+// Every Pay-with-Transfer payin Anchor holds for us, newest first. This is the
+// ONLY place a PWT payment is visible: it never appears under
+// /inbound-transfers (that is the NUBAN rail — asking there returns 412), so
+// without this there is no way to answer "did the money arrive?" when a webhook
+// does not turn up. Anchor only lists a payin once money has actually landed
+// against the session, so the list stays short.
+//
+// Best-effort by design: reconciliation calls this on a rider's poll and must
+// degrade to "not found yet" rather than break the poll.
+async function listPayins({ maxPages = 5 } = {}) {
+  try {
+    const out = []
+    for (let page = 0; page < maxPages; page++) {
+      const res = await http.get(`/pay/payin?page=${page}&size=50`)
+      const batch = res.data?.data || []
+      out.push(...batch)
+      const pages = res.data?.meta?.pagination?.totalPages ?? 1
+      if (batch.length === 0 || page >= pages - 1) break
+    }
+    return out
+  } catch (err) { throw anchorError(err, 'Could not list payments.') }
+}
+
 // Find an existing customer by email — used when creation is refused with
 // "Customer with Email already exist" (e.g. a FeaziMove account was deleted
 // and re-registered; the Anchor-side record outlives ours and gets adopted).
@@ -401,8 +424,15 @@ async function findTransferByReference(reference) {
   } catch (err) { throw anchorError(err, 'Could not list transfers.') }
 }
 
-// The org's root deposit account funds payouts. Configure explicitly via
-// ANCHOR_MASTER_ACCOUNT_ID, else the first ROOT account found is cached.
+// The account driver payouts are debited from. This MUST be the same account
+// the Anchor dashboard settles Pay-with-Transfer collections into (Settings →
+// Payment Settings → Payout), or money accumulates in one pot while withdrawals
+// drain another.
+//
+// Configure explicitly via ANCHOR_MASTER_ACCOUNT_ID. Falling back to accounts[0]
+// picked whichever account Anchor happened to list first — for an org with both
+// a BUSINESS and a MASTER account that is an arbitrary choice that can change
+// under us, so the account Anchor itself types as MASTER is preferred first.
 let cachedMasterAccountId = null
 async function getMasterAccountId() {
   if (process.env.ANCHOR_MASTER_ACCOUNT_ID) return process.env.ANCHOR_MASTER_ACCOUNT_ID
@@ -410,7 +440,9 @@ async function getMasterAccountId() {
   try {
     const res = await http.get('/api/v1/accounts')
     const accounts = res.data.data || []
-    const root = accounts.find(a => (a.attributes?.accountName || '').toUpperCase().includes('ROOT')) || accounts[0]
+    const root = accounts.find(a => (a.attributes?.type || '').toUpperCase() === 'MASTER')
+      || accounts.find(a => (a.attributes?.accountName || '').toUpperCase().includes('ROOT'))
+      || accounts[0]
     if (!root) throw new Error('No deposit account found on the Anchor organization.')
     cachedMasterAccountId = root.id
     return root.id
@@ -455,6 +487,7 @@ module.exports = {
   createVirtualNuban,
   isUnavailable,
   getPayin,
+  listPayins,
   getPayment,
   listInboundTransfersForNuban,
   getInboundTransfer,

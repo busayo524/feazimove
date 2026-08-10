@@ -686,6 +686,18 @@ CREATE TABLE IF NOT EXISTS schema_data_fixes (
   detail     VARCHAR(200)
 );
 
+-- ── Pay-with-Transfer: the link back from Anchor's payin to our top-up ───────
+-- A Pay-with-Transfer payin carries NEITHER our reference NOR the rider's
+-- Anchor customer id — Anchor mints its own reference and a throwaway
+-- GuestCustomer per session. On 9 Aug 2026 a rider's ₦1,300 arrived and could
+-- not have been matched to them by any of the three keys the settlement path
+-- had. The one field that does join is the PWT session's own reference (the
+-- '<id>-anc_va-ref' string), which comes back verbatim on the payin, so it is
+-- captured at session creation and matched on settlement.
+ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS anchor_payin_ref TEXT;
+CREATE INDEX IF NOT EXISTS idx_wallet_payin_ref
+  ON wallet_transactions(anchor_payin_ref) WHERE anchor_payin_ref IS NOT NULL;
+
 -- Undoes the old "force can_ride = true for every driver" statement: a driver
 -- who never chose to be a rider should not be one. Anyone with real rider
 -- history (a ride or a booking as rider) is left alone — they either opted in
