@@ -239,7 +239,71 @@ async function reconcileUserPayins(userId, { force = false } = {}) {
   return credited
 }
 
+// ── Sweep for payins that settle LATE ────────────────────────────────────────
+// A Pay-with-Transfer payin is NOT settled when the money arrives. Anchor
+// applies it to the session later, and "later" can be the next day: on 9 Aug
+// 2026 a rider's ₦1,300 landed at 19:50 and Anchor's own paidAt was 14:53 the
+// FOLLOWING afternoon — 19 hours. reconcilePayWithTransfer did exactly the
+// right thing at the time (unapplied money is not ours to credit), recorded
+// 'payin.unapplied' and moved on.
+//
+// The gap was that nothing ever looked again. Re-checking only happened inside
+// the rider's payment poll, which dies the moment they close the app — so a
+// payin that settles after they leave stayed stranded, with the money sitting
+// in our Anchor account and the rider's wallet showing ₦0.
+//
+// This settles every outstanding session in ONE Anchor call, for all riders at
+// once, whether or not anybody is watching. Request-triggered and throttled,
+// never a timer — same rule as services/onlineStatus.js: a 24/7 interval would
+// keep Neon awake permanently and burn the whole compute allowance.
+const SWEEP_EVERY_MS = 5 * 60 * 1000
+let lastSweep = 0
+
+async function sweepSettledPayins() {
+  if (!anchor.configured()) return 0
+  // Cheap guard first: no outstanding session means no Anchor call at all, so
+  // a quiet app costs nothing beyond one indexed query.
+  const pending = await query(
+    `SELECT anchor_payin_ref, user_id FROM wallet_transactions
+      WHERE status = 'pending' AND anchor_payin_ref IS NOT NULL
+        AND created_at > NOW() - INTERVAL '14 days'`
+  )
+  if (!pending.rows.length) return 0
+  const ownerOf = new Map(pending.rows.map(r => [r.anchor_payin_ref, r.user_id]))
+
+  const payins = await anchor.listPayins()
+  let credited = 0
+  for (const raw of payins) {
+    const p = normalizeInbound(raw)
+    const userId = ownerOf.get(p.ourRef)
+    // Still unapplied is normal, not an error — it just means Anchor has not
+    // released it yet. The next sweep looks again.
+    if (!userId || !p.settled) continue
+    const ok = await settlePayment({ ...p, userId, signatureValid: false, source: 'payin-sweep' })
+    if (!ok) continue
+    credited++
+    // An earlier pass may have filed this as stuck-at-Anchor. It no longer is,
+    // so close that note rather than leave the Back Office showing a false alarm.
+    await query(
+      `UPDATE anchor_events SET processed = true WHERE event_id = $1`,
+      [`payin-unapplied-${p.paymentId}`]
+    ).catch(() => {})
+  }
+  if (credited) console.log(`Payin sweep: credited ${credited} late-settling payment(s).`)
+  return credited
+}
+
+// Fire-and-forget, at most once per SWEEP_EVERY_MS — called from request
+// middleware, so it piggybacks on activity that already woke the database.
+function maybeSweepPayins() {
+  const now = Date.now()
+  if (now - lastSweep < SWEEP_EVERY_MS) return
+  lastSweep = now
+  sweepSettledPayins().catch(err => console.error('Payin sweep failed:', err.message))
+}
+
 module.exports = {
   userByCustomerId, userByNuban, userByPayinRef,
   settlePayment, reconcileUserPayins, normalizeInbound,
+  sweepSettledPayins, maybeSweepPayins,
 }

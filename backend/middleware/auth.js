@@ -7,6 +7,7 @@
 const jwt = require('jsonwebtoken')
 const { query } = require('../db')
 const { maybeSweep } = require('../services/onlineStatus')
+const { maybeSweepPayins } = require('../services/payinSettlement')
 
 async function requireAuth(req, res, next) {
   const authHeader = req.headers['authorization']
@@ -52,6 +53,9 @@ async function requireAuth(req, res, next) {
       [decoded.id]
     ).catch(() => {})
     maybeSweep() // activity-triggered, throttled — never keeps the DB awake on its own
+    // Same deal for money that Anchor settled after the rider stopped polling:
+    // any authenticated request is enough to find and credit it.
+    maybeSweepPayins()
     next()
   } catch (err) { next(err) }
 }

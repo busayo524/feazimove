@@ -813,6 +813,10 @@ runMigrations().then(() => {
   // sweeps are request-triggered in middleware/auth.js — NEVER on a timer,
   // which would keep the Neon database awake 24/7 and burn its compute quota.
   require('./services/onlineStatus').sweepStaleOnline()
+  // Also settle any payin Anchor released while nobody was polling — this alone
+  // would have caught the 9 Aug ₦1,300 at the very next deploy.
+  require('./services/payinSettlement').sweepSettledPayins()
+    .catch(err => console.error('Boot payin sweep failed:', err.message))
 })
 
 module.exports = app
