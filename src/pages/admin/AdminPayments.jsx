@@ -11,7 +11,7 @@ import { AlertCircle, ArrowDownLeft, ArrowUpRight, CheckCircle2, Ban, Download }
 function StatCard({ label, value, accent }) {
   return (
     <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, padding:18 }}>
-      <p style={{ fontSize:12, color:MUTED, fontWeight:600, marginBottom:8 }}>{label}</p>
+      <p style={{ fontSize:13.5, color:MUTED, fontWeight:600, marginBottom:8 }}>{label}</p>
       <p style={{ fontWeight:900, fontSize:24, color: accent || TEXT, letterSpacing:'-0.02em' }}>₦{value.toLocaleString()}</p>
     </div>
   )
@@ -34,7 +34,7 @@ function RoleTag({ role }) {
   if (!role) return null
   const isDriver = role === 'driver'
   return (
-    <span style={{ marginLeft:8, padding:'2px 8px', borderRadius:50, fontSize:10.5, fontWeight:800,
+    <span style={{ marginLeft:8, padding:'2px 8px', borderRadius:50, fontSize:12, fontWeight:800,
       textTransform:'uppercase', letterSpacing:'0.04em',
       background: isDriver ? '#e0edff' : '#f0f7dd', color: isDriver ? '#1d4ed8' : '#3f6212' }}>
       {isDriver ? 'Driver' : 'Rider'}
@@ -101,7 +101,7 @@ export default function AdminPayments() {
       {error && (
         <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10, marginBottom:20 }}>
           <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
-          <p style={{ fontSize:13, color:'#ef4444' }}>{error}</p>
+          <p style={{ fontSize:14.5, color:'#ef4444' }}>{error}</p>
         </div>
       )}
 
@@ -119,7 +119,7 @@ export default function AdminPayments() {
           <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, overflow:'hidden', marginBottom:24 }}>
             <p style={{ fontWeight:800, fontSize:15, color:TEXT, padding:'16px 18px' }}>Pending Payouts</p>
             {payouts.length === 0 ? (
-              <p style={{ color:MUTED, fontSize:13, padding:'0 18px 18px' }}>No pending withdrawal requests.</p>
+              <p style={{ color:MUTED, fontSize:14.5, padding:'0 18px 18px' }}>No pending withdrawal requests.</p>
             ) : payouts.map(p => (
               <div key={p.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 18px', borderTop:`1px solid ${BORDER}` }}>
                 <div>
@@ -131,22 +131,22 @@ export default function AdminPayments() {
                     )}
                     <RoleTag role={p.userRole}/>
                   </span>
-                  <p style={{ fontSize:12, color:MUTED }}>Requested {new Date(p.requestedAt).toLocaleString('en-NG', { timeZone:'Africa/Lagos' })}</p>
-                  {p.bankName && <p style={{ fontSize:11.5, color:MUTED }}>{p.bankName} · {p.accountNumber}</p>}
+                  <p style={{ fontSize:13.5, color:MUTED }}>Requested {new Date(p.requestedAt).toLocaleString('en-NG', { timeZone:'Africa/Lagos' })}</p>
+                  {p.bankName && <p style={{ fontSize:13, color:MUTED }}>{p.bankName} · {p.accountNumber}</p>}
                 </div>
                 <div style={{ display:'flex', alignItems:'center', gap:14 }}>
                   <div style={{ textAlign:'right' }}>
                     <p style={{ fontWeight:800, fontSize:15, color:TEXT }}>₦{p.amount.toLocaleString()}</p>
                     {p.fee > 0 && (
-                      <p style={{ fontSize:11, color:MUTED }}>less ₦{p.fee.toLocaleString()} fees → pays ₦{p.net.toLocaleString()}</p>
+                      <p style={{ fontSize:12.5, color:MUTED }}>less ₦{p.fee.toLocaleString()} fees → pays ₦{p.net.toLocaleString()}</p>
                     )}
                   </div>
                   <button onClick={() => handlePayout(p.id, 'approve')} disabled={busyId===p.id}
-                    style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 12px', borderRadius:8, border:'none', background:NEON, color:ON_NEON, fontWeight:700, fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
+                    style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 12px', borderRadius:8, border:'none', background:NEON, color:ON_NEON, fontWeight:700, fontSize:13.5, cursor:'pointer', fontFamily:'inherit' }}>
                     <CheckCircle2 size={13}/> Approve
                   </button>
                   <button onClick={() => handlePayout(p.id, 'reject')} disabled={busyId===p.id}
-                    style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 12px', borderRadius:8, border:'1px solid #fca5a5', background:'#fff', color:'#ef4444', fontWeight:700, fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
+                    style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 12px', borderRadius:8, border:'1px solid #fca5a5', background:'#fff', color:'#ef4444', fontWeight:700, fontSize:13.5, cursor:'pointer', fontFamily:'inherit' }}>
                     <Ban size={13}/> Reject
                   </button>
                 </div>
@@ -161,19 +161,19 @@ export default function AdminPayments() {
               <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
                 {RANGES.map(r => (
                   <button key={r.key} onClick={() => setRange(r.key)}
-                    style={{ padding:'6px 12px', borderRadius:50, fontSize:12, fontWeight:700, fontFamily:'inherit', cursor:'pointer',
+                    style={{ padding:'6px 12px', borderRadius:50, fontSize:13.5, fontWeight:700, fontFamily:'inherit', cursor:'pointer',
                       border:`1.5px solid ${range===r.key ? OLIVE : BORDER}`, background: range===r.key ? OLIVE : CARD, color: range===r.key ? '#fff' : MUTED }}>
                     {r.label}
                   </button>
                 ))}
                 <button onClick={handleExport} disabled={exporting}
-                  style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 14px', borderRadius:8, border:'none', background:NEON, color:ON_NEON, fontWeight:800, fontSize:12, cursor: exporting?'wait':'pointer', fontFamily:'inherit' }}>
+                  style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 14px', borderRadius:8, border:'none', background:NEON, color:ON_NEON, fontWeight:800, fontSize:13.5, cursor: exporting?'wait':'pointer', fontFamily:'inherit' }}>
                   <Download size={13}/> {exporting ? 'Exporting…' : 'Export to Excel'}
                 </button>
               </div>
             </div>
             {data.transactions.length === 0 ? (
-              <p style={{ color:MUTED, fontSize:13, padding:'0 18px 18px' }}>
+              <p style={{ color:MUTED, fontSize:14.5, padding:'0 18px 18px' }}>
                 No transactions in this period.
               </p>
             ) : data.transactions.map(t => (
@@ -182,8 +182,8 @@ export default function AdminPayments() {
                   {t.type === 'credit' ? <ArrowDownLeft size={15} color="#15803d"/> : <ArrowUpRight size={15} color="#ef4444"/>}
                 </div>
                 <div style={{ flex:1 }}>
-                  <p style={{ fontSize:13, fontWeight:600, color:TEXT }}>{t.description}</p>
-                  <p style={{ fontSize:12, color:MUTED }}>
+                  <p style={{ fontSize:14.5, fontWeight:600, color:TEXT }}>{t.description}</p>
+                  <p style={{ fontSize:13.5, color:MUTED }}>
                     {t.userName}
                     {/* The account is gone but the money still moved — say so
                         rather than showing a name that leads nowhere. */}
@@ -230,18 +230,18 @@ function NameMismatchModal({ data, busy, onClose, onConfirm }) {
           <AlertCircle size={17} color="#b45309"/>
           <p style={{ margin:0, fontWeight:800, fontSize:16, color:TEXT }}>Account name doesn’t match</p>
         </div>
-        <p style={{ fontSize:13, color:MUTED, lineHeight:1.55, marginBottom:12 }}>
+        <p style={{ fontSize:14.5, color:MUTED, lineHeight:1.55, marginBottom:12 }}>
           The bank reports this account as <strong style={{ color:TEXT }}>{data.bankAccountName}</strong>,
           but the registered holder is <strong style={{ color:TEXT }}>{data.registeredName}</strong>.
         </p>
         <div style={{ background:'#fffbeb', border:'1px solid #fcd34d', borderRadius:10, padding:'10px 13px', marginBottom:14 }}>
-          <p style={{ fontSize:12.5, color:'#92400e', lineHeight:1.5 }}>
+          <p style={{ fontSize:14, color:'#92400e', lineHeight:1.5 }}>
             You’re on Anchor <strong>sandbox</strong>, which invents a new random account name on every
             lookup — so this check can never pass here. Overriding is safe for testing. It will not be
             offered once live keys are in place.
           </p>
         </div>
-        <label style={{ display:'block', fontSize:12.5, fontWeight:700, color:TEXT, marginBottom:6 }}>
+        <label style={{ display:'block', fontSize:14, fontWeight:700, color:TEXT, marginBottom:6 }}>
           Reason (recorded in the audit log)
         </label>
         <input value={reason} onChange={e => setReason(e.target.value.slice(0, 200))}
@@ -250,7 +250,7 @@ function NameMismatchModal({ data, busy, onClose, onConfirm }) {
             marginBottom:14, boxSizing:'border-box', background:CARD, color:TEXT, fontFamily:'inherit' }}/>
         <div style={{ display:'flex', gap:10 }}>
           <button onClick={() => onConfirm(reason.trim())} disabled={busy || reason.trim().length < 3}
-            style={{ flex:1, padding:'11px', borderRadius:10, border:'none', fontWeight:800, fontSize:13.5, fontFamily:'inherit',
+            style={{ flex:1, padding:'11px', borderRadius:10, border:'none', fontWeight:800, fontSize:15, fontFamily:'inherit',
               background:(busy || reason.trim().length < 3) ? BORDER : '#b45309',
               color:(busy || reason.trim().length < 3) ? MUTED : '#fff',
               cursor:(busy || reason.trim().length < 3) ? 'not-allowed' : 'pointer' }}>
@@ -258,7 +258,7 @@ function NameMismatchModal({ data, busy, onClose, onConfirm }) {
           </button>
           <button onClick={onClose}
             style={{ padding:'11px 16px', borderRadius:10, background:'none', border:`1.5px solid ${BORDER}`,
-              color:MUTED, fontWeight:700, fontSize:13.5, cursor:'pointer', fontFamily:'inherit' }}>
+              color:MUTED, fontWeight:700, fontSize:15, cursor:'pointer', fontFamily:'inherit' }}>
             Cancel
           </button>
         </div>

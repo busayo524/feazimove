@@ -1,4 +1,5 @@
-import { NEON, ON_NEON_HARD as NT, BG, TEXT, ADMIN_BORDER as BORDER, HEADER } from '../theme/palette'
+import { NEON, ON_NEON_HARD as NT, BG, TEXT, ADMIN_BORDER as BORDER, HEADER,
+  SB_BG, SB_BORDER, SB_TEXT, SB_MUTED, SB_CARD, SB_HOVER } from '../theme/palette'
 import React, { useState, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -7,20 +8,21 @@ import { useMyAvatar } from '../hooks/useMyAvatar'
 import faviconImg from '../assets/favicon.png'
 import {
   MapPin, Clock, Package, Wallet, User, LogOut, Menu, X,
-  TrendingUp, LayoutGrid,
+  TrendingUp, LayoutGrid, Instagram, Facebook,
 } from 'lucide-react'
 
 
-// Sidebar-specific palette. Deliberately NOT themed: the sidebar is already
-// dark in both modes, which is what the reference design shows, so flipping it
-// would make the light theme worse and change nothing in dark.
-const SB_BG      = '#1a2400'          // sidebar background — very deep lime neon
-const SB_BORDER  = 'rgba(255,255,255,0.08)'
-const SB_TEXT    = '#e8f5d0'          // inactive label
-const SB_MUTED   = '#7aad40'          // subdued text
-const SB_CARD    = 'rgba(255,255,255,0.06)'  // user card / sign out bg
-const SB_HOVER   = 'rgba(255,255,255,0.08)'
+// Sidebar palette now themes: deep lime-green in light (unchanged), neutral ash
+// in dark — on a black page a green panel reads as a second brand colour rather
+// than a menu. Values live in index.css.
 const NAV_ACTIVE_BG = 'rgba(204,255,0,0.08)' // faint wash behind the active item
+
+// Where the social links point. Same URLs the marketing footer uses, so there
+// is one place to change them.
+const SOCIALS = [
+  { Icon: Instagram, href: 'https://www.instagram.com/feazimove/', label: 'FeaziMove on Instagram' },
+  { Icon: Facebook,  href: 'https://web.facebook.com/profile.php?id=61590273165597', label: 'FeaziMove on Facebook' },
+]
 
 const RIDER_NAV=[
   { to:'/book',    icon:<MapPin size={19}/>,    label:'Schedule Ride' },
@@ -147,6 +149,20 @@ export default function AppLayout({ children, title }){
           onMouseLeave={e => { e.currentTarget.style.background=SB_CARD; e.currentTarget.style.color=SB_TEXT; e.currentTarget.style.borderColor=SB_BORDER }}>
           <LogOut size={16}/> Sign Out
         </button>
+        {/* Social links — same accounts the marketing footer points at */}
+        <div style={{ display:'flex', justifyContent:'center', gap:14, marginTop:12 }}>
+          {SOCIALS.map(({ Icon, href, label }) => (
+            <a key={label} href={href} target="_blank" rel="noreferrer" aria-label={label} title={label}
+              style={{ width:36, height:36, borderRadius:10, display:'flex', alignItems:'center',
+                justifyContent:'center', background:SB_CARD, color:SB_TEXT,
+                border:`1px solid ${SB_BORDER}`, transition:'all 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.color = NEON; e.currentTarget.style.borderColor = NEON }}
+              onMouseLeave={e => { e.currentTarget.style.color = SB_TEXT; e.currentTarget.style.borderColor = SB_BORDER }}>
+              <Icon size={17}/>
+            </a>
+          ))}
+        </div>
+
       </div>
     </div>
   )

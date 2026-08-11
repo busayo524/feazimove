@@ -11,7 +11,7 @@ import { rememberAvatar } from '../../utils/avatarCache'
 import StepUpModal from '../../components/StepUpModal'
 import { CITIES, LAGOS_AREAS } from '../../constants/areas'
 import { User, Phone, Mail, Shield, Bell, ChevronRight, LogOut, Camera, CheckCircle, X, RefreshCw, Car, MapPin, AlertCircle, Landmark, Sun, Moon, Smartphone as SmartphoneIcon } from 'lucide-react'
-import { useTheme } from '../../context/ThemeContext'
+import AppearanceSetting from '../../components/AppearanceSetting'
 
 /* palette: themed tokens — see src/theme/palette.js */
 /* palette: themed tokens — see src/theme/palette.js */
@@ -348,57 +348,6 @@ function ChangePasswordModal({ onClose }){
 }
 
 // ── Main Profile Component ────────────────────────────────────────────────────
-// ── Appearance ───────────────────────────────────────────────────────────────
-// Riders and drivers share this profile page, so both get the setting from one
-// place. 'System default' follows the phone or computer's own light/dark
-// setting and keeps following it — the label under it names what that is right
-// now, since "system default" tells you nothing on its own.
-function AppearanceSetting(){
-  const { theme, resolved, setTheme } = useTheme()
-  const OPTIONS = [
-    { key:'light',  icon:<Sun size={17}/>,       label:'Light',
-      sub:'Bright background, dark text' },
-    { key:'dark',   icon:<Moon size={17}/>,      label:'Dark',
-      sub:'Easier on the eyes and saves battery' },
-    { key:'system', icon:<SmartphoneIcon size={17}/>, label:'System default',
-      sub:`Follows your device — currently ${resolved}` },
-  ]
-  return (
-    <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,overflow:'hidden',marginBottom:16,boxShadow:`0 2px 8px ${SHADOW}`}}>
-      <div style={{padding:'14px 20px',borderBottom:`1px solid ${BORDER}`}}>
-        <p style={{fontWeight:700,fontSize:13,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em'}}>Appearance</p>
-      </div>
-      {OPTIONS.map((o,i)=>{
-        const on = theme === o.key
-        return (
-          <button key={o.key} onClick={()=>setTheme(o.key)}
-            aria-pressed={on}
-            style={{width:'100%',display:'flex',alignItems:'center',gap:14,padding:'15px 20px',
-              borderBottom:i<OPTIONS.length-1?`1px solid ${BORDER}`:'none',
-              background:CARD,border:'none',cursor:'pointer',textAlign:'left',
-              transition:'background 0.15s',fontFamily:'inherit'}}
-            onMouseEnter={e=>e.currentTarget.style.background=BG}
-            onMouseLeave={e=>e.currentTarget.style.background=CARD}>
-            <div style={{width:36,height:36,borderRadius:10,flexShrink:0,display:'flex',
-              alignItems:'center',justifyContent:'center',
-              background:on?NEON:CHIP,color:on?ON_NEON:MOSS}}>{o.icon}</div>
-            <div style={{flex:1,minWidth:0}}>
-              <p style={{fontSize:14,color:TEXT,fontWeight:on?800:600}}>{o.label}</p>
-              <p style={{fontSize:12,color:MUTED,marginTop:1}}>{o.sub}</p>
-            </div>
-            {/* Radio, drawn rather than a real input so it themes with the rest */}
-            <span style={{width:20,height:20,borderRadius:'50%',flexShrink:0,
-              border:`2px solid ${on?ACCENT:BORDER}`,display:'flex',alignItems:'center',
-              justifyContent:'center',transition:'border-color 0.15s'}}>
-              {on && <span style={{width:10,height:10,borderRadius:'50%',background:ACCENT}}/>}
-            </span>
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
 export default function Profile(){
   const {user,logout,updateUser,addRole,switchRole}=useAuth()
   const navigate=useNavigate()
@@ -637,7 +586,7 @@ export default function Profile(){
         {/* Rider row */}
         <div style={{display:'flex',alignItems:'center',gap:14,padding:'14px 20px',borderBottom:`1px solid ${BORDER}`}}>
           <div style={{width:36,height:36,borderRadius:10,background:NEON,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-            <MapPin size={16} color={OLIVE}/>
+            <MapPin size={16} color={ON_NEON}/>
           </div>
           <div style={{flex:1}}>
             <p style={{fontSize:14,color:TEXT,fontWeight:600}}>Rider</p>
@@ -654,7 +603,7 @@ export default function Profile(){
         {/* Driver row */}
         <div style={{display:'flex',alignItems:'center',gap:14,padding:'14px 20px'}}>
           <div style={{width:36,height:36,borderRadius:10,background:NEON,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-            <Car size={16} color={OLIVE}/>
+            <Car size={16} color={ON_NEON}/>
           </div>
           <div style={{flex:1}}>
             <p style={{fontSize:14,color:TEXT,fontWeight:600}}>Driver</p>

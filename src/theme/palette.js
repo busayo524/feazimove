@@ -26,8 +26,18 @@ export const CARD    = 'var(--fm-card)'
 export const BORDER  = 'var(--fm-border)'
 export const HOVER   = 'var(--fm-hover)'
 export const HEADER  = 'var(--fm-header)'   // translucent sticky bars
+
+// Side menu. Green in light, ash in dark — see index.css.
+export const SB_BG     = 'var(--fm-sb-bg)'
+export const SB_BORDER = 'var(--fm-sb-border)'
+export const SB_TEXT   = 'var(--fm-sb-text)'
+export const SB_MUTED  = 'var(--fm-sb-muted)'
+export const SB_CARD   = 'var(--fm-sb-card)'
+export const SB_HOVER  = 'var(--fm-sb-hover)'
 export const DANGER_SOFT = 'var(--fm-danger-soft)'  // debit / error wash
 export const CHIP        = 'var(--fm-chip)'         // neutral pill background
+export const WARN_SOFT   = 'var(--fm-warn-soft)'    // caution wash
+export const WARN_BORDER = 'var(--fm-warn-border)'
 
 // Type
 export const TEXT    = 'var(--fm-text)'

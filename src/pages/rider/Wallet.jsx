@@ -1,4 +1,4 @@
-import { CARD, BORDER, TEXT, MUTED, BG, NEON, ACCENT as OLIVE, MOSS, ON_NEON, DANGER_SOFT, NEON_SOFT, ACCENT_FILL, ON_ACCENT_FILL } from '../../theme/palette'
+import { CARD, BORDER, TEXT, MUTED, BG, NEON, ACCENT as OLIVE, MOSS, ON_NEON, DANGER_SOFT, NEON_SOFT, ACCENT_FILL, ON_ACCENT_FILL, WARN_SOFT, WARN_BORDER } from '../../theme/palette'
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import AppLayout from '../../components/AppLayout'
 import { useAuth } from '../../context/AuthContext'
@@ -106,8 +106,8 @@ function ReservedAccountCard({ showForm, setShowForm, onStatus }) {
           too: people mistype it, or register under a name their bank does not
           hold, and they must be able to correct it and try again. */}
       {account && kyc && !kyc.isNamed && kyc.canReverify && !showForm && (
-        <div style={{ background: kyc.verifying ? NEON_SOFT : '#fff7ed',
-          border: `1px solid ${kyc.verifying ? NEON : '#fdba74'}`,
+        <div style={{ background: kyc.verifying ? NEON_SOFT : WARN_SOFT,
+          border: `1px solid ${kyc.verifying ? NEON : WARN_BORDER}`,
           borderRadius: 12, padding: 12, marginBottom: 12 }}>
           <div style={{ display:'flex', alignItems:'center', gap:7, marginBottom:6 }}>
             {kyc.verifying

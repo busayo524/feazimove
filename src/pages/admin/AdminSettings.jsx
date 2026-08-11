@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext'
 import { api } from '../../services/api'
 import { AlertCircle, CheckCircle, Lock, ShieldCheck } from 'lucide-react'
 import StepUpModal from '../../components/StepUpModal'
+import AppearanceSetting from '../../components/AppearanceSetting'
 
 /* palette: themed tokens — see src/theme/palette.js */
 /* palette: themed tokens — see src/theme/palette.js */
@@ -50,37 +51,37 @@ export default function AdminSettings() {
       {forced && (
         <div style={{ display:'flex', gap:10, padding:'12px 16px', background:'#fef9c3', border:'1px solid #fde68a', borderRadius:10, marginBottom:20 }}>
           <Lock size={16} color="#854d0e" style={{ flexShrink:0, marginTop:1 }}/>
-          <p style={{ fontSize:13, color:'#854d0e' }}>You're using a temporary password. Set a new one to continue.</p>
+          <p style={{ fontSize:14.5, color:'#854d0e' }}>You're using a temporary password. Set a new one to continue.</p>
         </div>
       )}
 
       <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, padding:22 }}>
         <p style={{ fontWeight:800, fontSize:15, color:TEXT, marginBottom:4 }}>Change Password</p>
-        <p style={{ fontSize:13, color:MUTED, marginBottom:18 }}>Use at least 8 characters, one uppercase letter, and one number.</p>
+        <p style={{ fontSize:14.5, color:MUTED, marginBottom:18 }}>Use at least 8 characters, one uppercase letter, and one number.</p>
 
         <form onSubmit={handleSubmit}>
-          <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Current Password</label>
+          <label style={{ display:'block', fontSize:14.5, fontWeight:600, color:TEXT, marginBottom:6 }}>Current Password</label>
           <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} required
             style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, marginBottom:14, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}/>
 
-          <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>New Password</label>
+          <label style={{ display:'block', fontSize:14.5, fontWeight:600, color:TEXT, marginBottom:6 }}>New Password</label>
           <input type="password" autoComplete="off" value={newPassword} onChange={e => setNewPassword(e.target.value)} required
             style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, marginBottom:14, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}/>
 
-          <label style={{ display:'block', fontSize:13, fontWeight:600, color:TEXT, marginBottom:6 }}>Confirm New Password</label>
+          <label style={{ display:'block', fontSize:14.5, fontWeight:600, color:TEXT, marginBottom:6 }}>Confirm New Password</label>
           <input type="password" autoComplete="off" value={confirm} onChange={e => setConfirm(e.target.value)} required
             style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, marginBottom:16, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}/>
 
           {error && (
             <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10, marginBottom:14 }}>
               <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
-              <p style={{ fontSize:13, color:'#ef4444' }}>{error}</p>
+              <p style={{ fontSize:14.5, color:'#ef4444' }}>{error}</p>
             </div>
           )}
           {success && (
             <div style={{ display:'flex', gap:8, padding:'10px 14px', background:'#dcfce7', border:'1px solid #86efac', borderRadius:10, marginBottom:14 }}>
               <CheckCircle size={14} color="#15803d" style={{ flexShrink:0, marginTop:1 }}/>
-              <p style={{ fontSize:13, color:'#15803d' }}>Password updated.</p>
+              <p style={{ fontSize:14.5, color:'#15803d' }}>Password updated.</p>
             </div>
           )}
 
@@ -112,6 +113,7 @@ export default function AdminSettings() {
   return (
     <AdminLayout title="Settings">
       {content}
+      <AppearanceSetting/>
       <AuthenticatorPanel/>
     </AdminLayout>
   )
@@ -185,7 +187,7 @@ function AuthenticatorPanel() {
         <ShieldCheck size={17} color={OLIVE}/>
         <p style={{ margin:0, fontWeight:800, fontSize:16, color:TEXT }}>Authenticator App</p>
       </div>
-      <p style={{ fontSize:13, color:MUTED, marginBottom:18, lineHeight:1.55 }}>
+      <p style={{ fontSize:14.5, color:MUTED, marginBottom:18, lineHeight:1.55 }}>
         Required to view a user’s full KYC details, including their complete BVN. Use Google
         Authenticator, Authy, Microsoft Authenticator or 1Password.
       </p>
@@ -193,18 +195,18 @@ function AuthenticatorPanel() {
       {notice && (
         <div style={{ display:'flex', gap:8, padding:'10px 14px', background:'#f0fdf4', border:'1px solid #86efac', borderRadius:10, marginBottom:14 }}>
           <CheckCircle size={14} color="#15803d" style={{ flexShrink:0, marginTop:1 }}/>
-          <p style={{ fontSize:13, color:'#15803d' }}>{notice}</p>
+          <p style={{ fontSize:14.5, color:'#15803d' }}>{notice}</p>
         </div>
       )}
       {error && (
         <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10, marginBottom:14 }}>
           <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
-          <p style={{ fontSize:13, color:'#ef4444' }}>{error}</p>
+          <p style={{ fontSize:14.5, color:'#ef4444' }}>{error}</p>
         </div>
       )}
 
       {!state.vaultConfigured && (
-        <p style={{ fontSize:13, color:'#b45309', lineHeight:1.5 }}>
+        <p style={{ fontSize:14.5, color:'#b45309', lineHeight:1.5 }}>
           The KYC vault is not configured on this server, so the authenticator cannot be set up.
           Set <code>KYC_ENCRYPTION_KEY</code> in the backend environment first.
         </p>
@@ -212,17 +214,17 @@ function AuthenticatorPanel() {
 
       {state.vaultConfigured && state.enabled && (
         <>
-          <p style={{ fontSize:13, color:'#15803d', fontWeight:700, marginBottom:14 }}>
+          <p style={{ fontSize:14.5, color:'#15803d', fontWeight:700, marginBottom:14 }}>
             ✓ Active since {new Date(state.enrolledAt).toLocaleDateString('en-NG', { day:'numeric', month:'long', year:'numeric' })}
           </p>
-          <p style={{ fontSize:12.5, color:MUTED, marginBottom:10 }}>
+          <p style={{ fontSize:14, color:MUTED, marginBottom:10 }}>
             To remove it, enter the current code from your app.
           </p>
           <input value={code} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
             placeholder="000000" inputMode="numeric" style={inputStyle}/>
           <button onClick={disable} disabled={busy}
             style={{ padding:'10px 16px', borderRadius:10, background:'none', border:'1px solid #fca5a5',
-              color:'#ef4444', fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+              color:'#ef4444', fontWeight:700, fontSize:14.5, cursor:'pointer', fontFamily:'inherit' }}>
             Remove authenticator
           </button>
         </>
@@ -231,34 +233,34 @@ function AuthenticatorPanel() {
       {state.vaultConfigured && !state.enabled && !setup && (
         <button onClick={startSetup} disabled={busy}
           style={{ padding:'11px 20px', borderRadius:10, background:NEON, border:'none', color:ON_NEON,
-            fontWeight:800, fontSize:13.5, cursor:'pointer', fontFamily:'inherit' }}>
+            fontWeight:800, fontSize:15, cursor:'pointer', fontFamily:'inherit' }}>
           {busy ? 'Preparing…' : 'Set up authenticator'}
         </button>
       )}
 
       {setup && (
         <form onSubmit={confirm}>
-          <p style={{ fontSize:13, color:TEXT, fontWeight:700, marginBottom:10 }}>1. Scan this with your app</p>
+          <p style={{ fontSize:14.5, color:TEXT, fontWeight:700, marginBottom:10 }}>1. Scan this with your app</p>
           <img src={setup.qrDataUri} alt="Authenticator QR code" width={200} height={200}
             style={{ display:'block', borderRadius:10, border:`1px solid ${BORDER}`, marginBottom:12 }}/>
-          <p style={{ fontSize:12.5, color:MUTED, marginBottom:6 }}>
+          <p style={{ fontSize:14, color:MUTED, marginBottom:6 }}>
             Can’t scan? Enter this key manually:
           </p>
-          <p style={{ fontFamily:'monospace', fontSize:13, background:'#f5f7f2', padding:'8px 10px',
+          <p style={{ fontFamily:'monospace', fontSize:14.5, background:'#f5f7f2', padding:'8px 10px',
             borderRadius:8, wordBreak:'break-all', marginBottom:16, color:TEXT }}>{setup.secret}</p>
-          <p style={{ fontSize:13, color:TEXT, fontWeight:700, marginBottom:10 }}>2. Enter the 6-digit code it shows</p>
+          <p style={{ fontSize:14.5, color:TEXT, fontWeight:700, marginBottom:10 }}>2. Enter the 6-digit code it shows</p>
           <input value={code} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
             placeholder="000000" inputMode="numeric" autoFocus style={inputStyle}/>
           <div style={{ display:'flex', gap:10 }}>
             <button type="submit" disabled={busy || code.length !== 6}
-              style={{ flex:1, padding:'11px', borderRadius:10, border:'none', fontWeight:800, fontSize:13.5, fontFamily:'inherit',
+              style={{ flex:1, padding:'11px', borderRadius:10, border:'none', fontWeight:800, fontSize:15, fontFamily:'inherit',
                 background:(busy || code.length !== 6)?BORDER:NEON, color:(busy || code.length !== 6)?MUTED:ON_NEON,
                 cursor:(busy || code.length !== 6)?'not-allowed':'pointer' }}>
               {busy ? 'Verifying…' : 'Confirm & enable'}
             </button>
             <button type="button" onClick={() => { setSetup(null); setCode(''); setError('') }}
               style={{ padding:'11px 16px', borderRadius:10, background:'none', border:`1.5px solid ${BORDER}`,
-                color:MUTED, fontWeight:700, fontSize:13.5, cursor:'pointer', fontFamily:'inherit' }}>
+                color:MUTED, fontWeight:700, fontSize:15, cursor:'pointer', fontFamily:'inherit' }}>
               Cancel
             </button>
           </div>

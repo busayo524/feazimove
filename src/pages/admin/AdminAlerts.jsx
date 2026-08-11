@@ -20,10 +20,10 @@ function Section({ icon, title, color, count, children }) {
         <span style={{ width:8, height:8, borderRadius:'50%', background:color, flexShrink:0 }}/>
         {icon}
         <p style={{ fontWeight:800, fontSize:14, color:TEXT }}>{title}</p>
-        <span style={{ marginLeft:'auto', fontSize:12, fontWeight:700, color:MUTED }}>{count}</span>
+        <span style={{ marginLeft:'auto', fontSize:13.5, fontWeight:700, color:MUTED }}>{count}</span>
       </div>
       {count === 0 ? (
-        <p style={{ color:MUTED, fontSize:13, padding:'14px 18px' }}>Nothing to flag here. ✅</p>
+        <p style={{ color:MUTED, fontSize:14.5, padding:'14px 18px' }}>Nothing to flag here. ✅</p>
       ) : children}
     </div>
   )
@@ -50,7 +50,7 @@ export default function AdminAlerts() {
       <AdminLayout title="Alerts">
         <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10 }}>
           <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
-          <p style={{ fontSize:13, color:'#ef4444' }}>{error}</p>
+          <p style={{ fontSize:14.5, color:'#ef4444' }}>{error}</p>
         </div>
       </AdminLayout>
     )
@@ -65,12 +65,12 @@ export default function AdminAlerts() {
         {alerts.delayedRides.map(r => (
           <div key={r.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 18px', borderTop:`1px solid #f5f5f5` }}>
             <div>
-              <p style={{ fontSize:13, fontWeight:600, color:TEXT }}>{r.pickup} → {r.destination}</p>
-              <p style={{ fontSize:12, color:MUTED }}>
+              <p style={{ fontSize:14.5, fontWeight:600, color:TEXT }}>{r.pickup} → {r.destination}</p>
+              <p style={{ fontSize:13.5, color:MUTED }}>
                 {r.driverName || 'Unassigned'} · {r.riderName || '—'} · {r.status.replace('_',' ')} · {timeAgo(r.since)}
               </p>
             </div>
-            <Link to="/admin/rides" style={{ fontSize:12, fontWeight:700, color:'#2563eb', textDecoration:'none' }}>View →</Link>
+            <Link to="/admin/rides" style={{ fontSize:13.5, fontWeight:700, color:'#2563eb', textDecoration:'none' }}>View →</Link>
           </div>
         ))}
       </Section>
@@ -79,10 +79,10 @@ export default function AdminAlerts() {
         {alerts.unmatchedRequests.map(r => (
           <div key={r.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 18px', borderTop:`1px solid #f5f5f5` }}>
             <div>
-              <p style={{ fontSize:13, fontWeight:600, color:TEXT }}>{r.pickup} → {r.destination}</p>
-              <p style={{ fontSize:12, color:MUTED }}>Waiting {timeAgo(r.since)}</p>
+              <p style={{ fontSize:14.5, fontWeight:600, color:TEXT }}>{r.pickup} → {r.destination}</p>
+              <p style={{ fontSize:13.5, color:MUTED }}>Waiting {timeAgo(r.since)}</p>
             </div>
-            <Link to="/admin/rides" style={{ fontSize:12, fontWeight:700, color:'#2563eb', textDecoration:'none' }}>View →</Link>
+            <Link to="/admin/rides" style={{ fontSize:13.5, fontWeight:700, color:'#2563eb', textDecoration:'none' }}>View →</Link>
           </div>
         ))}
       </Section>
@@ -90,10 +90,10 @@ export default function AdminAlerts() {
       <Section icon={<Wallet size={15} color="#854d0e"/>} title="Low / Negative Balance Riders" color="#854d0e" count={alerts.lowBalanceRiders.length}>
         {alerts.lowBalanceRiders.map(u => (
           <div key={u.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 18px', borderTop:`1px solid #f5f5f5` }}>
-            <p style={{ fontSize:13, fontWeight:600, color:TEXT }}>{u.name}</p>
+            <p style={{ fontSize:14.5, fontWeight:600, color:TEXT }}>{u.name}</p>
             <div style={{ display:'flex', alignItems:'center', gap:14 }}>
-              <p style={{ fontSize:13, fontWeight:700, color: u.walletBalance < 0 ? '#ef4444' : MUTED }}>₦{u.walletBalance.toLocaleString()}</p>
-              <Link to={`/admin/riders/${u.id}`} style={{ fontSize:12, fontWeight:700, color:'#2563eb', textDecoration:'none' }}>View →</Link>
+              <p style={{ fontSize:14.5, fontWeight:700, color: u.walletBalance < 0 ? '#ef4444' : MUTED }}>₦{u.walletBalance.toLocaleString()}</p>
+              <Link to={`/admin/riders/${u.id}`} style={{ fontSize:13.5, fontWeight:700, color:'#2563eb', textDecoration:'none' }}>View →</Link>
             </div>
           </div>
         ))}

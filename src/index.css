@@ -72,7 +72,17 @@
      bright patches on a black page — dark mode uses a translucent tint of the
      same hue instead. */
   --fm-danger-soft:   #fef2f2;
+  --fm-warn-soft:     #fff7ed;
+  --fm-warn-border:   #fdba74;
   --fm-chip:          #f3f4f6;
+  /* Side menu. Deep lime-green in light (unchanged), neutral ash in dark so it
+     reads as a menu panel rather than a second brand colour on a black page. */
+  --fm-sb-bg:         #1a2400;
+  --fm-sb-border:     rgba(255,255,255,0.08);
+  --fm-sb-text:       #e8f5d0;
+  --fm-sb-muted:      #7aad40;
+  --fm-sb-card:       rgba(255,255,255,0.06);
+  --fm-sb-hover:      rgba(255,255,255,0.08);
   --fm-header:        rgba(255,255,255,0.96);
   --fm-shadow:        rgba(36,56,0,0.06);
   --fm-shadow-strong: rgba(36,56,0,0.14);
@@ -124,7 +134,15 @@
   --fm-on-neon-hard:  #0a0a0a;   /* deliberately unchanged */
 
   --fm-danger-soft:   rgba(239,68,68,0.16);
+  --fm-warn-soft:     rgba(249,115,22,0.16);
+  --fm-warn-border:   rgba(253,186,116,0.45);
   --fm-chip:          #2a2a2e;
+  --fm-sb-bg:         #1c1c1e;
+  --fm-sb-border:     rgba(255,255,255,0.10);
+  --fm-sb-text:       rgba(255,255,255,0.88);
+  --fm-sb-muted:      rgba(255,255,255,0.50);
+  --fm-sb-card:       rgba(255,255,255,0.07);
+  --fm-sb-hover:      rgba(255,255,255,0.10);
   --fm-header:        rgba(10,10,12,0.92);
   --fm-shadow:        rgba(0,0,0,0.55);
   --fm-shadow-strong: rgba(0,0,0,0.7);
@@ -662,4 +680,37 @@ html, body {
 @media (max-width: 640px) {
   .fm-date-long  { display: none; }
   .fm-date-short { display: inline; }
+}
+
+
+/* ── Pannable wide content ────────────────────────────────────────────────────
+   Admin tables have more columns than a phone is wide. A bare overflow:auto
+   scrolls, but gives no sign there is anything to scroll to — on touch the
+   scrollbar is hidden until you already know to swipe. This keeps a visible,
+   themed bar and adds momentum scrolling, so the extra columns are reachable
+   and, more importantly, discoverable. */
+.fm-scroll-x {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;                       /* Firefox */
+  scrollbar-color: var(--fm-moss) transparent;
+  overscroll-behavior-x: contain;              /* don't trigger browser back-swipe */
+  padding-bottom: 2px;
+}
+.fm-scroll-x::-webkit-scrollbar { height: 8px; }
+.fm-scroll-x::-webkit-scrollbar-track {
+  background: var(--fm-chip);
+  border-radius: 8px;
+}
+.fm-scroll-x::-webkit-scrollbar-thumb {
+  background: var(--fm-moss);
+  border-radius: 8px;
+}
+.fm-scroll-x::-webkit-scrollbar-thumb:hover { background: var(--fm-accent); }
+
+/* On touch screens the bar is the only affordance, so make it permanent. */
+@media (hover: none) {
+  .fm-scroll-x { scrollbar-width: auto; }
+  .fm-scroll-x::-webkit-scrollbar { height: 10px; -webkit-appearance: none; }
 }

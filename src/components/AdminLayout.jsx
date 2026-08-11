@@ -1,18 +1,22 @@
-import { NEON, ON_NEON_HARD as NT, ADMIN_BG as BG, ADMIN_TEXT as TEXT, HEADER } from '../theme/palette'
+import { NEON, ON_NEON_HARD as NT, ADMIN_BG as BG, ADMIN_TEXT as TEXT, HEADER,
+  SB_BG, SB_BORDER, SB_TEXT, SB_MUTED, SB_CARD, SB_HOVER, CHIP } from '../theme/palette'
 import React, { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import faviconImg from '../assets/favicon.png'
 import {
-  LayoutGrid, Users, Car, Navigation, LogOut, Menu, X, Settings, Wallet, AlertTriangle,
+  LayoutGrid, Users, Car, Navigation, LogOut, Menu, X, Settings, Wallet, AlertTriangle, Instagram, Facebook,
   BarChart3, Map, MapPin, Tag, PackageOpen, ShieldCheck, MessageSquare, FileSearch,
 } from 'lucide-react'
 
-const SB_BG = '#1a2400', SB_BORDER = 'rgba(255,255,255,0.08)' // very deep lime neon
-const SB_TEXT = '#cbd5c0', SB_MUTED = '#6b8a55', SB_HOVER = 'rgba(255,255,255,0.08)'
 /* NEON / NT come from the themed palette */
 /* palette: themed tokens — page plane flips with the theme; the sidebar
    below stays dark in both, which is the reference design. */
+const SOCIALS = [
+  { Icon: Instagram, href: 'https://www.instagram.com/feazimove/', label: 'FeaziMove on Instagram' },
+  { Icon: Facebook,  href: 'https://web.facebook.com/profile.php?id=61590273165597', label: 'FeaziMove on Facebook' },
+]
+
 const NAV_ACTIVE_BG = 'rgba(204,255,0,0.08)' // faint wash behind the active item
 
 const NAV = [
@@ -86,12 +90,26 @@ export default function AdminLayout({ children, title }) {
             color:SB_TEXT, fontWeight:600, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
           <LogOut size={15}/> Sign Out
         </button>
+        {/* Social links — same accounts the marketing footer points at */}
+        <div style={{ display:'flex', justifyContent:'center', gap:14, marginTop:12 }}>
+          {SOCIALS.map(({ Icon, href, label }) => (
+            <a key={label} href={href} target="_blank" rel="noreferrer" aria-label={label} title={label}
+              style={{ width:36, height:36, borderRadius:10, display:'flex', alignItems:'center',
+                justifyContent:'center', background:SB_CARD, color:SB_TEXT,
+                border:`1px solid ${SB_BORDER}`, transition:'all 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.color = NEON; e.currentTarget.style.borderColor = NEON }}
+              onMouseLeave={e => { e.currentTarget.style.color = SB_TEXT; e.currentTarget.style.borderColor = SB_BORDER }}>
+              <Icon size={17}/>
+            </a>
+          ))}
+        </div>
+
       </div>
     </div>
   )
 
   return (
-    <div style={{ display:'flex', minHeight:'100vh', background:BG, colorScheme:'light' }}>
+    <div style={{ display:'flex', minHeight:'100vh', background:BG }}>
       <aside style={{ width:230, position:'fixed', top:0, left:0, height:'100vh', zIndex:40, flexShrink:0 }} className="admin-desktop-sidebar">
         <SidebarContent/>
       </aside>
@@ -106,12 +124,15 @@ export default function AdminLayout({ children, title }) {
       )}
 
       <div style={{ flex:1, marginLeft:230, display:'flex', flexDirection:'column', minHeight:'100vh' }} className="admin-main-content">
-        <header style={{ position:'sticky', top:0, zIndex:30, background:'#fff', borderBottom:'1px solid #e5e7eb',
+        <header style={{ position:'sticky', top:0, zIndex:30, background:HEADER, borderBottom:`1px solid ${SB_BORDER}`,
           padding:'0 24px', height:60, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
           <div style={{ display:'flex', alignItems:'center', gap:12, minWidth:0 }}>
-            <button onClick={() => setOpen(!open)} style={{ display:'none', background:'none', border:'none', cursor:'pointer', color:TEXT, padding:4, flexShrink:0 }}
+            <button onClick={() => setOpen(!open)}
+              style={{ display:'none', background:CHIP, border:`1px solid ${SB_BORDER}`, borderRadius:10,
+                cursor:'pointer', color:TEXT, width:38, height:38, alignItems:'center',
+                justifyContent:'center', flexShrink:0, padding:0 }}
               className="admin-mobile-menu-btn" aria-label="Toggle menu">
-              <Menu size={22}/>
+              <Menu size={20}/>
             </button>
             <p style={{ fontSize:14, color:TEXT, margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', minWidth:0 }}><span className="fm-date-long">{todayLong}</span><span className="fm-date-short">{todayShort}</span></p>
           </div>
