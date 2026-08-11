@@ -22,9 +22,18 @@ function buildSlots(startHour24, endHour24, stepMinutes = 5) {
 export const MORNING_SLOTS = buildSlots(5, 10)   // 5:00 AM – 10:00 AM
 export const EVENING_SLOTS = buildSlots(15, 22)  // 3:00 PM – 10:00 PM
 
-// One list for the whole day. Riders and drivers pick a TIME; nobody picks a
-// "period" any more.
+// One list for the whole day. Riders and drivers pick AM/PM and then a TIME;
+// nobody picks a "period" any more.
 export const ALL_RIDE_SLOTS = [...MORNING_SLOTS, ...EVENING_SLOTS]
+
+export const MERIDIEMS = ['AM', 'PM']
+
+// The times offered for one half of the day. Empty is impossible for AM/PM
+// here, but the filter keeps the two lists in sync with ALL_RIDE_SLOTS rather
+// than restating the ranges anywhere else.
+export function slotsForMeridiem(half) {
+  return ALL_RIDE_SLOTS.filter(s => s.endsWith(half))
+}
 
 // Routes are still priced per morning/evening period, and rider↔driver matching
 // still keys on it — so the period did not go away, it stopped being a question
@@ -136,21 +145,15 @@ export function LocationDropdown({ label, options, value, onChange, placeholder,
   )
 }
 
-// `meridiem` turns on an AM/PM filter inside the panel. It replaces the old
-// Morning/Evening cards: with ~145 five-minute slots in a day, dropping the
-// cards without it would leave an evening rider scrolling past sixty morning
-// times to reach 3 PM.
-export function TimeDropdown({ slots, value, onChange, meridiem = false }){
+// Generic single-column picker. Used for the time slot and, with
+// slots={MERIDIEMS}, for the AM/PM field that narrows it — the two are separate
+// fields, so the panel here stays a plain list.
+export function TimeDropdown({ slots, value, onChange, placeholder = 'Select a time slot', icon }){
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
   const { openUpward, maxHeight } = usePanelPlacement(open, ref)
 
-  // Which half of the day the list is showing. Follows the current selection so
-  // reopening a chosen 6 PM lands on PM rather than snapping back to AM.
-  const [half, setHalf] = useState(() => (value && String(value).includes('PM') ? 'PM' : 'AM'))
-  useEffect(() => { if (value) setHalf(String(value).includes('PM') ? 'PM' : 'AM') }, [value])
-
-  const shown = meridiem ? slots.filter(s => String(s).includes(half)) : slots
+  const shown = slots
 
   useEffect(()=>{
     function handleClick(e){ if(ref.current && !ref.current.contains(e.target)) setOpen(false) }
@@ -170,8 +173,10 @@ export function TimeDropdown({ slots, value, onChange, meridiem = false }){
           textAlign:'left',cursor:'pointer',display:'flex',alignItems:'center',
           transition:'border-color 0.15s',outline:'none',
         }}>
-        <Clock size={15} style={{position:'absolute',left:14,color:open?MOSS:MUTED,transition:'color 0.15s'}}/>
-        <span style={{flex:1}}>{value || 'Select a time slot'}</span>
+        <span style={{position:'absolute',left:14,display:'flex',color:open?MOSS:MUTED,transition:'color 0.15s'}}>
+          {icon || <Clock size={15}/>}
+        </span>
+        <span style={{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{value || placeholder}</span>
         <ChevronDown size={15} style={{position:'absolute',right:14,color:MUTED,transform:open?'rotate(180deg)':'rotate(0)',transition:'transform 0.2s'}}/>
       </button>
 
@@ -182,38 +187,8 @@ export function TimeDropdown({ slots, value, onChange, meridiem = false }){
           left:0,right:0,zIndex:100,
           background:CARD,border:`1.5px solid ${BORDER}`,borderRadius:12,
           boxShadow:'0 8px 24px rgba(36,56,0,0.12)',
-          // Column layout so the AM/PM control stays pinned while the times
-          // scroll under it — inside the scroller it would slide out of reach.
-          maxHeight,display:'flex',flexDirection:'column',overflow:'hidden',
+          maxHeight,overflowY:'auto',
         }}>
-          {meridiem&&(
-            <div style={{
-              display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,padding:8,
-              borderBottom:`1px solid ${BORDER}`,background:CARD,flexShrink:0,
-            }}>
-              {['AM','PM'].map(m=>{
-                const inHalf=slots.filter(s=>String(s).includes(m))
-                if(!inHalf.length) return null
-                const range=`${inHalf[0].replace(/ [AP]M$/,'')} – ${inHalf[inHalf.length-1]}`
-                const on=half===m
-                return(
-                  <button key={m} type="button" onClick={()=>setHalf(m)}
-                    aria-pressed={on}
-                    style={{
-                      padding:'7px 10px',borderRadius:9,cursor:'pointer',
-                      fontFamily:'inherit',textAlign:'center',
-                      border:`1.5px solid ${on?OLIVE:BORDER}`,
-                      background:on?NEON:CARD,
-                      transition:'background 0.12s, border-color 0.12s',
-                    }}>
-                    <p style={{fontSize:13,fontWeight:800,color:on?OLIVE:TEXT,lineHeight:1.2}}>{m}</p>
-                    <p style={{fontSize:10,color:on?'rgba(36,56,0,0.6)':MUTED,marginTop:1}}>{range}</p>
-                  </button>
-                )
-              })}
-            </div>
-          )}
-          <div style={{overflowY:'auto'}}>
           {shown.map((s,i)=>(
             <button key={s} type="button"
               onClick={()=>{ onChange(s); setOpen(false) }}
@@ -230,13 +205,14 @@ export function TimeDropdown({ slots, value, onChange, meridiem = false }){
               onMouseEnter={e=>{ if(value!==s) e.currentTarget.style.background=BG }}
               onMouseLeave={e=>{ if(value!==s) e.currentTarget.style.background=CARD }}>
               <span style={{display:'flex',alignItems:'center',gap:10}}>
-                <Clock size={13} color={value===s?MOSS:MUTED}/>
+                {/* A clock beside "AM"/"PM" reads as decoration, not meaning —
+                    only actual times get one. */}
+                {/\d/.test(s) && <Clock size={13} color={value===s?MOSS:MUTED}/>}
                 {s}
               </span>
               {value===s&&<Check size={14} color={MOSS}/>}
             </button>
           ))}
-          </div>
         </div>
       )}
     </div>

@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/AppLayout'
 import RideTracker from '../../components/RideTracker'
-import { LocationDropdown, TimeDropdown, ALL_RIDE_SLOTS, periodForSlot } from '../../components/RouteDropdowns'
+import { LocationDropdown, TimeDropdown, MERIDIEMS, slotsForMeridiem } from '../../components/RouteDropdowns'
 import ScheduleDatePicker, { formatScheduleDate } from '../../components/ScheduleDatePicker'
-import { MapPin, ArrowRight, Users, Navigation, X, Clock, Landmark, Wallet as WalletIcon, Star, Car, CalendarDays, CalendarCheck, Trash2 } from 'lucide-react'
+import { MapPin, ArrowRight, Users, Navigation, Sun, X, Clock, Landmark, Wallet as WalletIcon, Star, Car, CalendarDays, CalendarCheck, Trash2 } from 'lucide-react'
 import TransferDetails from '../../components/TransferDetails'
 import { useAuth } from '../../context/AuthContext'
 import PersonAvatar from '../../components/PersonAvatar'
@@ -238,10 +238,10 @@ export default function BookRide(){
   const [dropoff,setDropoff]=useState('')
   const [comment,setComment]=useState('')
   const [timeSlot,setTimeSlot]=useState('')
-  // Not a choice any more — the picked time decides it. Before a time is picked
-  // there is nothing to derive from, so the morning catalogue seeds the
-  // pickup/drop-off lists; choosing a PM time swaps them to the evening one.
-  const period = timeSlot ? periodForSlot(timeSlot) : 'morning'
+  const [half,setHalf]=useState('AM')  // which half of the day the time list offers
+  // The rider picks AM/PM and a time; the period the backend matches and prices
+  // on follows from that, so it is never asked for directly.
+  const period = half === 'PM' ? 'evening' : 'morning'
   const [searching,setSearching]=useState(false)
   const [bookingId,setBookingId]=useState(null)
   const [bookError,setBookError]=useState(null)
@@ -345,6 +345,7 @@ export default function BookRide(){
         setService(b.service)
         setScheduleDate(b.scheduledDate || '')
         setTimeSlot(b.timeSlot)
+        setHalf(String(b.timeSlot||'').endsWith('PM') ? 'PM' : 'AM')
         setPickup(b.pickup)
         setDropoff(b.dropoff)
         setBookingId(b.bookingId)
@@ -354,17 +355,24 @@ export default function BookRide(){
     return () => { cancelled = true }
   }, [activeRideId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  function chooseTimeSlot(s){
+  // AM and PM are separately priced catalogues, so switching resets the rest of
+  // the form — the stops offered for one half may not exist in the other, and a
+  // pair with no fare cannot be booked. Same reset the Morning/Evening cards did.
+  function chooseHalf(h){
+    if(h === half) return
     if(payPending) return // a paid-for booking snapshot is in flight — form is locked
-    // Crossing between AM and PM changes which routes are priced and offered,
-    // so a pickup/dropoff picked under the other half may not exist there —
-    // clear them rather than submit a pair with no fare. Picking the first
-    // time of the day clears nothing, since there is nothing to invalidate.
-    if(timeSlot && periodForSlot(s) !== periodForSlot(timeSlot)){
-      setPickup('')
-      setDropoff('')
-      setComment('')
-    }
+    setHalf(h)
+    setTimeSlot('')
+    setPickup('')
+    setDropoff('')
+    setComment('')
+    setBookingId(null)
+    setBookError(null)
+    setScheduledOk(null)
+  }
+
+  function chooseTimeSlot(s){
+    if(payPending) return
     setTimeSlot(s)
     setBookingId(null)
     setBookError(null)
@@ -543,6 +551,7 @@ export default function BookRide(){
             setService(b.service || 'pool')
             setScheduleDate(b.scheduledDate || '')
             setTimeSlot(b.timeSlot)
+            setHalf(String(b.timeSlot||'').endsWith('PM') ? 'PM' : 'AM')
             setPickup(b.pickup)
             setDropoff(b.dropoff)
             setWalletKobo(null) // stale now — refetched next time the preview opens
@@ -597,6 +606,7 @@ export default function BookRide(){
     setService(b.service || 'pool')
     setScheduleDate(b.scheduledDate || '')
     setTimeSlot(b.timeSlot)
+    setHalf(String(b.timeSlot||'').endsWith('PM') ? 'PM' : 'AM')
     setPickup(b.pickup)
     setDropoff(b.dropoff)
     setComment(b.comment || '')
@@ -708,16 +718,24 @@ export default function BookRide(){
                 </div>
               )}
 
-              {/* Time slot — one list for the whole day, split AM/PM inside the
-                  dropdown. The period the backend matches and prices on is
-                  derived from whichever time is picked. */}
+              {/* AM/PM picks the half of the day, the field beside it picks the
+                  exact time within it. The period the backend matches and
+                  prices on follows from the AM/PM choice. */}
               <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:14,padding:12,marginBottom:10,boxShadow:'0 2px 8px rgba(36,56,0,0.06)'}}>
-                <TimeDropdown
-                  slots={ALL_RIDE_SLOTS}
-                  meridiem
-                  value={timeSlot}
-                  onChange={chooseTimeSlot}
-                />
+                <div style={{display:'grid',gridTemplateColumns:'minmax(90px,0.42fr) minmax(0,1fr)',gap:8}}>
+                  <TimeDropdown
+                    slots={MERIDIEMS}
+                    value={half}
+                    onChange={chooseHalf}
+                    placeholder="AM / PM"
+                    icon={<Sun size={15}/>}
+                  />
+                  <TimeDropdown
+                    slots={slotsForMeridiem(half)}
+                    value={timeSlot}
+                    onChange={chooseTimeSlot}
+                  />
+                </div>
               </div>
 
               <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:14,padding:12,marginBottom:10,boxShadow:'0 2px 8px rgba(36,56,0,0.06)'}}>

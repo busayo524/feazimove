@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   MapPin, Users, Clock,
-  ChevronDown, Check,
+  Sun, ChevronDown, Check,
   Wifi, ChevronRight, AlertCircle, UserCheck,
   Phone, MessageSquare, CheckCircle, X,
   CalendarDays, CalendarCheck, Trash2, Zap,
@@ -16,7 +16,7 @@ import { api } from '../../services/api'
 import { track } from '../../services/analytics'
 import { useStopCoords } from '../../hooks/useStopCoords'
 import { useUnreadChat } from '../../hooks/useUnreadChat'
-import { usePanelPlacement, ALL_RIDE_SLOTS, periodForSlot } from '../../components/RouteDropdowns'
+import { usePanelPlacement, MERIDIEMS, slotsForMeridiem } from '../../components/RouteDropdowns'
 import ScheduleDatePicker, { formatScheduleDate } from '../../components/ScheduleDatePicker'
 
 const NEON='#ccff00', NT='#0a0a0a'
@@ -103,21 +103,11 @@ function fmtEta(seconds) {
 }
 
 // ── Reusable Dropdown ─────────────────────────────────────────────────────────
-// `meridiem` adds an AM/PM filter inside the panel — used for the time slot,
-// which now spans the whole day instead of being pre-split by a Morning/Evening
-// toggle. Styled here rather than reusing the rider's TimeDropdown so the field
-// still matches the seats/location dropdowns sitting next to it.
-function Dropdown({ options, value, onChange, placeholder, icon, forceUpward, meridiem = false }) {
+function Dropdown({ options, value, onChange, placeholder, icon, forceUpward }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
   const { openUpward: autoUpward, maxHeight } = usePanelPlacement(open, ref)
   const openUpward = forceUpward || autoUpward
-
-  // Follows the current selection so reopening a chosen 6 PM lands on PM.
-  const [half, setHalf] = useState(() => (value && String(value).includes('PM') ? 'PM' : 'AM'))
-  useEffect(() => { if (value) setHalf(String(value).includes('PM') ? 'PM' : 'AM') }, [value])
-  const shown = meridiem ? options.filter(o => String(o).includes(half)) : options
-
   useEffect(() => {
     function outside(e){ if(ref.current && !ref.current.contains(e.target)) setOpen(false) }
     document.addEventListener('mousedown', outside)
@@ -138,29 +128,8 @@ function Dropdown({ options, value, onChange, placeholder, icon, forceUpward, me
       {open && (
         <div style={{ position:'absolute', ...(openUpward ? { bottom:'calc(100% + 4px)' } : { top:'calc(100% + 4px)' }), left:0, right:0, background:CARD,
           border:`1.5px solid ${BORDER}`, borderRadius:12, boxShadow:'0 8px 24px rgba(36,56,0,0.12)',
-          zIndex:200, maxHeight, display:'flex', flexDirection:'column', overflow:'hidden' }}>
-          {meridiem && (
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6, padding:8,
-              borderBottom:`1px solid ${BORDER}`, background:CARD, flexShrink:0 }}>
-              {['AM','PM'].map(m => {
-                const inHalf = options.filter(o => String(o).includes(m))
-                if (!inHalf.length) return null
-                const range = `${inHalf[0].replace(/ [AP]M$/,'')} – ${inHalf[inHalf.length-1]}`
-                const on = half === m
-                return (
-                  <button key={m} onClick={() => setHalf(m)} aria-pressed={on}
-                    style={{ padding:'7px 10px', borderRadius:10, cursor:'pointer', fontFamily:'inherit',
-                      textAlign:'center', border:`1.5px solid ${on ? OLIVE : BORDER}`,
-                      background:on ? NEON : CARD, transition:'all 0.15s' }}>
-                    <p style={{ fontSize:13, fontWeight:800, color:on ? OLIVE : TEXT, lineHeight:1.2 }}>{m}</p>
-                    <p style={{ fontSize:10, color:on ? 'rgba(36,56,0,0.6)' : MUTED, marginTop:1 }}>{range}</p>
-                  </button>
-                )
-              })}
-            </div>
-          )}
-          <div style={{ overflowY:'auto' }}>
-          {shown.map(opt => (
+          zIndex:200, maxHeight, overflowY:'auto' }}>
+          {options.map(opt => (
             <button key={opt} onClick={() => { onChange(opt); setOpen(false) }}
               style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between',
                 padding:'11px 14px', border:'none', background:'transparent', cursor:'pointer',
@@ -172,7 +141,6 @@ function Dropdown({ options, value, onChange, placeholder, icon, forceUpward, me
               {value===opt && <Check size={14} color={MOSS}/>}
             </button>
           ))}
-          </div>
         </div>
       )}
     </div>
@@ -404,6 +372,7 @@ export default function DriverDashboard() {
         if (!s) return
         setAvailabilityId(s.availabilityId)
         setTimeSlot(s.timeSlot)
+        setHalf(String(s.timeSlot||'').endsWith('PM') ? 'PM' : 'AM')
         setPickup(s.originPickup)      // where the chain started
         setCurrentPickup(s.currentPickup) // how far it has been expanded
         setDropoff(s.dropoff)
@@ -439,11 +408,11 @@ export default function DriverDashboard() {
 
   // Route form
   const [timeSlot, setTimeSlot] = useState('')
-  // Derived, not chosen — the picked time decides it. Routes are still priced
-  // and matched per period, so it has to keep flowing to the API exactly as
-  // before; the driver simply is not asked for it any more. Morning seeds the
-  // route catalogue until a time is picked.
-  const period = timeSlot ? periodForSlot(timeSlot) : 'morning'
+  const [half, setHalf]         = useState('AM') // which half of the day the time list offers
+  // Derived, not chosen. Routes are still priced and matched per period, so it
+  // keeps flowing to the API exactly as before — the driver just picks AM/PM
+  // and a time instead of being asked for a "period".
+  const period = half === 'PM' ? 'evening' : 'morning'
   const [pickup, setPickup]   = useState('')
   const [dropoff, setDropoff] = useState('')
   const [comment, setComment] = useState('')
@@ -652,20 +621,20 @@ export default function DriverDashboard() {
     setShowRoutePreview(false)
   }
 
-  // Crossing between AM and PM swaps which routes are priced and offered, so a
-  // pickup/drop-off chosen under the other half may not exist there — clear
-  // them rather than publish a route with no fare. This is what the old
-  // Morning/Evening buttons did on switch; it now hangs off the time itself.
-  function chooseTimeSlot(s) {
-    if (timeSlot && periodForSlot(s) !== periodForSlot(timeSlot)) {
-      setPickup('')
-      setDropoff('')
-      setComment('')
-    }
-    setTimeSlot(s)
+  // AM and PM are separately priced catalogues, so switching resets the rest of
+  // the form — the stops offered for one half may not exist in the other, and a
+  // route with no fare cannot be published. Same reset the old Morning/Evening
+  // buttons did.
+  function chooseHalf(h) {
+    if (h === half) return
+    setHalf(h)
+    setTimeSlot('')
+    setPickup('')
+    setDropoff('')
+    setComment('')
   }
 
-  const slots         = ALL_RIDE_SLOTS
+  const slots         = slotsForMeridiem(half)
   const pickupOptions = [...new Set(routes.map(r => r.pickup))].sort()
   const dropoffOptions = [...new Set(
     routes.filter(r => !pickup || r.pickup === pickup).map(r => r.dropoff)
@@ -854,6 +823,7 @@ export default function DriverDashboard() {
       const res = await api.post('/driver/activate-schedule', { availabilityId: s.availabilityId })
       setAvailabilityId(res.data.availabilityId)
       setTimeSlot(res.data.timeSlot)
+      setHalf(String(res.data.timeSlot||'').endsWith('PM') ? 'PM' : 'AM')
       setPickup(res.data.originPickup)
       setCurrentPickup(res.data.currentPickup)
       setDropoff(res.data.dropoff)
@@ -1475,10 +1445,13 @@ export default function DriverDashboard() {
                     </div>
                   )}
 
-                  {/* Time slot — whole day in one list, split AM/PM inside the
-                      dropdown; the period is derived from the chosen time */}
-                  <div style={{ marginBottom:10 }}>
-                    <Dropdown options={slots} value={timeSlot} onChange={chooseTimeSlot} meridiem
+                  {/* AM/PM picks the half of the day, the field beside it the
+                      exact time within it; the period follows from AM/PM */}
+                  <div style={{ display:'grid', gridTemplateColumns:'minmax(88px,0.42fr) minmax(0,1fr)',
+                    gap:8, marginBottom:10 }}>
+                    <Dropdown options={MERIDIEMS} value={half} onChange={chooseHalf}
+                      placeholder="AM / PM" icon={<Sun size={15}/>}/>
+                    <Dropdown options={slots} value={timeSlot} onChange={setTimeSlot}
                       placeholder="Select a time slot" icon={<Clock size={15}/>}/>
                   </div>
 
