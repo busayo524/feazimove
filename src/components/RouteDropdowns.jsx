@@ -89,7 +89,7 @@ export function LocationDropdown({ label, options, value, onChange, placeholder,
 
   return(
     <div>
-      <label style={{display:'block',fontSize:13,fontWeight:600,color:TEXT,marginBottom:6}}>{label}</label>
+      <label style={{display:'block',fontSize:14,fontWeight:600,color:TEXT,marginBottom:6}}>{label}</label>
       <div ref={ref} style={{position:'relative'}}>
         <button type="button" onClick={()=>setOpen(o=>!o)}
           style={{
@@ -127,7 +127,7 @@ export function LocationDropdown({ label, options, value, onChange, placeholder,
                   background:value===opt?BG:CARD,
                   borderBottom:i<options.length-1?`1px solid ${BORDER}`:'none',
                   border:'none',cursor:'pointer',textAlign:'left',
-                  fontFamily:'inherit',fontSize:14,
+                  fontFamily:'inherit',fontSize:14.5,
                   color:value===opt?ACCENT:TEXT,fontWeight:value===opt?700:400,
                   transition:'background 0.1s',
                 }}
@@ -204,7 +204,7 @@ export function TimeDropdown({ slots, value, onChange, placeholder = 'Select a t
                 background:value===s?BG:CARD,
                 borderBottom:i<shown.length-1?`1px solid ${BORDER}`:'none',
                 border:'none',cursor:'pointer',textAlign:'left',
-                fontFamily:'inherit',fontSize:14,
+                fontFamily:'inherit',fontSize:14.5,
                 color:value===s?ACCENT:TEXT,fontWeight:value===s?700:400,
                 transition:'background 0.1s',
               }}

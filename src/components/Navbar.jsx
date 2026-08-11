@@ -50,7 +50,7 @@ function Dropdown({ items, onClose, isDark }) {
             </div>
             <div>
               <p style={{ fontWeight: 700, fontSize: 15, color: isDark ? '#ffffff' : '#0a0a0a', marginBottom: 3 }}>{item.label}</p>
-              <p style={{ fontSize: 13, color: isDark ? 'rgba(255,255,255,0.5)' : '#6b7280', lineHeight: 1.5 }}>{item.sub}</p>
+              <p style={{ fontSize: 14, color: isDark ? 'rgba(255,255,255,0.5)' : '#6b7280', lineHeight: 1.5 }}>{item.sub}</p>
             </div>
           </Link>
         ))}
@@ -114,7 +114,7 @@ export default function Navbar() {
           <li>
             <Link to="/signup?role=rider" style={{
               display:'block', padding:'8px 14px', borderRadius:8,
-              fontWeight: 600, fontSize: 14,
+              fontWeight: 600, fontSize: 14.5,
               color: isDark ? '#fff' : NT,
               textDecoration:'none', transition:'color 0.15s',
             }}
@@ -128,7 +128,7 @@ export default function Navbar() {
           <li>
             <Link to="/signup?role=driver" style={{
               display:'block', padding:'8px 14px', borderRadius:8,
-              fontWeight: 600, fontSize: 14,
+              fontWeight: 600, fontSize: 14.5,
               color: isDark ? '#fff' : NT,
               textDecoration:'none', transition:'color 0.15s',
             }}
@@ -145,7 +145,7 @@ export default function Navbar() {
             <button style={{
               display:'flex', alignItems:'center', gap:5, padding:'8px 14px',
               background:'none', border:'none', cursor:'pointer', borderRadius:8,
-              fontWeight: 600, fontSize: 14,
+              fontWeight: 600, fontSize: 14.5,
               color: dropdown === 'learn' ? FOREST : (isDark ? '#fff' : NT),
               transition:'color 0.15s',
             }}
@@ -167,7 +167,7 @@ export default function Navbar() {
               <Link to={href} style={{
                 display:'block', position:'relative',
                 padding:'8px 14px', borderRadius:8,
-                fontWeight: isActive(href) ? 700 : 500, fontSize: 14,
+                fontWeight: isActive(href) ? 700 : 500, fontSize: 14.5,
                 color: linkColor(href),
                 textDecoration:'none', transition:'color 0.15s',
               }}
@@ -196,14 +196,14 @@ export default function Navbar() {
             {isDark ? <Sun size={15}/> : <Moon size={15}/>}
           </button>
 
-          <Link to="/login" style={{ padding:'9px 20px', borderRadius:50, background:'transparent', border:`1.5px solid ${isDark?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.15)'}`, color: isDark?'#fff':NT, fontSize:13, fontWeight:700, textDecoration:'none', transition:'all 0.15s' }}
+          <Link to="/login" style={{ padding:'9px 20px', borderRadius:50, background:'transparent', border:`1.5px solid ${isDark?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.15)'}`, color: isDark?'#fff':NT, fontSize:14, fontWeight:700, textDecoration:'none', transition:'all 0.15s' }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = FOREST; e.currentTarget.style.color = FOREST }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = isDark?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.15)'; e.currentTarget.style.color = isDark?'#fff':NT }}>
             Log in
           </Link>
           <Link to="/register" style={{
             display:'inline-flex', alignItems:'center', gap:6, padding:'9px 20px', borderRadius:50,
-            background: NEON, color: NT, fontSize:13, fontWeight:700,
+            background: NEON, color: NT, fontSize:14, fontWeight:700,
             transition:'background 0.2s, transform 0.15s', textDecoration:'none',
           }}
             onMouseEnter={e => { e.currentTarget.style.background='#d4ff1a'; e.currentTarget.style.transform='translateY(-1px)' }}

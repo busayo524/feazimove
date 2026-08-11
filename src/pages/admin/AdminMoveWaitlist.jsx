@@ -19,7 +19,7 @@ function StatTile({ icon, label, value, accent }) {
       </div>
       <div>
         <p style={{ fontSize:24, fontWeight:800, color:TEXT, lineHeight:1.1 }}>{value}</p>
-        <p style={{ fontSize:13.5, color:MUTED, fontWeight:600 }}>{label}</p>
+        <p style={{ fontSize:14.5, color:MUTED, fontWeight:600 }}>{label}</p>
       </div>
     </div>
   )
@@ -68,7 +68,7 @@ export default function AdminMoveWaitlist() {
       <AdminLayout title="Move Waitlist">
         <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10 }}>
           <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
-          <p style={{ fontSize:14.5, color:'#ef4444' }}>{error}</p>
+          <p style={{ fontSize:15, color:'#ef4444' }}>{error}</p>
         </div>
       </AdminLayout>
     )
@@ -77,7 +77,7 @@ export default function AdminMoveWaitlist() {
 
   return (
     <AdminLayout title="Move Waitlist">
-      <p style={{ color:MUTED, fontSize:14, marginBottom:20 }}>
+      <p style={{ color:MUTED, fontSize:14.5, marginBottom:20 }}>
         Everyone who tapped <strong>Join the Waitlist</strong> on the "Move an Item" launch page — your day-one customers when the service goes live. Refreshes every 30 seconds.
       </p>
 
@@ -95,13 +95,13 @@ export default function AdminMoveWaitlist() {
             value={q}
             onChange={e => setQ(e.target.value)}
             placeholder="Search name, email, phone, location…"
-            style={{ width:'100%', padding:'10px 12px 10px 34px', borderRadius:10, border:`1px solid ${BORDER}`, fontSize:14.5, outline:'none', background:CARD, color:TEXT, boxSizing:'border-box', fontFamily:'inherit' }}
+            style={{ width:'100%', padding:'10px 12px 10px 34px', borderRadius:10, border:`1px solid ${BORDER}`, fontSize:15, outline:'none', background:CARD, color:TEXT, boxSizing:'border-box', fontFamily:'inherit' }}
           />
         </div>
         <button onClick={exportCsv} disabled={filtered.length === 0}
           style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 16px', borderRadius:10,
             background: filtered.length === 0 ? CHIP : '#1a2400', color: filtered.length === 0 ? MUTED : NEON,
-            border:'none', fontWeight:700, fontSize:14.5, cursor: filtered.length === 0 ? 'not-allowed' : 'pointer', fontFamily:'inherit' }}>
+            border:'none', fontWeight:700, fontSize:15, cursor: filtered.length === 0 ? 'not-allowed' : 'pointer', fontFamily:'inherit' }}>
           <Download size={14}/> Export CSV
         </button>
       </div>
@@ -111,20 +111,20 @@ export default function AdminMoveWaitlist() {
         {filtered.length === 0 ? (
           <div style={{ padding:'46px 20px', textAlign:'center' }}>
             <PackageOpen size={34} color="#d1d5db" style={{ marginBottom:10 }}/>
-            <p style={{ fontSize:14, fontWeight:700, color:TEXT, marginBottom:4 }}>
+            <p style={{ fontSize:14.5, fontWeight:700, color:TEXT, marginBottom:4 }}>
               {q ? 'No matches for your search.' : 'No one has joined yet.'}
             </p>
-            <p style={{ fontSize:14.5, color:MUTED }}>
+            <p style={{ fontSize:15, color:MUTED }}>
               {q ? 'Try a different name, email, or phone number.' : 'Entries appear here the moment a rider taps "Join the Waitlist" on the Move an Item page.'}
             </p>
           </div>
         ) : (
           <div className="fm-scroll-x">
-            <table style={{ width:'100%', borderCollapse:'collapse', fontSize:14.5 }}>
+            <table style={{ width:'100%', borderCollapse:'collapse', fontSize:15 }}>
               <thead>
                 <tr style={{ background:'#f9fafb', textAlign:'left' }}>
                   {['#','Name','Contact','Location','Also a Driver','Joined'].map(h => (
-                    <th key={h} style={{ padding:'11px 16px', fontSize:12.5, fontWeight:800, color:MUTED, textTransform:'uppercase', letterSpacing:'0.05em', whiteSpace:'nowrap' }}>{h}</th>
+                    <th key={h} style={{ padding:'11px 16px', fontSize:14, fontWeight:800, color:MUTED, textTransform:'uppercase', letterSpacing:'0.05em', whiteSpace:'nowrap' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -143,8 +143,8 @@ export default function AdminMoveWaitlist() {
                     </td>
                     <td style={{ padding:'12px 16px' }}>
                       {e.isDriver
-                        ? <span style={{ fontSize:12.5, fontWeight:800, padding:'3px 10px', borderRadius:20, background:'#ecfccb', color:'#3f6212' }}>Driver</span>
-                        : <span style={{ fontSize:12.5, fontWeight:700, padding:'3px 10px', borderRadius:20, background:CHIP, color:MUTED }}>Rider</span>}
+                        ? <span style={{ fontSize:14, fontWeight:800, padding:'3px 10px', borderRadius:20, background:'#ecfccb', color:'#3f6212' }}>Driver</span>
+                        : <span style={{ fontSize:14, fontWeight:700, padding:'3px 10px', borderRadius:20, background:CHIP, color:MUTED }}>Rider</span>}
                     </td>
                     <td style={{ padding:'12px 16px', color:MUTED, whiteSpace:'nowrap' }}>{fmtDate(e.joinedAt)}</td>
                   </tr>

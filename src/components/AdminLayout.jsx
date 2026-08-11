@@ -1,5 +1,5 @@
 import { NEON, ON_NEON_HARD as NT, ADMIN_BG as BG, ADMIN_TEXT as TEXT, HEADER,
-  SB_BG, SB_BORDER, SB_TEXT, SB_MUTED, SB_CARD, SB_HOVER, CHIP } from '../theme/palette'
+  SB_BG, SB_BORDER, SB_TEXT, SB_MUTED, SB_CARD, SB_HOVER, CHIP, SB_ACTIVE, SB_ACTIVE_BG } from '../theme/palette'
 import React, { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -57,8 +57,8 @@ export default function AdminLayout({ children, title }) {
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
           <img src={faviconImg} alt="FeaziMove" style={{ width:34, height:34, objectFit:'contain' }}/>
           <div>
-            <p style={{ margin:0, fontSize:16, fontWeight:900, color:'#fff' }}>FeaziMove</p>
-            <p style={{ margin:0, fontSize:11, color:SB_MUTED }}>Admin Panel</p>
+            <p style={{ margin:0, fontSize:16, fontWeight:900, color:SB_TEXT }}>FeaziMove</p>
+            <p style={{ margin:0, fontSize:12.5, color:SB_MUTED }}>Admin Panel</p>
           </div>
         </div>
       </div>
@@ -68,9 +68,9 @@ export default function AdminLayout({ children, title }) {
           <NavLink key={item.to} to={item.to} end={item.end} onClick={() => setOpen(false)}
             style={({ isActive }) => ({
               display:'flex', alignItems:'center', gap:12, padding:'11px 14px', borderRadius:10,
-              marginBottom:4, textDecoration:'none', fontWeight:600, fontSize:14, transition:'all 0.15s',
-              background: isActive ? NAV_ACTIVE_BG : 'transparent',
-              color: isActive ? NEON : SB_TEXT,
+              marginBottom:4, textDecoration:'none', fontWeight:600, fontSize:14.5, transition:'all 0.15s',
+              background: isActive ? SB_ACTIVE_BG : 'transparent',
+              color: isActive ? SB_ACTIVE : SB_TEXT,
             })}
             onMouseEnter={e => { if (!e.currentTarget.style.background.includes('204')) e.currentTarget.style.background = SB_HOVER }}
             onMouseLeave={e => { if (!e.currentTarget.style.background.includes('204')) e.currentTarget.style.background = 'transparent' }}>
@@ -80,14 +80,14 @@ export default function AdminLayout({ children, title }) {
       </nav>
 
       <div style={{ padding:'14px 16px', borderTop:`1px solid ${SB_BORDER}` }}>
-        <p style={{ color:'#fff', fontSize:13, fontWeight:600, margin:0, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+        <p style={{ color:SB_TEXT, fontSize:14, fontWeight:600, margin:0, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
           {user?.email || user?.name}
         </p>
-        <p style={{ color:SB_MUTED, fontSize:11, margin:'2px 0 12px', textTransform:'uppercase', letterSpacing:'0.05em' }}>Admin</p>
+        <p style={{ color:SB_MUTED, fontSize:12.5, margin:'2px 0 12px', textTransform:'uppercase', letterSpacing:'0.05em' }}>Admin</p>
         <button onClick={handleLogout}
           style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'10px',
             borderRadius:10, background:'rgba(255,255,255,0.06)', border:`1px solid ${SB_BORDER}`,
-            color:SB_TEXT, fontWeight:600, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+            color:SB_TEXT, fontWeight:600, fontSize:14, cursor:'pointer', fontFamily:'inherit' }}>
           <LogOut size={15}/> Sign Out
         </button>
         {/* Social links — same accounts the marketing footer points at */}
@@ -134,9 +134,9 @@ export default function AdminLayout({ children, title }) {
               className="admin-mobile-menu-btn" aria-label="Toggle menu">
               <Menu size={20}/>
             </button>
-            <p style={{ fontSize:14, color:TEXT, margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', minWidth:0 }}><span className="fm-date-long">{todayLong}</span><span className="fm-date-short">{todayShort}</span></p>
+            <p style={{ fontSize:14.5, color:TEXT, margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', minWidth:0 }}><span className="fm-date-long">{todayLong}</span><span className="fm-date-short">{todayShort}</span></p>
           </div>
-          <p style={{ fontSize:13, color:'#6b7280', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+          <p style={{ fontSize:14, color:'#6b7280', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
             {user?.email || user?.name}
           </p>
         </header>

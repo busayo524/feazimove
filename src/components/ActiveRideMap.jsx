@@ -268,7 +268,7 @@ export default function ActiveRideMap({ pickup, dropoff, riderLocation, status, 
     return (
       <div style={{ background:OLIVE, borderRadius:20, height:340, marginBottom:20, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:8 }}>
         <MapPin size={26} color={NEON}/>
-        <p style={{ color:'rgba(255,255,255,0.7)', fontSize:13, textAlign:'center', padding:'0 20px' }}>
+        <p style={{ color:'rgba(255,255,255,0.7)', fontSize:14, textAlign:'center', padding:'0 20px' }}>
           Add <code style={{ color:NEON }}>VITE_MAPBOX_TOKEN</code> to your <code style={{ color:NEON }}>.env</code> to see the map
         </p>
       </div>
@@ -279,9 +279,9 @@ export default function ActiveRideMap({ pickup, dropoff, riderLocation, status, 
     return (
       <div style={{ background:OLIVE, borderRadius:20, height:340, marginBottom:20, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:10 }}>
         <MapPin size={26} color={NEON}/>
-        <p style={{ color:'rgba(255,255,255,0.7)', fontSize:13, textAlign:'center', padding:'0 20px' }}>Couldn't load the map.</p>
+        <p style={{ color:'rgba(255,255,255,0.7)', fontSize:14, textAlign:'center', padding:'0 20px' }}>Couldn't load the map.</p>
         <button onClick={() => setRetryKey(k => k + 1)}
-          style={{ padding:'7px 18px', borderRadius:50, background:NEON, color:ON_NEON, fontWeight:700, fontSize:13, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
+          style={{ padding:'7px 18px', borderRadius:50, background:NEON, color:ON_NEON, fontWeight:700, fontSize:14, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
           Retry
         </button>
       </div>
@@ -292,7 +292,7 @@ export default function ActiveRideMap({ pickup, dropoff, riderLocation, status, 
     return (
       <div style={{ background:CARD, border:`1.5px dashed ${BORDER}`, borderRadius:20, padding:24, marginBottom:20, textAlign:'center' }}>
         <MapPin size={24} color={MUTED} style={{ marginBottom:8 }}/>
-        <p style={{ fontSize:13, color:MUTED }}>Route preview unavailable for this pickup/dropoff.</p>
+        <p style={{ fontSize:14, color:MUTED }}>Route preview unavailable for this pickup/dropoff.</p>
       </div>
     )
   }

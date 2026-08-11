@@ -39,9 +39,9 @@
   --fm-bg:            #f6f7f9;
   --fm-card:          #ffffff;
   --fm-border:        #e9ecef;
-  --fm-text:          #1a2800;
-  --fm-muted:         #4C6900;
-  --fm-moss:          #4C6900;   /* icons and secondary labels */
+  --fm-text:          #0a0a0a;
+  --fm-muted:         #5b6472;
+  --fm-moss:          #1a1a1a;   /* icons and secondary labels */
 
   --fm-admin-bg:      #f5f7f2;
   --fm-admin-card:    #ffffff;
@@ -51,7 +51,7 @@
 
   /* Emphasis text (headings, selected values). Dark-green on light, and it
      MUST lighten in dark or it disappears into the card. */
-  --fm-accent:        #243800;
+  --fm-accent:        #0a0a0a;
   /* Text and icons sitting ON a neon fill. Never themed — a neon button is
      neon in both modes, so its label stays dark or it vanishes. */
   --fm-on-neon:       #243800;
@@ -59,7 +59,7 @@
   --fm-neon-soft:     #f6faee;   /* neon-tinted callout background */
   /* Solid accent button: a filled pill with a contrasting label. The fill and
      its label must swap together, or dark mode paints white on neon. */
-  --fm-accent-fill:    #243800;
+  --fm-accent-fill:    #0a0a0a;
   --fm-on-accent-fill: #ffffff;
   /* Inverted pill: near-black fill carrying neon text. Needs to lift in dark
      or it sinks into the card it sits on. */
@@ -77,12 +77,14 @@
   --fm-chip:          #f3f4f6;
   /* Side menu. Deep lime-green in light (unchanged), neutral ash in dark so it
      reads as a menu panel rather than a second brand colour on a black page. */
-  --fm-sb-bg:         #1a2400;
-  --fm-sb-border:     rgba(255,255,255,0.08);
-  --fm-sb-text:       #e8f5d0;
-  --fm-sb-muted:      #7aad40;
-  --fm-sb-card:       rgba(255,255,255,0.06);
-  --fm-sb-hover:      rgba(255,255,255,0.08);
+  --fm-sb-bg:         #ffffff;
+  --fm-sb-border:     rgba(0,0,0,0.09);
+  --fm-sb-text:       #1a1a1a;
+  --fm-sb-muted:      #6b7280;
+  --fm-sb-card:       rgba(0,0,0,0.045);
+  --fm-sb-hover:      rgba(0,0,0,0.06);
+  --fm-sb-active:     #0a0a0a;   /* active nav label — neon is invisible on white */
+  --fm-sb-active-bg:  rgba(204,255,0,0.35);
   --fm-header:        rgba(255,255,255,0.96);
   --fm-shadow:        rgba(36,56,0,0.06);
   --fm-shadow-strong: rgba(36,56,0,0.14);
@@ -115,14 +117,14 @@
   --fm-card:          #1a1a1c;
   --fm-border:        rgba(255,255,255,0.12);
   --fm-text:          #ffffff;
-  --fm-muted:         rgba(255,255,255,0.62);
+  --fm-muted:         rgba(255,255,255,0.74);
   --fm-moss:          #b4e600;   /* moss is unreadable on black — lift it */
 
   --fm-admin-bg:      #000000;
   --fm-admin-card:    #1a1a1c;
   --fm-admin-border:  rgba(255,255,255,0.12);
   --fm-admin-text:    #ffffff;
-  --fm-admin-muted:   rgba(255,255,255,0.60);
+  --fm-admin-muted:   rgba(255,255,255,0.74);
 
   --fm-accent:        #ccff00;
   --fm-on-neon:       #243800;   /* deliberately unchanged */
@@ -140,9 +142,11 @@
   --fm-sb-bg:         #1c1c1e;
   --fm-sb-border:     rgba(255,255,255,0.10);
   --fm-sb-text:       rgba(255,255,255,0.88);
-  --fm-sb-muted:      rgba(255,255,255,0.50);
+  --fm-sb-muted:      rgba(255,255,255,0.55);
   --fm-sb-card:       rgba(255,255,255,0.07);
   --fm-sb-hover:      rgba(255,255,255,0.10);
+  --fm-sb-active:     #ccff00;
+  --fm-sb-active-bg:  rgba(204,255,0,0.10);
   --fm-header:        rgba(10,10,12,0.92);
   --fm-shadow:        rgba(0,0,0,0.55);
   --fm-shadow-strong: rgba(0,0,0,0.7);
@@ -155,6 +159,14 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+
+  /* font-smoothing on dark: antialiased renders light text thinner, which at
+     small sizes reads as blurry. Subpixel keeps the stems solid. */
+  html[data-theme="dark"] {
+    -webkit-font-smoothing: auto;
+    -moz-osx-font-smoothing: auto;
+    text-rendering: optimizeLegibility;
+  }
 
   body {
     font-family: 'Inter', 'UberMove', system-ui, -apple-system, sans-serif;

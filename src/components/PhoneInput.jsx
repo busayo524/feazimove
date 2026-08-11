@@ -89,7 +89,7 @@ export default function PhoneInput({ value = '', onChange, error, disabled, focu
           }}
         >
           <span style={{ fontSize: 20, lineHeight: 1 }}>{country.flag}</span>
-          <span style={{ fontSize: 12, fontWeight: 700, color: '#555', letterSpacing: '0.04em' }}>{country.code}</span>
+          <span style={{ fontSize: 13.5, fontWeight: 700, color: '#555', letterSpacing: '0.04em' }}>{country.code}</span>
           {!disabled && (
             <svg width="10" height="6" viewBox="0 0 10 6" style={{ color: '#aaa', flexShrink: 0, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
               <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
@@ -98,7 +98,7 @@ export default function PhoneInput({ value = '', onChange, error, disabled, focu
         </button>
 
         {/* Dial code */}
-        <span style={{ fontSize: 13, fontWeight: 700, color: '#444', padding: '0 8px 0 10px', flexShrink: 0, userSelect: 'none' }}>
+        <span style={{ fontSize: 14, fontWeight: 700, color: '#444', padding: '0 8px 0 10px', flexShrink: 0, userSelect: 'none' }}>
           {country.dial}
         </span>
 
@@ -144,7 +144,7 @@ export default function PhoneInput({ value = '', onChange, error, disabled, focu
               type="text" value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search country…" autoFocus
               style={{
-                width: '100%', padding: '7px 10px', fontSize: 13, borderRadius: 7,
+                width: '100%', padding: '7px 10px', fontSize: 14, borderRadius: 7,
                 border: '1px solid #e0e0e0', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
               }}
             />
@@ -162,12 +162,12 @@ export default function PhoneInput({ value = '', onChange, error, disabled, focu
                 onMouseLeave={e => { e.currentTarget.style.background = c.code === country.code ? '#f5fff0' : 'transparent' }}
               >
                 <span style={{ fontSize: 20 }}>{c.flag}</span>
-                <span style={{ fontSize: 13, color: '#333', flex: 1 }}>{c.name}</span>
-                <span style={{ fontSize: 12, color: '#999', fontWeight: 600 }}>{c.dial}</span>
+                <span style={{ fontSize: 14, color: '#333', flex: 1 }}>{c.name}</span>
+                <span style={{ fontSize: 13.5, color: '#999', fontWeight: 600 }}>{c.dial}</span>
               </button>
             ))}
             {filtered.length === 0 && (
-              <p style={{ textAlign: 'center', color: '#aaa', fontSize: 13, padding: 16, margin: 0 }}>No results</p>
+              <p style={{ textAlign: 'center', color: '#aaa', fontSize: 14, padding: 16, margin: 0 }}>No results</p>
             )}
           </div>
         </div>

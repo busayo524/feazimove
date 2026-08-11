@@ -55,18 +55,18 @@ export default function ChatModal({ rideId, title, onClose }) {
           </button>
         </div>
         <div style={{ flex:1, overflowY:'auto', padding:'16px 20px', display:'flex', flexDirection:'column', gap:8 }}>
-          {loading && <p style={{ textAlign:'center', color:MUTED, fontSize:13 }}>Loading messages…</p>}
+          {loading && <p style={{ textAlign:'center', color:MUTED, fontSize:14 }}>Loading messages…</p>}
           {!loading && messages.length === 0 && (
-            <p style={{ textAlign:'center', color:MUTED, fontSize:13, marginTop:20 }}>No messages yet — say hello!</p>
+            <p style={{ textAlign:'center', color:MUTED, fontSize:14, marginTop:20 }}>No messages yet — say hello!</p>
           )}
           {messages.map(m => (
             <div key={m.id} style={{ display:'flex', justifyContent: m.mine ? 'flex-end' : 'flex-start' }}>
               <div style={{
-                maxWidth:'75%', padding:'9px 14px', borderRadius:14, fontSize:14,
+                maxWidth:'75%', padding:'9px 14px', borderRadius:14, fontSize:14.5,
                 background: m.mine ? INVERT : BG, color: m.mine ? NEON : TEXT,
               }}>
                 <p style={{ margin:0, wordBreak:'break-word' }}>{m.body}</p>
-                <p style={{ margin:'3px 0 0', fontSize:10, opacity:0.6 }}>{m.time}</p>
+                <p style={{ margin:'3px 0 0', fontSize:11.5, opacity:0.6 }}>{m.time}</p>
               </div>
             </div>
           ))}
@@ -78,7 +78,7 @@ export default function ChatModal({ rideId, title, onClose }) {
             onChange={e => setText(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') send() }}
             placeholder="Type a message…"
-            style={{ flex:1, padding:'11px 14px', borderRadius:50, border:`1.5px solid ${BORDER}`, fontSize:14, outline:'none', fontFamily:'inherit',
+            style={{ flex:1, padding:'11px 14px', borderRadius:50, border:`1.5px solid ${BORDER}`, fontSize:14.5, outline:'none', fontFamily:'inherit',
               background:CARD, color:TEXT, colorScheme:'light' }}
           />
           <button onClick={send} disabled={!text.trim() || sending} aria-label="Send"

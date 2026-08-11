@@ -51,10 +51,10 @@ export default function AdminBackOffice() {
 
   return (
     <AdminLayout title="Back Office">
-      <p style={{ color: MUTED, fontSize: 14, marginBottom: 6 }}>
+      <p style={{ color: MUTED, fontSize: 14.5, marginBottom: 6 }}>
         Payment rails monitoring — transactions, customers, and AML compliance.
       </p>
-      <p style={{ fontSize: 13.5, color: overview?.configured ? '#15803d' : '#d97706', fontWeight: 600, marginBottom: 18 }}>
+      <p style={{ fontSize: 14.5, color: overview?.configured ? '#15803d' : '#d97706', fontWeight: 600, marginBottom: 18 }}>
         {overview == null ? '' : overview.configured
           ? `● Anchor connected · last event ${fmtTime(overview.lastEventAt)}`
           : '● Anchor API key not configured'}
@@ -67,11 +67,11 @@ export default function AdminBackOffice() {
           borderRadius:10, marginBottom:12,
           background: overview.rails.live ? '#fffbeb' : '#f5f7f2',
           border: `1px solid ${overview.rails.live ? '#fcd34d' : BORDER}` }}>
-          <span style={{ padding:'3px 10px', borderRadius:50, fontSize:12.5, fontWeight:800, letterSpacing:'0.04em',
+          <span style={{ padding:'3px 10px', borderRadius:50, fontSize:14, fontWeight:800, letterSpacing:'0.04em',
             background: overview.rails.live ? '#b45309' : '#6b7280', color:'#fff' }}>
             {overview.rails.live ? 'LIVE — REAL MONEY' : 'SANDBOX — NO REAL MONEY'}
           </span>
-          <span style={{ fontSize:14, color: TEXT }}>
+          <span style={{ fontSize:14.5, color: TEXT }}>
             {overview.rails.restricted
               ? `Payments restricted to ${overview.rails.allowlistCount} test account${overview.rails.allowlistCount === 1 ? '' : 's'}`
               : 'Payments open to all users'}
@@ -88,10 +88,10 @@ export default function AdminBackOffice() {
           border:'1px solid #fca5a5', borderRadius:10, marginBottom:16 }}>
           <ShieldAlert size={15} color="#b91c1c" style={{ flexShrink:0, marginTop:1 }}/>
           <div>
-            <p style={{ fontSize:14.5, color:'#b91c1c', fontWeight:700 }}>
+            <p style={{ fontSize:15, color:'#b91c1c', fontWeight:700 }}>
               {overview.kyc.onFallbackAccount} user{overview.kyc.onFallbackAccount === 1 ? '' : 's'} on a fallback funding account — no BVN verification
             </p>
-            <p style={{ fontSize:14, color:'#7f1d1d', lineHeight:1.55, marginTop:3 }}>
+            <p style={{ fontSize:14.5, color:'#7f1d1d', lineHeight:1.55, marginTop:3 }}>
               Anchor refused the reserved-account request, so these accounts are in FeaziMove's
               name rather than the customer's and no CBN identity check was performed. Ask Anchor
               to enable reserved accounts, and make sure the deposit account can cover the
@@ -104,7 +104,7 @@ export default function AdminBackOffice() {
       {error && (
         <div style={{ display: 'flex', gap: 8, padding: '10px 14px', background: DANGER_SOFT, border: '1px solid #fca5a5', borderRadius: 10, marginBottom: 16 }}>
           <AlertCircle size={14} color="#ef4444" style={{ flexShrink: 0, marginTop: 1 }}/>
-          <p style={{ fontSize: 14.5, color: '#ef4444' }}>{error}</p>
+          <p style={{ fontSize: 15, color: '#ef4444' }}>{error}</p>
         </div>
       )}
 
@@ -113,10 +113,10 @@ export default function AdminBackOffice() {
         {stats.map(s => (
           <div key={s.label} style={{ background: CARD, border: `1px solid ${s.alert ? '#fca5a5' : BORDER}`, borderRadius: 14, padding: '14px 16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: s.alert ? '#dc2626' : MUTED, marginBottom: 6 }}>
-              {s.icon}<span style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{s.label}</span>
+              {s.icon}<span style={{ fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{s.label}</span>
             </div>
             <p style={{ fontSize: 22, fontWeight: 800, color: s.alert ? '#dc2626' : TEXT }}>{s.value}</p>
-            {s.sub && <p style={{ fontSize: 13, color: MUTED }}>{s.sub}</p>}
+            {s.sub && <p style={{ fontSize: 14, color: MUTED }}>{s.sub}</p>}
           </div>
         ))}
       </div>
@@ -125,7 +125,7 @@ export default function AdminBackOffice() {
       <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
         {[['events', 'Transaction Monitor'], ['customers', 'Customers'], ['aml', 'AML Flags']].map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)}
-            style={{ padding: '9px 18px', borderRadius: 50, fontSize: 14.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer',
+            style={{ padding: '9px 18px', borderRadius: 50, fontSize: 15, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer',
               border: `1.5px solid ${tab === key ? NEON : BORDER}`, background: tab === key ? NEON : CARD, color:tab === key ? ON_NEON : MUTED }}>
             {label}
           </button>
@@ -136,11 +136,11 @@ export default function AdminBackOffice() {
       {tab === 'events' && (
         <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, overflow: 'hidden' }}>
           <div className="fm-scroll-x">
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14.5 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 15 }}>
               <thead>
                 <tr style={{ background: BG, textAlign: 'left' }}>
                   {['Time', 'Event', 'Resource', 'Origin', 'Processed'].map(h => (
-                    <th key={h} style={{ padding: '10px 14px', fontSize: 13, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{h}</th>
+                    <th key={h} style={{ padding: '10px 14px', fontSize: 14, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -157,9 +157,9 @@ export default function AdminBackOffice() {
                     <td style={{ padding: '10px 14px', whiteSpace: 'nowrap', color: MUTED }}>{fmtTime(e.at)}</td>
                     <td style={{ padding: '10px 14px', fontWeight: 700, color: TEXT }}>
                       {e.type}
-                      {e.detail && <p style={{ fontWeight: 400, fontSize: 13, color: MUTED, marginTop: 2 }}>{e.detail}</p>}
+                      {e.detail && <p style={{ fontWeight: 400, fontSize: 14, color: MUTED, marginTop: 2 }}>{e.detail}</p>}
                     </td>
-                    <td style={{ padding: '10px 14px', color: MUTED, fontFamily: 'monospace', fontSize: 13.5 }}>{e.resourceId || '—'}</td>
+                    <td style={{ padding: '10px 14px', color: MUTED, fontFamily: 'monospace', fontSize: 14.5 }}>{e.resourceId || '—'}</td>
                     <td style={{ padding: '10px 14px' }}>
                       {/* Internal rows are steps WE initiated (wallet setup, KYC
                           submission) — there is no signature to judge them by. */}
@@ -182,11 +182,11 @@ export default function AdminBackOffice() {
       {tab === 'customers' && (
         <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, overflow: 'hidden' }}>
           <div className="fm-scroll-x">
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14.5 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 15 }}>
               <thead>
                 <tr style={{ background: BG, textAlign: 'left' }}>
                   {['Name', 'Contact', 'Role', 'Anchor Customer ID', 'KYC', 'Funding Account', 'Payout Beneficiary'].map(h => (
-                    <th key={h} style={{ padding: '10px 14px', fontSize: 13, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{h}</th>
+                    <th key={h} style={{ padding: '10px 14px', fontSize: 14, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -202,7 +202,7 @@ export default function AdminBackOffice() {
                     <td style={{ padding: '10px 14px', fontWeight: 700, color: TEXT, whiteSpace: 'nowrap' }}>{c.name}</td>
                     <td style={{ padding: '10px 14px', color: MUTED }}>{c.email}<br/>{c.phone}</td>
                     <td style={{ padding: '10px 14px', textTransform: 'capitalize' }}>{c.role}</td>
-                    <td style={{ padding: '10px 14px', fontFamily: 'monospace', fontSize: 13.5, color: MUTED }}>{c.anchorCustomerId}</td>
+                    <td style={{ padding: '10px 14px', fontFamily: 'monospace', fontSize: 14.5, color: MUTED }}>{c.anchorCustomerId}</td>
                     <td style={{ padding: '10px 14px' }}>{c.kycStatus || '—'}</td>
                     <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
                       {c.reservedAccount ? `${c.reservedAccount.number} · ${c.reservedAccount.bank}` : '—'}
@@ -215,7 +215,7 @@ export default function AdminBackOffice() {
                           <span style={{ fontWeight: 700, color: TEXT }}>{c.payoutBeneficiary.accountNumber}</span>
                           {c.payoutBeneficiary.bank && <span style={{ color: MUTED }}> · {c.payoutBeneficiary.bank}</span>}
                           {c.payoutBeneficiary.registered && (
-                            <p style={{ fontSize: 12.5, color: '#15803d', fontWeight: 600, marginTop: 2 }}>
+                            <p style={{ fontSize: 14, color: '#15803d', fontWeight: 600, marginTop: 2 }}>
                               Registered with Anchor
                             </p>
                           )}
@@ -236,8 +236,8 @@ export default function AdminBackOffice() {
           <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
             {['open', 'reviewed', 'dismissed', 'all'].map(s => (
               <button key={s} onClick={() => setFlagFilter(s)}
-                style={{ padding: '6px 14px', borderRadius: 50, fontSize: 13.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', textTransform: 'capitalize',
-                  border: `1.5px solid ${flagFilter === s ? OLIVE : BORDER}`, background: flagFilter === s ? OLIVE : CARD, color: flagFilter === s ? '#fff' : MUTED }}>
+                style={{ padding: '6px 14px', borderRadius: 50, fontSize: 14.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', textTransform: 'capitalize',
+                  border: `1.5px solid ${flagFilter === s ? ACCENT_FILL : BORDER}`, background: flagFilter === s ? ACCENT_FILL : CARD, color: flagFilter === s ? ON_ACCENT_FILL : MUTED }}>
                 {s}
               </button>
             ))}
@@ -253,14 +253,14 @@ export default function AdminBackOffice() {
             ) : flags.map(f => (
               <div key={f.id} style={{ background: CARD, border: `1px solid ${BORDER}`, borderLeft: `4px solid ${SEV[f.severity] || MUTED}`, borderRadius: 12, padding: '12px 16px', display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
                 <div style={{ flex: 1, minWidth: 220 }}>
-                  <p style={{ fontWeight: 800, fontSize: 14.5, color: TEXT }}>
-                    {f.rule} <span style={{ color: SEV[f.severity], fontSize: 12.5, textTransform: 'uppercase' }}>· {f.severity}</span>
+                  <p style={{ fontWeight: 800, fontSize: 15, color: TEXT }}>
+                    {f.rule} <span style={{ color: SEV[f.severity], fontSize: 14, textTransform: 'uppercase' }}>· {f.severity}</span>
                   </p>
-                  <p style={{ fontSize: 14.5, color: TEXT, margin: '3px 0' }}>{f.detail}</p>
+                  <p style={{ fontSize: 15, color: TEXT, margin: '3px 0' }}>{f.detail}</p>
                   {/* Who moved the money. Flags raised before identity was
                       snapshotted, on an account since deleted, have nothing
                       left to show — say that rather than "Unknown user". */}
-                  <p style={{ fontSize: 13, color: MUTED }}>
+                  <p style={{ fontSize: 14, color: MUTED }}>
                     <span style={{ fontWeight: 700, color: f.userName ? TEXT : MUTED }}>
                       {f.userName || 'Identity not recorded'}
                     </span>
@@ -276,11 +276,11 @@ export default function AdminBackOffice() {
                 {f.status === 'open' && (
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button onClick={() => reviewFlag(f.id, 'reviewed')}
-                      style={{ padding: '8px 14px', borderRadius: 8, background:ACCENT_FILL, color:ON_ACCENT_FILL, border: 'none', fontWeight: 700, fontSize: 13.5, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      style={{ padding: '8px 14px', borderRadius: 8, background:ACCENT_FILL, color:ON_ACCENT_FILL, border: 'none', fontWeight: 700, fontSize: 14.5, cursor: 'pointer', fontFamily: 'inherit' }}>
                       Mark Reviewed
                     </button>
                     <button onClick={() => reviewFlag(f.id, 'dismissed')}
-                      style={{ padding: '8px 14px', borderRadius: 8, background: 'none', color: MUTED, border: `1.5px solid ${BORDER}`, fontWeight: 700, fontSize: 13.5, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      style={{ padding: '8px 14px', borderRadius: 8, background: 'none', color: MUTED, border: `1.5px solid ${BORDER}`, fontWeight: 700, fontSize: 14.5, cursor: 'pointer', fontFamily: 'inherit' }}>
                       Dismiss
                     </button>
                   </div>

@@ -60,10 +60,10 @@ function CardHeader({ title, sub, icon, viewAll }) {
     <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:14 }}>
       <div>
         <p style={{ fontSize:15, fontWeight:700, color:TEXT, margin:0 }}>{title}</p>
-        {sub && <p style={{ fontSize:13.5, color:MUTED, margin:'3px 0 0' }}>{sub}</p>}
+        {sub && <p style={{ fontSize:14.5, color:MUTED, margin:'3px 0 0' }}>{sub}</p>}
       </div>
       {viewAll ? (
-        <Link to={viewAll} style={{ display:'flex', alignItems:'center', gap:5, fontSize:14.5, fontWeight:600,
+        <Link to={viewAll} style={{ display:'flex', alignItems:'center', gap:5, fontSize:15, fontWeight:600,
           color:GREEN, textDecoration:'none', flexShrink:0 }}>
           View all <ArrowRight size={14}/>
         </Link>
@@ -79,12 +79,12 @@ function StatCard({ icon, label, value, sub }) {
   return (
     <Card style={{ padding:18 }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
-        <p style={{ fontSize:14.5, color:MUTED, fontWeight:600, margin:0 }}>{label}</p>
+        <p style={{ fontSize:15, color:MUTED, fontWeight:600, margin:0 }}>{label}</p>
         <div style={{ width:32, height:32, borderRadius:9, background:'#f3fbd3', display:'flex',
           alignItems:'center', justifyContent:'center', color:'#3f6212' }}>{icon}</div>
       </div>
       <p style={{ fontWeight:800, fontSize:26, color:TEXT, letterSpacing:'-0.02em', margin:0 }}>{value}</p>
-      {sub && <p style={{ fontSize:13.5, color:MUTED, marginTop:5, marginBottom:0 }}>{sub}</p>}
+      {sub && <p style={{ fontSize:14.5, color:MUTED, marginTop:5, marginBottom:0 }}>{sub}</p>}
     </Card>
   )
 }
@@ -94,7 +94,7 @@ function Tooltip({ tip }) {
   if (!tip) return null
   return (
     <div style={{ position:'absolute', left:tip.x, top:tip.y, transform:'translate(-50%, -110%)',
-      background:'#1a1a1a', color:'#fff', borderRadius:8, padding:'7px 10px', fontSize:13.5,
+      background:'#1a1a1a', color:'#fff', borderRadius:8, padding:'7px 10px', fontSize:14.5,
       pointerEvents:'none', whiteSpace:'nowrap', zIndex:5, boxShadow:'0 4px 12px rgba(0,0,0,0.2)' }}>
       {tip.lines.map((l, i) => (
         <div key={i} style={{ fontWeight: i === 0 ? 700 : 400, opacity: i === 0 ? 1 : 0.85 }}>{l}</div>
@@ -205,7 +205,7 @@ function StatusDonut({ data }) {
   return (
     <div ref={boxRef} style={{ position:'relative', display:'flex', flexDirection:'column', alignItems:'center', gap:14 }}>
       {total === 0 ? (
-        <p style={{ fontSize:14.5, color:MUTED, padding:'60px 0' }}>No rides yet</p>
+        <p style={{ fontSize:15, color:MUTED, padding:'60px 0' }}>No rides yet</p>
       ) : (
         <svg viewBox={`0 0 ${size} ${size}`} style={{ width:180, height:180 }}>
           {segs.length === 1 ? (
@@ -223,8 +223,8 @@ function StatusDonut({ data }) {
         {data.map(d => (
           <div key={d.status} style={{ display:'flex', alignItems:'center', gap:6 }}>
             <span style={{ width:10, height:10, borderRadius:3, background:STATUS_COLORS[d.status], flexShrink:0 }}/>
-            <span style={{ fontSize:13.5, color:MUTED }}>{STATUS_LABELS[d.status]}</span>
-            <span style={{ fontSize:13.5, fontWeight:700, color:TEXT }}>{d.count}</span>
+            <span style={{ fontSize:14.5, color:MUTED }}>{STATUS_LABELS[d.status]}</span>
+            <span style={{ fontSize:14.5, fontWeight:700, color:TEXT }}>{d.count}</span>
           </div>
         ))}
       </div>
@@ -286,14 +286,14 @@ function DailyColumns({ data }) {
 // ── Horizontal bars: top routes by trip count ────────────────────────────────
 function RouteBars({ data }) {
   const max = Math.max(...data.map(d => d.count), 1)
-  if (data.length === 0) return <p style={{ fontSize:14.5, color:MUTED, padding:'40px 0', textAlign:'center' }}>No rides yet</p>
+  if (data.length === 0) return <p style={{ fontSize:15, color:MUTED, padding:'40px 0', textAlign:'center' }}>No rides yet</p>
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:14, paddingTop:4 }}>
       {data.map(d => (
         <div key={d.route}>
           <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5, gap:10 }}>
-            <span style={{ fontSize:14, color:TEXT, fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.route}</span>
-            <span style={{ fontSize:14, color:MUTED, fontWeight:600, flexShrink:0, fontVariantNumeric:'tabular-nums' }}>{d.count}</span>
+            <span style={{ fontSize:14.5, color:TEXT, fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.route}</span>
+            <span style={{ fontSize:14.5, color:MUTED, fontWeight:600, flexShrink:0, fontVariantNumeric:'tabular-nums' }}>{d.count}</span>
           </div>
           <div style={{ height:8, borderRadius:4, background:'#f1f3ee', overflow:'hidden' }}>
             <div style={{ height:'100%', width:`${(d.count / max) * 100}%`, borderRadius:4, background:GREEN }}/>
@@ -355,12 +355,12 @@ export default function AdminDashboard() {
 
   return (
     <AdminLayout title="Dashboard">
-      <p style={{ color:MUTED, fontSize:14, marginBottom:20 }}>Ride analytics and activity overview.</p>
+      <p style={{ color:MUTED, fontSize:14.5, marginBottom:20 }}>Ride analytics and activity overview.</p>
 
       {error && (
         <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10, marginBottom:20 }}>
           <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
-          <p style={{ fontSize:14.5, color:'#ef4444', margin:0 }}>{error}</p>
+          <p style={{ fontSize:15, color:'#ef4444', margin:0 }}>{error}</p>
         </div>
       )}
 
@@ -400,14 +400,14 @@ export default function AdminDashboard() {
                     <p style={{ fontSize:15, fontWeight:700, color:TEXT, margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                       {a.title}
                     </p>
-                    <p style={{ fontSize:13.5, color:MUTED, margin:'3px 0 0', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{a.sub}</p>
+                    <p style={{ fontSize:14.5, color:MUTED, margin:'3px 0 0', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{a.sub}</p>
                   </div>
-                  <span style={{ fontSize:13, fontWeight:700, padding:'3px 10px', borderRadius:50,
+                  <span style={{ fontSize:14, fontWeight:700, padding:'3px 10px', borderRadius:50,
                     background:a.bg, color:a.fg, border:`1px solid ${a.bd}`, flexShrink:0 }}>{a.tag}</span>
                 </div>
               ))}
               {alertRows(alerts).length > 6 && (
-                <p style={{ fontSize:13.5, color:MUTED, margin:'10px 0 0' }}>
+                <p style={{ fontSize:14.5, color:MUTED, margin:'10px 0 0' }}>
                   +{alertRows(alerts).length - 6} more — see Alerts for the full list
                 </p>
               )}
@@ -444,7 +444,7 @@ export default function AdminDashboard() {
             <Card>
               <CardHeader title="Recent Rides" viewAll="/admin/rides"/>
               {data.recentRides.length === 0 ? (
-                <p style={{ fontSize:14.5, color:MUTED, padding:'30px 0', textAlign:'center' }}>No rides yet</p>
+                <p style={{ fontSize:15, color:MUTED, padding:'30px 0', textAlign:'center' }}>No rides yet</p>
               ) : data.recentRides.map((r, i) => {
                 const pill = rideStatusPill(r.status)
                 return (
@@ -454,11 +454,11 @@ export default function AdminDashboard() {
                       <p style={{ fontSize:15, fontWeight:700, color:TEXT, margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                         {r.pickup} → {r.destination}
                       </p>
-                      <p style={{ fontSize:13.5, color:MUTED, margin:'3px 0 0' }}>
+                      <p style={{ fontSize:14.5, color:MUTED, margin:'3px 0 0' }}>
                         {r.riderName || 'Unknown rider'}{r.fare ? ` · ${naira(r.fare)}` : ''}
                       </p>
                     </div>
-                    <span style={{ fontSize:13, fontWeight:700, padding:'3px 10px', borderRadius:50,
+                    <span style={{ fontSize:14, fontWeight:700, padding:'3px 10px', borderRadius:50,
                       background:pill.bg, color:pill.fg, border:`1px solid ${pill.bd}`, flexShrink:0 }}>{pill.label}</span>
                   </div>
                 )
@@ -467,21 +467,21 @@ export default function AdminDashboard() {
             <Card>
               <CardHeader title="Drivers" viewAll="/admin/drivers"/>
               {data.topDrivers.length === 0 ? (
-                <p style={{ fontSize:14.5, color:MUTED, padding:'30px 0', textAlign:'center' }}>No drivers yet</p>
+                <p style={{ fontSize:15, color:MUTED, padding:'30px 0', textAlign:'center' }}>No drivers yet</p>
               ) : data.topDrivers.map((d, i) => (
                 <div key={d.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 0',
                   borderTop: i > 0 ? `1px solid ${BORDER}` : 'none' }}>
                   <div style={{ width:36, height:36, borderRadius:'50%', background:'#ccff00', color:'#243800',
-                    display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:14, flexShrink:0 }}>
+                    display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:14.5, flexShrink:0 }}>
                     {(d.name || '?').charAt(0).toUpperCase()}
                   </div>
                   <div style={{ flex:1, minWidth:0 }}>
                     <p style={{ fontSize:15, fontWeight:700, color:TEXT, margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.name}</p>
-                    <p style={{ fontSize:13.5, color:MUTED, margin:'3px 0 0' }}>
+                    <p style={{ fontSize:14.5, color:MUTED, margin:'3px 0 0' }}>
                       {d.vehicle || 'No vehicle on file'} · {d.trips} trip{d.trips === 1 ? '' : 's'}
                     </p>
                   </div>
-                  <span style={{ fontSize:13, fontWeight:700, padding:'3px 10px', borderRadius:50, flexShrink:0,
+                  <span style={{ fontSize:14, fontWeight:700, padding:'3px 10px', borderRadius:50, flexShrink:0,
                     background: d.isOnline ? '#ecfdf3' : CHIP,
                     color: d.isOnline ? '#027a48' : MUTED,
                     border: `1px solid ${d.isOnline ? '#abefc6' : BORDER}` }}>
@@ -496,18 +496,18 @@ export default function AdminDashboard() {
           <Card>
             <CardHeader title="Recent Activity" sub="Latest events across the platform"/>
             {data.recentActivity.length === 0 ? (
-              <p style={{ fontSize:14.5, color:MUTED, padding:'30px 0', textAlign:'center' }}>No activity yet</p>
+              <p style={{ fontSize:15, color:MUTED, padding:'30px 0', textAlign:'center' }}>No activity yet</p>
             ) : data.recentActivity.map((a, i) => (
               <div key={i} style={{ display:'flex', alignItems:'center', gap:14, padding:'13px 0',
                 borderTop: i > 0 ? `1px solid ${BORDER}` : 'none' }}>
                 <Clock size={16} color={MUTED} style={{ flexShrink:0 }}/>
                 <div style={{ flex:1, minWidth:0 }}>
                   <p style={{ fontSize:15, fontWeight:700, color:TEXT, margin:0 }}>{a.action}</p>
-                  <p style={{ fontSize:13.5, color:MUTED, margin:'3px 0 0', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                  <p style={{ fontSize:14.5, color:MUTED, margin:'3px 0 0', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                     {a.actor}{a.detail ? ` · ${a.detail}` : ''} · {new Date(a.at).toLocaleString('en-NG', { timeZone:'Africa/Lagos' })}
                   </p>
                 </div>
-                <span style={{ fontSize:13, fontWeight:600, padding:'3px 10px', borderRadius:50,
+                <span style={{ fontSize:14, fontWeight:600, padding:'3px 10px', borderRadius:50,
                   background:CHIP, color:MUTED, border:`1px solid ${BORDER}`, flexShrink:0 }}>
                   {CATEGORY_TAGS[a.category] || a.category}
                 </span>

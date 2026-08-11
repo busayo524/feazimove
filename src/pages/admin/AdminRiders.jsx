@@ -31,12 +31,12 @@ export default function AdminRiders() {
   return (
     <AdminLayout title="Riders">
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20, flexWrap:'wrap', gap:10 }}>
-        <p style={{ color:MUTED, fontSize:14 }}>{riders.length} rider{riders.length !== 1 ? 's' : ''} registered</p>
+        <p style={{ color:MUTED, fontSize:14.5 }}>{riders.length} rider{riders.length !== 1 ? 's' : ''} registered</p>
         <form onSubmit={handleSearch} style={{ display:'flex', gap:8 }}>
           <div style={{ position:'relative' }}>
             <Search size={15} color={MUTED} style={{ position:'absolute', left:12, top:'50%', transform:'translateY(-50%)' }}/>
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, email, phone…"
-              style={{ padding:'9px 14px 9px 34px', borderRadius:10, border:`1px solid ${BORDER}`, fontSize:14.5, width:240, fontFamily:'inherit', outline:'none', background:CARD, color:TEXT }}/>
+              style={{ padding:'9px 14px 9px 34px', borderRadius:10, border:`1px solid ${BORDER}`, fontSize:15, width:240, fontFamily:'inherit', outline:'none', background:CARD, color:TEXT }}/>
           </div>
         </form>
       </div>
@@ -44,17 +44,17 @@ export default function AdminRiders() {
       {error && (
         <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10, marginBottom:16 }}>
           <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
-          <p style={{ fontSize:14.5, color:'#ef4444' }}>{error}</p>
+          <p style={{ fontSize:15, color:'#ef4444' }}>{error}</p>
         </div>
       )}
 
       <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, overflow:'hidden', boxShadow:'0 1px 3px rgba(0,0,0,0.04)' }}>
         <div className="fm-scroll-x">
-        <table style={{ width:'100%', borderCollapse:'collapse', fontSize:14 }}>
+        <table style={{ width:'100%', borderCollapse:'collapse', fontSize:14.5 }}>
           <thead>
             <tr style={{ background:CARD, textAlign:'left' }}>
               {['Rider','Trips','Wallet','Rating','Status','Last Ride',''].map(h => (
-                <th key={h} style={{ padding:'12px 16px', fontSize:13.5, color:MUTED, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.04em' }}>{h}</th>
+                <th key={h} style={{ padding:'12px 16px', fontSize:14.5, color:MUTED, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.04em' }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -67,18 +67,18 @@ export default function AdminRiders() {
               <tr key={r.id} style={{ borderTop:`1px solid ${BORDER}` }}>
                 <td style={{ padding:'12px 16px' }}>
                   <p style={{ fontWeight:700, color:TEXT }}>{r.name}</p>
-                  <p style={{ fontSize:13.5, color:MUTED }}>{r.email || r.phone}</p>
+                  <p style={{ fontSize:14.5, color:MUTED }}>{r.email || r.phone}</p>
                 </td>
                 <td style={{ padding:'12px 16px', color:TEXT }}>{r.tripCount}</td>
                 <td style={{ padding:'12px 16px', color:TEXT }}>₦{r.walletBalance.toLocaleString()}</td>
                 <td style={{ padding:'12px 16px', color:TEXT }}>{r.rating ? `⭐ ${r.rating}` : '—'}</td>
                 <td style={{ padding:'12px 16px' }}>
-                  <span style={{ fontSize:12.5, fontWeight:700, padding:'3px 10px', borderRadius:20,
+                  <span style={{ fontSize:14, fontWeight:700, padding:'3px 10px', borderRadius:20,
                     background: r.isActive ? '#f3fbd3' : DANGER_SOFT, color: r.isActive ? '#3f6212' : '#ef4444', border: r.isActive ? '1px solid #dff0a8' : '1px solid #fecdca' }}>
                     {r.isActive ? 'Active' : 'Suspended'}
                   </span>
                 </td>
-                <td style={{ padding:'12px 16px', color:MUTED, fontSize:14.5 }}>
+                <td style={{ padding:'12px 16px', color:MUTED, fontSize:15 }}>
                   {r.lastRide ? new Date(r.lastRide).toLocaleDateString() : '—'}
                 </td>
                 <td style={{ padding:'12px 16px', textAlign:'right' }}>

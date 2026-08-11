@@ -1,5 +1,5 @@
 import { NEON, ON_NEON_HARD as NT, BG, TEXT, ADMIN_BORDER as BORDER, HEADER,
-  SB_BG, SB_BORDER, SB_TEXT, SB_MUTED, SB_CARD, SB_HOVER } from '../theme/palette'
+  SB_BG, SB_BORDER, SB_TEXT, SB_MUTED, SB_CARD, SB_HOVER, SB_ACTIVE, SB_ACTIVE_BG } from '../theme/palette'
 import React, { useState, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -79,7 +79,7 @@ export default function AppLayout({ children, title }){
       <div style={{ padding:'28px 20px 20px', borderBottom:`1px solid ${SB_BORDER}` }}>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
           <img src={faviconImg} alt="FeaziMove" style={{ width:38, height:38, objectFit:'contain', display:'block', flexShrink:0 }} />
-          <span style={{ fontStyle:'normal', fontSize:18, letterSpacing:'-0.01em', color:'#fff' }}>
+          <span style={{ fontStyle:'normal', fontSize:18, letterSpacing:'-0.01em', color:SB_TEXT }}>
             <span style={{ fontWeight:500 }}>Feazi</span><span style={{ fontWeight:900 }}>Move</span>
           </span>
         </div>
@@ -92,10 +92,10 @@ export default function AppLayout({ children, title }){
             style={({ isActive }) => ({
               display:'flex', alignItems:'center', gap:12,
               padding:'11px 14px', borderRadius:12, marginBottom:4,
-              textDecoration:'none', fontWeight:600, fontSize:14,
+              textDecoration:'none', fontWeight:600, fontSize:14.5,
               transition:'all 0.15s',
-              background: isActive ? NAV_ACTIVE_BG : 'transparent',
-              color: isActive ? NEON : SB_TEXT,
+              background: isActive ? SB_ACTIVE_BG : 'transparent',
+              color: isActive ? SB_ACTIVE : SB_TEXT,
               border: '1.5px solid transparent',
             })}
             onMouseEnter={e => { if (!e.currentTarget.style.background.includes('204')) e.currentTarget.style.background = SB_HOVER }}
@@ -110,10 +110,10 @@ export default function AppLayout({ children, title }){
           style={({ isActive }) => ({
             display:'flex', alignItems:'center', gap:12,
             padding:'11px 14px', borderRadius:12, marginTop:8,
-            textDecoration:'none', fontWeight:600, fontSize:14,
+            textDecoration:'none', fontWeight:600, fontSize:14.5,
             transition:'all 0.15s',
-            background: isActive ? NAV_ACTIVE_BG : 'transparent',
-            color: isActive ? NEON : SB_TEXT,
+            background: isActive ? SB_ACTIVE_BG : 'transparent',
+            color: isActive ? SB_ACTIVE : SB_TEXT,
             border: '1.5px solid transparent',
           })}>
           <User size={19}/> Profile
@@ -125,7 +125,7 @@ export default function AppLayout({ children, title }){
         {/* Role switcher — only shown when user has both roles */}
         {user?.canRide && user?.canDrive && (
           <button onClick={handleSwitch} disabled={switching}
-            style={{ width:'100%', marginBottom:8, padding:'9px 14px', borderRadius:12, border:`1.5px solid ${NEON}`, background:'transparent', color:NEON, fontWeight:700, fontSize:13, cursor:switching?'not-allowed':'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8, fontFamily:'inherit', opacity:switching?0.6:1, transition:'all 0.15s' }}>
+            style={{ width:'100%', marginBottom:8, padding:'9px 14px', borderRadius:12, border:`1.5px solid ${NEON}`, background:'transparent', color:NEON, fontWeight:700, fontSize:14, cursor:switching?'not-allowed':'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8, fontFamily:'inherit', opacity:switching?0.6:1, transition:'all 0.15s' }}>
             {switching ? 'Switching…' : user?.role === 'driver' ? 'Switch to Rider' : 'Switch to Driver'}
           </button>
         )}
@@ -133,18 +133,18 @@ export default function AppLayout({ children, title }){
           <div style={{ width:34, height:34, borderRadius:'50%', background:NEON, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, overflow:'hidden' }}>
             {avatarUrl
               ? <img src={avatarUrl} alt="avatar" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
-              : <span style={{ color:NT, fontWeight:800, fontSize:14 }}>{initials}</span>
+              : <span style={{ color:NT, fontWeight:800, fontSize:14.5 }}>{initials}</span>
             }
           </div>
           <div style={{ flex:1, minWidth:0 }}>
-            <p style={{ color:'#fff', fontWeight:700, fontSize:13, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+            <p style={{ color:SB_TEXT, fontWeight:700, fontSize:14, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
               {user?.firstName} {user?.lastName}
             </p>
-            <p style={{ color:SB_MUTED, fontSize:11, textTransform:'capitalize', marginTop:1 }}>{user?.role}</p>
+            <p style={{ color:SB_MUTED, fontSize:12.5, textTransform:'capitalize', marginTop:1 }}>{user?.role}</p>
           </div>
         </div>
         <button onClick={handleLogout}
-          style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'10px', borderRadius:12, background:SB_CARD, border:`1.5px solid ${SB_BORDER}`, color:SB_TEXT, fontWeight:600, fontSize:14, cursor:'pointer', transition:'all 0.15s', fontFamily:'inherit' }}
+          style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'10px', borderRadius:12, background:SB_CARD, border:`1.5px solid ${SB_BORDER}`, color:SB_TEXT, fontWeight:600, fontSize:14.5, cursor:'pointer', transition:'all 0.15s', fontFamily:'inherit' }}
           onMouseEnter={e => { e.currentTarget.style.background='rgba(239,68,68,0.15)'; e.currentTarget.style.color='#f87171'; e.currentTarget.style.borderColor='rgba(239,68,68,0.3)' }}
           onMouseLeave={e => { e.currentTarget.style.background=SB_CARD; e.currentTarget.style.color=SB_TEXT; e.currentTarget.style.borderColor=SB_BORDER }}>
           <LogOut size={16}/> Sign Out
@@ -195,14 +195,14 @@ export default function AppLayout({ children, title }){
             <button onClick={() => setOpen(!open)} style={{ display:'none', background:'none', border:'none', cursor:'pointer', color:TEXT, padding:4, flexShrink:0 }} className="mobile-menu-btn" aria-label="Toggle menu">
               <Menu size={22}/>
             </button>
-            <p style={{ fontSize:14, color:TEXT, margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', minWidth:0 }}><span className="fm-date-long">{todayLong}</span><span className="fm-date-short">{todayShort}</span></p>
+            <p style={{ fontSize:14.5, color:TEXT, margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', minWidth:0 }}><span className="fm-date-long">{todayLong}</span><span className="fm-date-short">{todayShort}</span></p>
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
             {/* Wallet balance pill — opens the wallet page for every role */}
             <button onClick={() => navigate('/wallet')}
               style={{ display:'flex', alignItems:'center', gap:7, padding:'6px 13px', borderRadius:50, background:NEON, border:'none', cursor:'pointer', textDecoration:'none', flexShrink:0 }}>
               <Wallet size={14} color={NT} strokeWidth={2.5}/>
-              <span style={{ fontWeight:800, fontSize:13, color:NT, letterSpacing:'-0.01em' }}>
+              <span style={{ fontWeight:800, fontSize:14, color:NT, letterSpacing:'-0.01em' }}>
                 {walletBalance === null ? '—' : `₦${walletBalance.toLocaleString()}`}
               </span>
             </button>
@@ -211,7 +211,7 @@ export default function AppLayout({ children, title }){
               <div style={{ width:34, height:34, borderRadius:'50%', background:NEON, display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden' }}>
                 {avatarUrl
                   ? <img src={avatarUrl} alt="avatar" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
-                  : <span style={{ color:NT, fontWeight:800, fontSize:13 }}>{initials}</span>
+                  : <span style={{ color:NT, fontWeight:800, fontSize:14 }}>{initials}</span>
                 }
               </div>
             </NavLink>

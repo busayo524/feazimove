@@ -35,13 +35,13 @@ function CandidateDriverCard({ d }) {
       <PersonAvatar userId={d.id} name={d.name} size={42} fontSize={15}/>
       <div style={{ minWidth:0, flex:1 }}>
         <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-          <p style={{ fontSize:13.5, fontWeight:800, color:TEXT, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.name}</p>
-          <span style={{ display:'flex', alignItems:'center', gap:3, fontSize:12, fontWeight:700, color:OLIVE, flexShrink:0 }}>
+          <p style={{ fontSize:14.5, fontWeight:800, color:TEXT, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.name}</p>
+          <span style={{ display:'flex', alignItems:'center', gap:3, fontSize:13.5, fontWeight:700, color:OLIVE, flexShrink:0 }}>
             <Star size={11} fill="#eab308" color="#eab308"/>{(d.rating ?? 5).toFixed(1)}
           </span>
         </div>
         {(d.vehicleMake || d.vehicleModel || d.plateNumber) && (
-          <p style={{ display:'flex', alignItems:'center', gap:5, fontSize:11.5, color:MUTED, marginTop:2 }}>
+          <p style={{ display:'flex', alignItems:'center', gap:5, fontSize:13, color:MUTED, marginTop:2 }}>
             <Car size={11}/>
             <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
               {[d.vehicleMake, d.vehicleModel, d.vehicleColor].filter(Boolean).join(' ')}{d.plateNumber ? ` · ${d.plateNumber}` : ''}
@@ -63,7 +63,7 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, on
       onClick={(matching || confirmingPay) ? undefined : onClose}>
       <div onClick={e=>e.stopPropagation()} style={{background:CARD,borderRadius:18,maxWidth:380,width:'100%',overflow:'hidden',boxShadow:'0 16px 40px rgba(0,0,0,0.25)',maxHeight:'95vh',display:'flex',flexDirection:'column'}}>
         <div style={{padding:'10px 14px',borderBottom:`1px solid ${BORDER}`,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-          <p style={{fontWeight:700,fontSize:12,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em'}}>Route Preview</p>
+          <p style={{fontWeight:700,fontSize:13.5,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em'}}>Route Preview</p>
           {/* X stays available while confirming a payment — it only hides the
               modal; confirmation keeps running and reopens it when done */}
           {!matching && (
@@ -74,7 +74,7 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, on
         {(!token || token==='your_mapbox_public_token_here' || !pc || !dc) ? (
           <div style={{height:100,background:OLIVE,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:6,position:'relative',overflow:'hidden'}}>
             <MapPin size={22} color={NEON}/>
-            <p style={{color:'rgba(255,255,255,0.7)',fontSize:11,textAlign:'center',padding:'0 20px'}}>Map preview unavailable for this route</p>
+            <p style={{color:'rgba(255,255,255,0.7)',fontSize:12.5,textAlign:'center',padding:'0 20px'}}>Map preview unavailable for this route</p>
           </div>
         ) : (
           <img
@@ -88,23 +88,23 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, on
           <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:8}}>
             <div style={{flex:1,display:'flex',alignItems:'center',gap:8,minWidth:0}}>
               <div style={{width:9,height:9,borderRadius:'50%',background:MOSS,border:`2px solid ${BORDER}`,flexShrink:0}}/>
-              <div style={{minWidth:0}}><p style={{fontSize:10,color:MUTED,fontWeight:500}}>Takeoff</p><p style={{fontSize:13,color:TEXT,fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{pickup}</p></div>
+              <div style={{minWidth:0}}><p style={{fontSize:11.5,color:MUTED,fontWeight:500}}>Takeoff</p><p style={{fontSize:14,color:TEXT,fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{pickup}</p></div>
             </div>
             <div style={{flex:1,display:'flex',alignItems:'center',gap:8,minWidth:0}}>
               <div style={{width:9,height:9,borderRadius:'50%',background:OLIVE,border:`2px solid ${BORDER}`,flexShrink:0}}/>
-              <div style={{minWidth:0}}><p style={{fontSize:10,color:MUTED,fontWeight:500}}>Dropoff</p><p style={{fontSize:13,color:TEXT,fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{dropoff}</p></div>
+              <div style={{minWidth:0}}><p style={{fontSize:11.5,color:MUTED,fontWeight:500}}>Dropoff</p><p style={{fontSize:14,color:TEXT,fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{dropoff}</p></div>
             </div>
           </div>
 
           <div style={{display:'flex',gap:8}}>
             <div style={{flex:1,background:CARD,border:`1.5px solid ${BORDER}`,borderRadius:10,padding:'8px 10px',display:'flex',alignItems:'center',gap:6}}>
               <Clock size={13} color={MOSS}/>
-              <span style={{fontSize:12,fontWeight:700,color:TEXT}}>{timeSlot}</span>
+              <span style={{fontSize:13.5,fontWeight:700,color:TEXT}}>{timeSlot}</span>
             </div>
             <div style={{flex:1,background:CARD,border:`1.5px solid ${BORDER}`,borderRadius:10,padding:'8px 10px',textAlign:'center'}}>
               {fareKobo!=null
-                ? <span style={{fontSize:14,fontWeight:800,color:OLIVE}}>{`₦${Math.round(fareKobo/100).toLocaleString()}`}</span>
-                : <span style={{fontSize:11,fontWeight:600,color:MUTED}}>Set once matched</span>}
+                ? <span style={{fontSize:14.5,fontWeight:800,color:OLIVE}}>{`₦${Math.round(fareKobo/100).toLocaleString()}`}</span>
+                : <span style={{fontSize:12.5,fontWeight:600,color:MUTED}}>Set once matched</span>}
             </div>
           </div>
 
@@ -114,7 +114,7 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, on
             <div style={{display:'flex',alignItems:'center',gap:6,marginTop:8,background:NEON_SOFT,
               border:`1.5px solid ${NEON}`,borderRadius:10,padding:'8px 10px'}}>
               <CalendarDays size={13} color={OLIVE}/>
-              <span style={{fontSize:12,fontWeight:800,color:OLIVE}}>{formatScheduleDate(scheduleDate,{long:true})}</span>
+              <span style={{fontSize:13.5,fontWeight:800,color:OLIVE}}>{formatScheduleDate(scheduleDate,{long:true})}</span>
             </div>
           )}
         </div>
@@ -124,18 +124,18 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, on
             <>
               {candidateDrivers?.length > 0 && (
                 <div style={{ marginBottom:4 }}>
-                  <p style={{ fontSize:12, fontWeight:800, color:OLIVE, textTransform:'uppercase', letterSpacing:'0.05em', margin:'6px 0 8px' }}>
+                  <p style={{ fontSize:13.5, fontWeight:800, color:OLIVE, textTransform:'uppercase', letterSpacing:'0.05em', margin:'6px 0 8px' }}>
                     {candidateDrivers.length === 1 ? 'Driver found on your route!' : `${candidateDrivers.length} drivers found on your route!`}
                   </p>
                   {candidateDrivers.map(d => <CandidateDriverCard key={d.id} d={d}/>)}
-                  <p style={{ fontSize:11.5, color:MUTED, lineHeight:1.4, marginBottom:4 }}>
+                  <p style={{ fontSize:13, color:MUTED, lineHeight:1.4, marginBottom:4 }}>
                     Waiting for a driver to confirm — the first driver to confirm starts your ride.
                   </p>
                 </div>
               )}
               <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,padding:'12px 0',marginBottom:8}}>
                 <div style={{width:18,height:18,border:`2.5px solid ${OLIVE}`,borderTopColor:'transparent',borderRadius:'50%',animation:'bookride-spin 0.8s linear infinite'}}/>
-                <span style={{fontSize:13,fontWeight:700,color:OLIVE}}>
+                <span style={{fontSize:14,fontWeight:700,color:OLIVE}}>
                   {candidateDrivers?.length ? 'Waiting for your driver to confirm…' : 'Matching you with a driver on your route…'}
                 </span>
               </div>
@@ -143,7 +143,7 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, on
                 width:'100%',padding:'11px',borderRadius:50,
                 background:'none',border:`1.5px solid ${BORDER}`,
                 color:cancelling?MUTED:'#ef4444',
-                fontWeight:700,fontSize:14,
+                fontWeight:700,fontSize:14.5,
                 cursor:cancelling?'not-allowed':'pointer',
                 fontFamily:'inherit',transition:'all 0.2s'
               }}>
@@ -155,13 +155,13 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, on
             <>
               <TransferDetails transfer={payPending.transfer} secondsLeft={paySecondsLeft}
                 waitingLabel="Waiting for your transfer…"/>
-              <p style={{fontSize:11.5,color:MUTED,textAlign:'center',margin:'8px 0 0',lineHeight:1.4}}>
+              <p style={{fontSize:13,color:MUTED,textAlign:'center',margin:'8px 0 0',lineHeight:1.4}}>
                 Your booking continues automatically the moment the transfer arrives.
               </p>
               <button onClick={onCancelPay} style={{
                 width:'100%',padding:'10px',borderRadius:50,marginTop:8,
                 background:'none',border:`1.5px solid ${BORDER}`,color:MUTED,
-                fontWeight:700,fontSize:12.5,cursor:'pointer',fontFamily:'inherit'
+                fontWeight:700,fontSize:14,cursor:'pointer',fontFamily:'inherit'
               }}>
                 Cancel this payment
               </button>
@@ -169,13 +169,13 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, on
           ) : insufficient ? (
             /* Fare not covered by wallet — two ways to pay */
             <>
-              <p style={{fontSize:11,fontStyle:'italic',color:MUTED,textAlign:'center',margin:'0 0 8px'}}>
+              <p style={{fontSize:12.5,fontStyle:'italic',color:MUTED,textAlign:'center',margin:'0 0 8px'}}>
                 {scheduleDate ? `*Your seat is held for ${formatScheduleDate(scheduleDate)}*` : '*Booking should be within 24hrs*'}
               </p>
               <button onClick={onPayNow} disabled={payBusy} style={{
                 width:'100%',padding:'11px',borderRadius:50,
                 background:payBusy?BORDER:NEON,color:payBusy?MUTED:ON_NEON,
-                fontWeight:800,fontSize:14,border:'none',
+                fontWeight:800,fontSize:14.5,border:'none',
                 cursor:payBusy?'not-allowed':'pointer',
                 display:'flex',alignItems:'center',justifyContent:'center',gap:8,
                 transition:'all 0.2s',
@@ -188,26 +188,26 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, on
               <button onClick={onSetupWallet} style={{
                 width:'100%',padding:'11px',borderRadius:50,marginTop:8,
                 background:'none',border:`1.5px solid ${BORDER}`,color:OLIVE,
-                fontWeight:700,fontSize:13,cursor:'pointer',
+                fontWeight:700,fontSize:14,cursor:'pointer',
                 display:'flex',alignItems:'center',justifyContent:'center',gap:8,
                 fontFamily:'inherit',transition:'all 0.2s'
               }}>
                 <WalletIcon size={15}/> Set up my wallet instead
               </button>
-              <p style={{fontSize:11.5,color:MUTED,textAlign:'center',margin:'8px 0 0',lineHeight:1.4}}>
+              <p style={{fontSize:13,color:MUTED,textAlign:'center',margin:'8px 0 0',lineHeight:1.4}}>
                 {walletKobo > 0 && `₦${Math.round(walletKobo/100).toLocaleString()} already in your wallet covers the rest. `}
                 Fund your wallet once and future rides pay automatically.
               </p>
             </>
           ) : (
             <>
-            <p style={{fontSize:11,fontStyle:'italic',color:MUTED,textAlign:'center',margin:'0 0 8px'}}>
+            <p style={{fontSize:12.5,fontStyle:'italic',color:MUTED,textAlign:'center',margin:'0 0 8px'}}>
               {scheduleDate ? `*Matching starts ${formatScheduleDate(scheduleDate)}*` : '*Booking should be within 24hrs*'}
             </p>
             <button onClick={onBook} disabled={booking} style={{
               width:'100%',padding:'11px',borderRadius:50,
               background:booking?BORDER:NEON,color:booking?MUTED:ON_NEON,
-              fontWeight:800,fontSize:14,border:'none',
+              fontWeight:800,fontSize:14.5,border:'none',
               cursor:booking?'not-allowed':'pointer',
               display:'flex',alignItems:'center',justifyContent:'center',gap:10,
               transition:'all 0.2s',
@@ -656,7 +656,7 @@ export default function BookRide(){
             <button onClick={()=>setShowPreview(true)}
               style={{ position:'fixed', bottom:18, left:'50%', transform:'translateX(-50%)', zIndex:900,
                 display:'flex', alignItems:'center', gap:8, padding:'10px 18px', borderRadius:50,
-                background:OLIVE, color:NEON, border:'none', fontWeight:800, fontSize:13,
+                background:OLIVE, color:NEON, border:'none', fontWeight:800, fontSize:14,
                 cursor:'pointer', fontFamily:'inherit', boxShadow:'0 6px 20px rgba(0,0,0,0.25)' }}>
               ₦{Number(payPending.transfer?.amount || 0).toLocaleString()} payment in progress — view details
             </button>
@@ -665,7 +665,7 @@ export default function BookRide(){
           <div className="bookride-scroll">
             {/* Service selector */}
             <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:14,padding:12,marginBottom:10,boxShadow:'0 2px 8px rgba(36,56,0,0.06)'}}>
-              <p style={{fontWeight:700,fontSize:12,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:8}}>What do you need?</p>
+              <p style={{fontWeight:700,fontSize:13.5,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:8}}>What do you need?</p>
               <div style={{display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:6}}>
                 {SERVICES.map(s=>{
                   const active=service===s.id
@@ -678,7 +678,7 @@ export default function BookRide(){
                       boxShadow:active?'0 4px 16px rgba(204,255,0,0.35)':'none'
                     }}>
                       <div style={{display:'flex',justifyContent:'center',marginBottom:4,color:active? ON_NEON :MOSS}}>{s.icon}</div>
-                      <p style={{fontWeight:700,fontSize:11.5,color:active? ON_NEON :TEXT,marginBottom:1,lineHeight:1.15}}>{s.label}</p>
+                      <p style={{fontWeight:700,fontSize:13,color:active? ON_NEON :TEXT,marginBottom:1,lineHeight:1.15}}>{s.label}</p>
                       <p style={{fontSize:9.5,color:active?'rgba(36,56,0,0.65)':MUTED,lineHeight:1.2}}>{s.desc}</p>
                     </button>
                   )
@@ -693,10 +693,10 @@ export default function BookRide(){
                 background:NEON_SOFT,border:`1.5px solid ${NEON}`,borderRadius:12,marginBottom:10}}>
                 <CalendarCheck size={17} color={OLIVE} style={{flexShrink:0,marginTop:1}}/>
                 <div style={{minWidth:0}}>
-                  <p style={{fontSize:13,fontWeight:800,color:OLIVE}}>
+                  <p style={{fontSize:14,fontWeight:800,color:OLIVE}}>
                     Scheduled for {formatScheduleDate(scheduledOk.date,{long:true})}
                   </p>
-                  <p style={{fontSize:11.5,color:MUTED,marginTop:2,lineHeight:1.4}}>
+                  <p style={{fontSize:13,color:MUTED,marginTop:2,lineHeight:1.4}}>
                     {scheduledOk.driver
                       ? `${scheduledOk.driver.name} has scheduled the same trip and is reserved for you. Your ride starts matching on the day.`
                       : "We'll match you with a driver on that day — and pair you early if one schedules the same trip."}
@@ -758,16 +758,16 @@ export default function BookRide(){
                     forceUpward
                   />
                   <div>
-                    <label style={{display:'block',fontSize:13,fontWeight:600,color:TEXT,marginBottom:6}}>Additional Comment (optional)</label>
+                    <label style={{display:'block',fontSize:14,fontWeight:600,color:TEXT,marginBottom:6}}>Additional Comment (optional)</label>
                     <textarea value={comment} onChange={e=>setComment(e.target.value.slice(0,200))}
                       placeholder="A note for your driver - e.g I'll be waiting at Ogudu Express" rows={2}
-                      style={{width:'100%',padding:'12px 14px',borderRadius:10,fontSize:14,border:`1.5px solid ${BORDER}`,outline:'none',background:CARD,color:TEXT,fontFamily:'inherit',resize:'vertical',boxSizing:'border-box'}}
+                      style={{width:'100%',padding:'12px 14px',borderRadius:10,fontSize:14.5,border:`1.5px solid ${BORDER}`,outline:'none',background:CARD,color:TEXT,fontFamily:'inherit',resize:'vertical',boxSizing:'border-box'}}
                       onFocus={e=>e.target.style.borderColor=MOSS} onBlur={e=>e.target.style.borderColor=BORDER}/>
                   </div>
                   {!showPreview && (
                     <button type="button" onClick={()=>canPreview && setShowPreview(true)} disabled={!canPreview}
                       style={{
-                        width:'100%',padding:'12px',borderRadius:10,fontSize:14,fontWeight:700,
+                        width:'100%',padding:'12px',borderRadius:10,fontSize:14.5,fontWeight:700,
                         background:canPreview?NEON:BORDER,color:canPreview? ON_NEON :MUTED,
                         border:'none',cursor:canPreview?'pointer':'not-allowed',
                         display:'flex',alignItems:'center',justifyContent:'center',gap:8,
@@ -784,7 +784,7 @@ export default function BookRide(){
                 <div style={{display:'flex',alignItems:'flex-start',gap:10,padding:'12px 14px',
                   background:DANGER_SOFT,border:'1px solid #fca5a5',borderRadius:12,marginBottom:10}}>
                   <span style={{fontSize:16,flexShrink:0}}>⚠️</span>
-                  <p style={{fontSize:13,color:'#ef4444'}}>{bookError}</p>
+                  <p style={{fontSize:14,color:'#ef4444'}}>{bookError}</p>
                 </div>
               )}
 
@@ -793,7 +793,7 @@ export default function BookRide(){
                   matching, and the rider can still call them off from here. */}
               {upcoming.length > 0 && (
                 <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:14,padding:12,marginBottom:10,boxShadow:'0 2px 8px rgba(36,56,0,0.06)'}}>
-                  <p style={{fontWeight:700,fontSize:12,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:8}}>
+                  <p style={{fontWeight:700,fontSize:13.5,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:8}}>
                     Your Scheduled Rides
                   </p>
                   {upcoming.map(s=>(
@@ -801,27 +801,27 @@ export default function BookRide(){
                       padding:'10px 12px',marginBottom:8,background:s.isToday?NEON_SOFT:CARD}}>
                       <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
                         <CalendarDays size={13} color={OLIVE} style={{flexShrink:0}}/>
-                        <p style={{fontSize:12.5,fontWeight:800,color:OLIVE}}>
+                        <p style={{fontSize:14,fontWeight:800,color:OLIVE}}>
                           {formatScheduleDate(s.scheduledDate,{long:true})} · {s.timeSlot}
                         </p>
                         {s.fare!=null && (
-                          <span style={{marginLeft:'auto',fontSize:12,fontWeight:800,color:OLIVE,
+                          <span style={{marginLeft:'auto',fontSize:13.5,fontWeight:800,color:OLIVE,
                             border:`1.5px solid ${BORDER}`,borderRadius:8,padding:'1px 7px',flexShrink:0,whiteSpace:'nowrap'}}>
                             ₦{s.fare.toLocaleString()}
                           </span>
                         )}
                       </div>
-                      <p style={{fontSize:11.5,color:MUTED,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                      <p style={{fontSize:13,color:MUTED,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
                         {s.pickup} → {s.dropoff}
                       </p>
                       {s.driver ? (
                         <div style={{display:'flex',alignItems:'center',gap:8,marginTop:8}}>
                           <PersonAvatar userId={s.driver.id} name={s.driver.name} size={30} fontSize={12} radius={9}/>
                           <div style={{minWidth:0,flex:1}}>
-                            <p style={{fontSize:12,fontWeight:700,color:TEXT,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                            <p style={{fontSize:13.5,fontWeight:700,color:TEXT,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
                               {s.driver.name} reserved for you
                             </p>
-                            <p style={{fontSize:10.5,color:MUTED,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                            <p style={{fontSize:12,color:MUTED,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
                               <Star size={9} fill="#eab308" color="#eab308" style={{display:'inline',verticalAlign:'-1px'}}/> {s.driver.rating.toFixed(1)}
                               {[s.driver.vehicleMake,s.driver.vehicleModel].filter(Boolean).length
                                 ? ` · ${[s.driver.vehicleMake,s.driver.vehicleModel,s.driver.vehicleColor].filter(Boolean).join(' ')}` : ''}
@@ -830,7 +830,7 @@ export default function BookRide(){
                           </div>
                         </div>
                       ) : (
-                        <p style={{fontSize:11,color:MUTED,marginTop:6,fontStyle:'italic'}}>
+                        <p style={{fontSize:12.5,color:MUTED,marginTop:6,fontStyle:'italic'}}>
                           {s.isToday ? 'Matching with drivers today' : 'Waiting for a driver on this day'}
                         </p>
                       )}
@@ -838,7 +838,7 @@ export default function BookRide(){
                         style={{marginTop:8,display:'flex',alignItems:'center',gap:6,padding:'6px 10px',borderRadius:8,
                           background:'none',border:`1.5px solid ${BORDER}`,
                           color:cancellingId===s.bookingId?MUTED:'#ef4444',
-                          fontWeight:700,fontSize:11.5,fontFamily:'inherit',
+                          fontWeight:700,fontSize:13,fontFamily:'inherit',
                           cursor:cancellingId===s.bookingId?'not-allowed':'pointer'}}>
                         <Trash2 size={12}/>{cancellingId===s.bookingId?'Cancelling…':'Cancel this ride'}
                       </button>

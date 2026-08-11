@@ -62,15 +62,15 @@ export default function StepUpModal({ purpose, title = 'Confirm it’s you', act
         </div>
 
         {sending ? (
-          <p style={{ fontSize: 13.5, color: MUTED, padding: '18px 0', textAlign: 'center' }}>Sending a code to your email…</p>
+          <p style={{ fontSize: 14.5, color: MUTED, padding: '18px 0', textAlign: 'center' }}>Sending a code to your email…</p>
         ) : sendError ? (
           <div style={{ textAlign: 'center', padding: '10px 0' }}>
-            <p style={{ fontSize: 13.5, color: '#ef4444', marginBottom: 14 }}>{sendError}</p>
-            <button onClick={requestCode} style={{ padding: '10px 22px', borderRadius: 50, background: NEON, color:ON_NEON, fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Try again</button>
+            <p style={{ fontSize: 14.5, color: '#ef4444', marginBottom: 14 }}>{sendError}</p>
+            <button onClick={requestCode} style={{ padding: '10px 22px', borderRadius: 50, background: NEON, color:ON_NEON, fontWeight: 700, fontSize: 14.5, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Try again</button>
           </div>
         ) : (
           <form onSubmit={submit}>
-            <p style={{ fontSize: 13.5, color: MUTED, lineHeight: 1.6, margin: '2px 0 16px' }}>
+            <p style={{ fontSize: 14.5, color: MUTED, lineHeight: 1.6, margin: '2px 0 16px' }}>
               For your security, we emailed a 6-digit code to <strong style={{ color: TEXT }}>{masked}</strong>
               {actionText ? ` to confirm you want to ${actionText}.` : '.'} Enter it below.
             </p>
@@ -79,7 +79,7 @@ export default function StepUpModal({ purpose, title = 'Confirm it’s you', act
             {error && (
               <div style={{ display: 'flex', gap: 8, padding: '10px 12px', background: DANGER_SOFT, border: '1px solid #fca5a5', borderRadius: 10, margin: '12px 0 0' }}>
                 <AlertCircle size={14} color="#ef4444" style={{ flexShrink: 0, marginTop: 1 }} />
-                <p style={{ fontSize: 13, color: '#ef4444' }}>{error}</p>
+                <p style={{ fontSize: 14, color: '#ef4444' }}>{error}</p>
               </div>
             )}
             <button type="submit" disabled={busy || code.length !== 6}
@@ -87,7 +87,7 @@ export default function StepUpModal({ purpose, title = 'Confirm it’s you', act
               {busy ? 'Verifying…' : 'Confirm'}
             </button>
             <button type="button" onClick={requestCode} disabled={busy}
-              style={{ width: '100%', marginTop: 8, padding: '10px', borderRadius: 50, background: 'transparent', color: MUTED, fontWeight: 600, fontSize: 13, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+              style={{ width: '100%', marginTop: 8, padding: '10px', borderRadius: 50, background: 'transparent', color: MUTED, fontWeight: 600, fontSize: 14, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
               Resend code
             </button>
           </form>

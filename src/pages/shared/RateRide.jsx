@@ -104,8 +104,8 @@ export default function RateRide(){
           </div>
           <div style={{flex:1,minWidth:0}}>
             <p style={{fontWeight:700,fontSize:15,color:TEXT}}>{other?.name || `Your ${otherLabel}`}</p>
-            <p style={{fontSize:13,color:MUTED,marginTop:2}}>{ride.pickup} → {ride.destination}</p>
-            <p style={{fontSize:12,color:MUTED,marginTop:1}}>{ride.date}</p>
+            <p style={{fontSize:14,color:MUTED,marginTop:2}}>{ride.pickup} → {ride.destination}</p>
+            <p style={{fontSize:13.5,color:MUTED,marginTop:1}}>{ride.date}</p>
           </div>
           <p style={{fontWeight:900,fontSize:18,color:ON_NEON_HARD,background:NEON,padding:'4px 12px',borderRadius:10,flexShrink:0}}>₦{ride.fare.toLocaleString()}</p>
         </div>
@@ -115,7 +115,7 @@ export default function RateRide(){
         {/* Stars */}
         <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,padding:24,marginBottom:16,boxShadow:'0 1px 3px rgba(0,0,0,0.04)',textAlign:'center'}}>
           <p style={{fontWeight:700,fontSize:15,color:TEXT,marginBottom:6}}>How was your {isRider ? 'ride' : 'rider'}?</p>
-          <p style={{fontSize:13,color:MUTED,marginBottom:20}}>Tap a star to rate</p>
+          <p style={{fontSize:14,color:MUTED,marginBottom:20}}>Tap a star to rate</p>
           <div style={{display:'flex',justifyContent:'center',gap:10,marginBottom:12}}>
             {[1,2,3,4,5].map(s=>(
               <button key={s} type="button" onMouseEnter={()=>setHover(s)} onMouseLeave={()=>setHover(0)} onClick={()=>setStars(s)} style={{background:'none',border:'none',cursor:'pointer',padding:4,transition:'transform 0.1s',transform:(hover||stars)>=s?'scale(1.15)':'scale(1)'}}>
@@ -129,7 +129,7 @@ export default function RateRide(){
         {submitError && (
           <div style={{display:'flex',alignItems:'flex-start',gap:10,padding:'12px 14px',background:DANGER_SOFT,border:'1px solid #fca5a5',borderRadius:12,marginBottom:16}}>
             <AlertCircle size={16} color="#ef4444" style={{flexShrink:0,marginTop:1}}/>
-            <p style={{fontSize:13,color:'#ef4444'}}>{submitError}</p>
+            <p style={{fontSize:14,color:'#ef4444'}}>{submitError}</p>
           </div>
         )}
 

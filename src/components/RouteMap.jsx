@@ -18,8 +18,8 @@ export default function RouteMap({ pickup, dropoff }) {
   return (
     <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:16, overflow:'hidden', marginBottom:16, boxShadow:'0 2px 8px rgba(36,56,0,0.06)' }}>
       <div style={{ padding:'14px 20px', borderBottom:`1px solid ${BORDER}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-        <p style={{ fontWeight:700, fontSize:13, color:MOSS, textTransform:'uppercase', letterSpacing:'0.06em' }}>Route Map</p>
-        {pickup && dropoff && <span style={{ fontSize:12, color:MOSS, fontWeight:600 }}>{pickup} → {dropoff}</span>}
+        <p style={{ fontWeight:700, fontSize:14, color:MOSS, textTransform:'uppercase', letterSpacing:'0.06em' }}>Route Map</p>
+        {pickup && dropoff && <span style={{ fontSize:13.5, color:MOSS, fontWeight:600 }}>{pickup} → {dropoff}</span>}
       </div>
 
       {pickup && dropoff ? (
@@ -30,10 +30,10 @@ export default function RouteMap({ pickup, dropoff }) {
               <div style={{ position:'relative', width:44, height:44, borderRadius:'50%', background:NEON, display:'flex', alignItems:'center', justifyContent:'center' }}>
                 <MapPin size={22} color={OLIVE}/>
               </div>
-              <p style={{ color:'rgba(255,255,255,0.7)', fontSize:13, textAlign:'center', position:'relative' }}>
+              <p style={{ color:'rgba(255,255,255,0.7)', fontSize:14, textAlign:'center', position:'relative' }}>
                 {!pCoord || !dCoord
                   ? <>Route preview unavailable for this pickup/dropoff.</>
-                  : <>Add <code style={{ color:NEON, fontSize:12 }}>VITE_MAPBOX_TOKEN</code> to <code style={{ color:NEON, fontSize:12 }}>.env</code><br/>to see the route map</>
+                  : <>Add <code style={{ color:NEON, fontSize:13.5 }}>VITE_MAPBOX_TOKEN</code> to <code style={{ color:NEON, fontSize:13.5 }}>.env</code><br/>to see the route map</>
                 }
               </p>
             </div>
@@ -52,16 +52,16 @@ export default function RouteMap({ pickup, dropoff }) {
             <div style={{ display:'flex', alignItems:'center', gap:12 }}>
               <div style={{ width:10, height:10, borderRadius:'50%', background:MOSS, border:`2px solid ${BORDER}`, flexShrink:0 }}/>
               <div>
-                <p style={{ fontSize:11, color:MUTED, fontWeight:500 }}>Pickup</p>
-                <p style={{ fontSize:14, color:TEXT, fontWeight:600 }}>{pickup}</p>
+                <p style={{ fontSize:12.5, color:MUTED, fontWeight:500 }}>Pickup</p>
+                <p style={{ fontSize:14.5, color:TEXT, fontWeight:600 }}>{pickup}</p>
               </div>
             </div>
             <div style={{ width:2, height:16, background:BORDER, marginLeft:4 }}/>
             <div style={{ display:'flex', alignItems:'center', gap:12 }}>
               <div style={{ width:10, height:10, borderRadius:'50%', background:OLIVE, border:`2px solid ${BORDER}`, flexShrink:0 }}/>
               <div>
-                <p style={{ fontSize:11, color:MUTED, fontWeight:500 }}>Drop-off</p>
-                <p style={{ fontSize:14, color:TEXT, fontWeight:600 }}>{dropoff}</p>
+                <p style={{ fontSize:12.5, color:MUTED, fontWeight:500 }}>Drop-off</p>
+                <p style={{ fontSize:14.5, color:TEXT, fontWeight:600 }}>{dropoff}</p>
               </div>
             </div>
           </div>
@@ -69,7 +69,7 @@ export default function RouteMap({ pickup, dropoff }) {
       ) : (
         <div style={{ height:200, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:10, background:BG }}>
           <MapPin size={32} color={BORDER}/>
-          <p style={{ fontSize:13, color:MUTED, textAlign:'center' }}>Select pickup and drop-off<br/>to see your route on the map</p>
+          <p style={{ fontSize:14, color:MUTED, textAlign:'center' }}>Select pickup and drop-off<br/>to see your route on the map</p>
         </div>
       )}
     </div>
