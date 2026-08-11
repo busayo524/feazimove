@@ -1,11 +1,12 @@
+import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, NEON, ACCENT as OLIVE, DANGER_SOFT, ON_NEON } from '../../theme/palette'
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
 import { api } from '../../services/api'
 import { AlertCircle, ArrowDownLeft, ArrowUpRight, CheckCircle2, Ban, Download } from 'lucide-react'
 
-const CARD = '#ffffff', BORDER = '#e5e7eb', TEXT = '#1a1a1a', MUTED = '#6b7280', BG = '#f5f7f2'
-const NEON = '#ccff00', OLIVE = '#243800'
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
 
 function StatCard({ label, value, accent }) {
   return (
@@ -98,7 +99,7 @@ export default function AdminPayments() {
       <p style={{ color:MUTED, fontSize:14, marginBottom:20 }}>Wallet balances, driver payouts, and platform revenue.</p>
 
       {error && (
-        <div style={{ display:'flex', gap:8, padding:'10px 14px', background:'#fef2f2', border:'1px solid #fca5a5', borderRadius:10, marginBottom:20 }}>
+        <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10, marginBottom:20 }}>
           <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
           <p style={{ fontSize:13, color:'#ef4444' }}>{error}</p>
         </div>
@@ -141,7 +142,7 @@ export default function AdminPayments() {
                     )}
                   </div>
                   <button onClick={() => handlePayout(p.id, 'approve')} disabled={busyId===p.id}
-                    style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 12px', borderRadius:8, border:'none', background:NEON, color:OLIVE, fontWeight:700, fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
+                    style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 12px', borderRadius:8, border:'none', background:NEON, color:ON_NEON, fontWeight:700, fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
                     <CheckCircle2 size={13}/> Approve
                   </button>
                   <button onClick={() => handlePayout(p.id, 'reject')} disabled={busyId===p.id}
@@ -166,7 +167,7 @@ export default function AdminPayments() {
                   </button>
                 ))}
                 <button onClick={handleExport} disabled={exporting}
-                  style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 14px', borderRadius:8, border:'none', background:NEON, color:OLIVE, fontWeight:800, fontSize:12, cursor: exporting?'wait':'pointer', fontFamily:'inherit' }}>
+                  style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 14px', borderRadius:8, border:'none', background:NEON, color:ON_NEON, fontWeight:800, fontSize:12, cursor: exporting?'wait':'pointer', fontFamily:'inherit' }}>
                   <Download size={13}/> {exporting ? 'Exporting…' : 'Export to Excel'}
                 </button>
               </div>
@@ -177,7 +178,7 @@ export default function AdminPayments() {
               </p>
             ) : data.transactions.map(t => (
               <div key={t.id} style={{ display:'flex', alignItems:'center', gap:14, padding:'12px 18px', borderTop:`1px solid ${BORDER}` }}>
-                <div style={{ width:32, height:32, borderRadius:9, background: t.type==='credit' ? '#dcfce7' : '#fef2f2', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <div style={{ width:32, height:32, borderRadius:9, background: t.type==='credit' ? '#dcfce7' : DANGER_SOFT, display:'flex', alignItems:'center', justifyContent:'center' }}>
                   {t.type === 'credit' ? <ArrowDownLeft size={15} color="#15803d"/> : <ArrowUpRight size={15} color="#ef4444"/>}
                 </div>
                 <div style={{ flex:1 }}>

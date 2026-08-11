@@ -1,10 +1,11 @@
+import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, DANGER_SOFT } from '../../theme/palette'
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
 import { api } from '../../services/api'
 import { Search, Eye, AlertCircle } from 'lucide-react'
 
-const CARD = '#ffffff', BORDER = '#e5e7eb', TEXT = '#1a1a1a', MUTED = '#6b7280', BG = '#f5f7f2'
+/* palette: themed tokens — see src/theme/palette.js */
 
 export default function AdminRiders() {
   const [riders, setRiders] = useState([])
@@ -41,7 +42,7 @@ export default function AdminRiders() {
       </div>
 
       {error && (
-        <div style={{ display:'flex', gap:8, padding:'10px 14px', background:'#fef2f2', border:'1px solid #fca5a5', borderRadius:10, marginBottom:16 }}>
+        <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10, marginBottom:16 }}>
           <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
           <p style={{ fontSize:13, color:'#ef4444' }}>{error}</p>
         </div>
@@ -73,7 +74,7 @@ export default function AdminRiders() {
                 <td style={{ padding:'12px 16px', color:TEXT }}>{r.rating ? `⭐ ${r.rating}` : '—'}</td>
                 <td style={{ padding:'12px 16px' }}>
                   <span style={{ fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:20,
-                    background: r.isActive ? '#f3fbd3' : '#fef2f2', color: r.isActive ? '#3f6212' : '#ef4444', border: r.isActive ? '1px solid #dff0a8' : '1px solid #fecdca' }}>
+                    background: r.isActive ? '#f3fbd3' : DANGER_SOFT, color: r.isActive ? '#3f6212' : '#ef4444', border: r.isActive ? '1px solid #dff0a8' : '1px solid #fecdca' }}>
                     {r.isActive ? 'Active' : 'Suspended'}
                   </span>
                 </td>

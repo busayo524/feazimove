@@ -1,10 +1,11 @@
+import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, ADMIN_BG as BG, NEON, ACCENT as OLIVE, ON_NEON, CHIP, DANGER_SOFT } from '../../theme/palette'
 import React, { useEffect, useState } from 'react'
 import AdminLayout from '../../components/AdminLayout'
 import { api } from '../../services/api'
 import { AlertCircle, Plus, X, Check } from 'lucide-react'
 
-const CARD = '#ffffff', BORDER = '#e5e7eb', TEXT = '#1a1a1a', MUTED = '#6b7280', BG = '#f5f7f2'
-const NEON = '#ccff00', OLIVE = '#243800'
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
 
 function fmt(kobo) { return `₦${Math.round(kobo / 100).toLocaleString()}` }
 
@@ -84,7 +85,7 @@ function PlatformFeeControl() {
         <span style={{ fontSize:13, color:MUTED }}>%</span>
       </div>
       <button onClick={save} disabled={saving || feePercent === null}
-        style={{ padding:'8px 14px', borderRadius:10, background:NEON, border:'none', color:OLIVE, fontWeight:700, fontSize:13, cursor:saving?'not-allowed':'pointer', fontFamily:'inherit', opacity:saving?0.7:1 }}>
+        style={{ padding:'8px 14px', borderRadius:10, background:NEON, border:'none', color:ON_NEON, fontWeight:700, fontSize:13, cursor:saving?'not-allowed':'pointer', fontFamily:'inherit', opacity:saving?0.7:1 }}>
         {saving ? 'Saving…' : 'Save'}
       </button>
       {saved && <Check size={16} color="#15803d"/>}
@@ -134,7 +135,7 @@ export default function AdminPricing() {
         <p style={{ color:MUTED, fontSize:14 }}>Click a fare to edit it. Changes apply to new bookings only — fares already quoted to a rider are locked in.</p>
         <button onClick={() => setShowAdd(true)}
           style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 18px', borderRadius:10, background:NEON, border:'none',
-            color:OLIVE, fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit', flexShrink:0 }}>
+            color:ON_NEON, fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit', flexShrink:0 }}>
           <Plus size={15}/> Add Route
         </button>
       </div>
@@ -143,14 +144,14 @@ export default function AdminPricing() {
         {['morning', 'evening'].map(p => (
           <button key={p} onClick={() => setPeriod(p)}
             style={{ padding:'7px 18px', borderRadius:8, border:'none', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit', textTransform:'capitalize',
-              background: period===p ? NEON : 'transparent', color: period===p ? OLIVE : MUTED }}>
+              background: period===p ? NEON : 'transparent', color:period===p ? ON_NEON : MUTED }}>
             {p}
           </button>
         ))}
       </div>
 
       {error && (
-        <div style={{ display:'flex', gap:8, padding:'10px 14px', background:'#fef2f2', border:'1px solid #fca5a5', borderRadius:10, marginBottom:16 }}>
+        <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10, marginBottom:16 }}>
           <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
           <p style={{ fontSize:13, color:'#ef4444' }}>{error}</p>
         </div>
@@ -180,7 +181,7 @@ export default function AdminPricing() {
                 </td>
                 <td style={{ padding:'12px 16px' }}>
                   <span style={{ fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:20,
-                    background: r.isActive ? '#dcfce7' : '#f3f4f6', color: r.isActive ? '#15803d' : MUTED }}>
+                    background: r.isActive ? '#dcfce7' : CHIP, color: r.isActive ? '#15803d' : MUTED }}>
                     {r.isActive ? 'Active' : 'Inactive'}
                   </span>
                 </td>
@@ -416,7 +417,7 @@ function AddRouteModal({ period, onClose, onCreated }) {
           {error && <p style={{ fontSize:13, color:'#ef4444', marginBottom:12 }}>{error}</p>}
 
           <button type="submit" disabled={busy}
-            style={{ width:'100%', padding:'11px', borderRadius:10, background:NEON, color:OLIVE, border:'none', fontWeight:700, fontSize:14, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit', opacity:busy?0.7:1 }}>
+            style={{ width:'100%', padding:'11px', borderRadius:10, background:NEON, color:ON_NEON, border:'none', fontWeight:700, fontSize:14, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit', opacity:busy?0.7:1 }}>
             {busy ? 'Creating…' : isFanOut ? (() => { const n = selectedDropoffs.length + (newDropoffChecked && newDropoffName.trim() ? 1 : 0); return `Create ${n || ''} Route${n === 1 ? '' : 's'}` })() : 'Create Route'}
           </button>
         </form>

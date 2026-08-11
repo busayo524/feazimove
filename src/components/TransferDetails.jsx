@@ -1,8 +1,9 @@
+import { NEON, ACCENT as OLIVE, MOSS, TEXT, MUTED, NEON_SOFT } from '../theme/palette'
 import React, { useState } from 'react'
 import { Copy, Check, RefreshCw, X } from 'lucide-react'
 
-const NEON='#ccff00', OLIVE='#243800', MOSS='#4C6900'
-const TEXT='#1a2800', MUTED='#4C6900'
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
 
 export function CopyBtn({ text }) {
   const [copied, setCopied] = useState(false)
@@ -22,7 +23,7 @@ export default function TransferDetails({ transfer, secondsLeft, onCancel, waiti
   const mins = Math.max(0, Math.floor(secondsLeft / 60))
   const secs = Math.max(0, secondsLeft % 60)
   return (
-    <div style={{ background:'#f7ffe0', border:`1.5px solid ${NEON}`, borderRadius:14, padding:16 }}>
+    <div style={{ background:NEON_SOFT, border:`1.5px solid ${NEON}`, borderRadius:14, padding:16 }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10 }}>
         <div>
           <p style={{ fontWeight:800, fontSize:13, color:OLIVE }}>Transfer to this account</p>

@@ -1,8 +1,9 @@
+import { NEON, ACCENT as OLIVE, CARD, BORDER, TEXT, MUTED, DANGER_SOFT, ON_NEON } from '../theme/palette'
 import React, { useEffect, useState } from 'react'
 import { api } from '../services/api'
 import { ShieldCheck, X, AlertCircle } from 'lucide-react'
 
-const NEON = '#ccff00', OLIVE = '#243800', CARD = '#ffffff', BORDER = '#e9ecef', TEXT = '#1a2800', MUTED = '#4C6900'
+/* palette: themed tokens — see src/theme/palette.js */
 
 /**
  * Step-up 2FA modal. Requests an emailed code for `purpose` on mount, collects
@@ -65,7 +66,7 @@ export default function StepUpModal({ purpose, title = 'Confirm it’s you', act
         ) : sendError ? (
           <div style={{ textAlign: 'center', padding: '10px 0' }}>
             <p style={{ fontSize: 13.5, color: '#ef4444', marginBottom: 14 }}>{sendError}</p>
-            <button onClick={requestCode} style={{ padding: '10px 22px', borderRadius: 50, background: NEON, color: OLIVE, fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Try again</button>
+            <button onClick={requestCode} style={{ padding: '10px 22px', borderRadius: 50, background: NEON, color:ON_NEON, fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Try again</button>
           </div>
         ) : (
           <form onSubmit={submit}>
@@ -76,13 +77,13 @@ export default function StepUpModal({ purpose, title = 'Confirm it’s you', act
             <input value={code} inputMode="numeric" maxLength={6} autoFocus placeholder="000000"
               onChange={e => setCode(e.target.value.replace(/\D/g, ''))} style={inp} />
             {error && (
-              <div style={{ display: 'flex', gap: 8, padding: '10px 12px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 10, margin: '12px 0 0' }}>
+              <div style={{ display: 'flex', gap: 8, padding: '10px 12px', background: DANGER_SOFT, border: '1px solid #fca5a5', borderRadius: 10, margin: '12px 0 0' }}>
                 <AlertCircle size={14} color="#ef4444" style={{ flexShrink: 0, marginTop: 1 }} />
                 <p style={{ fontSize: 13, color: '#ef4444' }}>{error}</p>
               </div>
             )}
             <button type="submit" disabled={busy || code.length !== 6}
-              style={{ width: '100%', marginTop: 16, padding: '13px', borderRadius: 50, background: (busy || code.length !== 6) ? BORDER : NEON, color: (busy || code.length !== 6) ? MUTED : OLIVE, fontWeight: 800, fontSize: 15, border: 'none', cursor: (busy || code.length !== 6) ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+              style={{ width: '100%', marginTop: 16, padding: '13px', borderRadius: 50, background: (busy || code.length !== 6) ? BORDER : NEON, color: (busy || code.length !== 6) ? MUTED : ON_NEON, fontWeight: 800, fontSize: 15, border: 'none', cursor: (busy || code.length !== 6) ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
               {busy ? 'Verifying…' : 'Confirm'}
             </button>
             <button type="button" onClick={requestCode} disabled={busy}

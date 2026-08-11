@@ -1,11 +1,12 @@
+import { CARD, BORDER, TEXT, MUTED, BG, ACCENT as OLIVE, MOSS, NEON, ON_NEON, DANGER_SOFT } from '../../theme/palette'
 import React, { useState, useEffect } from 'react'
 import AppLayout from '../../components/AppLayout'
 import { MapPin, Star, ChevronRight, Package, Clock } from 'lucide-react'
 import { api } from '../../services/api'
 
-const NEON='#ccff00', NT='#0a0a0a'
-const OLIVE='#243800', MOSS='#4C6900'
-const CARD='#ffffff', BORDER='#e9ecef', TEXT='#1a2800', MUTED='#4C6900', BG='#f6f7f9'
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
 
 const FILTERS=['All','Rides','Packages','Cancelled']
 
@@ -19,7 +20,7 @@ const STATUS_LABEL = {
 }
 
 function statusStyle(s) {
-  if (s === 'cancelled')       return { bg:'#fef2f2', color:'#ef4444', border:'#fca5a5' }
+  if (s === 'cancelled')       return { bg:DANGER_SOFT, color:'#ef4444', border:'#fca5a5' }
   if (s === 'completed')       return { bg:BG,        color:OLIVE,     border:BORDER    }
   if (s === 'in_transit')      return { bg:'#f0fdf4', color:'#166534', border:'#bbf7d0' }
   if (s === 'arrived_pickup')  return { bg:'#fffbeb', color:'#92400e', border:'#fde68a' }
@@ -64,7 +65,7 @@ export default function TripHistory(){
         ].map(([l, v]) => (
           <div key={l} style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:14,padding:'18px 8px',textAlign:'center',boxShadow:'0 2px 8px rgba(36,56,0,0.06)',minWidth:0,overflow:'hidden'}}>
             <p style={{fontWeight:900,fontSize:'clamp(0.95rem,4vw,1.6rem)',color:OLIVE,letterSpacing:'-0.03em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{loading ? '—' : v}</p>
-            <p style={{fontSize:11,color:'rgba(36,56,0,0.6)',fontWeight:600,marginTop:2}}>{l}</p>
+            <p style={{fontSize:11,color:MUTED,fontWeight:600,marginTop:2}}>{l}</p>
           </div>
         ))}
       </div>
@@ -73,7 +74,7 @@ export default function TripHistory(){
       <div style={{display:'flex',gap:8,marginBottom:16,overflowX:'auto',paddingBottom:4}}>
         {FILTERS.map(f => (
           <button key={f} onClick={() => setFilter(f)}
-            style={{padding:'8px 18px',borderRadius:50,fontSize:13,fontWeight:700,border:`1.5px solid ${filter===f?NEON:BORDER}`,background:filter===f?NEON:CARD,color:filter===f?OLIVE:MOSS,cursor:'pointer',whiteSpace:'nowrap',flexShrink:0,transition:'all 0.15s'}}>
+            style={{padding:'8px 18px',borderRadius:50,fontSize:13,fontWeight:700,border:`1.5px solid ${filter===f?NEON:BORDER}`,background:filter===f?NEON:CARD,color:filter===f? ON_NEON :MOSS,cursor:'pointer',whiteSpace:'nowrap',flexShrink:0,transition:'all 0.15s'}}>
             {f}
           </button>
         ))}
@@ -106,7 +107,7 @@ export default function TripHistory(){
               style={{display:'flex',alignItems:'center',gap:14,padding:'14px 18px',borderBottom:i<filtered.length-1?`1px solid ${BORDER}`:'none',cursor:'pointer',transition:'background 0.15s'}}
               onMouseEnter={e=>e.currentTarget.style.background=BG}
               onMouseLeave={e=>e.currentTarget.style.background=CARD}>
-              <div style={{width:40,height:40,borderRadius:12,flexShrink:0,background:trip.status==='cancelled'?'#fef2f2':isPending?'#f8f8f8':NEON,display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <div style={{width:40,height:40,borderRadius:12,flexShrink:0,background:trip.status==='cancelled'?DANGER_SOFT:isPending?'#f8f8f8':NEON,display:'flex',alignItems:'center',justifyContent:'center'}}>
                 {isPending
                   ? <Clock size={18} color='#888'/>
                   : trip.type==='send'

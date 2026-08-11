@@ -1,3 +1,4 @@
+import { NEON } from '../../theme/palette'
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { HomeLogoLink } from '../../components/StandaloneApp'
@@ -5,7 +6,7 @@ import { ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react'
 import { api } from '../../services/api'
 import faviconImg from '../../assets/favicon.png'
 
-const NEON = '#ccff00'
+/* palette: themed tokens — see src/theme/palette.js */
 const DARK = '#0a0a0a'
 
 export default function ForgotPassword() {

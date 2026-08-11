@@ -1,10 +1,11 @@
+import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, NEON, CHIP, DANGER_SOFT } from '../../theme/palette'
 import React, { useEffect, useMemo, useState } from 'react'
 import AdminLayout from '../../components/AdminLayout'
 import { api } from '../../services/api'
 import { AlertCircle, PackageOpen, Users, Sparkles, Download, Search, Mail, Phone } from 'lucide-react'
 
-const CARD = '#ffffff', BORDER = '#e5e7eb', TEXT = '#1a1a1a', MUTED = '#6b7280'
-const NEON = '#ccff00'
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
 
 function fmtDate(d) {
   return new Date(d).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Lagos' })
@@ -13,7 +14,7 @@ function fmtDate(d) {
 function StatTile({ icon, label, value, accent }) {
   return (
     <div style={{ flex:1, minWidth:180, background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, padding:'16px 18px', display:'flex', alignItems:'center', gap:14 }}>
-      <div style={{ width:42, height:42, borderRadius:12, background:accent ? NEON : '#f3f4f6', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+      <div style={{ width:42, height:42, borderRadius:12, background:accent ? NEON : CHIP, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
         {icon}
       </div>
       <div>
@@ -65,7 +66,7 @@ export default function AdminMoveWaitlist() {
   if (error) {
     return (
       <AdminLayout title="Move Waitlist">
-        <div style={{ display:'flex', gap:8, padding:'10px 14px', background:'#fef2f2', border:'1px solid #fca5a5', borderRadius:10 }}>
+        <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10 }}>
           <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
           <p style={{ fontSize:13, color:'#ef4444' }}>{error}</p>
         </div>
@@ -99,7 +100,7 @@ export default function AdminMoveWaitlist() {
         </div>
         <button onClick={exportCsv} disabled={filtered.length === 0}
           style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 16px', borderRadius:10,
-            background: filtered.length === 0 ? '#f3f4f6' : '#1a2400', color: filtered.length === 0 ? MUTED : NEON,
+            background: filtered.length === 0 ? CHIP : '#1a2400', color: filtered.length === 0 ? MUTED : NEON,
             border:'none', fontWeight:700, fontSize:13, cursor: filtered.length === 0 ? 'not-allowed' : 'pointer', fontFamily:'inherit' }}>
           <Download size={14}/> Export CSV
         </button>
@@ -143,7 +144,7 @@ export default function AdminMoveWaitlist() {
                     <td style={{ padding:'12px 16px' }}>
                       {e.isDriver
                         ? <span style={{ fontSize:11, fontWeight:800, padding:'3px 10px', borderRadius:20, background:'#ecfccb', color:'#3f6212' }}>Driver</span>
-                        : <span style={{ fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:20, background:'#f3f4f6', color:MUTED }}>Rider</span>}
+                        : <span style={{ fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:20, background:CHIP, color:MUTED }}>Rider</span>}
                     </td>
                     <td style={{ padding:'12px 16px', color:MUTED, whiteSpace:'nowrap' }}>{fmtDate(e.joinedAt)}</td>
                   </tr>

@@ -1,10 +1,11 @@
+import { CARD, BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, DANGER_SOFT } from '../../theme/palette'
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
 import { api } from '../../services/api'
 import { AlertCircle, ArrowLeft, Navigation, Star, Wallet } from 'lucide-react'
 
-const CARD = '#ffffff', BORDER = '#e9ecef', TEXT = '#1a1a1a', MUTED = '#6b7280'
+/* palette: themed tokens — see src/theme/palette.js */
 
 const TRIP_STATUS_LABELS = {
   pending: 'Waiting for driver', driver_assigned: 'Driver assigned',
@@ -26,7 +27,7 @@ export default function AdminRiderDetail() {
   if (error) {
     return (
       <AdminLayout title="Rider">
-        <div style={{ display:'flex', gap:8, padding:'10px 14px', background:'#fef2f2', border:'1px solid #fca5a5', borderRadius:10 }}>
+        <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10 }}>
           <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
           <p style={{ fontSize:13, color:'#ef4444' }}>{error}</p>
         </div>
@@ -43,7 +44,7 @@ export default function AdminRiderDetail() {
         <div>
           <p style={{ color:MUTED, fontSize:13 }}>Rider ID: {rider.id}</p>
           <span style={{ fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:20, marginTop:6, display:'inline-block',
-            background: rider.isActive ? '#f3fbd3' : '#fef2f2', color: rider.isActive ? '#3f6212' : '#ef4444' }}>
+            background: rider.isActive ? '#f3fbd3' : DANGER_SOFT, color: rider.isActive ? '#3f6212' : '#ef4444' }}>
             {rider.isActive ? 'Active' : 'Suspended'}
           </span>
         </div>

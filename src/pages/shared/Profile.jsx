@@ -1,3 +1,4 @@
+import { CARD, BORDER, TEXT, MUTED, BG, ACCENT as OLIVE, ACCENT, MOSS, NEON, ON_NEON, DANGER_SOFT, SHADOW, ACCENT_FILL, ON_ACCENT_FILL, CHIP } from '../../theme/palette'
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/AppLayout'
@@ -9,11 +10,12 @@ import { compressImage } from '../../utils/compressImage'
 import { rememberAvatar } from '../../utils/avatarCache'
 import StepUpModal from '../../components/StepUpModal'
 import { CITIES, LAGOS_AREAS } from '../../constants/areas'
-import { User, Phone, Mail, Shield, Bell, ChevronRight, LogOut, Camera, CheckCircle, X, RefreshCw, Car, MapPin, AlertCircle, Landmark } from 'lucide-react'
+import { User, Phone, Mail, Shield, Bell, ChevronRight, LogOut, Camera, CheckCircle, X, RefreshCw, Car, MapPin, AlertCircle, Landmark, Sun, Moon, Smartphone as SmartphoneIcon } from 'lucide-react'
+import { useTheme } from '../../context/ThemeContext'
 
-const NEON='#ccff00', NT='#0a0a0a'
-const OLIVE='#243800', MOSS='#4C6900'
-const CARD='#ffffff', BORDER='#e9ecef', TEXT='#1a2800', MUTED='#4C6900', BG='#f6f7f9'
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
 
 function sanitize(v){return String(v).replace(/[<>"]/g,'').slice(0,100)}
 
@@ -189,7 +191,7 @@ function CameraModal({ onCapture, onClose }){
           </button>
           {!error && (
             <button onClick={capture} disabled={!ready}
-              style={{padding:'11px 28px',borderRadius:50,background:ready?NEON:'rgba(204,255,0,0.25)',border:'none',color:ready?OLIVE:'rgba(36,56,0,0.4)',fontWeight:800,fontSize:14,cursor:ready?'pointer':'not-allowed',fontFamily:'inherit',display:'flex',alignItems:'center',gap:8}}>
+              style={{padding:'11px 28px',borderRadius:50,background:ready?NEON:'rgba(204,255,0,0.25)',border:'none',color:ready? ON_NEON :'rgba(36,56,0,0.4)',fontWeight:800,fontSize:14,cursor:ready?'pointer':'not-allowed',fontFamily:'inherit',display:'flex',alignItems:'center',gap:8}}>
               <Camera size={15}/>Capture
             </button>
           )}
@@ -319,7 +321,7 @@ function ChangePasswordModal({ onClose }){
             style={{width:'100%',padding:'10px 12px',borderRadius:10,border:`1.5px solid ${BORDER}`,fontSize:14,marginBottom:16,fontFamily:'inherit',boxSizing:'border-box',background:CARD,color:TEXT}}/>
 
           {error&&(
-            <div style={{display:'flex',gap:8,padding:'10px 14px',background:'#fef2f2',border:'1px solid #fca5a5',borderRadius:10,marginBottom:14}}>
+            <div style={{display:'flex',gap:8,padding:'10px 14px',background:DANGER_SOFT,border:'1px solid #fca5a5',borderRadius:10,marginBottom:14}}>
               <AlertCircle size={14} color="#ef4444" style={{flexShrink:0,marginTop:1}}/>
               <p style={{fontSize:13,color:'#ef4444'}}>{error}</p>
             </div>
@@ -332,7 +334,7 @@ function ChangePasswordModal({ onClose }){
           )}
 
           <button type="submit" disabled={busy}
-            style={{width:'100%',padding:'13px',borderRadius:50,background:busy?BORDER:NEON,color:busy?MUTED:OLIVE,fontWeight:800,fontSize:15,border:'none',cursor:busy?'not-allowed':'pointer',fontFamily:'inherit'}}>
+            style={{width:'100%',padding:'13px',borderRadius:50,background:busy?BORDER:NEON,color:busy?MUTED:ON_NEON,fontWeight:800,fontSize:15,border:'none',cursor:busy?'not-allowed':'pointer',fontFamily:'inherit'}}>
             {busy?'Updating…':'Update Password'}
           </button>
         </form>
@@ -346,6 +348,57 @@ function ChangePasswordModal({ onClose }){
 }
 
 // ── Main Profile Component ────────────────────────────────────────────────────
+// ── Appearance ───────────────────────────────────────────────────────────────
+// Riders and drivers share this profile page, so both get the setting from one
+// place. 'System default' follows the phone or computer's own light/dark
+// setting and keeps following it — the label under it names what that is right
+// now, since "system default" tells you nothing on its own.
+function AppearanceSetting(){
+  const { theme, resolved, setTheme } = useTheme()
+  const OPTIONS = [
+    { key:'light',  icon:<Sun size={17}/>,       label:'Light',
+      sub:'Bright background, dark text' },
+    { key:'dark',   icon:<Moon size={17}/>,      label:'Dark',
+      sub:'Easier on the eyes and saves battery' },
+    { key:'system', icon:<SmartphoneIcon size={17}/>, label:'System default',
+      sub:`Follows your device — currently ${resolved}` },
+  ]
+  return (
+    <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,overflow:'hidden',marginBottom:16,boxShadow:`0 2px 8px ${SHADOW}`}}>
+      <div style={{padding:'14px 20px',borderBottom:`1px solid ${BORDER}`}}>
+        <p style={{fontWeight:700,fontSize:13,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em'}}>Appearance</p>
+      </div>
+      {OPTIONS.map((o,i)=>{
+        const on = theme === o.key
+        return (
+          <button key={o.key} onClick={()=>setTheme(o.key)}
+            aria-pressed={on}
+            style={{width:'100%',display:'flex',alignItems:'center',gap:14,padding:'15px 20px',
+              borderBottom:i<OPTIONS.length-1?`1px solid ${BORDER}`:'none',
+              background:CARD,border:'none',cursor:'pointer',textAlign:'left',
+              transition:'background 0.15s',fontFamily:'inherit'}}
+            onMouseEnter={e=>e.currentTarget.style.background=BG}
+            onMouseLeave={e=>e.currentTarget.style.background=CARD}>
+            <div style={{width:36,height:36,borderRadius:10,flexShrink:0,display:'flex',
+              alignItems:'center',justifyContent:'center',
+              background:on?NEON:CHIP,color:on?ON_NEON:MOSS}}>{o.icon}</div>
+            <div style={{flex:1,minWidth:0}}>
+              <p style={{fontSize:14,color:TEXT,fontWeight:on?800:600}}>{o.label}</p>
+              <p style={{fontSize:12,color:MUTED,marginTop:1}}>{o.sub}</p>
+            </div>
+            {/* Radio, drawn rather than a real input so it themes with the rest */}
+            <span style={{width:20,height:20,borderRadius:'50%',flexShrink:0,
+              border:`2px solid ${on?ACCENT:BORDER}`,display:'flex',alignItems:'center',
+              justifyContent:'center',transition:'border-color 0.15s'}}>
+              {on && <span style={{width:10,height:10,borderRadius:'50%',background:ACCENT}}/>}
+            </span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function Profile(){
   const {user,logout,updateUser,addRole,switchRole}=useAuth()
   const navigate=useNavigate()
@@ -429,12 +482,12 @@ export default function Profile(){
           <div style={{width:72,height:72,borderRadius:'50%',background:NEON,display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
             {avatarUrl
               ?<img src={avatarUrl} alt="Profile" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
-              :<span style={{color:OLIVE,fontWeight:900,fontSize:28,letterSpacing:'-0.03em'}}>{initials}</span>
+              :<span style={{color:ON_NEON,fontWeight:900,fontSize:28,letterSpacing:'-0.03em'}}>{initials}</span>
             }
           </div>
           <button onClick={()=>setShowPicker(true)}
             style={{position:'absolute',bottom:0,right:0,width:24,height:24,borderRadius:'50%',background:NEON,border:`1.5px solid ${CARD}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}} aria-label="Change photo">
-            <Camera size={12} color={OLIVE}/>
+            <Camera size={12} color={ON_NEON}/>
           </button>
         </div>
         <div style={{flex:1}}>
@@ -442,7 +495,7 @@ export default function Profile(){
           {saved&&<div style={{display:'flex',alignItems:'center',gap:6,marginTop:6}}><CheckCircle size={14} color={MOSS}/><span style={{fontSize:13,color:MOSS,fontWeight:600}}>Updated!</span></div>}
         </div>
         <button onClick={()=>setEditing(!editing)}
-          style={{padding:'9px 16px',borderRadius:10,fontWeight:700,fontSize:13,cursor:'pointer',background:editing?BG:OLIVE,border:`1px solid ${editing?BORDER:OLIVE}`,color:editing?OLIVE:'#fff'}}>
+          style={{padding:'9px 16px',borderRadius:10,fontWeight:700,fontSize:13,cursor:'pointer',background:editing?BG:ACCENT_FILL,border:`1px solid ${editing?BORDER:ACCENT_FILL}`,color:editing? ON_NEON :ON_ACCENT_FILL}}>
           {editing?'Cancel':'Edit'}
         </button>
       </div>
@@ -524,13 +577,13 @@ export default function Profile(){
             </div>
           </div>
           {saveError&&(
-            <div style={{display:'flex',gap:8,padding:'10px 14px',background:'#fef2f2',border:'1px solid #fca5a5',borderRadius:10,marginTop:14}}>
+            <div style={{display:'flex',gap:8,padding:'10px 14px',background:DANGER_SOFT,border:'1px solid #fca5a5',borderRadius:10,marginTop:14}}>
               <AlertCircle size={14} color="#ef4444" style={{flexShrink:0,marginTop:1}}/>
               <p style={{fontSize:13,color:'#ef4444'}}>{saveError}</p>
             </div>
           )}
           <button type="submit" disabled={saving}
-            style={{marginTop:16,width:'100%',padding:'13px',borderRadius:50,background:saving?BORDER:NEON,color:saving?MUTED:OLIVE,fontWeight:800,fontSize:15,border:'none',cursor:saving?'not-allowed':'pointer',fontFamily:'inherit'}}>
+            style={{marginTop:16,width:'100%',padding:'13px',borderRadius:50,background:saving?BORDER:NEON,color:saving?MUTED:ON_NEON,fontWeight:800,fontSize:15,border:'none',cursor:saving?'not-allowed':'pointer',fontFamily:'inherit'}}>
             {saving?'Saving…':'Save Changes'}
           </button>
         </form>
@@ -541,10 +594,10 @@ export default function Profile(){
         <div style={{padding:'14px 20px',borderBottom:`1px solid ${BORDER}`}}>
           <p style={{fontWeight:700,fontSize:13,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em'}}>Account Info</p>
         </div>
-        {[{icon:<Phone size={16} color={OLIVE}/>,label:'Phone',value:user?.phone||'—'},
-          {icon:<Mail size={16} color={OLIVE}/>,label:'Email',value:user?.email||'—'},
-          {icon:<User size={16} color={OLIVE}/>,label:'Role',value:user?.role||'rider',cap:true},
-          {icon:<Landmark size={16} color={OLIVE}/>,label:'Bank Account',value:user?.bankName?`${user.bankName} · ${user.bankAccountNumber||''}`:'Not added yet — tap Edit to add'}].map((item,i,arr)=>(
+        {[{icon:<Phone size={16} color={ON_NEON}/>,label:'Phone',value:user?.phone||'—'},
+          {icon:<Mail size={16} color={ON_NEON}/>,label:'Email',value:user?.email||'—'},
+          {icon:<User size={16} color={ON_NEON}/>,label:'Role',value:user?.role||'rider',cap:true},
+          {icon:<Landmark size={16} color={ON_NEON}/>,label:'Bank Account',value:user?.bankName?`${user.bankName} · ${user.bankAccountNumber||''}`:'Not added yet — tap Edit to add'}].map((item,i,arr)=>(
           <div key={item.label} style={{display:'flex',alignItems:'center',gap:14,padding:'14px 20px',borderBottom:i<arr.length-1?`1px solid ${BORDER}`:'none',transition:'background 0.15s'}}
             onMouseEnter={e=>e.currentTarget.style.background=BG}
             onMouseLeave={e=>e.currentTarget.style.background=CARD}>
@@ -557,6 +610,8 @@ export default function Profile(){
         ))}
       </div>
 
+      <AppearanceSetting/>
+
       {/* Settings */}
       <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,overflow:'hidden',marginBottom:16,boxShadow:'0 2px 8px rgba(36,56,0,0.06)'}}>
         {MENU.map((item,i)=>(
@@ -564,7 +619,7 @@ export default function Profile(){
             style={{width:'100%',display:'flex',alignItems:'center',gap:14,padding:'15px 20px',borderBottom:i<MENU.length-1?`1px solid ${BORDER}`:'none',background:CARD,border:'none',cursor:'pointer',textAlign:'left',transition:'background 0.15s',fontFamily:'inherit'}}
             onMouseEnter={e=>e.currentTarget.style.background=BG}
             onMouseLeave={e=>e.currentTarget.style.background=CARD}>
-            <div style={{width:36,height:36,borderRadius:10,background:NEON,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,color:OLIVE}}>{item.icon}</div>
+            <div style={{width:36,height:36,borderRadius:10,background:NEON,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,color:ON_NEON}}>{item.icon}</div>
             <div style={{flex:1}}>
               <p style={{fontSize:14,fontWeight:600,color:TEXT}}>{item.label}</p>
               <p style={{fontSize:12,color:MUTED,marginTop:1}}>{item.desc}</p>
@@ -588,10 +643,10 @@ export default function Profile(){
             <p style={{fontSize:14,color:TEXT,fontWeight:600}}>Rider</p>
             <p style={{fontSize:12,color:MUTED,marginTop:1}}>{user?.canRide?'Active — you can book rides':'Not registered'}</p>
           </div>
-          {user?.canRide&&user?.role==='rider'&&<span style={{fontSize:11,fontWeight:700,color:OLIVE,background:NEON,padding:'3px 10px',borderRadius:50}}>Active</span>}
+          {user?.canRide&&user?.role==='rider'&&<span style={{fontSize:11,fontWeight:700,color:ON_NEON,background:NEON,padding:'3px 10px',borderRadius:50}}>Active</span>}
           {user?.canRide&&user?.role!=='rider'&&(
             <button onClick={async()=>{await switchRole('rider');navigate('/book',{replace:true})}}
-              style={{fontSize:12,fontWeight:700,color:OLIVE,background:NEON,padding:'5px 12px',borderRadius:50,border:'none',cursor:'pointer',fontFamily:'inherit'}}>
+              style={{fontSize:12,fontWeight:700,color:ON_NEON,background:NEON,padding:'5px 12px',borderRadius:50,border:'none',cursor:'pointer',fontFamily:'inherit'}}>
               Switch
             </button>
           )}
@@ -605,16 +660,16 @@ export default function Profile(){
             <p style={{fontSize:14,color:TEXT,fontWeight:600}}>Driver</p>
             <p style={{fontSize:12,color:MUTED,marginTop:1}}>{user?.canDrive?'Active — you can accept rides':'Not registered yet'}</p>
           </div>
-          {user?.canDrive&&user?.role==='driver'&&<span style={{fontSize:11,fontWeight:700,color:OLIVE,background:NEON,padding:'3px 10px',borderRadius:50}}>Active</span>}
+          {user?.canDrive&&user?.role==='driver'&&<span style={{fontSize:11,fontWeight:700,color:ON_NEON,background:NEON,padding:'3px 10px',borderRadius:50}}>Active</span>}
           {user?.canDrive&&user?.role!=='driver'&&(
             <button onClick={async()=>{await switchRole('driver');navigate('/driver',{replace:true})}}
-              style={{fontSize:12,fontWeight:700,color:OLIVE,background:NEON,padding:'5px 12px',borderRadius:50,border:'none',cursor:'pointer',fontFamily:'inherit'}}>
+              style={{fontSize:12,fontWeight:700,color:ON_NEON,background:NEON,padding:'5px 12px',borderRadius:50,border:'none',cursor:'pointer',fontFamily:'inherit'}}>
               Switch
             </button>
           )}
           {!user?.canDrive&&(
             <button onClick={()=>navigate('/register/driver?add=true')}
-              style={{fontSize:12,fontWeight:700,color:'#fff',background:OLIVE,padding:'5px 12px',borderRadius:50,border:'none',cursor:'pointer',fontFamily:'inherit'}}>
+              style={{fontSize:12,fontWeight:700,color:ON_ACCENT_FILL,background:ACCENT_FILL,padding:'5px 12px',borderRadius:50,border:'none',cursor:'pointer',fontFamily:'inherit'}}>
               + Add
             </button>
           )}
@@ -623,7 +678,7 @@ export default function Profile(){
 
       {/* Logout */}
       <button onClick={logout}
-        style={{width:'100%',padding:'14px',borderRadius:14,background:'#fef2f2',border:'1.5px solid #fca5a5',color:'#ef4444',fontWeight:700,fontSize:15,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:10,fontFamily:'inherit'}}>
+        style={{width:'100%',padding:'14px',borderRadius:14,background:DANGER_SOFT,border:'1.5px solid #fca5a5',color:'#ef4444',fontWeight:700,fontSize:15,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:10,fontFamily:'inherit'}}>
         <LogOut size={18}/>Sign Out
       </button>
     </AppLayout>

@@ -1,3 +1,4 @@
+import { CARD, BORDER, TEXT, MUTED, BG, ACCENT as OLIVE, MOSS, NEON, DANGER_SOFT, ON_NEON } from '../theme/palette'
 import React, { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ChatModal from './ChatModal'
@@ -9,9 +10,9 @@ import { useUnreadChat } from '../hooks/useUnreadChat'
 import { loadMapbox } from '../utils/mapbox'
 import { fetchDrivingRoute } from '../utils/mapboxDirections'
 
-const NEON='#ccff00', NT='#0a0a0a'
-const OLIVE='#243800', MOSS='#4C6900'
-const CARD='#ffffff', BORDER='#e9ecef', TEXT='#1a2800', MUTED='#4C6900', BG='#f6f7f9'
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
 
 // One-line, friendlier phrasing for each stage.
 const STAGE_PHRASES = [
@@ -569,7 +570,7 @@ export default function RideTracker({ activeRideId, onExit }) {
         </div>
 
         {rideError && (
-          <div style={{ display:'flex', gap:8, padding:'8px 12px', background:'#fef2f2', border:'1px solid #fca5a5', borderRadius:10, marginBottom:10 }}>
+          <div style={{ display:'flex', gap:8, padding:'8px 12px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10, marginBottom:10 }}>
             <AlertCircle size={13} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
             <p style={{ fontSize:12, color:'#ef4444' }}>{rideError}</p>
           </div>
@@ -580,7 +581,7 @@ export default function RideTracker({ activeRideId, onExit }) {
         {step < 3 && (
         <div style={{ display:'flex', gap:8 }}>
           <a href={driver.phone ? `tel:${driver.phone}` : undefined} aria-disabled={!driver.phone}
-            style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'10px', borderRadius:12, background:NEON, color:OLIVE, fontWeight:800, fontSize:13, textDecoration:'none', boxShadow:'0 4px 12px rgba(204,255,0,0.3)', opacity:driver.phone?1:0.5, pointerEvents:driver.phone?'auto':'none' }}>
+            style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'10px', borderRadius:12, background:NEON, color:ON_NEON, fontWeight:800, fontSize:13, textDecoration:'none', boxShadow:'0 4px 12px rgba(204,255,0,0.3)', opacity:driver.phone?1:0.5, pointerEvents:driver.phone?'auto':'none' }}>
             <Phone size={14}/> Call
           </a>
           <button onClick={() => { setShowChat(true); markChatSeen() }}
@@ -598,7 +599,7 @@ export default function RideTracker({ activeRideId, onExit }) {
           several riders matched at once and can't always tap a button for
           each one right away. */}
       {ride.status !== 'completed' && (
-        <button onClick={advanceRide} disabled={advancing} style={{ width:'100%', padding:'13px', borderRadius:50, marginBottom:8, background:advancing?BORDER:NEON, color:advancing?MUTED:OLIVE, fontWeight:700, fontSize:14, border:'none', cursor:advancing?'not-allowed':'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:10, opacity:advancing?0.7:1, boxShadow:advancing?'none':'0 4px 12px rgba(204,255,0,0.3)', fontFamily:'inherit' }}>
+        <button onClick={advanceRide} disabled={advancing} style={{ width:'100%', padding:'13px', borderRadius:50, marginBottom:8, background:advancing?BORDER:NEON, color:advancing?MUTED:ON_NEON, fontWeight:700, fontSize:14, border:'none', cursor:advancing?'not-allowed':'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:10, opacity:advancing?0.7:1, boxShadow:advancing?'none':'0 4px 12px rgba(204,255,0,0.3)', fontFamily:'inherit' }}>
           {advancing ? 'Updating…' : NEXT_STATUS_LABEL[NEXT_STATUS[step <= 1 ? 0 : step - 1]]}
         </button>
       )}
@@ -614,7 +615,7 @@ export default function RideTracker({ activeRideId, onExit }) {
 
       {ride.status === 'completed' && (
         <button onClick={() => navigate(`/rate/${activeRideId}`)}
-          style={{ width:'100%', padding:'13px', borderRadius:50, background:NEON, color:OLIVE, fontWeight:800, fontSize:14, border:'none', cursor:'pointer', fontFamily:'inherit', boxShadow:'0 4px 16px rgba(204,255,0,0.35)' }}>
+          style={{ width:'100%', padding:'13px', borderRadius:50, background:NEON, color:ON_NEON, fontWeight:800, fontSize:14, border:'none', cursor:'pointer', fontFamily:'inherit', boxShadow:'0 4px 16px rgba(204,255,0,0.35)' }}>
           Rate This Trip
         </button>
       )}
@@ -633,7 +634,7 @@ function CancelledNotice({ byDriver, onExit }) {
   }, [byDriver]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:340, textAlign:'center', padding:24 }}>
-      <div style={{ width:64, height:64, borderRadius:'50%', background:'#fef2f2', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:16 }}>
+      <div style={{ width:64, height:64, borderRadius:'50%', background:DANGER_SOFT, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:16 }}>
         <AlertCircle size={30} color="#ef4444"/>
       </div>
       <p style={{ color:TEXT, fontWeight:800, fontSize:17, marginBottom:6 }}>

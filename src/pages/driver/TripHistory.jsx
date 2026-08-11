@@ -1,10 +1,11 @@
+import { CARD, BORDER, TEXT, MUTED, BG, ACCENT as OLIVE, MOSS, NEON, ON_NEON, DANGER_SOFT } from '../../theme/palette'
 import React, { useState } from 'react'
 import AppLayout from '../../components/AppLayout'
 import { MapPin, Star } from 'lucide-react'
 
-const NEON='#ccff00', NT='#0a0a0a'
-const OLIVE='#243800', MOSS='#4C6900'
-const CARD='#ffffff', BORDER='#e9ecef', TEXT='#1a2800', MUTED='#4C6900', BG='#f6f7f9'
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
 
 const TRIPS=[
   {id:'t1',from:'Ikeja',to:'VI',fare:3200,date:'Today, 9:10 AM',status:'completed',rating:5},
@@ -45,7 +46,7 @@ export default function DriverTripHistory(){
       <div style={{display:'flex',gap:8,marginBottom:16,overflowX:'auto',paddingBottom:4}}>
         {FILTERS.map(f=>(
           <button key={f} onClick={()=>setFilter(f)}
-            style={{padding:'8px 18px',borderRadius:50,fontSize:13,fontWeight:700,border:`1.5px solid ${filter===f?NEON:BORDER}`,background:filter===f?NEON:CARD,color:filter===f?OLIVE:MOSS,cursor:'pointer',whiteSpace:'nowrap',flexShrink:0,transition:'all 0.15s'}}>
+            style={{padding:'8px 18px',borderRadius:50,fontSize:13,fontWeight:700,border:`1.5px solid ${filter===f?NEON:BORDER}`,background:filter===f?NEON:CARD,color:filter===f? ON_NEON :MOSS,cursor:'pointer',whiteSpace:'nowrap',flexShrink:0,transition:'all 0.15s'}}>
             {f}
           </button>
         ))}
@@ -63,7 +64,7 @@ export default function DriverTripHistory(){
             style={{display:'flex',alignItems:'center',gap:14,padding:'14px 20px',borderBottom:i<filtered.length-1?`1px solid ${BORDER}`:'none',transition:'background 0.15s'}}
             onMouseEnter={e=>e.currentTarget.style.background=BG}
             onMouseLeave={e=>e.currentTarget.style.background=CARD}>
-            <div style={{width:38,height:38,borderRadius:10,flexShrink:0,background:t.status==='cancelled'?'#fef2f2':NEON,display:'flex',alignItems:'center',justifyContent:'center'}}>
+            <div style={{width:38,height:38,borderRadius:10,flexShrink:0,background:t.status==='cancelled'?DANGER_SOFT:NEON,display:'flex',alignItems:'center',justifyContent:'center'}}>
               <MapPin size={16} color={t.status==='cancelled'?'#ef4444':OLIVE}/>
             </div>
             <div style={{flex:1,minWidth:0}}>
@@ -75,7 +76,7 @@ export default function DriverTripHistory(){
             </div>
             <div style={{textAlign:'right',flexShrink:0}}>
               <p style={{fontWeight:800,fontSize:14,color:t.status==='cancelled'?'#ef4444':TEXT}}>₦{t.fare.toLocaleString()}</p>
-              <span style={{fontSize:11,fontWeight:700,padding:'2px 8px',borderRadius:20,marginTop:2,display:'inline-block',background:t.status==='cancelled'?'#fef2f2':BG,color:t.status==='cancelled'?'#ef4444':MOSS,border:`1px solid ${t.status==='cancelled'?'#fca5a5':BORDER}`,textTransform:'uppercase',letterSpacing:'0.04em'}}>{t.status}</span>
+              <span style={{fontSize:11,fontWeight:700,padding:'2px 8px',borderRadius:20,marginTop:2,display:'inline-block',background:t.status==='cancelled'?DANGER_SOFT:BG,color:t.status==='cancelled'?'#ef4444':MOSS,border:`1px solid ${t.status==='cancelled'?'#fca5a5':BORDER}`,textTransform:'uppercase',letterSpacing:'0.04em'}}>{t.status}</span>
             </div>
           </div>
         ))}

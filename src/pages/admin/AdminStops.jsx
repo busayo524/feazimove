@@ -1,10 +1,11 @@
+import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, ADMIN_BG as BG, NEON, ACCENT as OLIVE, DANGER_SOFT, ON_NEON } from '../../theme/palette'
 import React, { useEffect, useState } from 'react'
 import AdminLayout from '../../components/AdminLayout'
 import { api } from '../../services/api'
 import { AlertCircle, Plus, Ban, CheckCircle2, X, ChevronUp, ChevronDown, GripVertical, Pencil, Trash2, FolderInput } from 'lucide-react'
 
-const CARD = '#ffffff', BORDER = '#e5e7eb', TEXT = '#1a1a1a', MUTED = '#6b7280', BG = '#f5f7f2'
-const NEON = '#ccff00', OLIVE = '#243800'
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
 
 export default function AdminStops() {
   const [zones, setZones] = useState(null)
@@ -147,7 +148,7 @@ export default function AdminStops() {
         <p style={{ color:MUTED, fontSize:14 }}>The catalog of named locations riders and drivers can select, organised into categories.</p>
         <button onClick={() => setShowAdd(true)}
           style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 18px', borderRadius:10, background:NEON, border:'none',
-            color:OLIVE, fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+            color:ON_NEON, fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
           <Plus size={15}/> Add Stop
         </button>
       </div>
@@ -157,7 +158,7 @@ export default function AdminStops() {
       </p>
 
       {error && (
-        <div style={{ display:'flex', gap:8, padding:'10px 14px', background:'#fef2f2', border:'1px solid #fca5a5', borderRadius:10, marginBottom:16 }}>
+        <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10, marginBottom:16 }}>
           <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
           <p style={{ fontSize:13, color:'#ef4444' }}>{error}</p>
         </div>
@@ -366,7 +367,7 @@ function AddStopModal({ zones, onClose, onCreated }) {
           {error && <p style={{ fontSize:13, color:'#ef4444', marginBottom:12 }}>{error}</p>}
 
           <button type="submit" disabled={busy || !zoneId}
-            style={{ width:'100%', padding:'11px', borderRadius:10, background:NEON, color:OLIVE, border:'none', fontWeight:700, fontSize:14, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit', opacity:busy?0.7:1 }}>
+            style={{ width:'100%', padding:'11px', borderRadius:10, background:NEON, color:ON_NEON, border:'none', fontWeight:700, fontSize:14, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit', opacity:busy?0.7:1 }}>
             {busy ? 'Creating…' : 'Create Stop'}
           </button>
         </form>

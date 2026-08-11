@@ -1,3 +1,4 @@
+import { CARD, BORDER, TEXT, MUTED, ACCENT as OLIVE, MOSS, NEON, ON_NEON, DANGER_SOFT, NEON_SOFT } from '../../theme/palette'
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/AppLayout'
@@ -13,9 +14,9 @@ import { track } from '../../services/analytics'
 import { useStopCoords } from '../../hooks/useStopCoords'
 import { useRoutes } from '../../hooks/useRoutes'
 
-const NEON='#ccff00', NT='#0a0a0a'
-const OLIVE='#243800', MOSS='#4C6900'
-const CARD='#ffffff', BORDER='#e9ecef', TEXT='#1a2800', MUTED='#4C6900', BG='#f6f7f9'
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
 
 const SERVICES=[
   { id:'pool', icon:<Users size={18}/>,     label:'Pool Ride',   desc:'Share route, split cost' },
@@ -29,7 +30,7 @@ const SERVICES=[
 // Several can appear; the FIRST one to confirm gets the ride (server-enforced).
 function CandidateDriverCard({ d }) {
   return (
-    <div style={{ display:'flex', alignItems:'center', gap:10, background:'#f6faee', border:`1.5px solid ${NEON}`,
+    <div style={{ display:'flex', alignItems:'center', gap:10, background:NEON_SOFT, border:`1.5px solid ${NEON}`,
       borderRadius:12, padding:'10px 12px', marginBottom:8, textAlign:'left' }}>
       <PersonAvatar userId={d.id} name={d.name} size={42} fontSize={15}/>
       <div style={{ minWidth:0, flex:1 }}>
@@ -110,7 +111,7 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, on
           {/* The day a scheduled ride is for — the one thing that separates it
               from a booking placed for right now, so it gets its own row */}
           {scheduleDate && (
-            <div style={{display:'flex',alignItems:'center',gap:6,marginTop:8,background:'#f6faee',
+            <div style={{display:'flex',alignItems:'center',gap:6,marginTop:8,background:NEON_SOFT,
               border:`1.5px solid ${NEON}`,borderRadius:10,padding:'8px 10px'}}>
               <CalendarDays size={13} color={OLIVE}/>
               <span style={{fontSize:12,fontWeight:800,color:OLIVE}}>{formatScheduleDate(scheduleDate,{long:true})}</span>
@@ -173,7 +174,7 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, on
               </p>
               <button onClick={onPayNow} disabled={payBusy} style={{
                 width:'100%',padding:'11px',borderRadius:50,
-                background:payBusy?BORDER:NEON,color:payBusy?MUTED:OLIVE,
+                background:payBusy?BORDER:NEON,color:payBusy?MUTED:ON_NEON,
                 fontWeight:800,fontSize:14,border:'none',
                 cursor:payBusy?'not-allowed':'pointer',
                 display:'flex',alignItems:'center',justifyContent:'center',gap:8,
@@ -205,7 +206,7 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, fareKobo, stopCoords, on
             </p>
             <button onClick={onBook} disabled={booking} style={{
               width:'100%',padding:'11px',borderRadius:50,
-              background:booking?BORDER:NEON,color:booking?MUTED:OLIVE,
+              background:booking?BORDER:NEON,color:booking?MUTED:ON_NEON,
               fontWeight:800,fontSize:14,border:'none',
               cursor:booking?'not-allowed':'pointer',
               display:'flex',alignItems:'center',justifyContent:'center',gap:10,
@@ -676,8 +677,8 @@ export default function BookRide(){
                       cursor:'pointer',textAlign:'center',transition:'all 0.15s',
                       boxShadow:active?'0 4px 16px rgba(204,255,0,0.35)':'none'
                     }}>
-                      <div style={{display:'flex',justifyContent:'center',marginBottom:4,color:active?OLIVE:MOSS}}>{s.icon}</div>
-                      <p style={{fontWeight:700,fontSize:11.5,color:active?OLIVE:TEXT,marginBottom:1,lineHeight:1.15}}>{s.label}</p>
+                      <div style={{display:'flex',justifyContent:'center',marginBottom:4,color:active? ON_NEON :MOSS}}>{s.icon}</div>
+                      <p style={{fontWeight:700,fontSize:11.5,color:active? ON_NEON :TEXT,marginBottom:1,lineHeight:1.15}}>{s.label}</p>
                       <p style={{fontSize:9.5,color:active?'rgba(36,56,0,0.65)':MUTED,lineHeight:1.2}}>{s.desc}</p>
                     </button>
                   )
@@ -689,7 +690,7 @@ export default function BookRide(){
                 since there is nothing to match against until it arrives */}
             {scheduledOk && (
               <div style={{display:'flex',alignItems:'flex-start',gap:10,padding:'12px 14px',
-                background:'#f6faee',border:`1.5px solid ${NEON}`,borderRadius:12,marginBottom:10}}>
+                background:NEON_SOFT,border:`1.5px solid ${NEON}`,borderRadius:12,marginBottom:10}}>
                 <CalendarCheck size={17} color={OLIVE} style={{flexShrink:0,marginTop:1}}/>
                 <div style={{minWidth:0}}>
                   <p style={{fontSize:13,fontWeight:800,color:OLIVE}}>
@@ -722,13 +723,14 @@ export default function BookRide(){
                   exact time within it. The period the backend matches and
                   prices on follows from the AM/PM choice. */}
               <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:14,padding:12,marginBottom:10,boxShadow:'0 2px 8px rgba(36,56,0,0.06)'}}>
-                <div style={{display:'grid',gridTemplateColumns:'minmax(90px,0.42fr) minmax(0,1fr)',gap:8}}>
+                <div style={{display:'grid',gridTemplateColumns:'minmax(104px,0.38fr) minmax(0,1fr)',gap:8}}>
                   <TimeDropdown
                     slots={MERIDIEMS}
                     value={half}
                     onChange={chooseHalf}
                     placeholder="AM / PM"
                     icon={<Sun size={15}/>}
+                    compact
                   />
                   <TimeDropdown
                     slots={slotsForMeridiem(half)}
@@ -766,7 +768,7 @@ export default function BookRide(){
                     <button type="button" onClick={()=>canPreview && setShowPreview(true)} disabled={!canPreview}
                       style={{
                         width:'100%',padding:'12px',borderRadius:10,fontSize:14,fontWeight:700,
-                        background:canPreview?NEON:BORDER,color:canPreview?OLIVE:MUTED,
+                        background:canPreview?NEON:BORDER,color:canPreview? ON_NEON :MUTED,
                         border:'none',cursor:canPreview?'pointer':'not-allowed',
                         display:'flex',alignItems:'center',justifyContent:'center',gap:8,
                         fontFamily:'inherit',transition:'opacity 0.2s',
@@ -780,7 +782,7 @@ export default function BookRide(){
               {/* Error */}
               {bookError && (
                 <div style={{display:'flex',alignItems:'flex-start',gap:10,padding:'12px 14px',
-                  background:'#fef2f2',border:'1px solid #fca5a5',borderRadius:12,marginBottom:10}}>
+                  background:DANGER_SOFT,border:'1px solid #fca5a5',borderRadius:12,marginBottom:10}}>
                   <span style={{fontSize:16,flexShrink:0}}>⚠️</span>
                   <p style={{fontSize:13,color:'#ef4444'}}>{bookError}</p>
                 </div>
@@ -796,7 +798,7 @@ export default function BookRide(){
                   </p>
                   {upcoming.map(s=>(
                     <div key={s.bookingId} style={{border:`1.5px solid ${s.isToday?NEON:BORDER}`,borderRadius:12,
-                      padding:'10px 12px',marginBottom:8,background:s.isToday?'#f6faee':CARD}}>
+                      padding:'10px 12px',marginBottom:8,background:s.isToday?NEON_SOFT:CARD}}>
                       <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
                         <CalendarDays size={13} color={OLIVE} style={{flexShrink:0}}/>
                         <p style={{fontSize:12.5,fontWeight:800,color:OLIVE}}>

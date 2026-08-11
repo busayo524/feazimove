@@ -1,7 +1,8 @@
+import { NEON, CHIP } from '../theme/palette'
 import React, { useEffect, useState } from 'react'
 import { Smartphone, X, Share, SquarePlus, CheckCircle2 } from 'lucide-react'
 
-const NEON = '#ccff00'
+/* palette: themed tokens — see src/theme/palette.js */
 
 // One shared handle on Chrome's install prompt — the event fires once per page
 // load, usually before this component mounts, so it's captured at module level.
@@ -98,7 +99,7 @@ export default function InstallAppButton() {
           }}>
             <button onClick={() => setShowSheet(false)} aria-label="Close" style={{
               position: 'absolute', top: 16, right: 16, width: 32, height: 32, borderRadius: '50%',
-              background: '#f3f4f6', border: 'none', display: 'flex', alignItems: 'center',
+              background: CHIP, border: 'none', display: 'flex', alignItems: 'center',
               justifyContent: 'center', color: '#6b7280', cursor: 'pointer', padding: 0,
             }}><X size={16} /></button>
 

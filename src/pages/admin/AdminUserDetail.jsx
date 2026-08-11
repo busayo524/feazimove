@@ -1,3 +1,4 @@
+import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, ADMIN_BG as BG, DANGER_SOFT, ON_NEON, ACCENT_FILL, ON_ACCENT_FILL } from '../../theme/palette'
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
@@ -5,7 +6,7 @@ import { api } from '../../services/api'
 import { ArrowLeft, Ban, CheckCircle2, XCircle, FileText, AlertCircle, Car, Trash2,
   Eye, EyeOff, ShieldCheck, ShieldAlert, RefreshCw, Download } from 'lucide-react'
 
-const CARD = '#ffffff', BORDER = '#e5e7eb', TEXT = '#1a1a1a', MUTED = '#6b7280', BG = '#f5f7f2'
+/* palette: themed tokens — see src/theme/palette.js */
 const GREEN = '#2a6048', NEON = '#ccff00', OLIVE = '#243800'
 
 const DOC_LABELS = {
@@ -44,7 +45,7 @@ function userStatus(u) {
 const STATUS_MAP = {
   pending:  { label:'Pending', bg:'#fef9c3', fg:'#854d0e' },
   approved: { label:'Approved',       bg:'#dcfce7', fg:'#15803d' },
-  rejected: { label:'Rejected',       bg:'#fef2f2', fg:'#dc2626' },
+  rejected: { label:'Rejected',       bg:DANGER_SOFT, fg:'#dc2626' },
 }
 
 function Section({ title, action, children }) {
@@ -102,7 +103,7 @@ function KycRevealModal({ userId, onRevealed, onClose }) {
               then come back.
             </p>
             <button onClick={onClose}
-              style={{ width:'100%', padding:'11px', borderRadius:10, background:OLIVE, color:'#fff', border:'none',
+              style={{ width:'100%', padding:'11px', borderRadius:10, background:ACCENT_FILL, color:ON_ACCENT_FILL, border:'none',
                 fontWeight:800, fontSize:13.5, cursor:'pointer', fontFamily:'inherit' }}>
               Close
             </button>
@@ -118,7 +119,7 @@ function KycRevealModal({ userId, onRevealed, onClose }) {
             <div style={{ display:'flex', gap:10 }}>
               <button type="submit" disabled={busy || code.length !== 6}
                 style={{ flex:1, padding:'11px', borderRadius:10, border:'none', fontWeight:800, fontSize:13.5, fontFamily:'inherit',
-                  background:(busy || code.length !== 6)?BORDER:NEON, color:(busy || code.length !== 6)?MUTED:OLIVE,
+                  background:(busy || code.length !== 6)?BORDER:NEON, color:(busy || code.length !== 6)?MUTED:ON_NEON,
                   cursor:(busy || code.length !== 6)?'not-allowed':'pointer' }}>
                 {busy ? 'Verifying…' : 'Reveal KYC'}
               </button>
@@ -302,7 +303,7 @@ function IdentityVerdict({ identity, userId, onRerun }) {
   const TONE = {
     verified: { bg:'#f0fdf4', bd:'#86efac', fg:'#15803d', label:'IDENTITY VERIFIED',
       icon:<ShieldCheck size={17} color="#15803d"/> },
-    failed:   { bg:'#fef2f2', bd:'#fca5a5', fg:'#b91c1c', label:'IDENTITY CHECK FAILED',
+    failed:   { bg:DANGER_SOFT, bd:'#fca5a5', fg:'#b91c1c', label:'IDENTITY CHECK FAILED',
       icon:<ShieldAlert size={17} color="#b91c1c"/> },
     error:    { bg:'#fffbeb', bd:'#fcd34d', fg:'#b45309', label:'VERIFICATION COULD NOT RUN',
       icon:<AlertCircle size={17} color="#b45309"/> },
@@ -410,7 +411,7 @@ function ProfilePhoto({ userId, hasAvatar, initials }) {
   }, [userId, hasAvatar])
 
   return (
-    <div style={{ width:72, height:72, borderRadius:'50%', background:NEON, color:OLIVE,
+    <div style={{ width:72, height:72, borderRadius:'50%', background:NEON, color:ON_NEON,
       display:'flex', alignItems:'center', justifyContent:'center',
       overflow:'hidden', fontWeight:800, fontSize:26, flexShrink:0 }}>
       {src
@@ -524,7 +525,7 @@ export default function AdminUserDetail() {
 
   if (error) return (
     <AdminLayout title="User Detail">
-      <div style={{ display:'flex', gap:8, padding:'12px 16px', background:'#fef2f2', border:'1px solid #fca5a5', borderRadius:10 }}>
+      <div style={{ display:'flex', gap:8, padding:'12px 16px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10 }}>
         <AlertCircle size={15} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
         <p style={{ fontSize:14, color:'#ef4444' }}>{error}</p>
       </div>
@@ -591,7 +592,7 @@ export default function AdminUserDetail() {
               </button>
               <button onClick={reject} disabled={busy}
                 style={{ display:'flex', alignItems:'center', gap:7, padding:'10px 20px', borderRadius:10,
-                  background:'#fef2f2', color:'#dc2626', border:'1.5px solid #fca5a5',
+                  background:DANGER_SOFT, color:'#dc2626', border:'1.5px solid #fca5a5',
                   fontWeight:700, fontSize:13, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit', opacity:busy&&action==='reject'?0.6:1 }}>
                 <XCircle size={15}/>{busy&&action==='reject'?'Rejecting…':'Reject'}
               </button>
@@ -600,7 +601,7 @@ export default function AdminUserDetail() {
             {st === 'approved' && user.role !== 'admin' && (
               <button onClick={toggleSuspend} disabled={busy}
                 style={{ display:'flex', alignItems:'center', gap:7, padding:'10px 20px', borderRadius:10,
-                  background:'#fef2f2', color:'#dc2626', border:'1.5px solid #fca5a5',
+                  background:DANGER_SOFT, color:'#dc2626', border:'1.5px solid #fca5a5',
                   fontWeight:700, fontSize:13, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit' }}>
                 <Ban size={15}/>Suspend User
               </button>
@@ -674,7 +675,7 @@ export default function AdminUserDetail() {
               ) : (
                 <button onClick={() => setShowReveal(true)}
                   style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:8,
-                    border:'none', background:OLIVE, color:'#fff', fontWeight:700, fontSize:11.5,
+                    border:'none', background:ACCENT_FILL, color:ON_ACCENT_FILL, fontWeight:700, fontSize:11.5,
                     cursor:'pointer', fontFamily:'inherit' }}>
                   <Eye size={12}/> View full KYC
                 </button>
@@ -769,7 +770,7 @@ export default function AdminUserDetail() {
                   </div>
                 </div>
                 <button onClick={() => viewDocument(doc.id)}
-                  style={{ padding:'7px 16px', borderRadius:8, background:NEON, color:OLIVE,
+                  style={{ padding:'7px 16px', borderRadius:8, background:NEON, color:ON_NEON,
                     border:'none', fontWeight:600, fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
                   View
                 </button>
@@ -780,7 +781,7 @@ export default function AdminUserDetail() {
       </Section>
 
       {/* Danger zone — permanent deletion */}
-      <div style={{ background:'#fef2f2', border:'1px solid #fecdca', borderRadius:14, padding:'20px 24px',
+      <div style={{ background:DANGER_SOFT, border:'1px solid #fecdca', borderRadius:14, padding:'20px 24px',
         marginTop:20, display:'flex', alignItems:'center', justifyContent:'space-between', gap:16, flexWrap:'wrap' }}>
         <div style={{ flex:'1 1 300px', minWidth:0 }}>
           <p style={{ margin:'0 0 4px', fontWeight:800, fontSize:14, color:'#b42318' }}>Delete this user</p>

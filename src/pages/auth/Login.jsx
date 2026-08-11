@@ -1,3 +1,4 @@
+import { NEON } from '../../theme/palette'
 import React, { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Eye, EyeOff, AlertCircle, Lock, Clock } from 'lucide-react'
@@ -6,7 +7,7 @@ import { IDLE_LOGOUT_FLAG } from '../../hooks/useIdleLogout'
 import { HomeLogoLink } from '../../components/StandaloneApp'
 import faviconImg from '../../assets/favicon.png'
 
-const NEON = '#ccff00'
+/* palette: themed tokens — see src/theme/palette.js */
 const DARK = '#0a0a0a'
 
 function sanitizePhone(val) {

@@ -1,12 +1,14 @@
+import { CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, DANGER_SOFT } from '../../theme/palette'
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/AppLayout'
 import { useAuth } from '../../context/AuthContext'
 import { api } from '../../services/api'
 import { Star, AlertCircle } from 'lucide-react'
+import { NEON } from '../../theme/palette'
 
-const NEON='#ccff00', NT='#0a0a0a'
-const CARD='#ffffff', BORDER='#e8eaed', TEXT='#111827', MUTED='#6b7280'
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
 
 export default function RateRide(){
   const { rideId } = useParams()
@@ -126,7 +128,7 @@ export default function RateRide(){
         </div>
 
         {submitError && (
-          <div style={{display:'flex',alignItems:'flex-start',gap:10,padding:'12px 14px',background:'#fef2f2',border:'1px solid #fca5a5',borderRadius:12,marginBottom:16}}>
+          <div style={{display:'flex',alignItems:'flex-start',gap:10,padding:'12px 14px',background:DANGER_SOFT,border:'1px solid #fca5a5',borderRadius:12,marginBottom:16}}>
             <AlertCircle size={16} color="#ef4444" style={{flexShrink:0,marginTop:1}}/>
             <p style={{fontSize:13,color:'#ef4444'}}>{submitError}</p>
           </div>

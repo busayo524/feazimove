@@ -1,10 +1,11 @@
+import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, ADMIN_BG as BG, NEON, ACCENT as OLIVE, DANGER_SOFT, ON_NEON, ACCENT_FILL, ON_ACCENT_FILL } from '../../theme/palette'
 import React, { useEffect, useState } from 'react'
 import AdminLayout from '../../components/AdminLayout'
 import { api } from '../../services/api'
 import { AlertCircle, Mail, CheckCircle2, Inbox, MailWarning } from 'lucide-react'
 
-const CARD = '#ffffff', BORDER = '#e5e7eb', TEXT = '#1a1a1a', MUTED = '#6b7280', BG = '#f5f7f2'
-const NEON = '#ccff00', OLIVE = '#243800'
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
 
 const FILTERS = [
   { key: 'all',     label: 'All' },
@@ -62,7 +63,7 @@ export default function AdminFeedback() {
       </p>
 
       {error && (
-        <div style={{ display:'flex', gap:8, padding:'10px 14px', background:'#fef2f2', border:'1px solid #fca5a5', borderRadius:10, marginBottom:20 }}>
+        <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10, marginBottom:20 }}>
           <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
           <p style={{ fontSize:13, color:'#ef4444' }}>{error}</p>
         </div>
@@ -110,7 +111,7 @@ export default function AdminFeedback() {
                       {!m.emailed && (
                         <span title="The notification email to support did not send — the message is still saved here."
                           style={{ display:'inline-flex', alignItems:'center', gap:4, padding:'2px 8px', borderRadius:50,
-                            fontSize:10.5, fontWeight:700, background:'#fef2f2', color:'#b91c1c' }}>
+                            fontSize:10.5, fontWeight:700, background:DANGER_SOFT, color:'#b91c1c' }}>
                           <MailWarning size={11}/> Not emailed
                         </span>
                       )}
@@ -147,13 +148,13 @@ export default function AdminFeedback() {
                     <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
                       <a href={`mailto:${m.email}?subject=${encodeURIComponent(`Re: ${m.topic} — FeaziMove`)}`}
                         style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'8px 14px', borderRadius:8,
-                          background:NEON, color:OLIVE, fontWeight:700, fontSize:12.5, textDecoration:'none' }}>
+                          background:NEON, color:ON_NEON, fontWeight:700, fontSize:12.5, textDecoration:'none' }}>
                         <Mail size={13}/> Reply by email
                       </a>
                       {m.status !== 'handled' && (
                         <button onClick={() => setStatus(m.id, 'handled')} disabled={busyId === m.id}
                           style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'8px 14px', borderRadius:8,
-                            background:OLIVE, color:'#fff', border:'none', fontWeight:700, fontSize:12.5,
+                            background:ACCENT_FILL, color:ON_ACCENT_FILL, border:'none', fontWeight:700, fontSize:12.5,
                             cursor:'pointer', fontFamily:'inherit' }}>
                           <CheckCircle2 size={13}/> Mark handled
                         </button>

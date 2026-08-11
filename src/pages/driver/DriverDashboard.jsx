@@ -1,3 +1,4 @@
+import { CARD, BORDER, TEXT, MUTED, BG, ACCENT as OLIVE, MOSS, NEON, ON_NEON, DANGER_SOFT, NEON_SOFT } from '../../theme/palette'
 import React, { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -19,9 +20,9 @@ import { useUnreadChat } from '../../hooks/useUnreadChat'
 import { usePanelPlacement, MERIDIEMS, slotsForMeridiem } from '../../components/RouteDropdowns'
 import ScheduleDatePicker, { formatScheduleDate } from '../../components/ScheduleDatePicker'
 
-const NEON='#ccff00', NT='#0a0a0a'
-const OLIVE='#243800', MOSS='#4C6900'
-const CARD='#ffffff', BORDER='#e9ecef', TEXT='#1a2800', MUTED='#4C6900', BG='#f6f7f9'
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
 
 
 // ── Active-ride stage mapping (mirrors the old standalone ActiveRide page) ────
@@ -161,7 +162,7 @@ function RiderCard({ rider }) {
       </div>
       <div style={{ textAlign:'right', flexShrink:0 }}>
         <p style={{ fontSize:12, color:MUTED }}>⭐ {rider.riderRating.toFixed(1)}</p>
-        <span style={{ fontSize:11, fontWeight:700, background:NEON, color:OLIVE, padding:'2px 8px', borderRadius:20 }}>
+        <span style={{ fontSize:11, fontWeight:700, background:NEON, color:ON_NEON, padding:'2px 8px', borderRadius:20 }}>
           {rider.service}
         </span>
       </div>
@@ -175,7 +176,7 @@ function OnlineToggle({ online, busy, onToggle }) {
     <button onClick={onToggle} disabled={busy} aria-pressed={online}
       style={{ display:'flex', alignItems:'center', gap:10, padding:'5px 14px 5px 6px', borderRadius:50,
         border:'none', cursor:busy ? 'not-allowed' : 'pointer', fontFamily:'inherit',
-        background:online ? NEON : '#e5e7eb', color:online ? OLIVE : '#374151',
+        background:online ? NEON : '#e5e7eb', color:online ? ON_NEON : '#374151',
         fontWeight:800, fontSize:13, transition:'background 0.2s', opacity:busy ? 0.7 : 1 }}>
       <span style={{ position:'relative', width:34, height:18, borderRadius:20, flexShrink:0,
         background:online ? OLIVE : '#9ca3af', transition:'background 0.2s' }}>
@@ -270,7 +271,7 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, seats, poolFareKobo, sto
           {/* The day this drive is being committed to — the one field that makes
               it a schedule rather than a route the driver is starting now */}
           {scheduleMode && scheduleDate && (
-            <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:8, background:'#f6faee',
+            <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:8, background:NEON_SOFT,
               border:`1.5px solid ${NEON}`, borderRadius:10, padding:'8px 10px' }}>
               <CalendarDays size={13} color={OLIVE}/>
               <span style={{ fontSize:12, fontWeight:800, color:OLIVE }}>{formatScheduleDate(scheduleDate, { long:true })}</span>
@@ -310,7 +311,7 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, seats, poolFareKobo, sto
             </p>
             <button onClick={onSchedule} disabled={schedulingRoute} style={{
               width:'100%', padding:'11px', borderRadius:50,
-              background:schedulingRoute?BORDER:NEON, color:schedulingRoute?MUTED:OLIVE,
+              background:schedulingRoute?BORDER:NEON, color:schedulingRoute?MUTED:ON_NEON,
               fontWeight:800, fontSize:14, border:'none',
               cursor:schedulingRoute?'not-allowed':'pointer',
               fontFamily:'inherit', transition:'all 0.2s',
@@ -327,7 +328,7 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, seats, poolFareKobo, sto
             <p style={{fontSize:11,fontStyle:'italic',color:MUTED,textAlign:'center',margin:'0 0 8px'}}>*Booking should be within 24hrs*</p>
             <button onClick={onGoLive} disabled={goingLive} style={{
               width:'100%', padding:'11px', borderRadius:50,
-              background:goingLive?BORDER:NEON, color:goingLive?MUTED:OLIVE,
+              background:goingLive?BORDER:NEON, color:goingLive?MUTED:ON_NEON,
               fontWeight:800, fontSize:14, border:'none',
               cursor:goingLive?'not-allowed':'pointer',
               fontFamily:'inherit', transition:'all 0.2s',
@@ -969,7 +970,7 @@ export default function DriverDashboard() {
         <div style={{ background:CARD, border:`1.5px solid #fca5a5`, borderRadius:16, padding:24,
           marginBottom:16, boxShadow:'0 4px 16px rgba(239,68,68,0.08)' }}>
           <div style={{ display:'flex', alignItems:'flex-start', gap:12, marginBottom:16 }}>
-            <div style={{ width:40, height:40, borderRadius:12, background:'#fef2f2',
+            <div style={{ width:40, height:40, borderRadius:12, background:DANGER_SOFT,
               display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
               <AlertCircle size={20} color="#ef4444"/>
             </div>
@@ -1001,7 +1002,7 @@ export default function DriverDashboard() {
               </p>
               <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
                 <button onClick={handleExpand}
-                  style={{ padding:'12px', borderRadius:12, background:NEON, color:OLIVE,
+                  style={{ padding:'12px', borderRadius:12, background:NEON, color:ON_NEON,
                     fontWeight:800, fontSize:14, border:'none', cursor:'pointer', fontFamily:'inherit',
                     boxShadow:'0 4px 12px rgba(204,255,0,0.3)' }}>
                   Yes, try {nextPickup}
@@ -1104,7 +1105,7 @@ export default function DriverDashboard() {
           )}
 
           {goLiveError && (
-            <div style={{ display:'flex', gap:8, padding:'10px 14px', background:'#fef2f2',
+            <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT,
               border:'1px solid #fca5a5', borderRadius:10, marginBottom:12 }}>
               <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
               <p style={{ fontSize:13, color:'#ef4444' }}>{goLiveError}</p>
@@ -1113,7 +1114,7 @@ export default function DriverDashboard() {
 
           <button onClick={handleConfirmRoute} disabled={confirming}
             style={{ width:'100%', marginTop:6, padding:'13px', borderRadius:12, background:NEON,
-              color:OLIVE, fontWeight:800, fontSize:14, border:'none', cursor:confirming?'not-allowed':'pointer',
+              color:ON_NEON, fontWeight:800, fontSize:14, border:'none', cursor:confirming?'not-allowed':'pointer',
               fontFamily:'inherit', opacity:confirming?0.7:1, boxShadow:confirming?'none':'0 4px 12px rgba(204,255,0,0.3)' }}>
             {confirming ? 'Starting route…' : 'Confirm & Start Route'}
           </button>
@@ -1216,7 +1217,7 @@ export default function DriverDashboard() {
               ))}
 
               <button onClick={submitAllRatings} disabled={rateBusy}
-                style={{ width:'100%', marginTop:10, padding:'13px', borderRadius:50, background:NEON, color:OLIVE,
+                style={{ width:'100%', marginTop:10, padding:'13px', borderRadius:50, background:NEON, color:ON_NEON,
                   fontWeight:800, fontSize:15, border:'none', cursor:rateBusy?'not-allowed':'pointer',
                   fontFamily:'inherit', opacity:rateBusy?0.7:1 }}>
                 {rateBusy ? 'Submitting…' : `Submit ${unratedRides.length > 1 ? 'All Ratings' : 'Rating'}`}
@@ -1242,7 +1243,7 @@ export default function DriverDashboard() {
           riders={rides.map(r => ({ name: r.rider?.name || 'Rider', location: r.riderLocation }))}/>
 
         {rideError && (
-          <div style={{ display:'flex', gap:8, padding:'10px 14px', background:'#fef2f2', border:'1px solid #fca5a5', borderRadius:10, marginBottom:16 }}>
+          <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10, marginBottom:16 }}>
             <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
             <p style={{ fontSize:13, color:'#ef4444' }}>{rideError}</p>
           </div>
@@ -1271,7 +1272,7 @@ export default function DriverDashboard() {
         ))}
 
         <button onClick={advanceRide} disabled={advancing}
-          style={{ width:'100%', padding:'15px', borderRadius:50, background:NEON, color:OLIVE, fontWeight:700, fontSize:15, border:'none', cursor:advancing?'not-allowed':'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:10, opacity:advancing?0.7:1, boxShadow:advancing?'none':'0 4px 12px rgba(204,255,0,0.3)' }}>
+          style={{ width:'100%', padding:'15px', borderRadius:50, background:NEON, color:ON_NEON, fontWeight:700, fontSize:15, border:'none', cursor:advancing?'not-allowed':'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:10, opacity:advancing?0.7:1, boxShadow:advancing?'none':'0 4px 12px rgba(204,255,0,0.3)' }}>
           {advancing ? 'Updating…' : stage===1 ? 'Start Trip' : stage<STAGES.length-1 ? STAGES[stage+1] : 'Complete Trip & Collect Fare'}
         </button>
 
@@ -1336,7 +1337,7 @@ export default function DriverDashboard() {
                   </button>
                   <button onClick={() => { setShowCancelConfirm(false); handleGoOffline() }}
                     style={{ flex:1, padding:'11px', borderRadius:10, border:'none',
-                      background:NEON, color:OLIVE, fontWeight:700, fontSize:14, cursor:'pointer', fontFamily:'inherit' }}>
+                      background:NEON, color:ON_NEON, fontWeight:700, fontSize:14, cursor:'pointer', fontFamily:'inherit' }}>
                     Yes
                   </button>
                 </div>
@@ -1355,7 +1356,7 @@ export default function DriverDashboard() {
 
           <div>
           {onlineError && (
-            <div style={{ display:'flex', gap:8, padding:'10px 14px', background:'#fef2f2',
+            <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT,
               border:'1px solid #fca5a5', borderRadius:10, marginBottom:10 }}>
               <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
               <p style={{ fontSize:13, color:'#ef4444' }}>{onlineError}</p>
@@ -1379,9 +1380,9 @@ export default function DriverDashboard() {
                       background:formMode===val ? NEON : CARD,
                       cursor:'pointer', textAlign:'left', fontFamily:'inherit', transition:'all 0.2s',
                       boxShadow:formMode===val ? '0 4px 12px rgba(204,255,0,0.3)' : 'none' }}>
-                    <span style={{ color:formMode===val ? OLIVE : MUTED, flexShrink:0 }}>{icon}</span>
+                    <span style={{ color:formMode===val ? ON_NEON : MUTED, flexShrink:0 }}>{icon}</span>
                     <div style={{ minWidth:0 }}>
-                      <p style={{ fontWeight:800, fontSize:12.5, color:formMode===val ? OLIVE : TEXT }}>{label}</p>
+                      <p style={{ fontWeight:800, fontSize:12.5, color:formMode===val ? ON_NEON : TEXT }}>{label}</p>
                       <p style={{ fontSize:10, color:formMode===val ? 'rgba(36,56,0,0.55)' : MUTED, marginTop:0 }}>{sub}</p>
                     </div>
                   </button>
@@ -1391,7 +1392,7 @@ export default function DriverDashboard() {
               {/* Just-scheduled confirmation */}
               {scheduleOk && (
                 <div style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'12px 14px',
-                  background:'#f6faee', border:`1.5px solid ${NEON}`, borderRadius:12, marginBottom:10 }}>
+                  background:NEON_SOFT, border:`1.5px solid ${NEON}`, borderRadius:12, marginBottom:10 }}>
                   <CalendarCheck size={17} color={OLIVE} style={{ flexShrink:0, marginTop:1 }}/>
                   <div style={{ minWidth:0 }}>
                     <p style={{ fontSize:13, fontWeight:800, color:OLIVE }}>
@@ -1411,7 +1412,7 @@ export default function DriverDashboard() {
               )}
 
               {scheduleError && (
-                <div style={{ display:'flex', gap:8, padding:'10px 14px', background:'#fef2f2',
+                <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT,
                   border:'1px solid #fca5a5', borderRadius:10, marginBottom:10 }}>
                   <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
                   <p style={{ fontSize:13, color:'#ef4444' }}>{scheduleError}</p>
@@ -1488,7 +1489,7 @@ export default function DriverDashboard() {
                     <button type="button" onClick={()=>canPreviewRoute && setShowRoutePreview(true)} disabled={!canPreviewRoute}
                       style={{
                         width:'100%', padding:'12px', borderRadius:10, fontSize:14, fontWeight:700,
-                        background:canPreviewRoute?NEON:BORDER, color:canPreviewRoute?OLIVE:MUTED,
+                        background:canPreviewRoute?NEON:BORDER, color:canPreviewRoute? ON_NEON :MUTED,
                         border:'none', cursor:canPreviewRoute?'pointer':'not-allowed',
                         display:'flex', alignItems:'center', justifyContent:'center', gap:8,
                         fontFamily:'inherit', marginBottom:10,
@@ -1498,7 +1499,7 @@ export default function DriverDashboard() {
                   )}
 
                   {goLiveError && (
-                    <div style={{ display:'flex', gap:8, padding:'10px 14px', background:'#fef2f2',
+                    <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT,
                       border:'1px solid #fca5a5', borderRadius:10, marginBottom:10 }}>
                       <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
                       <p style={{ fontSize:13, color:'#ef4444' }}>{goLiveError}</p>
@@ -1522,7 +1523,7 @@ export default function DriverDashboard() {
 
                   {schedules.map(s => (
                     <div key={s.availabilityId} style={{ border:`1.5px solid ${s.isToday ? NEON : BORDER}`,
-                      borderRadius:12, padding:'10px 12px', marginBottom:8, background:s.isToday ? '#f6faee' : CARD }}>
+                      borderRadius:12, padding:'10px 12px', marginBottom:8, background:s.isToday ? NEON_SOFT : CARD }}>
                       <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
                         <CalendarDays size={13} color={OLIVE} style={{ flexShrink:0 }}/>
                         <p style={{ fontSize:12.5, fontWeight:800, color:OLIVE }}>
@@ -1563,7 +1564,7 @@ export default function DriverDashboard() {
                             title={online ? undefined : 'Go online first'}
                             style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6,
                               padding:'9px', borderRadius:10, border:'none',
-                              background:online ? NEON : BORDER, color:online ? OLIVE : MUTED,
+                              background:online ? NEON : BORDER, color:online ? ON_NEON : MUTED,
                               fontWeight:800, fontSize:12.5, fontFamily:'inherit',
                               cursor:(!online || activatingId === s.availabilityId) ? 'not-allowed' : 'pointer' }}>
                             <Wifi size={13}/>

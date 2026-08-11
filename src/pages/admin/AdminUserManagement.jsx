@@ -1,10 +1,11 @@
+import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, ADMIN_BG as BG, DANGER_SOFT, ON_NEON } from '../../theme/palette'
 import React, { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
 import { api } from '../../services/api'
 import { Search, Eye, ChevronDown, AlertCircle, UserPlus, CheckCircle2, X, Download } from 'lucide-react'
 
-const CARD = '#ffffff', BORDER = '#e5e7eb', TEXT = '#1a1a1a', MUTED = '#6b7280', BG = '#f5f7f2'
+/* palette: themed tokens — see src/theme/palette.js */
 const GREEN = '#2a6048', NEON = '#ccff00', OLIVE = '#243800'
 
 // Lighter shade of the brand lime — pale wash, olive-green text, hairline ring
@@ -13,7 +14,7 @@ const LIME_PILL = { bg:'#f3fbd3', fg:'#3f6212', bd:'#dff0a8' }
 const STATUS_MAP = {
   pending:   { label: 'Pending',   bg: '#fef9c3', fg: '#854d0e' },
   approved:  { label: 'Approved',  ...LIME_PILL },
-  suspended: { label: 'Suspended', bg: '#fef2f2', fg: '#dc2626' },
+  suspended: { label: 'Suspended', bg: DANGER_SOFT, fg: '#dc2626' },
 }
 
 const ROLE_BADGE = {
@@ -47,7 +48,7 @@ function Avatar({ name, userId, hasAvatar }) {
   }, [userId, hasAvatar])
 
   return (
-    <div style={{ width:36, height:36, borderRadius:'50%', background:NEON, color:OLIVE,
+    <div style={{ width:36, height:36, borderRadius:'50%', background:NEON, color:ON_NEON,
       display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden',
       fontWeight:700, fontSize:13, flexShrink:0 }}>
       {src
@@ -136,14 +137,14 @@ export default function AdminUserManagement() {
           </button>
           <button onClick={() => setShowAdd(true)}
             style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 18px', borderRadius:10, background:NEON, border:'none',
-              color:OLIVE, fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+              color:ON_NEON, fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
             <UserPlus size={15}/> Add User
           </button>
         </div>
       </div>
 
       {error && (
-        <div style={{ display:'flex', gap:8, padding:'10px 14px', background:'#fef2f2', border:'1px solid #fca5a5', borderRadius:10, marginBottom:16 }}>
+        <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10, marginBottom:16 }}>
           <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
           <p style={{ fontSize:13, color:'#ef4444' }}>{error}</p>
         </div>
@@ -168,7 +169,7 @@ export default function AdminUserManagement() {
             <button key={f} onClick={() => setFilter(f)}
               style={{ padding:'7px 16px', borderRadius:50, fontSize:13, fontWeight:600, cursor:'pointer', border:'none',
                 background: filter === f ? NEON : BG,
-                color: filter === f ? OLIVE : MUTED,
+                color: filter === f ? ON_NEON : MUTED,
                 transition:'all 0.15s', fontFamily:'inherit' }}>
               {f}
             </button>
@@ -325,7 +326,7 @@ function AddUserPanel({ onClose, onCreated }) {
             </p>
           </div>
           <button onClick={onClose}
-            style={{ padding:'10px 24px', borderRadius:8, background:NEON, color:OLIVE, border:'none',
+            style={{ padding:'10px 24px', borderRadius:8, background:NEON, color:ON_NEON, border:'none',
               fontWeight:700, fontSize:14, cursor:'pointer', fontFamily:'inherit', flexShrink:0 }}>
             Done
           </button>
@@ -350,7 +351,7 @@ function AddUserPanel({ onClose, onCreated }) {
               </select>
             </div>
             <button type="submit" disabled={busy}
-              style={{ padding:'10px 22px', borderRadius:8, background:NEON, color:OLIVE, border:'none', fontWeight:700,
+              style={{ padding:'10px 22px', borderRadius:8, background:NEON, color:ON_NEON, border:'none', fontWeight:700,
                 fontSize:14, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit', opacity:busy?0.7:1, flexShrink:0, whiteSpace:'nowrap' }}>
               {busy ? 'Sending…' : 'Send Invite'}
             </button>

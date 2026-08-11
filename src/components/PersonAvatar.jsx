@@ -1,8 +1,9 @@
+import { NEON, BORDER, ON_NEON as OLIVE } from '../theme/palette'
 import React, { useState, useEffect } from 'react'
 import { api } from '../services/api'
 import { cachedAvatar, rememberAvatar, isFreshThisSession, blobToDataUrl, dedupeFetch } from '../utils/avatarCache'
 
-const NEON='#ccff00', BORDER='#e9ecef', OLIVE='#243800'
+/* palette: themed tokens — see src/theme/palette.js */
 
 // Shows a rider/driver's real uploaded profile photo, fetched via the
 // authenticated /rides/avatar/:userId endpoint (plain <img src> can't send

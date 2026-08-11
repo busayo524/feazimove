@@ -1,3 +1,4 @@
+import { NEON, ON_NEON_HARD as NT, ADMIN_BG as BG, ADMIN_TEXT as TEXT, HEADER } from '../theme/palette'
 import React, { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -9,8 +10,9 @@ import {
 
 const SB_BG = '#1a2400', SB_BORDER = 'rgba(255,255,255,0.08)' // very deep lime neon
 const SB_TEXT = '#cbd5c0', SB_MUTED = '#6b8a55', SB_HOVER = 'rgba(255,255,255,0.08)'
-const NEON = '#ccff00', NT = '#0a0a0a'
-const BG = '#f6f7f9', TEXT = '#1a1a1a' // soft grey page plane — white cards sit on it
+/* NEON / NT come from the themed palette */
+/* palette: themed tokens — page plane flips with the theme; the sidebar
+   below stays dark in both, which is the reference design. */
 const NAV_ACTIVE_BG = 'rgba(204,255,0,0.08)' // faint wash behind the active item
 
 const NAV = [

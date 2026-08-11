@@ -1,10 +1,11 @@
+import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, ADMIN_BG as BG, NEON, ACCENT as OLIVE, ON_NEON, DANGER_SOFT, ACCENT_FILL, ON_ACCENT_FILL } from '../../theme/palette'
 import React, { useEffect, useState, useCallback } from 'react'
 import AdminLayout from '../../components/AdminLayout'
 import { api } from '../../services/api'
 import { AlertCircle, ShieldAlert, Radio, Users2, Banknote, CheckCircle2, XCircle, ArrowUpRight } from 'lucide-react'
 
-const CARD = '#ffffff', BORDER = '#e5e7eb', TEXT = '#1a1a1a', MUTED = '#6b7280', BG = '#f5f7f2'
-const NEON = '#ccff00', OLIVE = '#243800'
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
 
 const SEV = { high: '#dc2626', medium: '#d97706', low: '#6b7280' }
 
@@ -83,7 +84,7 @@ export default function AdminBackOffice() {
           never verified. The setup log reads like a success, so without this
           the gap is invisible. */}
       {overview?.kyc?.onFallbackAccount > 0 && (
-        <div style={{ display:'flex', gap:9, padding:'11px 14px', background:'#fef2f2',
+        <div style={{ display:'flex', gap:9, padding:'11px 14px', background:DANGER_SOFT,
           border:'1px solid #fca5a5', borderRadius:10, marginBottom:16 }}>
           <ShieldAlert size={15} color="#b91c1c" style={{ flexShrink:0, marginTop:1 }}/>
           <div>
@@ -101,7 +102,7 @@ export default function AdminBackOffice() {
       )}
 
       {error && (
-        <div style={{ display: 'flex', gap: 8, padding: '10px 14px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 10, marginBottom: 16 }}>
+        <div style={{ display: 'flex', gap: 8, padding: '10px 14px', background: DANGER_SOFT, border: '1px solid #fca5a5', borderRadius: 10, marginBottom: 16 }}>
           <AlertCircle size={14} color="#ef4444" style={{ flexShrink: 0, marginTop: 1 }}/>
           <p style={{ fontSize: 13, color: '#ef4444' }}>{error}</p>
         </div>
@@ -125,7 +126,7 @@ export default function AdminBackOffice() {
         {[['events', 'Transaction Monitor'], ['customers', 'Customers'], ['aml', 'AML Flags']].map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)}
             style={{ padding: '9px 18px', borderRadius: 50, fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer',
-              border: `1.5px solid ${tab === key ? NEON : BORDER}`, background: tab === key ? NEON : CARD, color: tab === key ? OLIVE : MUTED }}>
+              border: `1.5px solid ${tab === key ? NEON : BORDER}`, background: tab === key ? NEON : CARD, color:tab === key ? ON_NEON : MUTED }}>
             {label}
           </button>
         ))}
@@ -275,7 +276,7 @@ export default function AdminBackOffice() {
                 {f.status === 'open' && (
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button onClick={() => reviewFlag(f.id, 'reviewed')}
-                      style={{ padding: '8px 14px', borderRadius: 8, background: OLIVE, color: '#fff', border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      style={{ padding: '8px 14px', borderRadius: 8, background:ACCENT_FILL, color:ON_ACCENT_FILL, border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
                       Mark Reviewed
                     </button>
                     <button onClick={() => reviewFlag(f.id, 'dismissed')}

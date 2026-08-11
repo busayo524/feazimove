@@ -1,3 +1,4 @@
+import { CARD, BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, CHIP, DANGER_SOFT } from '../../theme/palette'
 import React, { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
@@ -7,7 +8,7 @@ import {
   BarChart3, PieChart, Clock, ArrowRight,
 } from 'lucide-react'
 
-const CARD = '#ffffff', BORDER = '#e9ecef', TEXT = '#1a1a1a', MUTED = '#6b7280'
+/* palette: themed tokens — see src/theme/palette.js */
 const GRID = '#eef0ea', AXIS = '#d1d5db'
 const GREEN = '#008300' // single-series mark color (validated on white)
 
@@ -357,7 +358,7 @@ export default function AdminDashboard() {
       <p style={{ color:MUTED, fontSize:14, marginBottom:20 }}>Ride analytics and activity overview.</p>
 
       {error && (
-        <div style={{ display:'flex', gap:8, padding:'10px 14px', background:'#fef2f2', border:'1px solid #fca5a5', borderRadius:10, marginBottom:20 }}>
+        <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10, marginBottom:20 }}>
           <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
           <p style={{ fontSize:13, color:'#ef4444', margin:0 }}>{error}</p>
         </div>
@@ -481,7 +482,7 @@ export default function AdminDashboard() {
                     </p>
                   </div>
                   <span style={{ fontSize:11.5, fontWeight:700, padding:'3px 10px', borderRadius:50, flexShrink:0,
-                    background: d.isOnline ? '#ecfdf3' : '#f3f4f6',
+                    background: d.isOnline ? '#ecfdf3' : CHIP,
                     color: d.isOnline ? '#027a48' : MUTED,
                     border: `1px solid ${d.isOnline ? '#abefc6' : BORDER}` }}>
                     {d.isOnline ? 'Online' : 'Offline'}
@@ -507,7 +508,7 @@ export default function AdminDashboard() {
                   </p>
                 </div>
                 <span style={{ fontSize:11.5, fontWeight:600, padding:'3px 10px', borderRadius:50,
-                  background:'#f3f4f6', color:MUTED, border:`1px solid ${BORDER}`, flexShrink:0 }}>
+                  background:CHIP, color:MUTED, border:`1px solid ${BORDER}`, flexShrink:0 }}>
                   {CATEGORY_TAGS[a.category] || a.category}
                 </span>
               </div>

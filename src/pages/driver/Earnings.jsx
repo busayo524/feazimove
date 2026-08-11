@@ -1,3 +1,4 @@
+import { CARD, BORDER, TEXT, MUTED, BG, ACCENT as OLIVE, MOSS, NEON, ON_NEON, DANGER_SOFT } from '../../theme/palette'
 import React, { useState, useEffect } from 'react'
 import AppLayout from '../../components/AppLayout'
 import { useAuth } from '../../context/AuthContext'
@@ -9,9 +10,9 @@ import {
   Clock, CheckCircle, Calendar
 } from 'lucide-react'
 
-const NEON='#ccff00', NT='#0a0a0a'
-const OLIVE='#243800', MOSS='#4C6900'
-const CARD='#ffffff', BORDER='#e9ecef', TEXT='#1a2800', MUTED='#4C6900', BG='#f6f7f9'
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function fmt(n){ return '₦' + Number(n||0).toLocaleString() }
@@ -65,7 +66,7 @@ function BarChart({ data, maxVal }){
               <div style={{ width:'100%', height:h, borderRadius:'5px 5px 3px 3px',
                 background: isHighest ? NEON : 'rgba(76,105,0,0.2)', transition:'height 0.4s ease' }}/>
             </div>
-            <span style={{ fontSize:10, fontWeight: isHighest ? 700 : 500, color: isHighest ? OLIVE : MUTED,
+            <span style={{ fontSize:10, fontWeight: isHighest ? 700 : 500, color:isHighest ? ON_NEON : MUTED,
               background: isHighest ? NEON : 'transparent', padding: isHighest ? '1px 5px' : '0',
               borderRadius:4, whiteSpace:'nowrap' }}>
               {d.label}
@@ -223,7 +224,7 @@ export default function Earnings(){
         <div style={{ width:60, height:60, borderRadius:'50%', background:NEON, display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', flexShrink:0, border:`3px solid ${OLIVE}` }}>
           {avatarUrl
             ? <img src={avatarUrl} alt="avatar" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
-            : <span style={{ color:OLIVE, fontWeight:900, fontSize:22 }}>{initials}</span>
+            : <span style={{ color:ON_NEON, fontWeight:900, fontSize:22 }}>{initials}</span>
           }
         </div>
         <div style={{ flex:1 }}>
@@ -297,7 +298,7 @@ export default function Earnings(){
                   Cancel
                 </button>
                 <button type="submit" disabled={withdrawing}
-                  style={{ flex:1, padding:'11px', borderRadius:10, border:'none', background:NEON, color:OLIVE, fontWeight:700, fontSize:14, cursor:withdrawing?'not-allowed':'pointer', fontFamily:'inherit', opacity:withdrawing?0.7:1 }}>
+                  style={{ flex:1, padding:'11px', borderRadius:10, border:'none', background:NEON, color:ON_NEON, fontWeight:700, fontSize:14, cursor:withdrawing?'not-allowed':'pointer', fontFamily:'inherit', opacity:withdrawing?0.7:1 }}>
                   {withdrawing ? 'Requesting…' : 'Request'}
                 </button>
               </div>
@@ -327,14 +328,14 @@ export default function Earnings(){
             <div key={t.id} style={{ display:'flex', alignItems:'center', gap:14, padding:'13px 20px', borderBottom:i<arr.length-1?`1px solid ${BORDER}`:'none', transition:'background 0.15s' }}
               onMouseEnter={e=>e.currentTarget.style.background=BG}
               onMouseLeave={e=>e.currentTarget.style.background=CARD}>
-              <div style={{ width:38, height:38, borderRadius:10, background: t.type==='credit'?NEON:'#fef2f2', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+              <div style={{ width:38, height:38, borderRadius:10, background: t.type==='credit'?NEON:DANGER_SOFT, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                 <ArrowDownLeft size={15} color={t.type==='credit'?OLIVE:'#ef4444'} style={{ transform: t.type==='debit'?'rotate(180deg)':'none' }}/>
               </div>
               <div style={{ flex:1, minWidth:0 }}>
                 <p style={{ color:TEXT, fontWeight:600, fontSize:14, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{t.description}</p>
                 <p style={{ color:MUTED, fontSize:12, marginTop:2 }}>{t.date}</p>
               </div>
-              <span style={{ fontWeight:800, fontSize:13, color: t.type==='credit'?OLIVE:'#ef4444', background: t.type==='credit'?NEON:'#fef2f2', padding:'3px 11px', borderRadius:20, flexShrink:0 }}>
+              <span style={{ fontWeight:800, fontSize:13, color:t.type==='credit'? ON_NEON :'#ef4444', background: t.type==='credit'?NEON:DANGER_SOFT, padding:'3px 11px', borderRadius:20, flexShrink:0 }}>
                 {t.type==='credit'?'+':'-'}{fmt(t.amount)}
               </span>
             </div>
@@ -346,7 +347,7 @@ export default function Earnings(){
       <div style={{ display:'flex', gap:6, marginBottom:16, background:CARD, border:`1px solid ${BORDER}`, borderRadius:12, padding:5, boxShadow:'0 2px 8px rgba(36,56,0,0.06)' }}>
         {[['today','Today'],['week','This Week'],['month','This Month']].map(([val,label])=>(
           <button key={val} onClick={()=>setPeriod(val)}
-            style={{ flex:1, padding:'9px', borderRadius:9, fontSize:13, fontWeight:700, border:'none', background:period===val?NEON:CARD, color:period===val?OLIVE:MUTED, cursor:'pointer', transition:'all 0.2s', fontFamily:'inherit' }}>
+            style={{ flex:1, padding:'9px', borderRadius:9, fontSize:13, fontWeight:700, border:'none', background:period===val?NEON:CARD, color:period===val? ON_NEON :MUTED, cursor:'pointer', transition:'all 0.2s', fontFamily:'inherit' }}>
             {label}
           </button>
         ))}
@@ -356,7 +357,7 @@ export default function Earnings(){
       <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:20, padding:'24px', marginBottom:16, position:'relative', overflow:'hidden', boxShadow:'0 2px 8px rgba(36,56,0,0.06)' }}>
         <div style={{ position:'absolute', top:-24, right:-24, width:120, height:120, borderRadius:'50%', background:'rgba(36,56,0,0.07)' }}/>
         <div style={{ position:'absolute', bottom:-30, left:60, width:80, height:80, borderRadius:'50%', background:'rgba(36,56,0,0.05)' }}/>
-        <p style={{ color:'rgba(36,56,0,0.55)', fontSize:12, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:4 }}>{periodLabel}</p>
+        <p style={{ color:MUTED, fontSize:12, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:4 }}>{periodLabel}</p>
         <p style={{ color:OLIVE, fontWeight:900, fontSize:'clamp(2rem,6vw,3rem)', letterSpacing:'-0.03em', lineHeight:1, marginBottom:16 }}>
           {fmt(periodAmount)}
         </p>
@@ -367,7 +368,7 @@ export default function Earnings(){
             ['Rating', `⭐ ${user?.rating||'4.8'}`],
           ].map(([l,v])=>(
             <div key={l} style={{ background:'rgba(36,56,0,0.08)', borderRadius:10, padding:'10px 12px', minWidth:0, overflow:'hidden' }}>
-              <p style={{ color:'rgba(36,56,0,0.5)', fontSize:11, marginBottom:3 }}>{l}</p>
+              <p style={{ color:MUTED, fontSize:11, marginBottom:3 }}>{l}</p>
               <p style={{ color:OLIVE, fontWeight:800, fontSize:14, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{v}</p>
             </div>
           ))}

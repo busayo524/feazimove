@@ -1,10 +1,11 @@
+import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, DANGER_SOFT } from '../../theme/palette'
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
 import { api } from '../../services/api'
 import { AlertCircle, FileText, Ban, CheckCircle2 } from 'lucide-react'
 
-const CARD = '#ffffff', BORDER = '#e5e7eb', TEXT = '#1a1a1a', MUTED = '#6b7280'
+/* palette: themed tokens — see src/theme/palette.js */
 
 const DOC_LABELS = {
   selfie: 'Selfie / Profile Photo', idDoc: 'ID Document',
@@ -49,7 +50,7 @@ export default function AdminDriverDetail() {
   if (error) {
     return (
       <AdminLayout title="Driver">
-        <div style={{ display:'flex', gap:8, padding:'10px 14px', background:'#fef2f2', border:'1px solid #fca5a5', borderRadius:10 }}>
+        <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10 }}>
           <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
           <p style={{ fontSize:13, color:'#ef4444' }}>{error}</p>
         </div>
@@ -67,7 +68,7 @@ export default function AdminDriverDetail() {
           <p style={{ color:MUTED, fontSize:13 }}>Driver ID: {driver.id}</p>
           <div style={{ display:'flex', gap:8, marginTop:6 }}>
             <span style={{ fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:20,
-              background: driver.isActive ? '#dcfce7' : '#fef2f2', color: driver.isActive ? '#15803d' : '#ef4444' }}>
+              background: driver.isActive ? '#dcfce7' : DANGER_SOFT, color: driver.isActive ? '#15803d' : '#ef4444' }}>
               {driver.isActive ? 'Active' : 'Suspended'}
             </span>
             <span style={{ display:'inline-flex', alignItems:'center', gap:6, fontSize:12, color: driver.isOnline ? '#15803d' : MUTED }}>
@@ -171,7 +172,7 @@ export default function AdminDriverDetail() {
 // knowing whether the licence held up.
 const ID_TONE = {
   verified: { fg:'#15803d', bg:'#f0fdf4', bd:'#86efac', label:'Identity verified' },
-  failed:   { fg:'#b91c1c', bg:'#fef2f2', bd:'#fca5a5', label:'Identity check failed' },
+  failed:   { fg:'#b91c1c', bg:DANGER_SOFT, bd:'#fca5a5', label:'Identity check failed' },
   error:    { fg:'#b45309', bg:'#fffbeb', bd:'#fcd34d', label:'Verification could not run' },
   skipped:  { fg:MUTED,     bg:'#f9fafb', bd:BORDER,    label:'Not verified' },
 }

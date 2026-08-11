@@ -1,11 +1,12 @@
+import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, ADMIN_BG as BG, NEON, ACCENT as OLIVE, DANGER_SOFT, ON_NEON } from '../../theme/palette'
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
 import { api } from '../../services/api'
 import { AlertCircle, Download, ShieldCheck, Eye, EyeOff, KeyRound } from 'lucide-react'
 
-const CARD = '#ffffff', BORDER = '#e5e7eb', TEXT = '#1a1a1a', MUTED = '#6b7280', BG = '#f5f7f2'
-const NEON = '#ccff00', OLIVE = '#243800'
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
 
 const ACTIONS = [
   { key: '',                      label: 'All events' },
@@ -17,7 +18,7 @@ const ACTIONS = [
 
 const ICON = {
   'KYC Revealed':          { icon: <Eye size={14}/>,        bg:'#fef3c7', fg:'#92400e' },
-  'KYC Reveal Denied':     { icon: <EyeOff size={14}/>,     bg:'#fef2f2', fg:'#b91c1c' },
+  'KYC Reveal Denied':     { icon: <EyeOff size={14}/>,     bg:DANGER_SOFT, fg:'#b91c1c' },
   'Authenticator Enabled': { icon: <ShieldCheck size={14}/>,bg:'#f3fbd3', fg:'#3f6212' },
   'Authenticator Removed': { icon: <KeyRound size={14}/>,   bg:'#f5f7f2', fg:'#6b7280' },
 }
@@ -59,13 +60,13 @@ export default function AdminKycAccessLog() {
         </p>
         <button onClick={handleExport} disabled={exporting}
           style={{ display:'flex', alignItems:'center', gap:7, padding:'9px 16px', borderRadius:10, border:'none',
-            background:NEON, color:OLIVE, fontWeight:800, fontSize:12.5, cursor: exporting?'wait':'pointer', fontFamily:'inherit' }}>
+            background:NEON, color:ON_NEON, fontWeight:800, fontSize:12.5, cursor: exporting?'wait':'pointer', fontFamily:'inherit' }}>
           <Download size={14}/> {exporting ? 'Exporting…' : 'Export to Excel'}
         </button>
       </div>
 
       {error && (
-        <div style={{ display:'flex', gap:8, padding:'10px 14px', background:'#fef2f2', border:'1px solid #fca5a5', borderRadius:10, marginBottom:20 }}>
+        <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10, marginBottom:20 }}>
           <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
           <p style={{ fontSize:13, color:'#ef4444' }}>{error}</p>
         </div>

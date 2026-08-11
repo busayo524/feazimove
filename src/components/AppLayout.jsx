@@ -1,3 +1,4 @@
+import { NEON, ON_NEON_HARD as NT, BG, TEXT, ADMIN_BORDER as BORDER, HEADER } from '../theme/palette'
 import React, { useState, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -9,9 +10,10 @@ import {
   TrendingUp, LayoutGrid,
 } from 'lucide-react'
 
-const NEON='#ccff00', NT='#0a0a0a', BG='#f6f7f9', BORDER='#e5e7eb', TEXT='#1a2800'
 
-// Sidebar-specific palette
+// Sidebar-specific palette. Deliberately NOT themed: the sidebar is already
+// dark in both modes, which is what the reference design shows, so flipping it
+// would make the light theme worse and change nothing in dark.
 const SB_BG      = '#1a2400'          // sidebar background — very deep lime neon
 const SB_BORDER  = 'rgba(255,255,255,0.08)'
 const SB_TEXT    = '#e8f5d0'          // inactive label
@@ -172,7 +174,7 @@ export default function AppLayout({ children, title }){
       <div style={{ flex:1, minWidth:0, marginLeft:240, display:'flex', flexDirection:'column', minHeight:'100vh' }} className="main-content">
         {/* Top bar — fixed (not sticky) so it's guaranteed to stay pinned
             regardless of scroll context quirks */}
-        <header style={{ position:'fixed', top:0, left:240, right:0, zIndex:30, background:'rgba(255,255,255,0.96)', backdropFilter:'blur(10px)', borderBottom:`1px solid ${BORDER}`, padding:'0 24px', height:60, display:'flex', alignItems:'center', justifyContent:'space-between' }} className="app-header">
+        <header style={{ position:'fixed', top:0, left:240, right:0, zIndex:30, background:HEADER, backdropFilter:'blur(10px)', borderBottom:`1px solid ${BORDER}`, padding:'0 24px', height:60, display:'flex', alignItems:'center', justifyContent:'space-between' }} className="app-header">
           <div style={{ display:'flex', alignItems:'center', gap:12, minWidth:0, flex:1 }}>
             <button onClick={() => setOpen(!open)} style={{ display:'none', background:'none', border:'none', cursor:'pointer', color:TEXT, padding:4, flexShrink:0 }} className="mobile-menu-btn" aria-label="Toggle menu">
               <Menu size={22}/>

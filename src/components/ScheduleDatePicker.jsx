@@ -1,9 +1,10 @@
+import { CARD, BORDER, TEXT, MUTED, BG, ACCENT as OLIVE, MOSS, NEON, ON_NEON } from '../theme/palette'
 import React, { useState, useRef, useEffect } from 'react'
 import { Calendar, ChevronDown, ChevronLeft, ChevronRight, Check } from 'lucide-react'
 import { usePanelPlacement } from './RouteDropdowns'
 
-const OLIVE='#243800', MOSS='#4C6900', NEON='#ccff00'
-const CARD='#ffffff', BORDER='#e9ecef', TEXT='#1a2800', MUTED='#4C6900', BG='#f6f7f9'
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
 
 // Rides can only be scheduled inside the coming week — today plus the next six
 // days. The backend enforces the same window; this just makes it impossible to
@@ -83,7 +84,7 @@ function MonthGrid({ monthDate, value, allowed, onPick }) {
               fontWeight: selected ? 800 : selectable ? 700 : 400,
               border: selected ? `1.5px solid ${OLIVE}` : selectable ? `1.5px solid ${BORDER}` : '1.5px solid transparent',
               background: selected ? NEON : selectable ? CARD : 'transparent',
-              color: selected ? OLIVE : selectable ? TEXT : '#aab0b7',
+              color:selected ? ON_NEON : selectable ? TEXT : '#aab0b7',
               cursor: selectable ? 'pointer' : 'not-allowed',
               transition:'background 0.12s, border-color 0.12s',
             }}>
@@ -199,7 +200,7 @@ export default function ScheduleDatePicker({ label = 'Ride Date', value, onChang
                     fontFamily:'inherit', cursor:'pointer',
                     border:`1.5px solid ${value === iso ? OLIVE : BORDER}`,
                     background:value === iso ? NEON : BG,
-                    color:value === iso ? OLIVE : MUTED,
+                    color:value === iso ? ON_NEON : MUTED,
                     display:'flex', alignItems:'center', gap:4 }}>
                   {value === iso && <Check size={11}/>}
                   {formatScheduleDate(iso)}

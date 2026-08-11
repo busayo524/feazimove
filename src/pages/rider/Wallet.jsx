@@ -1,3 +1,4 @@
+import { CARD, BORDER, TEXT, MUTED, BG, NEON, ACCENT as OLIVE, MOSS, ON_NEON, DANGER_SOFT, NEON_SOFT, ACCENT_FILL, ON_ACCENT_FILL } from '../../theme/palette'
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import AppLayout from '../../components/AppLayout'
 import { useAuth } from '../../context/AuthContext'
@@ -7,8 +8,8 @@ import { ArrowDownLeft, ArrowUpRight, Plus, RefreshCw, AlertCircle, Landmark, Sh
 import TransferDetails, { CopyBtn } from '../../components/TransferDetails'
 import StepUpModal from '../../components/StepUpModal'
 
-const NEON='#ccff00', OLIVE='#243800', MOSS='#4C6900'
-const CARD='#ffffff', BORDER='#e9ecef', TEXT='#1a2800', MUTED='#4C6900', BG='#f6f7f9'
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
 
 const QUICK = [1000, 2000, 5000, 10000]
 const POLL_INTERVAL = 4000
@@ -105,7 +106,7 @@ function ReservedAccountCard({ showForm, setShowForm, onStatus }) {
           too: people mistype it, or register under a name their bank does not
           hold, and they must be able to correct it and try again. */}
       {account && kyc && !kyc.isNamed && kyc.canReverify && !showForm && (
-        <div style={{ background: kyc.verifying ? '#f7ffe0' : '#fff7ed',
+        <div style={{ background: kyc.verifying ? NEON_SOFT : '#fff7ed',
           border: `1px solid ${kyc.verifying ? NEON : '#fdba74'}`,
           borderRadius: 12, padding: 12, marginBottom: 12 }}>
           <div style={{ display:'flex', alignItems:'center', gap:7, marginBottom:6 }}>
@@ -211,7 +212,7 @@ function ReservedAccountCard({ showForm, setShowForm, onStatus }) {
           )}
           <div style={{ display:'flex', gap:10 }}>
             <button type="submit" disabled={!canSubmit}
-              style={{ flex:1, padding:'11px', borderRadius:10, background:!canSubmit?BORDER:NEON, color:!canSubmit?MUTED:OLIVE, border:'none', fontWeight:800, fontSize:13.5, cursor:!canSubmit?'not-allowed':'pointer', fontFamily:'inherit' }}>
+              style={{ flex:1, padding:'11px', borderRadius:10, background:!canSubmit?BORDER:NEON, color:!canSubmit?MUTED:ON_NEON, border:'none', fontWeight:800, fontSize:13.5, cursor:!canSubmit?'not-allowed':'pointer', fontFamily:'inherit' }}>
               {busy ? (account ? 'Verifying…' : 'Creating…') : (account ? 'Try Again' : 'Create My Account')}
             </button>
             <button type="button" onClick={() => setShowForm(false)}
@@ -420,25 +421,25 @@ export default function Wallet() {
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 20, padding: '28px 24px', marginBottom: 20, position: 'relative', overflow: 'hidden', boxShadow: '0 2px 8px rgba(36,56,0,0.06)' }}>
         <div style={{ position: 'absolute', top: -30, right: -30, width: 130, height: 130, borderRadius: '50%', background: 'rgba(204,255,0,0.18)' }} />
         <div style={{ position: 'absolute', bottom: -20, right: 50, width: 90, height: 90, borderRadius: '50%', background: 'rgba(204,255,0,0.1)' }} />
-        <p style={{ color: 'rgba(36,56,0,0.6)', fontSize: 13, fontWeight: 600, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Available Balance</p>
+        <p style={{ color:MUTED, fontSize: 13, fontWeight: 600, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Available Balance</p>
         <p style={{ color: OLIVE, fontWeight: 900, fontSize: 'clamp(2rem,5vw,3rem)', letterSpacing: '-0.03em', lineHeight: 1 }}>
           {balance === null ? '—' : `₦${balance.toLocaleString()}`}
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
-          <p style={{ color: 'rgba(36,56,0,0.45)', fontSize: 13 }}>{user?.phone || '••• ••• ••••'}</p>
+          <p style={{ color:MUTED, fontSize: 13 }}>{user?.phone || '••• ••• ••••'}</p>
           {pendingFund && <span style={{ fontSize: 12, color: MOSS, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
             <RefreshCw size={11} style={{ animation: 'spin 1s linear infinite' }} /> Waiting for transfer…
           </span>}
         </div>
         {successMsg && (
-          <div style={{ marginTop: 12, background: NEON, color: OLIVE, fontWeight: 700, fontSize: 13, padding: '8px 14px', borderRadius: 8, display: 'inline-block' }}>
+          <div style={{ marginTop: 12, background: NEON, color:ON_NEON, fontWeight: 700, fontSize: 13, padding: '8px 14px', borderRadius: 8, display: 'inline-block' }}>
             ✓ {successMsg}
           </div>
         )}
         {bvnSetUp === true && (
           <button onClick={() => { setWithdrawError(''); setShowWithdraw(true) }}
             style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 10,
-              background: OLIVE, color: '#fff', border: 'none', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+              background:ACCENT_FILL, color:ON_ACCENT_FILL, border: 'none', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
             <ArrowUpRight size={15}/> Withdraw
           </button>
         )}
@@ -452,7 +453,7 @@ export default function Wallet() {
             <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
               {QUICK.map(q => (
                 <button key={q} onClick={() => setAmount(String(q))}
-                  style={{ padding: '8px 16px', borderRadius: 50, fontSize: 13, fontWeight: 700, border: `1.5px solid ${amount === String(q) ? NEON : BORDER}`, background: amount === String(q) ? NEON : BG, color: amount === String(q) ? OLIVE : MOSS, cursor: 'pointer', transition: 'all 0.15s' }}>
+                  style={{ padding: '8px 16px', borderRadius: 50, fontSize: 13, fontWeight: 700, border: `1.5px solid ${amount === String(q) ? NEON : BORDER}`, background: amount === String(q) ? NEON : BG, color: amount === String(q) ? ON_NEON : MOSS, cursor: 'pointer', transition: 'all 0.15s' }}>
                   ₦{q.toLocaleString()}
                 </button>
               ))}
@@ -463,7 +464,7 @@ export default function Wallet() {
                 onFocus={e => e.target.style.borderColor = MOSS}
                 onBlur={e => e.target.style.borderColor = BORDER} />
               <button type="submit" disabled={funding}
-                style={{ padding: '12px 20px', borderRadius: 10, background: funding ? BORDER : NEON, color: funding ? MUTED : OLIVE, border: 'none', fontWeight: 800, fontSize: 14, cursor: funding ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                style={{ padding: '12px 20px', borderRadius: 10, background: funding ? BORDER : NEON, color: funding ? MUTED : ON_NEON, border: 'none', fontWeight: 800, fontSize: 14, cursor: funding ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Plus size={16} />{funding ? 'Preparing…' : 'Add'}
               </button>
             </form>
@@ -480,7 +481,7 @@ export default function Wallet() {
         {bvnSetUp === false && !pendingFund && (
           <button onClick={goToSetup}
             style={{ display:'flex', alignItems:'flex-start', gap:8, width:'100%', textAlign:'left', marginTop:12,
-              background:'#f7ffe0', border:'1px solid rgba(36,56,0,0.12)', borderRadius:10, padding:'10px 12px',
+              background:NEON_SOFT, border:'1px solid rgba(36,56,0,0.12)', borderRadius:10, padding:'10px 12px',
               cursor:'pointer', fontFamily:'inherit' }}>
             <ShieldCheck size={15} color={MOSS} style={{ flexShrink:0, marginTop:1 }}/>
             <span style={{ fontSize:12.5, color:TEXT, lineHeight:1.45 }}>
@@ -490,7 +491,7 @@ export default function Wallet() {
           </button>
         )}
         {fundError && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: '8px 12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, background: DANGER_SOFT, border: '1px solid #fca5a5', borderRadius: 8, padding: '8px 12px' }}>
             <AlertCircle size={14} style={{ color: '#ef4444', flexShrink: 0 }} />
             <span style={{ color: '#ef4444', fontSize: 13 }}>{fundError}</span>
           </div>
@@ -519,14 +520,14 @@ export default function Wallet() {
             <div key={txn.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px', borderBottom: i < transactions.length - 1 ? `1px solid ${BORDER}` : 'none', transition: 'background 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.background = BG}
               onMouseLeave={e => e.currentTarget.style.background = CARD}>
-              <div style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, background: isCredit ? NEON : '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, background: isCredit ? NEON : DANGER_SOFT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {isCredit ? <ArrowDownLeft size={17} color={OLIVE} /> : <ArrowUpRight size={17} color='#ef4444' />}
               </div>
               <div style={{ flex: 1 }}>
                 <p style={{ color: TEXT, fontWeight: 600, fontSize: 14 }}>{txn.description}</p>
                 <span style={{ color: MUTED, fontSize: 12 }}>{txn.date}</span>
               </div>
-              <span style={{ fontWeight: 800, fontSize: 14, flexShrink: 0, background: isCredit ? NEON : '#fef2f2', color: isCredit ? OLIVE : '#ef4444', padding: '3px 12px', borderRadius: 20 }}>
+              <span style={{ fontWeight: 800, fontSize: 14, flexShrink: 0, background: isCredit ? NEON : DANGER_SOFT, color:isCredit ? ON_NEON : '#ef4444', padding: '3px 12px', borderRadius: 20 }}>
                 {isCredit ? '+' : '-'}₦{txn.amount.toLocaleString()}
               </span>
             </div>
@@ -566,7 +567,7 @@ export default function Wallet() {
                   Cancel
                 </button>
                 <button type="submit"
-                  style={{ flex:1, padding:'11px', borderRadius:10, border:'none', background:NEON, color:OLIVE, fontWeight:700, fontSize:14, cursor:'pointer', fontFamily:'inherit' }}>
+                  style={{ flex:1, padding:'11px', borderRadius:10, border:'none', background:NEON, color:ON_NEON, fontWeight:700, fontSize:14, cursor:'pointer', fontFamily:'inherit' }}>
                   Withdraw
                 </button>
               </div>

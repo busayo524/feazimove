@@ -1,3 +1,4 @@
+import { ACCENT as OLIVE, MOSS, CARD, BORDER, TEXT, MUTED, NEON, ON_NEON, DANGER_SOFT } from '../../theme/palette'
 import React, { useState, useEffect } from 'react'
 import AppLayout from '../../components/AppLayout'
 import { LocationDropdown, TimeDropdown } from '../../components/RouteDropdowns'
@@ -7,9 +8,9 @@ import { track } from '../../services/analytics'
 import { useRoutes } from '../../hooks/useRoutes'
 import movingImg from '../../assets/Moving.png'
 
-const NEON='#ccff00', NT='#0a0a0a'
-const OLIVE='#243800', MOSS='#4C6900'
-const CARD='#ffffff', BORDER='#e9ecef', TEXT='#1a2800', MUTED='#4C6900'
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
 
 const SIZES=[
   {id:'sm',label:'Small',desc:'Documents, phones, small items'},
@@ -86,7 +87,7 @@ function LaunchingSoonOverlay(){
       <div className="ls-content" style={{position:'relative',textAlign:'center',maxWidth:680,animation:'lsRise 0.8s cubic-bezier(.22,1,.36,1) 0.15s both'}}>
         <span className="ls-badge" style={{
           display:'inline-flex',alignItems:'center',gap:8,borderRadius:50,
-          background:NEON,color:OLIVE,fontWeight:900,letterSpacing:'0.14em',
+          background:NEON,color:ON_NEON,fontWeight:900,letterSpacing:'0.14em',
           textTransform:'uppercase',boxShadow:'0 0 30px rgba(204,255,0,0.5)',
           animation:'lsBadge 2.2s ease-in-out infinite',
         }}>
@@ -220,7 +221,7 @@ function DeliveryStatusBanner({ rideId }){
   },[rideId])
 
   if(error) return (
-    <div style={{background:'#fef2f2',border:'1px solid #fca5a5',borderRadius:16,padding:16,marginBottom:16}}>
+    <div style={{background:DANGER_SOFT,border:'1px solid #fca5a5',borderRadius:16,padding:16,marginBottom:16}}>
       <p style={{fontSize:13,color:'#ef4444'}}>{error}</p>
     </div>
   )
@@ -236,7 +237,7 @@ function DeliveryStatusBanner({ rideId }){
     <div style={{background:CARD,border:`1.5px solid ${NEON}`,borderRadius:16,padding:18,marginBottom:20,boxShadow:'0 2px 8px rgba(36,56,0,0.06)'}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10,gap:10}}>
         <p style={{fontWeight:700,fontSize:13,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em'}}>Delivery in Progress</p>
-        <span style={{fontSize:11,fontWeight:700,padding:'4px 10px',borderRadius:20,background:ride.status==='completed'?'#dcfce7':NEON,color:ride.status==='completed'?'#15803d':OLIVE,whiteSpace:'nowrap',flexShrink:0}}>
+        <span style={{fontSize:11,fontWeight:700,padding:'4px 10px',borderRadius:20,background:ride.status==='completed'?'#dcfce7':NEON,color:ride.status==='completed'?'#15803d':ON_NEON,whiteSpace:'nowrap',flexShrink:0}}>
           {STAGE_LABEL[ride.status]||ride.status}
         </span>
       </div>
@@ -253,7 +254,7 @@ function DeliveryStatusBanner({ rideId }){
             )}
           </div>
           {driver.phone && (
-            <a href={`tel:${driver.phone}`} style={{display:'flex',alignItems:'center',gap:6,padding:'9px 16px',borderRadius:50,background:NEON,color:OLIVE,fontWeight:700,fontSize:13,textDecoration:'none',flexShrink:0}}>
+            <a href={`tel:${driver.phone}`} style={{display:'flex',alignItems:'center',gap:6,padding:'9px 16px',borderRadius:50,background:NEON,color:ON_NEON,fontWeight:700,fontSize:13,textDecoration:'none',flexShrink:0}}>
               <Phone size={13}/> Call
             </a>
           )}
@@ -361,7 +362,7 @@ export default function SendPackage(){
                 }}>
                   <input type="radio" name="size" value={s.id} checked={size===s.id} onChange={()=>setSize(s.id)} style={{display:'none'}}/>
                   <div style={{flex:1}}>
-                    <p style={{fontWeight:700,fontSize:14,color:size===s.id?OLIVE:TEXT,marginBottom:2}}>{s.label}</p>
+                    <p style={{fontWeight:700,fontSize:14,color:size===s.id? ON_NEON :TEXT,marginBottom:2}}>{s.label}</p>
                     <p style={{fontSize:12,color:size===s.id?'rgba(36,56,0,0.6)':MUTED}}>{s.desc}</p>
                   </div>
                 </label>
@@ -428,7 +429,7 @@ export default function SendPackage(){
             style={{
               width:'100%',padding:'15px',borderRadius:50,
               background:submitting||!pickup||!dropoff||!timeSlot?BORDER:NEON,
-              color:submitting||!pickup||!dropoff||!timeSlot?MUTED:OLIVE,
+              color:submitting||!pickup||!dropoff||!timeSlot?MUTED:ON_NEON,
               fontWeight:800,fontSize:15,border:'none',
               cursor:submitting||!pickup||!dropoff||!timeSlot?'not-allowed':'pointer',
               display:'flex',alignItems:'center',justifyContent:'center',gap:10,
@@ -455,7 +456,7 @@ export default function SendPackage(){
 
           {bookError && (
             <div style={{display:'flex',alignItems:'flex-start',gap:10,padding:'12px 14px',
-              background:'#fef2f2',border:'1px solid #fca5a5',borderRadius:12,marginBottom:16}}>
+              background:DANGER_SOFT,border:'1px solid #fca5a5',borderRadius:12,marginBottom:16}}>
               <span style={{fontSize:16,flexShrink:0}}>⚠️</span>
               <p style={{fontSize:13,color:'#ef4444'}}>{bookError}</p>
             </div>

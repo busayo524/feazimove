@@ -1,12 +1,14 @@
+import { CARD, BORDER, MUTED, ON_NEON } from '../theme/palette'
 import React, { useEffect, useRef, useState } from 'react'
 import { MapPin } from 'lucide-react'
 import { loadMapbox } from '../utils/mapbox'
 import { useStopCoords } from '../hooks/useStopCoords'
 import { api } from '../services/api'
 import { fetchDrivingRoute } from '../utils/mapboxDirections'
+import { NEON, ACCENT as OLIVE } from '../theme/palette'
 
-const NEON='#ccff00', OLIVE='#243800'
-const CARD='#ffffff', BORDER='#e9ecef', MUTED='#4C6900'
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
 
 function lerp(a, b, t) { return a + (b - a) * t }
 
@@ -279,7 +281,7 @@ export default function ActiveRideMap({ pickup, dropoff, riderLocation, status, 
         <MapPin size={26} color={NEON}/>
         <p style={{ color:'rgba(255,255,255,0.7)', fontSize:13, textAlign:'center', padding:'0 20px' }}>Couldn't load the map.</p>
         <button onClick={() => setRetryKey(k => k + 1)}
-          style={{ padding:'7px 18px', borderRadius:50, background:NEON, color:OLIVE, fontWeight:700, fontSize:13, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
+          style={{ padding:'7px 18px', borderRadius:50, background:NEON, color:ON_NEON, fontWeight:700, fontSize:13, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
           Retry
         </button>
       </div>

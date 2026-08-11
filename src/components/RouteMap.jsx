@@ -1,10 +1,11 @@
+import { CARD, BORDER, TEXT, MUTED, BG, ACCENT as OLIVE, MOSS, NEON } from '../theme/palette'
 import React from 'react'
 import { MapPin } from 'lucide-react'
 import { useStopCoords } from '../hooks/useStopCoords'
 
-const NEON='#ccff00'
-const OLIVE='#243800', MOSS='#4C6900'
-const CARD='#ffffff', BORDER='#e9ecef', TEXT='#1a2800', MUTED='#4C6900', BG='#f6f7f9'
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
 
 // Static pickup/dropoff route preview — Mapbox Static Images API, just an <img>,
 // no JS SDK or live tracking. Same pattern used on the rider's Book Ride page.

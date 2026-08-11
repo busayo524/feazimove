@@ -1,9 +1,11 @@
+import { CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, BG } from '../theme/palette'
 import React, { useState, useEffect, useRef } from 'react'
 import { X, Send } from 'lucide-react'
 import { api } from '../services/api'
+import { NEON } from '../theme/palette'
 
-const NEON='#ccff00', NT='#0a0a0a'
-const CARD='#ffffff', BORDER='#e8eaed', TEXT='#111827', MUTED='#6b7280', BG='#f5f7fa'
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
 
 // In-ride chat between the rider and driver of a single ride.
 // Used by both the driver's Active Ride screen and the rider's Track Ride screen.

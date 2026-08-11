@@ -1,3 +1,4 @@
+import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, NEON, ACCENT as OLIVE, DANGER_SOFT, ON_NEON } from '../../theme/palette'
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
@@ -6,8 +7,8 @@ import { api } from '../../services/api'
 import { AlertCircle, CheckCircle, Lock, ShieldCheck } from 'lucide-react'
 import StepUpModal from '../../components/StepUpModal'
 
-const CARD = '#ffffff', BORDER = '#e5e7eb', TEXT = '#1a1a1a', MUTED = '#6b7280'
-const NEON = '#ccff00', OLIVE = '#243800'
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
 
 export default function AdminSettings() {
   const { user, updateUser } = useAuth()
@@ -71,7 +72,7 @@ export default function AdminSettings() {
             style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14, marginBottom:16, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}/>
 
           {error && (
-            <div style={{ display:'flex', gap:8, padding:'10px 14px', background:'#fef2f2', border:'1px solid #fca5a5', borderRadius:10, marginBottom:14 }}>
+            <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10, marginBottom:14 }}>
               <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
               <p style={{ fontSize:13, color:'#ef4444' }}>{error}</p>
             </div>
@@ -84,7 +85,7 @@ export default function AdminSettings() {
           )}
 
           <button type="submit" disabled={busy}
-            style={{ width:'100%', padding:'12px', borderRadius:10, background:NEON, color:OLIVE, border:'none', fontWeight:700, fontSize:14, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit', opacity:busy?0.7:1 }}>
+            style={{ width:'100%', padding:'12px', borderRadius:10, background:NEON, color:ON_NEON, border:'none', fontWeight:700, fontSize:14, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit', opacity:busy?0.7:1 }}>
             {busy ? 'Updating…' : 'Update Password'}
           </button>
         </form>
@@ -196,7 +197,7 @@ function AuthenticatorPanel() {
         </div>
       )}
       {error && (
-        <div style={{ display:'flex', gap:8, padding:'10px 14px', background:'#fef2f2', border:'1px solid #fca5a5', borderRadius:10, marginBottom:14 }}>
+        <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10, marginBottom:14 }}>
           <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
           <p style={{ fontSize:13, color:'#ef4444' }}>{error}</p>
         </div>
@@ -229,7 +230,7 @@ function AuthenticatorPanel() {
 
       {state.vaultConfigured && !state.enabled && !setup && (
         <button onClick={startSetup} disabled={busy}
-          style={{ padding:'11px 20px', borderRadius:10, background:NEON, border:'none', color:OLIVE,
+          style={{ padding:'11px 20px', borderRadius:10, background:NEON, border:'none', color:ON_NEON,
             fontWeight:800, fontSize:13.5, cursor:'pointer', fontFamily:'inherit' }}>
           {busy ? 'Preparing…' : 'Set up authenticator'}
         </button>
@@ -251,7 +252,7 @@ function AuthenticatorPanel() {
           <div style={{ display:'flex', gap:10 }}>
             <button type="submit" disabled={busy || code.length !== 6}
               style={{ flex:1, padding:'11px', borderRadius:10, border:'none', fontWeight:800, fontSize:13.5, fontFamily:'inherit',
-                background:(busy || code.length !== 6)?BORDER:NEON, color:(busy || code.length !== 6)?MUTED:OLIVE,
+                background:(busy || code.length !== 6)?BORDER:NEON, color:(busy || code.length !== 6)?MUTED:ON_NEON,
                 cursor:(busy || code.length !== 6)?'not-allowed':'pointer' }}>
               {busy ? 'Verifying…' : 'Confirm & enable'}
             </button>

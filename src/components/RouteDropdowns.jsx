@@ -1,8 +1,9 @@
+import { CARD, BORDER, TEXT, MUTED, BG, MOSS, ACCENT } from '../theme/palette'
 import React, { useState, useRef, useEffect } from 'react'
 import { MapPin, ChevronDown, Check, Clock } from 'lucide-react'
 
-const OLIVE='#243800', MOSS='#4C6900', NEON='#ccff00'
-const CARD='#ffffff', BORDER='#e9ecef', TEXT='#1a2800', MUTED='#4C6900', BG='#f6f7f9'
+/* palette: themed tokens — see src/theme/palette.js */
+/* palette: themed tokens — see src/theme/palette.js */
 
 // Riders and drivers are matched on an EXACT time_slot string, so both sides
 // must produce byte-identical labels — they share these constants rather than
@@ -74,7 +75,7 @@ export function usePanelPlacement(open, triggerRef) {
 
 // Pickup/drop-off picker sourced from GET /routes — shared by Book Ride and
 // Move an Item so both use the exact same route structure.
-export function LocationDropdown({ label, options, value, onChange, placeholder, forceUpward }){
+export function LocationDropdown({ label, options, value, onChange, placeholder, forceUpward, compact = false }){
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
   const { openUpward: autoUpward, maxHeight } = usePanelPlacement(open, ref)
@@ -92,7 +93,8 @@ export function LocationDropdown({ label, options, value, onChange, placeholder,
       <div ref={ref} style={{position:'relative'}}>
         <button type="button" onClick={()=>setOpen(o=>!o)}
           style={{
-            width:'100%',padding:'13px 16px',paddingLeft:42,paddingRight:40,
+            width:'100%',padding:'13px 16px',
+          paddingLeft:compact?32:42,paddingRight:compact?26:40,
             borderRadius:10,fontSize:15,
             border:`1.5px solid ${open?MOSS:BORDER}`,
             background:CARD,color:value?TEXT:MUTED,
@@ -104,7 +106,7 @@ export function LocationDropdown({ label, options, value, onChange, placeholder,
           <span style={{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
             {value || placeholder}
           </span>
-          <ChevronDown size={15} style={{position:'absolute',right:14,color:MUTED,transform:open?'rotate(180deg)':'rotate(0)',transition:'transform 0.2s'}}/>
+          <ChevronDown size={15} style={{position:'absolute',right:compact?8:14,color:MUTED,transform:open?'rotate(180deg)':'rotate(0)',transition:'transform 0.2s'}}/>
         </button>
 
         {open&&(
@@ -126,7 +128,7 @@ export function LocationDropdown({ label, options, value, onChange, placeholder,
                   borderBottom:i<options.length-1?`1px solid ${BORDER}`:'none',
                   border:'none',cursor:'pointer',textAlign:'left',
                   fontFamily:'inherit',fontSize:14,
-                  color:value===opt?OLIVE:TEXT,fontWeight:value===opt?700:400,
+                  color:value===opt?ACCENT:TEXT,fontWeight:value===opt?700:400,
                   transition:'background 0.1s',
                 }}
                 onMouseEnter={e=>{ if(value!==opt) e.currentTarget.style.background=BG }}
@@ -148,7 +150,10 @@ export function LocationDropdown({ label, options, value, onChange, placeholder,
 // Generic single-column picker. Used for the time slot and, with
 // slots={MERIDIEMS}, for the AM/PM field that narrows it — the two are separate
 // fields, so the panel here stays a plain list.
-export function TimeDropdown({ slots, value, onChange, placeholder = 'Select a time slot', icon }){
+// `compact` trims the icon/chevron gutters. The full-width field can afford
+// 42px+40px of them; the narrow AM/PM field beside it cannot — on a 390px phone
+// that leaves about 8px for the label, which renders "AM" as "A".
+export function TimeDropdown({ slots, value, onChange, placeholder = 'Select a time slot', icon, compact = false }){
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
   const { openUpward, maxHeight } = usePanelPlacement(open, ref)
@@ -165,7 +170,8 @@ export function TimeDropdown({ slots, value, onChange, placeholder = 'Select a t
     <div ref={ref} style={{position:'relative'}}>
       <button type="button" onClick={()=>setOpen(o=>!o)}
         style={{
-          width:'100%',padding:'13px 16px',paddingLeft:42,paddingRight:40,
+          width:'100%',padding:'13px 16px',
+          paddingLeft:compact?32:42,paddingRight:compact?26:40,
           borderRadius:10,fontSize:15,
           border:`1.5px solid ${open?MOSS:BORDER}`,
           background:CARD,color:value?TEXT:MUTED,
@@ -173,11 +179,11 @@ export function TimeDropdown({ slots, value, onChange, placeholder = 'Select a t
           textAlign:'left',cursor:'pointer',display:'flex',alignItems:'center',
           transition:'border-color 0.15s',outline:'none',
         }}>
-        <span style={{position:'absolute',left:14,display:'flex',color:open?MOSS:MUTED,transition:'color 0.15s'}}>
+        <span style={{position:'absolute',left:compact?10:14,display:'flex',color:open?MOSS:MUTED,transition:'color 0.15s'}}>
           {icon || <Clock size={15}/>}
         </span>
         <span style={{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{value || placeholder}</span>
-        <ChevronDown size={15} style={{position:'absolute',right:14,color:MUTED,transform:open?'rotate(180deg)':'rotate(0)',transition:'transform 0.2s'}}/>
+        <ChevronDown size={15} style={{position:'absolute',right:compact?8:14,color:MUTED,transform:open?'rotate(180deg)':'rotate(0)',transition:'transform 0.2s'}}/>
       </button>
 
       {open&&(
@@ -199,7 +205,7 @@ export function TimeDropdown({ slots, value, onChange, placeholder = 'Select a t
                 borderBottom:i<shown.length-1?`1px solid ${BORDER}`:'none',
                 border:'none',cursor:'pointer',textAlign:'left',
                 fontFamily:'inherit',fontSize:14,
-                color:value===s?OLIVE:TEXT,fontWeight:value===s?700:400,
+                color:value===s?ACCENT:TEXT,fontWeight:value===s?700:400,
                 transition:'background 0.1s',
               }}
               onMouseEnter={e=>{ if(value!==s) e.currentTarget.style.background=BG }}

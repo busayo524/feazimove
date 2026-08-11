@@ -26,6 +26,58 @@
   --green-hover: #d9ff26;
   --green-deep:  #000000;
   --black:       #000000;
+
+  /* ── In-app surfaces (rider / driver / admin) ───────────────────────────
+     The marketing tokens above are black-and-white; the app runs a softer
+     olive/moss palette, so it gets its own set. Light values here are the
+     exact hexes the app screens used to hardcode, so switching a file over
+     to these tokens changes nothing in light mode.
+
+     Two families exist because the app and the admin panel genuinely differ
+     in light mode: app muted text is moss green, admin muted is neutral
+     grey. They converge in dark. */
+  --fm-bg:            #f6f7f9;
+  --fm-card:          #ffffff;
+  --fm-border:        #e9ecef;
+  --fm-text:          #1a2800;
+  --fm-muted:         #4C6900;
+  --fm-moss:          #4C6900;   /* icons and secondary labels */
+
+  --fm-admin-bg:      #f5f7f2;
+  --fm-admin-card:    #ffffff;
+  --fm-admin-border:  #e5e7eb;
+  --fm-admin-text:    #1a1a1a;
+  --fm-admin-muted:   #6b7280;
+
+  /* Emphasis text (headings, selected values). Dark-green on light, and it
+     MUST lighten in dark or it disappears into the card. */
+  --fm-accent:        #243800;
+  /* Text and icons sitting ON a neon fill. Never themed — a neon button is
+     neon in both modes, so its label stays dark or it vanishes. */
+  --fm-on-neon:       #243800;
+  --fm-neon:          #ccff00;
+  --fm-neon-soft:     #f6faee;   /* neon-tinted callout background */
+  /* Solid accent button: a filled pill with a contrasting label. The fill and
+     its label must swap together, or dark mode paints white on neon. */
+  --fm-accent-fill:    #243800;
+  --fm-on-accent-fill: #ffffff;
+  /* Inverted pill: near-black fill carrying neon text. Needs to lift in dark
+     or it sinks into the card it sits on. */
+  --fm-invert:        #0a0a0a;
+  --fm-on-neon-hard:  #0a0a0a;   /* the harder near-black used on neon fills */
+
+  /* Translucent sticky headers sit over scrolling content, so they need a
+     near-opaque version of the page colour rather than the card colour. */
+  /* Tinted status surfaces. These are pale washes in light mode, which read as
+     bright patches on a black page — dark mode uses a translucent tint of the
+     same hue instead. */
+  --fm-danger-soft:   #fef2f2;
+  --fm-chip:          #f3f4f6;
+  --fm-header:        rgba(255,255,255,0.96);
+  --fm-shadow:        rgba(36,56,0,0.06);
+  --fm-shadow-strong: rgba(36,56,0,0.14);
+  --fm-overlay:       rgba(0,0,0,0.45);
+  --fm-hover:         #f6f7f9;   /* row hover / pressed surface */
 }
 
 /* ── Dark mode — black base ──────────────────────────────────────────────── */
@@ -45,6 +97,39 @@
   --lime-text:   #ccff00;
   --green-hover: #d9ff26;
   --green-deep:  #000000;
+
+  /* ── In-app surfaces, dark ──────────────────────────────────────────────
+     Black page with raised near-black cards, matching the reference screens:
+     the card must be lighter than the page or every panel edge disappears. */
+  --fm-bg:            #000000;
+  --fm-card:          #1a1a1c;
+  --fm-border:        rgba(255,255,255,0.12);
+  --fm-text:          #ffffff;
+  --fm-muted:         rgba(255,255,255,0.62);
+  --fm-moss:          #b4e600;   /* moss is unreadable on black — lift it */
+
+  --fm-admin-bg:      #000000;
+  --fm-admin-card:    #1a1a1c;
+  --fm-admin-border:  rgba(255,255,255,0.12);
+  --fm-admin-text:    #ffffff;
+  --fm-admin-muted:   rgba(255,255,255,0.60);
+
+  --fm-accent:        #ccff00;
+  --fm-on-neon:       #243800;   /* deliberately unchanged */
+  --fm-neon:          #ccff00;
+  --fm-neon-soft:     rgba(204,255,0,0.10);
+  --fm-accent-fill:    #ccff00;
+  --fm-on-accent-fill: #243800;
+  --fm-invert:        #2c2c30;
+  --fm-on-neon-hard:  #0a0a0a;   /* deliberately unchanged */
+
+  --fm-danger-soft:   rgba(239,68,68,0.16);
+  --fm-chip:          #2a2a2e;
+  --fm-header:        rgba(10,10,12,0.92);
+  --fm-shadow:        rgba(0,0,0,0.55);
+  --fm-shadow-strong: rgba(0,0,0,0.7);
+  --fm-overlay:       rgba(0,0,0,0.65);
+  --fm-hover:         #26262a;
 }
 
 /* ── Base ────────────────────────────────────────────────────────────────── */
