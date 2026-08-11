@@ -1,11 +1,10 @@
-import { CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, DANGER_SOFT } from '../../theme/palette'
+import { CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, NEON, ON_NEON_HARD, DANGER_SOFT } from '../../theme/palette'
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/AppLayout'
 import { useAuth } from '../../context/AuthContext'
 import { api } from '../../services/api'
 import { Star, AlertCircle } from 'lucide-react'
-import { NEON } from '../../theme/palette'
 
 /* palette: themed tokens — see src/theme/palette.js */
 /* palette: themed tokens — see src/theme/palette.js */
@@ -87,7 +86,7 @@ export default function RateRide(){
               {[1,2,3,4,5].map(s=><Star key={s} size={28} fill={s<=stars?'#f59e0b':'none'} color={s<=stars?'#f59e0b':BORDER}/>)}
             </div>
           )}
-          <button onClick={()=>navigate(homeRoute())} style={{padding:'13px 32px',borderRadius:50,background:NEON,color:NT,fontWeight:700,fontSize:15,border:'none',cursor:'pointer'}}>
+          <button onClick={()=>navigate(homeRoute())} style={{padding:'13px 32px',borderRadius:50,background:NEON,color:ON_NEON_HARD,fontWeight:700,fontSize:15,border:'none',cursor:'pointer'}}>
             Done
           </button>
         </div>
@@ -101,14 +100,14 @@ export default function RateRide(){
       <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,padding:20,marginBottom:16,boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
         <div style={{display:'flex',alignItems:'center',gap:14}}>
           <div style={{width:52,height:52,borderRadius:14,background:NEON,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-            <span style={{color:NT,fontWeight:800,fontSize:22}}>{other?.name?.[0] || '?'}</span>
+            <span style={{color:ON_NEON_HARD,fontWeight:800,fontSize:22}}>{other?.name?.[0] || '?'}</span>
           </div>
           <div style={{flex:1,minWidth:0}}>
             <p style={{fontWeight:700,fontSize:15,color:TEXT}}>{other?.name || `Your ${otherLabel}`}</p>
             <p style={{fontSize:13,color:MUTED,marginTop:2}}>{ride.pickup} → {ride.destination}</p>
             <p style={{fontSize:12,color:MUTED,marginTop:1}}>{ride.date}</p>
           </div>
-          <p style={{fontWeight:900,fontSize:18,color:NT,background:NEON,padding:'4px 12px',borderRadius:10,flexShrink:0}}>₦{ride.fare.toLocaleString()}</p>
+          <p style={{fontWeight:900,fontSize:18,color:ON_NEON_HARD,background:NEON,padding:'4px 12px',borderRadius:10,flexShrink:0}}>₦{ride.fare.toLocaleString()}</p>
         </div>
       </div>
 
@@ -124,7 +123,7 @@ export default function RateRide(){
               </button>
             ))}
           </div>
-          {stars>0&&<p style={{fontWeight:700,fontSize:15,color:NT,background:NEON,display:'inline-block',padding:'4px 16px',borderRadius:20}}>{['','Poor','Fair','Good','Great','Excellent!'][stars]}</p>}
+          {stars>0&&<p style={{fontWeight:700,fontSize:15,color:ON_NEON_HARD,background:NEON,display:'inline-block',padding:'4px 16px',borderRadius:20}}>{['','Poor','Fair','Good','Great','Excellent!'][stars]}</p>}
         </div>
 
         {submitError && (
@@ -134,7 +133,7 @@ export default function RateRide(){
           </div>
         )}
 
-        <button type="submit" disabled={!stars||submitting} style={{width:'100%',padding:'15px',borderRadius:50,background:!stars||submitting?'#e5e7eb':NEON,color:!stars||submitting?MUTED:NT,fontWeight:700,fontSize:15,border:'none',cursor:!stars||submitting?'not-allowed':'pointer',transition:'background 0.2s'}}>
+        <button type="submit" disabled={!stars||submitting} style={{width:'100%',padding:'15px',borderRadius:50,background:!stars||submitting?'#e5e7eb':NEON,color:!stars||submitting?MUTED:ON_NEON_HARD,fontWeight:700,fontSize:15,border:'none',cursor:!stars||submitting?'not-allowed':'pointer',transition:'background 0.2s'}}>
           {submitting?'Submitting…':'Submit Rating'}
         </button>
       </form>

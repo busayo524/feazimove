@@ -1,8 +1,7 @@
-import { CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, BG } from '../theme/palette'
+import { CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, BG, NEON, INVERT } from '../theme/palette'
 import React, { useState, useEffect, useRef } from 'react'
 import { X, Send } from 'lucide-react'
 import { api } from '../services/api'
-import { NEON } from '../theme/palette'
 
 /* palette: themed tokens — see src/theme/palette.js */
 /* palette: themed tokens — see src/theme/palette.js */
@@ -64,7 +63,7 @@ export default function ChatModal({ rideId, title, onClose }) {
             <div key={m.id} style={{ display:'flex', justifyContent: m.mine ? 'flex-end' : 'flex-start' }}>
               <div style={{
                 maxWidth:'75%', padding:'9px 14px', borderRadius:14, fontSize:14,
-                background: m.mine ? NT : BG, color: m.mine ? NEON : TEXT,
+                background: m.mine ? INVERT : BG, color: m.mine ? NEON : TEXT,
               }}>
                 <p style={{ margin:0, wordBreak:'break-word' }}>{m.body}</p>
                 <p style={{ margin:'3px 0 0', fontSize:10, opacity:0.6 }}>{m.time}</p>
@@ -83,7 +82,7 @@ export default function ChatModal({ rideId, title, onClose }) {
               background:CARD, color:TEXT, colorScheme:'light' }}
           />
           <button onClick={send} disabled={!text.trim() || sending} aria-label="Send"
-            style={{ width:42, height:42, borderRadius:'50%', border:'none', background: text.trim() ? NT : BORDER, color:NEON, display:'flex', alignItems:'center', justifyContent:'center', cursor: text.trim() ? 'pointer' : 'not-allowed', flexShrink:0 }}>
+            style={{ width:42, height:42, borderRadius:'50%', border:'none', background: text.trim() ? INVERT : BORDER, color:NEON, display:'flex', alignItems:'center', justifyContent:'center', cursor: text.trim() ? 'pointer' : 'not-allowed', flexShrink:0 }}>
             <Send size={16}/>
           </button>
         </div>

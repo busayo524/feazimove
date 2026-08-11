@@ -1,4 +1,4 @@
-import { CARD, BORDER, TEXT, MUTED, BG, ACCENT as OLIVE, MOSS, NEON, ON_NEON, DANGER_SOFT, NEON_SOFT } from '../../theme/palette'
+import { CARD, BORDER, TEXT, MUTED, BG, ACCENT as OLIVE, MOSS, NEON, ON_NEON, ON_NEON_HARD, INVERT, DANGER_SOFT, NEON_SOFT } from '../../theme/palette'
 import React, { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -1141,7 +1141,7 @@ export default function DriverDashboard() {
           <AlertCircle size={32} color="#ef4444" style={{ marginBottom:12 }}/>
           <p style={{ color:TEXT, fontWeight:700, marginBottom:6 }}>{rideError}</p>
           <button onClick={backToDailyDrive}
-            style={{ marginTop:14, padding:'10px 22px', borderRadius:50, background:NT, color:NEON,
+            style={{ marginTop:14, padding:'10px 22px', borderRadius:50, background:INVERT, color:NEON,
               fontWeight:700, fontSize:14, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
             Back to Daily Drive
           </button>
@@ -1161,7 +1161,7 @@ export default function DriverDashboard() {
           <p style={{ color:MUTED, fontSize:15, marginBottom:8 }}>
             {rides.length > 1 ? `Fares collected — ${rides.length} riders` : 'Fare collected'}
           </p>
-          <p style={{ fontSize:36, fontWeight:900, color:NT, letterSpacing:'-0.03em', marginBottom:28, background:NEON, display:'inline-block', padding:'4px 24px', borderRadius:14 }}>
+          <p style={{ fontSize:36, fontWeight:900, color:ON_NEON_HARD, letterSpacing:'-0.03em', marginBottom:28, background:NEON, display:'inline-block', padding:'4px 24px', borderRadius:14 }}>
             ₦{rides.reduce((sum, r) => sum + (r.fare || 0), 0).toLocaleString()}
           </p>
 
@@ -1171,7 +1171,7 @@ export default function DriverDashboard() {
             <>
               <p style={{ color:TEXT, fontWeight:700, fontSize:15, marginBottom:20 }}>✓ Ratings submitted — thank you!</p>
               <button onClick={backToDailyDrive}
-                style={{ padding:'13px 32px', borderRadius:50, background:NT, color:NEON, fontWeight:700, fontSize:15, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
+                style={{ padding:'13px 32px', borderRadius:50, background:INVERT, color:NEON, fontWeight:700, fontSize:15, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
                 Back to Daily Drive
               </button>
             </>
@@ -1179,7 +1179,7 @@ export default function DriverDashboard() {
             <p style={{ color:MUTED, fontSize:14 }}>Loading riders…</p>
           ) : unratedRides.length === 0 ? (
             <button onClick={backToDailyDrive}
-              style={{ padding:'13px 32px', borderRadius:50, background:NT, color:NEON, fontWeight:700, fontSize:15, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
+              style={{ padding:'13px 32px', borderRadius:50, background:INVERT, color:NEON, fontWeight:700, fontSize:15, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
               Back to Daily Drive
             </button>
           ) : (

@@ -1,4 +1,4 @@
-import { ACCENT as OLIVE, MOSS, CARD, BORDER, TEXT, MUTED, NEON, ON_NEON, DANGER_SOFT } from '../../theme/palette'
+import { ACCENT as OLIVE, MOSS, CARD, BORDER, TEXT, MUTED, NEON, ON_NEON, ON_NEON_HARD, INVERT, DANGER_SOFT } from '../../theme/palette'
 import React, { useState, useEffect } from 'react'
 import AppLayout from '../../components/AppLayout'
 import { LocationDropdown, TimeDropdown } from '../../components/RouteDropdowns'
@@ -132,7 +132,7 @@ function LaunchingSoonOverlay(){
         ) : (
           <button onClick={joinWaitlist} disabled={waitlist==='joining'} className="ls-cta" style={{
             display:'inline-flex',alignItems:'center',gap:10,borderRadius:50,border:'none',
-            background:NEON,color:NT,fontWeight:900,letterSpacing:'0.02em',
+            background:NEON,color:ON_NEON_HARD,fontWeight:900,letterSpacing:'0.02em',
             cursor:waitlist==='joining'?'wait':'pointer',fontFamily:'inherit',
             boxShadow:'0 0 30px rgba(204,255,0,0.45), 0 8px 24px rgba(0,0,0,0.35)',
             animation:'lsBadge 2.2s ease-in-out infinite',transition:'transform 0.15s',
