@@ -293,17 +293,90 @@ async function sweepSettledPayins() {
   return credited
 }
 
+// ── Sweep the permanent-funding-account rail ─────────────────────────────────
+// The sweep above can only find money a rider ASKED for: it starts from an open
+// top-up session. A rider who simply transfers to their saved funding account —
+// no panel open, no pending row — leaves nothing to start from, so that money
+// was reachable only through their own poll, and only while they sat watching.
+//
+// There is no per-user hint to sweep from here, so we ask for the organization's
+// whole inbound list once and match each transfer back to its owner locally.
+// One call covers every rider, which is what makes this affordable to run
+// alongside the session sweep.
+async function sweepInboundTransfers() {
+  if (!anchor.configured()) return 0
+  const transfers = (await anchor.listInboundTransfers())
+    .map(normalizeInbound)
+    // No funding account attached means this is not a customer deposit at all —
+    // it is an InboundPay settling one of OUR payouts back into the master
+    // account. Crediting those would invent money; they belong to nobody.
+    .filter(p => p.settled && p.paymentId && (p.nubanId || p.nubanNumber))
+  if (!transfers.length) return 0
+
+  // Drop everything already settled before doing any work. settlePayment is
+  // idempotent and would return true for these anyway — but "true" there means
+  // "this money is accounted for", not "credited just now", so counting them
+  // would report the same transfers as new on every single sweep.
+  const seen = new Set((await query(
+    `SELECT event_id FROM anchor_events WHERE event_id = ANY($1)`,
+    [transfers.map(p => `pay-${p.paymentId}`)]
+  )).rows.map(r => r.event_id))
+
+  let credited = 0
+  for (const p of transfers) {
+    if (seen.has(`pay-${p.paymentId}`)) continue
+
+    const userId = await userByNuban(p.nubanId, p.nubanNumber)
+    if (userId) {
+      // Idempotent twice over: the anchor_events claim, and directCredit's
+      // unique reference. Anything already settled is a no-op.
+      if (await settlePayment({ ...p, userId, signatureValid: false, source: 'nuban-sweep' })) credited++
+      continue
+    }
+    // Money on a funding account we cannot attribute to anyone — an account
+    // orphaned by a deleted user, say. NEVER guess an owner from the sender's
+    // name; record it so the Back Office can see money is sitting unclaimed
+    // rather than have it vanish silently, which is how it stayed invisible
+    // before.
+    await query(
+      `INSERT INTO anchor_events (event_id, event_type, resource_id, signature_valid, processed, payload)
+       VALUES ($1, 'payin.unclaimed', $2, false, false, $3) ON CONFLICT (event_id) DO NOTHING`,
+      [`payin-unclaimed-${p.paymentId}`, p.paymentId, JSON.stringify({
+        source: 'nuban-sweep',
+        amountKobo: p.amountKobo,
+        nubanId: p.nubanId,
+        detail: `₦${Math.round(Number(p.amountKobo) / 100).toLocaleString()} arrived on funding account `
+          + `${p.nubanId || p.nubanNumber} which matches no user — not credited`
+          + `${p.detail ? ` · ${p.detail}` : ''}`,
+      })]
+    ).catch(() => {})
+  }
+  if (credited) console.log(`Inbound sweep: credited ${credited} funding-account transfer(s).`)
+  return credited
+}
+
+// Both rails, one after the other. A failure on either must not stop the other
+// from settling — the whole point is that no single path is load-bearing.
+async function sweepAllRails() {
+  let credited = 0
+  try { credited += await sweepSettledPayins() }
+  catch (err) { console.error('Payin sweep failed:', err.message) }
+  try { credited += await sweepInboundTransfers() }
+  catch (err) { console.error('Inbound sweep failed:', err.message) }
+  return credited
+}
+
 // Fire-and-forget, at most once per SWEEP_EVERY_MS — called from request
 // middleware, so it piggybacks on activity that already woke the database.
 function maybeSweepPayins() {
   const now = Date.now()
   if (now - lastSweep < SWEEP_EVERY_MS) return
   lastSweep = now
-  sweepSettledPayins().catch(err => console.error('Payin sweep failed:', err.message))
+  sweepAllRails().catch(err => console.error('Rail sweep failed:', err.message))
 }
 
 module.exports = {
   userByCustomerId, userByNuban, userByPayinRef,
   settlePayment, reconcileUserPayins, normalizeInbound,
-  sweepSettledPayins, maybeSweepPayins,
+  sweepSettledPayins, sweepInboundTransfers, sweepAllRails, maybeSweepPayins,
 }

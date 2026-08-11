@@ -294,6 +294,29 @@ async function listInboundTransfersForNuban(nubanId) {
   } catch (err) { throw anchorError(err, 'Could not list inbound transfers for that account.') }
 }
 
+// Every inbound transfer the organization has received, newest first — the
+// whole NUBAN rail in one call rather than one call per rider. Money can land
+// on a rider's permanent funding account with no top-up session open (they just
+// transfer, unprompted), so there is no per-user hint to sweep from; the only
+// way to find it without asking about every rider individually is to ask for
+// the lot and match each one back locally.
+//
+// Callers MUST resolve each transfer to a user themselves: this list also
+// contains InboundPay settlements of our own payouts, which belong to nobody.
+async function listInboundTransfers({ maxPages = 5 } = {}) {
+  try {
+    const out = []
+    for (let page = 0; page < maxPages; page++) {
+      const res = await http.get(`/api/v1/inbound-transfers?page=${page}&size=50`)
+      const batch = res.data?.data || []
+      out.push(...batch)
+      const pages = res.data?.meta?.pagination?.totalPages ?? 1
+      if (batch.length === 0 || page >= pages - 1) break
+    }
+    return out
+  } catch (err) { throw anchorError(err, 'Could not list inbound transfers.') }
+}
+
 // Authenticated pull of one inbound transfer — the trusted source for a payin
 // webhook whose signature can't be checked.
 async function getInboundTransfer(transferId) {
@@ -490,6 +513,7 @@ module.exports = {
   listPayins,
   getPayment,
   listInboundTransfersForNuban,
+  listInboundTransfers,
   getInboundTransfer,
   getCustomer,
   getReservedAccount,

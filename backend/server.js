@@ -815,7 +815,7 @@ runMigrations().then(() => {
   require('./services/onlineStatus').sweepStaleOnline()
   // Also settle any payin Anchor released while nobody was polling — this alone
   // would have caught the 9 Aug ₦1,300 at the very next deploy.
-  require('./services/payinSettlement').sweepSettledPayins()
+  require('./services/payinSettlement').sweepAllRails()
     .catch(err => console.error('Boot payin sweep failed:', err.message))
 })
 
