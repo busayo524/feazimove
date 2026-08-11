@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/AppLayout'
 import RideTracker from '../../components/RideTracker'
-import { LocationDropdown, TimeDropdown, MORNING_SLOTS, EVENING_SLOTS } from '../../components/RouteDropdowns'
+import { LocationDropdown, TimeDropdown, ALL_RIDE_SLOTS, periodForSlot } from '../../components/RouteDropdowns'
 import ScheduleDatePicker, { formatScheduleDate } from '../../components/ScheduleDatePicker'
-import { MapPin, ArrowRight, Users, Navigation, Sun, Moon, X, Clock, Landmark, Wallet as WalletIcon, Star, Car, CalendarDays, CalendarCheck, Trash2 } from 'lucide-react'
+import { MapPin, ArrowRight, Users, Navigation, X, Clock, Landmark, Wallet as WalletIcon, Star, Car, CalendarDays, CalendarCheck, Trash2 } from 'lucide-react'
 import TransferDetails from '../../components/TransferDetails'
 import { useAuth } from '../../context/AuthContext'
 import PersonAvatar from '../../components/PersonAvatar'
@@ -237,8 +237,11 @@ export default function BookRide(){
   const [pickup,setPickup]=useState('')
   const [dropoff,setDropoff]=useState('')
   const [comment,setComment]=useState('')
-  const [period,setPeriod]=useState('morning')
   const [timeSlot,setTimeSlot]=useState('')
+  // Not a choice any more — the picked time decides it. Before a time is picked
+  // there is nothing to derive from, so the morning catalogue seeds the
+  // pickup/drop-off lists; choosing a PM time swaps them to the evening one.
+  const period = timeSlot ? periodForSlot(timeSlot) : 'morning'
   const [searching,setSearching]=useState(false)
   const [bookingId,setBookingId]=useState(null)
   const [bookError,setBookError]=useState(null)
@@ -341,7 +344,6 @@ export default function BookRide(){
         // scheduled for today resumes the matching modal like any other.
         setService(b.service)
         setScheduleDate(b.scheduledDate || '')
-        setPeriod(b.period)
         setTimeSlot(b.timeSlot)
         setPickup(b.pickup)
         setDropoff(b.dropoff)
@@ -352,14 +354,18 @@ export default function BookRide(){
     return () => { cancelled = true }
   }, [activeRideId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  function switchPeriod(p){
-    if(p === period) return
+  function chooseTimeSlot(s){
     if(payPending) return // a paid-for booking snapshot is in flight — form is locked
-    setPeriod(p)
-    setTimeSlot('')
-    setPickup('')
-    setDropoff('')
-    setComment('')
+    // Crossing between AM and PM changes which routes are priced and offered,
+    // so a pickup/dropoff picked under the other half may not exist there —
+    // clear them rather than submit a pair with no fare. Picking the first
+    // time of the day clears nothing, since there is nothing to invalidate.
+    if(timeSlot && periodForSlot(s) !== periodForSlot(timeSlot)){
+      setPickup('')
+      setDropoff('')
+      setComment('')
+    }
+    setTimeSlot(s)
     setBookingId(null)
     setBookError(null)
     setScheduledOk(null)
@@ -536,7 +542,6 @@ export default function BookRide(){
             // matching modal can never display edits made during payment
             setService(b.service || 'pool')
             setScheduleDate(b.scheduledDate || '')
-            setPeriod(b.period)
             setTimeSlot(b.timeSlot)
             setPickup(b.pickup)
             setDropoff(b.dropoff)
@@ -591,7 +596,6 @@ export default function BookRide(){
     const b = saved.booking
     setService(b.service || 'pool')
     setScheduleDate(b.scheduledDate || '')
-    setPeriod(b.period)
     setTimeSlot(b.timeSlot)
     setPickup(b.pickup)
     setDropoff(b.dropoff)
@@ -704,37 +708,15 @@ export default function BookRide(){
                 </div>
               )}
 
-              {/* Time slot */}
+              {/* Time slot — one list for the whole day, split AM/PM inside the
+                  dropdown. The period the backend matches and prices on is
+                  derived from whichever time is picked. */}
               <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:14,padding:12,marginBottom:10,boxShadow:'0 2px 8px rgba(36,56,0,0.06)'}}>
-                {/* Morning / Evening toggle */}
-                <div style={{display:'grid',gridTemplateColumns:'minmax(0,1fr) minmax(0,1fr)',gap:8,marginBottom:8}}>
-                  {[
-                    { key:'morning', label:'Morning', icon:<Sun size={14}/>, sub:'5 AM – 10 AM' },
-                    { key:'evening', label:'Evening', icon:<Moon size={14}/>, sub:'3 PM – 10 PM' },
-                  ].map(p=>(
-                    <button key={p.key} type="button" onClick={()=>switchPeriod(p.key)}
-                      style={{
-                        padding:'8px 10px',borderRadius:10,
-                        border:`1.5px solid ${period===p.key?NEON:BORDER}`,
-                        background:period===p.key?NEON:CARD,
-                        cursor:'pointer',transition:'all 0.15s',
-                        display:'flex',alignItems:'center',gap:6,
-                        boxShadow:period===p.key?'0 4px 12px rgba(204,255,0,0.3)':'none',
-                      }}>
-                      <span style={{color:period===p.key?OLIVE:MOSS}}>{p.icon}</span>
-                      <div style={{textAlign:'left'}}>
-                        <p style={{fontWeight:700,fontSize:12,color:period===p.key?OLIVE:TEXT,lineHeight:1.2}}>{p.label}</p>
-                        <p style={{fontSize:10,color:period===p.key?'rgba(36,56,0,0.55)':MUTED,marginTop:0}}>{p.sub}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Time dropdown */}
                 <TimeDropdown
-                  slots={period==='morning'?MORNING_SLOTS:EVENING_SLOTS}
+                  slots={ALL_RIDE_SLOTS}
+                  meridiem
                   value={timeSlot}
-                  onChange={setTimeSlot}
+                  onChange={chooseTimeSlot}
                 />
               </div>
 

@@ -1185,6 +1185,20 @@ router.get('/anchor/overview', async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
+// Rows this API wrote itself, with no webhook involved: wallet-setup/KYC steps,
+// and every note the reconciliation and sweep paths leave behind. They have no
+// signature because nobody sent them, so the signed/UNSIGNED question does not
+// apply — they are shown as FeaziMove.
+//
+// 'signed-webhook' and 'api-pull' are deliberately NOT here: both mean a webhook
+// really did arrive. 'api-pull' is the unsigned one we verified by calling
+// Anchor back, and it MUST keep showing as UNSIGNED — that red flag is how
+// Anchor's signing bug stays visible.
+const INTERNAL_EVENT_SOURCES = new Set([
+  'feazimove-api', 'reconcile-poll', 'pwt-reconcile', 'payin-sweep', 'nuban-sweep',
+])
+const isInternalSource = source => INTERNAL_EVENT_SOURCES.has(source)
+
 // Live webhook/event feed — the raw evidence of every money movement.
 router.get('/anchor/events', async (req, res, next) => {
   try {
@@ -1198,10 +1212,13 @@ router.get('/anchor/events', async (req, res, next) => {
     )
     res.json({ events: result.rows.map(e => ({
       id: e.id, eventId: e.event_id, type: e.event_type, resourceId: e.resource_id,
-      // Rows we wrote ourselves (wallet setup, KYC submission) were never signed
-      // by anyone — reporting them as "signature valid" would be a lie.
-      signatureValid: e.source === 'feazimove-api' ? null : e.signature_valid,
-      internal: e.source === 'feazimove-api',
+      // Rows we wrote ourselves (wallet setup, KYC submission, and every
+      // reconciliation/sweep note) were never signed by anyone — reporting them
+      // as "signature valid" would be a lie, and reporting them as "Anchor ·
+      // UNSIGNED" is a worse one: Anchor never sent them at all. Only a row
+      // that actually arrived on the webhook can be judged on its signature.
+      signatureValid: isInternalSource(e.source) ? null : e.signature_valid,
+      internal: isInternalSource(e.source),
       detail: e.detail || null,
       processed: e.processed, at: e.created_at,
     })) })
