@@ -48,12 +48,12 @@ function PoolRiderCard({ ride, stage, showRoute, onOpenChat }) {
       <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom: stage < 2 ? 8 : 0 }}>
         <PersonAvatar userId={rider.id} name={rider.name} size={32} fontSize={13} radius={9}/>
         <div style={{ flex:1, minWidth:0 }}>
-          <p style={{ color:TEXT, fontWeight:700, fontSize:14, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{rider.name}</p>
+          <p style={{ color:TEXT, fontWeight:700, fontSize:15, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{rider.name}</p>
           {showRoute && (
-            <p style={{ fontSize:12.5, color:MUTED, marginTop:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{ride.pickup} → {ride.destination}</p>
+            <p style={{ fontSize:14.5, color:MUTED, marginTop:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{ride.pickup} → {ride.destination}</p>
           )}
         </div>
-        <p style={{ fontWeight:800, fontSize:14, color:OLIVE, background:CARD, border:`1.5px solid ${BORDER}`, padding:'2px 8px', borderRadius:8, flexShrink:0, whiteSpace:'nowrap' }}>₦{(ride.fare || 0).toLocaleString()}</p>
+        <p style={{ fontWeight:800, fontSize:15, color:OLIVE, background:CARD, border:`1.5px solid ${BORDER}`, padding:'2px 8px', borderRadius:8, flexShrink:0, whiteSpace:'nowrap' }}>₦{(ride.fare || 0).toLocaleString()}</p>
       </div>
 
       {/* Once the trip is in progress, the riders are already with the
@@ -61,11 +61,11 @@ function PoolRiderCard({ ride, stage, showRoute, onOpenChat }) {
       {stage < 2 && (
         <div style={{ display:'flex', gap:10 }}>
           <a href={rider.phone ? `tel:${rider.phone}` : undefined} aria-disabled={!rider.phone}
-            style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'10px', borderRadius:12, background:CARD, border:`1.5px solid ${BORDER}`, color:TEXT, fontWeight:700, fontSize:14.5, textDecoration:'none', opacity:rider.phone?1:0.5, pointerEvents:rider.phone?'auto':'none' }}>
+            style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'10px', borderRadius:12, background:CARD, border:`1.5px solid ${BORDER}`, color:TEXT, fontWeight:700, fontSize:15.5, textDecoration:'none', opacity:rider.phone?1:0.5, pointerEvents:rider.phone?'auto':'none' }}>
             <Phone size={15}/> Call
           </a>
           <button onClick={() => { onOpenChat(); markSeen() }}
-            style={{ position:'relative', flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'10px', borderRadius:12, background:CARD, border:`1.5px solid ${BORDER}`, color:TEXT, fontWeight:700, fontSize:14.5, cursor:'pointer', fontFamily:'inherit' }}>
+            style={{ position:'relative', flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'10px', borderRadius:12, background:CARD, border:`1.5px solid ${BORDER}`, color:TEXT, fontWeight:700, fontSize:15.5, cursor:'pointer', fontFamily:'inherit' }}>
             <MessageSquare size={15}/> Chat
             {hasUnread && (
               <span style={{ position:'absolute', top:6, right:'28%', width:9, height:9, borderRadius:'50%', background:'#ef4444', border:'2px solid '+CARD }}/>
@@ -121,7 +121,7 @@ function Dropdown({ options, value, onChange, placeholder, icon, forceUpward }) 
           border:`1.5px solid ${open ? NEON : BORDER}`, background:CARD, cursor:'pointer',
           textAlign:'left', fontFamily:'inherit', transition:'border-color 0.2s' }}>
         {icon && <span style={{ color:MUTED, flexShrink:0 }}>{icon}</span>}
-        <span style={{ flex:1, fontSize:14.5, color:value ? TEXT : MUTED, fontWeight:value ? 600 : 400 }}>
+        <span style={{ flex:1, fontSize:15.5, color:value ? TEXT : MUTED, fontWeight:value ? 600 : 400 }}>
           {value || placeholder}
         </span>
         <ChevronDown size={16} color={MUTED} style={{ transform:open ? 'rotate(180deg)' : 'none', transition:'transform 0.2s', flexShrink:0 }}/>
@@ -134,7 +134,7 @@ function Dropdown({ options, value, onChange, placeholder, icon, forceUpward }) 
             <button key={opt} onClick={() => { onChange(opt); setOpen(false) }}
               style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between',
                 padding:'11px 14px', border:'none', background:'transparent', cursor:'pointer',
-                fontSize:14.5, color:TEXT, fontWeight:value===opt ? 700 : 400, textAlign:'left',
+                fontSize:15.5, color:TEXT, fontWeight:value===opt ? 700 : 400, textAlign:'left',
                 fontFamily:'inherit', transition:'background 0.1s' }}
               onMouseEnter={e => e.currentTarget.style.background = BG}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
@@ -155,14 +155,14 @@ function RiderCard({ rider }) {
       background:BG, borderRadius:12, border:`1.5px solid ${BORDER}`, marginBottom:8 }}>
       <PersonAvatar userId={rider.riderId} name={rider.riderName}/>
       <div style={{ flex:1, minWidth:0 }}>
-        <p style={{ fontWeight:700, fontSize:14.5, color:TEXT }}>{rider.riderName}</p>
-        <p style={{ fontSize:13.5, color:MUTED, marginTop:2 }}>
+        <p style={{ fontWeight:700, fontSize:15.5, color:TEXT }}>{rider.riderName}</p>
+        <p style={{ fontSize:15, color:MUTED, marginTop:2 }}>
           {rider.pickup} → {rider.dropoff} · waiting since {rider.waitingSince}
         </p>
       </div>
       <div style={{ textAlign:'right', flexShrink:0 }}>
-        <p style={{ fontSize:13.5, color:MUTED }}>⭐ {rider.riderRating.toFixed(1)}</p>
-        <span style={{ fontSize:12.5, fontWeight:700, background:NEON, color:ON_NEON, padding:'2px 8px', borderRadius:20 }}>
+        <p style={{ fontSize:15, color:MUTED }}>⭐ {rider.riderRating.toFixed(1)}</p>
+        <span style={{ fontSize:14.5, fontWeight:700, background:NEON, color:ON_NEON, padding:'2px 8px', borderRadius:20 }}>
           {rider.service}
         </span>
       </div>
@@ -177,7 +177,7 @@ function OnlineToggle({ online, busy, onToggle }) {
       style={{ display:'flex', alignItems:'center', gap:10, padding:'5px 14px 5px 6px', borderRadius:50,
         border:'none', cursor:busy ? 'not-allowed' : 'pointer', fontFamily:'inherit',
         background:online ? NEON : '#e5e7eb', color:online ? ON_NEON : '#374151',
-        fontWeight:800, fontSize:14, transition:'background 0.2s', opacity:busy ? 0.7 : 1 }}>
+        fontWeight:800, fontSize:15, transition:'background 0.2s', opacity:busy ? 0.7 : 1 }}>
       <span style={{ position:'relative', width:34, height:18, borderRadius:20, flexShrink:0,
         background:online ? OLIVE : '#9ca3af', transition:'background 0.2s' }}>
         <span style={{ position:'absolute', top:2, left:online ? 18 : 2, width:14, height:14,
@@ -211,7 +211,7 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, seats, poolFareKobo, sto
     <div style={outerStyle} onClick={live ? undefined : onClose}>
       <div onClick={e => e.stopPropagation()} style={cardStyle}>
         <div style={{ padding:'10px 14px', borderBottom:`1px solid ${BORDER}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-          <p style={{ fontWeight:700, fontSize:13.5, color:MOSS, textTransform:'uppercase', letterSpacing:'0.06em' }}>Route Preview</p>
+          <p style={{ fontWeight:700, fontSize:15, color:MOSS, textTransform:'uppercase', letterSpacing:'0.06em' }}>Route Preview</p>
           {!live && (
             <button onClick={onClose} aria-label="Close" style={{ background:'none', border:'none', cursor:'pointer', color:MUTED, padding:2 }}><X size={16}/></button>
           )}
@@ -223,7 +223,7 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, seats, poolFareKobo, sto
           (!token || token === 'your_mapbox_public_token_here' || !pc || !dc) ? (
             <div style={{ height:100, background:OLIVE, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:6 }}>
               <MapPin size={22} color={NEON}/>
-              <p style={{ color:'rgba(255,255,255,0.7)', fontSize:12.5, textAlign:'center', padding:'0 20px' }}>Map preview unavailable for this route</p>
+              <p style={{ color:'rgba(255,255,255,0.7)', fontSize:14.5, textAlign:'center', padding:'0 20px' }}>Map preview unavailable for this route</p>
             </div>
           ) : (
             <img
@@ -238,33 +238,33 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, seats, poolFareKobo, sto
           <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
             <div style={{ flex:1, display:'flex', alignItems:'center', gap:8, minWidth:0 }}>
               <div style={{ width:9, height:9, borderRadius:'50%', background:MOSS, border:`2px solid ${BORDER}`, flexShrink:0 }}/>
-              <div style={{ minWidth:0 }}><p style={{ fontSize:11.5, color:MUTED, fontWeight:500 }}>Takeoff</p><p style={{ fontSize:14, color:TEXT, fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{pickup}</p></div>
+              <div style={{ minWidth:0 }}><p style={{ fontSize:13.5, color:MUTED, fontWeight:500 }}>Takeoff</p><p style={{ fontSize:15, color:TEXT, fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{pickup}</p></div>
             </div>
             <div style={{ flex:1, display:'flex', alignItems:'center', gap:8, minWidth:0 }}>
               <div style={{ width:9, height:9, borderRadius:'50%', background:OLIVE, border:`2px solid ${BORDER}`, flexShrink:0 }}/>
-              <div style={{ minWidth:0 }}><p style={{ fontSize:11.5, color:MUTED, fontWeight:500 }}>Dropoff</p><p style={{ fontSize:14, color:TEXT, fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{dropoff}</p></div>
+              <div style={{ minWidth:0 }}><p style={{ fontSize:13.5, color:MUTED, fontWeight:500 }}>Dropoff</p><p style={{ fontSize:15, color:TEXT, fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{dropoff}</p></div>
             </div>
           </div>
 
           <div style={{ display:'flex', gap:8, marginBottom:8 }}>
             <div style={{ flex:1, background:CARD, border:`1.5px solid ${BORDER}`, borderRadius:10, padding:'8px 10px', display:'flex', alignItems:'center', gap:6 }}>
               <Clock size={13} color={MOSS}/>
-              <span style={{ fontSize:13.5, fontWeight:700, color:TEXT }}>{timeSlot}</span>
+              <span style={{ fontSize:15, fontWeight:700, color:TEXT }}>{timeSlot}</span>
             </div>
             <div style={{ flex:1, background:CARD, border:`1.5px solid ${BORDER}`, borderRadius:10, padding:'8px 10px', display:'flex', alignItems:'center', gap:6 }}>
               <Users size={13} color={MOSS}/>
-              <span style={{ fontSize:13.5, fontWeight:700, color:TEXT }}>{seats} seat{seats==='1'?'':'s'}</span>
+              <span style={{ fontSize:15, fontWeight:700, color:TEXT }}>{seats} seat{seats==='1'?'':'s'}</span>
             </div>
           </div>
 
           <div style={{ display:'flex', gap:8 }}>
             <div style={{ flex:1, background:CARD, border:`1.5px solid ${BORDER}`, borderRadius:10, padding:'8px 10px', textAlign:'center' }}>
-              <p style={{ fontSize:11.5, color:MUTED, marginBottom:1 }}>Fare per rider</p>
-              <span style={{ fontSize:14.5, fontWeight:800, color:OLIVE }}>{poolFareKobo!=null ? `₦${Math.round(poolFareKobo/100).toLocaleString()}` : '—'}</span>
+              <p style={{ fontSize:13.5, color:MUTED, marginBottom:1 }}>Fare per rider</p>
+              <span style={{ fontSize:15.5, fontWeight:800, color:OLIVE }}>{poolFareKobo!=null ? `₦${Math.round(poolFareKobo/100).toLocaleString()}` : '—'}</span>
             </div>
             <div style={{ flex:1, background:CARD, border:`1.5px solid ${BORDER}`, borderRadius:10, padding:'8px 10px', textAlign:'center' }}>
-              <p style={{ fontSize:11.5, color:MUTED, marginBottom:1 }}>Total ride price</p>
-              <span style={{ fontSize:14.5, fontWeight:800, color:OLIVE }}>{totalKobo!=null ? `₦${Math.round(totalKobo/100).toLocaleString()}` : '—'}</span>
+              <p style={{ fontSize:13.5, color:MUTED, marginBottom:1 }}>Total ride price</p>
+              <span style={{ fontSize:15.5, fontWeight:800, color:OLIVE }}>{totalKobo!=null ? `₦${Math.round(totalKobo/100).toLocaleString()}` : '—'}</span>
             </div>
           </div>
 
@@ -274,7 +274,7 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, seats, poolFareKobo, sto
             <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:8, background:NEON_SOFT,
               border:`1.5px solid ${NEON}`, borderRadius:10, padding:'8px 10px' }}>
               <CalendarDays size={13} color={OLIVE}/>
-              <span style={{ fontSize:13.5, fontWeight:800, color:OLIVE }}>{formatScheduleDate(scheduleDate, { long:true })}</span>
+              <span style={{ fontSize:15, fontWeight:800, color:OLIVE }}>{formatScheduleDate(scheduleDate, { long:true })}</span>
             </div>
           )}
         </div>
@@ -287,18 +287,18 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, seats, poolFareKobo, sto
                   {phase === 'matching' && (
                     <>
                       <div style={{ width:18, height:18, border:`2.5px solid ${OLIVE}`, borderTopColor:'transparent', borderRadius:'50%', animation:'feazi-spin 0.8s linear infinite' }}/>
-                      <span style={{ fontSize:14, fontWeight:700, color:OLIVE }}>Matching you to a rider on your route…</span>
+                      <span style={{ fontSize:15, fontWeight:700, color:OLIVE }}>Matching you to a rider on your route…</span>
                     </>
                   )}
                   {phase === 'no-riders' && (
-                    <span style={{ fontSize:14, fontWeight:700, color:OLIVE }}>No riders found yet on this route</span>
+                    <span style={{ fontSize:15, fontWeight:700, color:OLIVE }}>No riders found yet on this route</span>
                   )}
                 </div>
               )}
               <button onClick={onCancel} style={{
                 width:'100%', padding:'11px', borderRadius:50,
                 background:'none', border:`1.5px solid ${BORDER}`,
-                color:'#ef4444', fontWeight:700, fontSize:14.5,
+                color:'#ef4444', fontWeight:700, fontSize:15.5,
                 cursor:'pointer', fontFamily:'inherit', transition:'all 0.2s'
               }}>
                 Cancel Request
@@ -306,13 +306,13 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, seats, poolFareKobo, sto
             </>
           ) : scheduleMode ? (
             <>
-            <p style={{fontSize:12.5,fontStyle:'italic',color:MUTED,textAlign:'center',margin:'0 0 8px'}}>
+            <p style={{fontSize:14.5,fontStyle:'italic',color:MUTED,textAlign:'center',margin:'0 0 8px'}}>
               *You'll start this drive on the day — riders scheduled for it are held for you*
             </p>
             <button onClick={onSchedule} disabled={schedulingRoute} style={{
               width:'100%', padding:'11px', borderRadius:50,
               background:schedulingRoute?BORDER:NEON, color:schedulingRoute?MUTED:ON_NEON,
-              fontWeight:800, fontSize:14.5, border:'none',
+              fontWeight:800, fontSize:15.5, border:'none',
               cursor:schedulingRoute?'not-allowed':'pointer',
               fontFamily:'inherit', transition:'all 0.2s',
               display:'flex', alignItems:'center', justifyContent:'center', gap:8,
@@ -325,11 +325,11 @@ function RoutePreviewModal({ pickup, dropoff, timeSlot, seats, poolFareKobo, sto
             </>
           ) : (
             <>
-            <p style={{fontSize:12.5,fontStyle:'italic',color:MUTED,textAlign:'center',margin:'0 0 8px'}}>*Booking should be within 24hrs*</p>
+            <p style={{fontSize:14.5,fontStyle:'italic',color:MUTED,textAlign:'center',margin:'0 0 8px'}}>*Booking should be within 24hrs*</p>
             <button onClick={onGoLive} disabled={goingLive} style={{
               width:'100%', padding:'11px', borderRadius:50,
               background:goingLive?BORDER:NEON, color:goingLive?MUTED:ON_NEON,
-              fontWeight:800, fontSize:14.5, border:'none',
+              fontWeight:800, fontSize:15.5, border:'none',
               cursor:goingLive?'not-allowed':'pointer',
               fontFamily:'inherit', transition:'all 0.2s',
               display:'flex', alignItems:'center', justifyContent:'center', gap:8,
@@ -918,7 +918,7 @@ export default function DriverDashboard() {
         <div style={{ background:CARD, border:`1.5px solid ${BORDER}`, borderRadius:16, padding:24,
           marginBottom:16, boxShadow:'0 4px 16px rgba(36,56,0,0.08)', textAlign:'center' }}>
           {resumedSearch && (
-            <p style={{ fontSize:14, color:MOSS, background:'#f3fbd3', border:'1px solid #dff0a8',
+            <p style={{ fontSize:15, color:MOSS, background:'#f3fbd3', border:'1px solid #dff0a8',
               borderRadius:10, padding:'8px 12px', marginBottom:14, lineHeight:1.45 }}>
               Your search was still running — we picked it back up where you left off.
             </p>
@@ -947,18 +947,18 @@ export default function DriverDashboard() {
               animation:'feazi-pulse 1.2s ease-in-out infinite' }}/>
             <p style={{ fontWeight:800, fontSize:16, color:TEXT }}>Matching you with riders…</p>
           </div>
-          <p style={{ fontSize:14, color:MUTED, marginBottom:16 }}>
+          <p style={{ fontSize:15, color:MUTED, marginBottom:16 }}>
             Finding riders on <strong style={{ color:OLIVE }}>{currentPickup} → {dropoff}</strong> at <strong style={{ color:OLIVE }}>{timeSlot}</strong>
           </p>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:14,
-            padding:'10px 14px', background:CARD, borderRadius:10, border:`1px solid ${BORDER}`, marginBottom:16, fontSize:14 }}>
+            padding:'10px 14px', background:CARD, borderRadius:10, border:`1px solid ${BORDER}`, marginBottom:16, fontSize:15 }}>
             {/* The time itself is already named in the line above, so the old
                 Morning/Evening chip only repeated it in vaguer words. */}
             <span style={{ color:MUTED }}>{seats} seat{seats==='1'?'':'s'} available</span>
           </div>
           <button onClick={() => setShowCancelConfirm(true)}
             style={{ padding:'10px 24px', borderRadius:10, border:`1.5px solid ${BORDER}`,
-              background:CARD, color:MUTED, fontWeight:600, fontSize:14.5, cursor:'pointer', fontFamily:'inherit' }}>
+              background:CARD, color:MUTED, fontWeight:600, fontSize:15.5, cursor:'pointer', fontFamily:'inherit' }}>
             Cancel Search
           </button>
         </div>
@@ -975,10 +975,10 @@ export default function DriverDashboard() {
               <AlertCircle size={20} color="#ef4444"/>
             </div>
             <div>
-              <p style={{ fontWeight:800, fontSize:15, color:TEXT, marginBottom:4 }}>
+              <p style={{ fontWeight:800, fontSize:16, color:TEXT, marginBottom:4 }}>
                 No riders found at {currentPickup}
               </p>
-              <p style={{ fontSize:14, color:MUTED }}>
+              <p style={{ fontSize:15, color:MUTED }}>
                 No one is waiting at this stop for <strong>{timeSlot}</strong> on the <strong>{currentPickup} → {dropoff}</strong> route.
               </p>
             </div>
@@ -988,35 +988,35 @@ export default function DriverDashboard() {
             <>
               <div style={{ background:BG, border:`1.5px solid ${BORDER}`, borderRadius:12,
                 padding:'14px 16px', marginBottom:14 }}>
-                <p style={{ fontSize:13.5, color:MUTED, fontWeight:600, textTransform:'uppercase',
+                <p style={{ fontSize:15, color:MUTED, fontWeight:600, textTransform:'uppercase',
                   letterSpacing:'0.05em', marginBottom:6 }}>Next Available Stop</p>
                 <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                   <MapPin size={15} color={MOSS}/>
-                  <span style={{ fontWeight:700, fontSize:15, color:OLIVE }}>{nextPickup}</span>
+                  <span style={{ fontWeight:700, fontSize:16, color:OLIVE }}>{nextPickup}</span>
                   <ChevronRight size={14} color={MUTED}/>
-                  <span style={{ fontSize:14, color:MUTED }}>{dropoff}</span>
+                  <span style={{ fontSize:15, color:MUTED }}>{dropoff}</span>
                 </div>
               </div>
-              <p style={{ fontSize:14, color:MUTED, marginBottom:14 }}>
+              <p style={{ fontSize:15, color:MUTED, marginBottom:14 }}>
                 Do you want to continue searching here, or pick up riders from <strong style={{ color:OLIVE }}>{nextPickup}</strong> instead?
               </p>
               <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
                 <button onClick={handleExpand}
                   style={{ padding:'12px', borderRadius:12, background:NEON, color:ON_NEON,
-                    fontWeight:800, fontSize:14.5, border:'none', cursor:'pointer', fontFamily:'inherit',
+                    fontWeight:800, fontSize:15.5, border:'none', cursor:'pointer', fontFamily:'inherit',
                     boxShadow:'0 4px 12px rgba(204,255,0,0.3)' }}>
                   Yes, try {nextPickup}
                 </button>
                 <div style={{ display:'flex', gap:10 }}>
                   <button onClick={continueSearching}
                     style={{ flex:1, padding:'12px', borderRadius:12, background:CARD,
-                      border:`1.5px solid ${MOSS}`, color:OLIVE, fontWeight:700, fontSize:14.5,
+                      border:`1.5px solid ${MOSS}`, color:OLIVE, fontWeight:700, fontSize:15.5,
                       cursor:'pointer', fontFamily:'inherit' }}>
                     Continue searching
                   </button>
                   <button onClick={handleGoOffline}
                     style={{ flex:1, padding:'12px', borderRadius:12, background:CARD,
-                      border:`1.5px solid ${BORDER}`, color:MUTED, fontWeight:600, fontSize:14.5,
+                      border:`1.5px solid ${BORDER}`, color:MUTED, fontWeight:600, fontSize:15.5,
                       cursor:'pointer', fontFamily:'inherit' }}>
                     Stop for today
                   </button>
@@ -1025,12 +1025,12 @@ export default function DriverDashboard() {
             </>
           ) : (
             <>
-              <p style={{ fontSize:14, color:MUTED, marginBottom:14 }}>
+              <p style={{ fontSize:15, color:MUTED, marginBottom:14 }}>
                 No riders found on this route today. You've reached the end of the route chain.
               </p>
               <button onClick={handleGoOffline}
                 style={{ width:'100%', padding:'12px', borderRadius:12, background:CARD,
-                  border:`1.5px solid ${BORDER}`, color:MUTED, fontWeight:600, fontSize:14.5,
+                  border:`1.5px solid ${BORDER}`, color:MUTED, fontWeight:600, fontSize:15.5,
                   cursor:'pointer', fontFamily:'inherit' }}>
                 Go Offline
               </button>
@@ -1051,15 +1051,15 @@ export default function DriverDashboard() {
               <UserCheck size={18} color={OLIVE}/>
             </div>
             <div>
-              <p style={{ fontWeight:800, fontSize:15, color:TEXT }}>
+              <p style={{ fontWeight:800, fontSize:16, color:TEXT }}>
                 {matchedRiders.length} rider{matchedRiders.length !== 1 ? 's' : ''} matched!
               </p>
-              <p style={{ fontSize:13.5, color:MUTED }}>
+              <p style={{ fontSize:15, color:MUTED }}>
                 {currentPickup} → {dropoff} · {timeSlot}
               </p>
             </div>
             <button onClick={handleGoOffline}
-              style={{ marginLeft:'auto', fontSize:13.5, fontWeight:600, color:MUTED,
+              style={{ marginLeft:'auto', fontSize:15, fontWeight:600, color:MUTED,
                 background:'none', border:`1px solid ${BORDER}`, borderRadius:8,
                 padding:'4px 10px', cursor:'pointer', fontFamily:'inherit' }}>
               Cancel
@@ -1073,7 +1073,7 @@ export default function DriverDashboard() {
           {matchedRiders.length < seatsCount && (
             <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, padding:'10px 0 4px' }}>
               <div style={{ width:16, height:16, border:`2.5px solid ${OLIVE}`, borderTopColor:'transparent', borderRadius:'50%', animation:'feazi-spin 0.8s linear infinite' }}/>
-              <span style={{ fontSize:14, fontWeight:700, color:OLIVE }}>
+              <span style={{ fontSize:15, fontWeight:700, color:OLIVE }}>
                 Matching you to more riders on your route… {matchedRiders.length}/{seatsCount} seats filled
               </span>
             </div>
@@ -1084,7 +1084,7 @@ export default function DriverDashboard() {
               Expanding KEEPS the riders already matched and only adds more. */}
           {matchedRiders.length < seatsCount && (matchIdleExpired || promptWindowOpen) && !promptsSnoozed && nextPickupPreview && (
             <div style={{ background:BG, border:`1.5px solid ${BORDER}`, borderRadius:12, padding:'12px 14px', margin:'10px 0 2px' }}>
-              <p style={{ fontSize:14, color:MUTED, marginBottom:10, lineHeight:1.5 }}>
+              <p style={{ fontSize:15, color:MUTED, marginBottom:10, lineHeight:1.5 }}>
                 Seats still open. Do you want to continue searching here, extend your search to{' '}
                 <strong style={{ color:OLIVE }}>{nextPickupPreview}</strong> (your matched rider{matchedRiders.length !== 1 ? 's stay' : ' stays'} on board),
                 or start the route with your current rider{matchedRiders.length !== 1 ? 's' : ''}?
@@ -1092,12 +1092,12 @@ export default function DriverDashboard() {
               <div style={{ display:'flex', gap:8 }}>
                 <button onClick={snoozePrompts}
                   style={{ flex:1, padding:'10px', borderRadius:10, background:CARD, border:`1.5px solid ${BORDER}`,
-                    color:MUTED, fontWeight:600, fontSize:14, cursor:'pointer', fontFamily:'inherit' }}>
+                    color:MUTED, fontWeight:600, fontSize:15, cursor:'pointer', fontFamily:'inherit' }}>
                   Continue searching
                 </button>
                 <button onClick={handleExpand}
                   style={{ flex:1, padding:'10px', borderRadius:10, background:CARD, border:`1.5px solid ${MOSS}`,
-                    color:OLIVE, fontWeight:700, fontSize:14, cursor:'pointer', fontFamily:'inherit' }}>
+                    color:OLIVE, fontWeight:700, fontSize:15, cursor:'pointer', fontFamily:'inherit' }}>
                   Search riders at {nextPickupPreview}
                 </button>
               </div>
@@ -1108,13 +1108,13 @@ export default function DriverDashboard() {
             <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT,
               border:'1px solid #fca5a5', borderRadius:10, marginBottom:12 }}>
               <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
-              <p style={{ fontSize:14, color:'#ef4444' }}>{goLiveError}</p>
+              <p style={{ fontSize:15, color:'#ef4444' }}>{goLiveError}</p>
             </div>
           )}
 
           <button onClick={handleConfirmRoute} disabled={confirming}
             style={{ width:'100%', marginTop:6, padding:'13px', borderRadius:12, background:NEON,
-              color:ON_NEON, fontWeight:800, fontSize:14.5, border:'none', cursor:confirming?'not-allowed':'pointer',
+              color:ON_NEON, fontWeight:800, fontSize:15.5, border:'none', cursor:confirming?'not-allowed':'pointer',
               fontFamily:'inherit', opacity:confirming?0.7:1, boxShadow:confirming?'none':'0 4px 12px rgba(204,255,0,0.3)' }}>
             {confirming ? 'Starting route…' : 'Confirm & Start Route'}
           </button>
@@ -1142,7 +1142,7 @@ export default function DriverDashboard() {
           <p style={{ color:TEXT, fontWeight:700, marginBottom:6 }}>{rideError}</p>
           <button onClick={backToDailyDrive}
             style={{ marginTop:14, padding:'10px 22px', borderRadius:50, background:INVERT, color:NEON,
-              fontWeight:700, fontSize:14.5, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
+              fontWeight:700, fontSize:15.5, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
             Back to Daily Drive
           </button>
         </div>
@@ -1158,7 +1158,7 @@ export default function DriverDashboard() {
             <CheckCircle size={40} color={OLIVE}/>
           </div>
           <h2 style={{ fontSize:24, fontWeight:900, color:TEXT, marginBottom:8, letterSpacing:'-0.02em' }}>Trip Completed!</h2>
-          <p style={{ color:MUTED, fontSize:15, marginBottom:8 }}>
+          <p style={{ color:MUTED, fontSize:16, marginBottom:8 }}>
             {rides.length > 1 ? `Fares collected — ${rides.length} riders` : 'Fare collected'}
           </p>
           <p style={{ fontSize:36, fontWeight:900, color:ON_NEON_HARD, letterSpacing:'-0.03em', marginBottom:28, background:NEON, display:'inline-block', padding:'4px 24px', borderRadius:14 }}>
@@ -1169,23 +1169,23 @@ export default function DriverDashboard() {
               adjust the ones that were a problem, then submit once. */}
           {ratingsSubmitted ? (
             <>
-              <p style={{ color:TEXT, fontWeight:700, fontSize:15, marginBottom:20 }}>✓ Ratings submitted — thank you!</p>
+              <p style={{ color:TEXT, fontWeight:700, fontSize:16, marginBottom:20 }}>✓ Ratings submitted — thank you!</p>
               <button onClick={backToDailyDrive}
-                style={{ padding:'13px 32px', borderRadius:50, background:INVERT, color:NEON, fontWeight:700, fontSize:15, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
+                style={{ padding:'13px 32px', borderRadius:50, background:INVERT, color:NEON, fontWeight:700, fontSize:16, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
                 Back to Daily Drive
               </button>
             </>
           ) : unratedRides === null ? (
-            <p style={{ color:MUTED, fontSize:14.5 }}>Loading riders…</p>
+            <p style={{ color:MUTED, fontSize:15.5 }}>Loading riders…</p>
           ) : unratedRides.length === 0 ? (
             <button onClick={backToDailyDrive}
-              style={{ padding:'13px 32px', borderRadius:50, background:INVERT, color:NEON, fontWeight:700, fontSize:15, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
+              style={{ padding:'13px 32px', borderRadius:50, background:INVERT, color:NEON, fontWeight:700, fontSize:16, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
               Back to Daily Drive
             </button>
           ) : (
             <div style={{ width:'100%', maxWidth:440 }}>
-              <p style={{ fontSize:14.5, fontWeight:800, color:TEXT, marginBottom:4 }}>Rate your rider{unratedRides.length > 1 ? 's' : ''}</p>
-              <p style={{ fontSize:14, color:MUTED, marginBottom:14 }}>
+              <p style={{ fontSize:15.5, fontWeight:800, color:TEXT, marginBottom:4 }}>Rate your rider{unratedRides.length > 1 ? 's' : ''}</p>
+              <p style={{ fontSize:15, color:MUTED, marginBottom:14 }}>
                 Everyone starts at 5 stars — tap a star only if a rider needs a lower rating.
                 Unrated rides from recent trips appear here too.
               </p>
@@ -1194,10 +1194,10 @@ export default function DriverDashboard() {
                 <div key={r.rideId} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12,
                   background:CARD, border:`1px solid ${BORDER}`, borderRadius:12, padding:'10px 14px', marginBottom:8 }}>
                   <div style={{ minWidth:0, textAlign:'left' }}>
-                    <p style={{ fontSize:14.5, fontWeight:700, color:TEXT, margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                    <p style={{ fontSize:15.5, fontWeight:700, color:TEXT, margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                       {r.riderName}
                     </p>
-                    <p style={{ fontSize:13, color:MUTED, margin:'2px 0 0', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                    <p style={{ fontSize:14.5, color:MUTED, margin:'2px 0 0', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                       {r.pickup} → {r.destination}
                       {/* Trip time — same rider can appear once per unrated trip */}
                       {r.completedAt ? ` · ${new Date(r.completedAt).toLocaleString('en-NG', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}` : ''}
@@ -1218,13 +1218,13 @@ export default function DriverDashboard() {
 
               <button onClick={submitAllRatings} disabled={rateBusy}
                 style={{ width:'100%', marginTop:10, padding:'13px', borderRadius:50, background:NEON, color:ON_NEON,
-                  fontWeight:800, fontSize:15, border:'none', cursor:rateBusy?'not-allowed':'pointer',
+                  fontWeight:800, fontSize:16, border:'none', cursor:rateBusy?'not-allowed':'pointer',
                   fontFamily:'inherit', opacity:rateBusy?0.7:1 }}>
                 {rateBusy ? 'Submitting…' : `Submit ${unratedRides.length > 1 ? 'All Ratings' : 'Rating'}`}
               </button>
               <button onClick={backToDailyDrive}
                 style={{ width:'100%', marginTop:8, padding:'11px', borderRadius:50, background:'transparent', color:MUTED,
-                  fontWeight:600, fontSize:14, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
+                  fontWeight:600, fontSize:15, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
                 Skip for now
               </button>
             </div>
@@ -1245,7 +1245,7 @@ export default function DriverDashboard() {
         {rideError && (
           <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10, marginBottom:16 }}>
             <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
-            <p style={{ fontSize:14, color:'#ef4444' }}>{rideError}</p>
+            <p style={{ fontSize:15, color:'#ef4444' }}>{rideError}</p>
           </div>
         )}
 
@@ -1253,7 +1253,7 @@ export default function DriverDashboard() {
         <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:16, padding:'10px 16px', marginBottom:16, boxShadow:'0 1px 3px rgba(0,0,0,0.04)', display:'flex', alignItems:'center', justifyContent:'space-between', gap:10 }}>
           <p style={{ color:TEXT, fontWeight:700, fontSize:'clamp(13px, 3vw, 15px)' }}>{STAGES[stage]}</p>
           {etaSeconds != null && (
-            <span style={{ fontSize:13.5, fontWeight:700, color:OLIVE, background:BG, border:`1px solid ${BORDER}`, padding:'2px 10px', borderRadius:20, whiteSpace:'nowrap', flexShrink:0 }}>
+            <span style={{ fontSize:15, fontWeight:700, color:OLIVE, background:BG, border:`1px solid ${BORDER}`, padding:'2px 10px', borderRadius:20, whiteSpace:'nowrap', flexShrink:0 }}>
               {fmtEta(etaSeconds)}
             </span>
           )}
@@ -1262,7 +1262,7 @@ export default function DriverDashboard() {
         {/* Rider cards — one per matched rider in the pool. Header shows the
             shared route once; each rider gets their own Call/Chat. */}
         {rides.length > 1 && (
-          <p style={{ fontSize:13.5, fontWeight:800, color:MUTED, textTransform:'uppercase', letterSpacing:'0.06em', margin:'0 0 8px 2px' }}>
+          <p style={{ fontSize:15, fontWeight:800, color:MUTED, textTransform:'uppercase', letterSpacing:'0.06em', margin:'0 0 8px 2px' }}>
             {rides.length} riders in this pool · {ride.pickup} → {ride.destination}
           </p>
         )}
@@ -1272,7 +1272,7 @@ export default function DriverDashboard() {
         ))}
 
         <button onClick={advanceRide} disabled={advancing}
-          style={{ width:'100%', padding:'15px', borderRadius:50, background:NEON, color:ON_NEON, fontWeight:700, fontSize:15, border:'none', cursor:advancing?'not-allowed':'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:10, opacity:advancing?0.7:1, boxShadow:advancing?'none':'0 4px 12px rgba(204,255,0,0.3)' }}>
+          style={{ width:'100%', padding:'15px', borderRadius:50, background:NEON, color:ON_NEON, fontWeight:700, fontSize:16, border:'none', cursor:advancing?'not-allowed':'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:10, opacity:advancing?0.7:1, boxShadow:advancing?'none':'0 4px 12px rgba(204,255,0,0.3)' }}>
           {advancing ? 'Updating…' : stage===1 ? 'Start Trip' : stage<STAGES.length-1 ? STAGES[stage+1] : 'Complete Trip & Collect Fare'}
         </button>
 
@@ -1280,7 +1280,7 @@ export default function DriverDashboard() {
             requests go back into the queue so they re-match automatically. */}
         {stage < 2 && (
           <button onClick={() => setShowTripCancelConfirm(true)}
-            style={{ width:'100%', marginTop:10, padding:'12px', borderRadius:50, background:'transparent', color:'#ef4444', fontWeight:700, fontSize:14.5, border:'1.5px solid #fca5a5', cursor:'pointer', fontFamily:'inherit' }}>
+            style={{ width:'100%', marginTop:10, padding:'12px', borderRadius:50, background:'transparent', color:'#ef4444', fontWeight:700, fontSize:15.5, border:'1.5px solid #fca5a5', cursor:'pointer', fontFamily:'inherit' }}>
             Cancel Ride
           </button>
         )}
@@ -1291,16 +1291,16 @@ export default function DriverDashboard() {
             <div onClick={e => e.stopPropagation()}
               style={{ background:CARD, borderRadius:16, padding:24, maxWidth:340, width:'100%', boxShadow:'0 12px 32px rgba(0,0,0,0.2)', textAlign:'center' }}>
               <p style={{ fontWeight:800, fontSize:16, color:TEXT, marginBottom:8 }}>Cancel this trip?</p>
-              <p style={{ fontSize:14, color:MUTED, marginBottom:20, lineHeight:1.5 }}>
+              <p style={{ fontSize:15, color:MUTED, marginBottom:20, lineHeight:1.5 }}>
                 {rides.length > 1 ? `All ${rides.length} riders` : 'Your rider'} will be returned to the queue and matched with another driver. This can't be undone.
               </p>
               <div style={{ display:'flex', gap:10 }}>
                 <button onClick={() => setShowTripCancelConfirm(false)}
-                  style={{ flex:1, padding:'11px', borderRadius:10, border:`1.5px solid ${BORDER}`, background:CARD, color:TEXT, fontWeight:700, fontSize:14.5, cursor:'pointer', fontFamily:'inherit' }}>
+                  style={{ flex:1, padding:'11px', borderRadius:10, border:`1.5px solid ${BORDER}`, background:CARD, color:TEXT, fontWeight:700, fontSize:15.5, cursor:'pointer', fontFamily:'inherit' }}>
                   Keep Trip
                 </button>
                 <button onClick={cancelActiveTrip} disabled={cancellingTrip}
-                  style={{ flex:1, padding:'11px', borderRadius:10, border:'none', background:'#ef4444', color:'#fff', fontWeight:700, fontSize:14.5, cursor:cancellingTrip?'not-allowed':'pointer', fontFamily:'inherit', opacity:cancellingTrip?0.7:1 }}>
+                  style={{ flex:1, padding:'11px', borderRadius:10, border:'none', background:'#ef4444', color:'#fff', fontWeight:700, fontSize:15.5, cursor:cancellingTrip?'not-allowed':'pointer', fontFamily:'inherit', opacity:cancellingTrip?0.7:1 }}>
                   {cancellingTrip ? 'Cancelling…' : 'Yes, Cancel'}
                 </button>
               </div>
@@ -1326,18 +1326,18 @@ export default function DriverDashboard() {
                 style={{ background:CARD, borderRadius:16, padding:24, maxWidth:340, width:'100%',
                   boxShadow:'0 12px 32px rgba(0,0,0,0.2)', textAlign:'center' }}>
                 <p style={{ fontWeight:800, fontSize:16, color:TEXT, marginBottom:8 }}>Cancel search?</p>
-                <p style={{ fontSize:14, color:MUTED, marginBottom:20, lineHeight:1.5 }}>
+                <p style={{ fontSize:15, color:MUTED, marginBottom:20, lineHeight:1.5 }}>
                   Are you sure you want to cancel the search? You'll stop matching with riders on this route.
                 </p>
                 <div style={{ display:'flex', gap:10 }}>
                   <button onClick={() => setShowCancelConfirm(false)}
                     style={{ flex:1, padding:'11px', borderRadius:10, border:`1.5px solid ${BORDER}`,
-                      background:CARD, color:TEXT, fontWeight:700, fontSize:14.5, cursor:'pointer', fontFamily:'inherit' }}>
+                      background:CARD, color:TEXT, fontWeight:700, fontSize:15.5, cursor:'pointer', fontFamily:'inherit' }}>
                     No
                   </button>
                   <button onClick={() => { setShowCancelConfirm(false); handleGoOffline() }}
                     style={{ flex:1, padding:'11px', borderRadius:10, border:'none',
-                      background:NEON, color:ON_NEON, fontWeight:700, fontSize:14.5, cursor:'pointer', fontFamily:'inherit' }}>
+                      background:NEON, color:ON_NEON, fontWeight:700, fontSize:15.5, cursor:'pointer', fontFamily:'inherit' }}>
                     Yes
                   </button>
                 </div>
@@ -1359,7 +1359,7 @@ export default function DriverDashboard() {
             <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT,
               border:'1px solid #fca5a5', borderRadius:10, marginBottom:10 }}>
               <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
-              <p style={{ fontSize:14, color:'#ef4444' }}>{onlineError}</p>
+              <p style={{ fontSize:15, color:'#ef4444' }}>{onlineError}</p>
             </div>
           )}
 
@@ -1382,8 +1382,8 @@ export default function DriverDashboard() {
                       boxShadow:formMode===val ? '0 4px 12px rgba(204,255,0,0.3)' : 'none' }}>
                     <span style={{ color:formMode===val ? ON_NEON : MUTED, flexShrink:0 }}>{icon}</span>
                     <div style={{ minWidth:0 }}>
-                      <p style={{ fontWeight:800, fontSize:14, color:formMode===val ? ON_NEON : TEXT }}>{label}</p>
-                      <p style={{ fontSize:11.5, color:formMode===val ? 'rgba(36,56,0,0.55)' : MUTED, marginTop:0 }}>{sub}</p>
+                      <p style={{ fontWeight:800, fontSize:15, color:formMode===val ? ON_NEON : TEXT }}>{label}</p>
+                      <p style={{ fontSize:13.5, color:formMode===val ? 'rgba(36,56,0,0.55)' : MUTED, marginTop:0 }}>{sub}</p>
                     </div>
                   </button>
                 ))}
@@ -1395,10 +1395,10 @@ export default function DriverDashboard() {
                   background:NEON_SOFT, border:`1.5px solid ${NEON}`, borderRadius:12, marginBottom:10 }}>
                   <CalendarCheck size={17} color={OLIVE} style={{ flexShrink:0, marginTop:1 }}/>
                   <div style={{ minWidth:0 }}>
-                    <p style={{ fontSize:14, fontWeight:800, color:OLIVE }}>
+                    <p style={{ fontSize:15, fontWeight:800, color:OLIVE }}>
                       Drive scheduled for {formatScheduleDate(scheduleOk.date, { long:true })}
                     </p>
-                    <p style={{ fontSize:13, color:MUTED, marginTop:2, lineHeight:1.4 }}>
+                    <p style={{ fontSize:14.5, color:MUTED, marginTop:2, lineHeight:1.4 }}>
                       {scheduleOk.riders.length
                         ? `${scheduleOk.riders.length} rider${scheduleOk.riders.length>1?'s':''} already scheduled this trip — ${scheduleOk.riders.map(r=>r.riderName).join(', ')} ${scheduleOk.riders.length>1?'are':'is'} reserved for you.`
                         : "We'll hold riders for you as they schedule this trip. Start the drive from below on the day."}
@@ -1415,7 +1415,7 @@ export default function DriverDashboard() {
                 <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT,
                   border:'1px solid #fca5a5', borderRadius:10, marginBottom:10 }}>
                   <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
-                  <p style={{ fontSize:14, color:'#ef4444' }}>{scheduleError}</p>
+                  <p style={{ fontSize:15, color:'#ef4444' }}>{scheduleError}</p>
                 </div>
               )}
 
@@ -1423,8 +1423,8 @@ export default function DriverDashboard() {
                 <div style={{ background:BG, border:`1.5px dashed ${BORDER}`, borderRadius:16, padding:24,
                   textAlign:'center', marginBottom:16 }}>
                   <Wifi size={28} color={BORDER} style={{ marginBottom:10 }}/>
-                  <p style={{ fontWeight:700, fontSize:14.5, color:TEXT, marginBottom:4 }}>You're offline</p>
-                  <p style={{ fontSize:14, color:MUTED }}>Go online above to set your route and start receiving bookings — or schedule a drive for a later day.</p>
+                  <p style={{ fontWeight:700, fontSize:15.5, color:TEXT, marginBottom:4 }}>You're offline</p>
+                  <p style={{ fontSize:15, color:MUTED }}>Go online above to set your route and start receiving bookings — or schedule a drive for a later day.</p>
                 </div>
               ) : (
                 <div style={{ background:CARD, border:`1.5px solid ${BORDER}`, borderRadius:14, padding:14,
@@ -1433,7 +1433,7 @@ export default function DriverDashboard() {
                   {/* Header */}
                   <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
                     <div style={{ width:4, height:16, borderRadius:2, background:NEON }}/>
-                    <p style={{ fontWeight:800, fontSize:14, color:OLIVE, textTransform:'uppercase', letterSpacing:'0.06em' }}>
+                    <p style={{ fontWeight:800, fontSize:15, color:OLIVE, textTransform:'uppercase', letterSpacing:'0.06em' }}>
                       {scheduleMode ? 'Schedule Departure & Route' : 'Set Departure & Route'}
                     </p>
                   </div>
@@ -1448,7 +1448,7 @@ export default function DriverDashboard() {
 
                   {/* AM/PM picks the half of the day, the field beside it the
                       exact time within it; the period follows from AM/PM */}
-                  <div style={{ display:'grid', gridTemplateColumns:'minmax(88px,0.42fr) minmax(0,1fr)',
+                  <div style={{ display:'grid', gridTemplateColumns:'minmax(min(88px,100%),0.42fr) minmax(0,1fr)',
                     gap:8, marginBottom:10 }}>
                     <Dropdown options={MERIDIEMS} value={half} onChange={chooseHalf}
                       placeholder="AM / PM" icon={<Sun size={15}/>}/>
@@ -1457,7 +1457,7 @@ export default function DriverDashboard() {
                   </div>
 
                   {/* Available seats */}
-                  <p style={{ fontSize:12.5, fontWeight:700, color:MUTED, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:6 }}>
+                  <p style={{ fontSize:14.5, fontWeight:700, color:MUTED, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:6 }}>
                     Available Seats
                   </p>
                   <div style={{ marginBottom:10 }}>
@@ -1465,30 +1465,30 @@ export default function DriverDashboard() {
                       placeholder="How many seats are available?" icon={<Users size={15}/>}/>
                   </div>
 
-                  <p style={{ fontSize:13.5, fontWeight:600, color:TEXT, marginBottom:4 }}>Pickup Location</p>
+                  <p style={{ fontSize:15, fontWeight:600, color:TEXT, marginBottom:4 }}>Pickup Location</p>
                   <div style={{ marginBottom:8 }}>
                     <Dropdown options={pickupOptions} value={pickup} onChange={setPickup}
                       placeholder={routesLoading ? 'Loading…' : 'Select pickup location'} icon={<MapPin size={15}/>}/>
                   </div>
 
-                  <p style={{ fontSize:13.5, fontWeight:600, color:TEXT, marginBottom:4 }}>Drop-off Location</p>
+                  <p style={{ fontSize:15, fontWeight:600, color:TEXT, marginBottom:4 }}>Drop-off Location</p>
                   <div style={{ marginBottom:10 }}>
                     <Dropdown options={dropoffOptions} value={dropoff} onChange={setDropoff}
                       placeholder={routesLoading ? 'Loading…' : 'Select drop-off location'} icon={<MapPin size={15}/>} forceUpward/>
                   </div>
 
-                  <p style={{ fontSize:13.5, fontWeight:600, color:TEXT, marginBottom:4 }}>Additional Comment (optional)</p>
+                  <p style={{ fontSize:15, fontWeight:600, color:TEXT, marginBottom:4 }}>Additional Comment (optional)</p>
                   <div style={{ marginBottom:10 }}>
                     <textarea value={comment} onChange={e=>setComment(e.target.value.slice(0,200))}
                       placeholder="A note for your rider - e.g. I'll be passing through Ogudu Roundabout" rows={2}
-                      style={{ width:'100%', padding:'10px 12px', borderRadius:10, fontSize:14.5, border:`1.5px solid ${BORDER}`, outline:'none', background:CARD, color:TEXT, fontFamily:'inherit', resize:'vertical', boxSizing:'border-box' }}
+                      style={{ width:'100%', padding:'10px 12px', borderRadius:10, fontSize:15.5, border:`1.5px solid ${BORDER}`, outline:'none', background:CARD, color:TEXT, fontFamily:'inherit', resize:'vertical', boxSizing:'border-box' }}
                       onFocus={e=>e.target.style.borderColor=MOSS} onBlur={e=>e.target.style.borderColor=BORDER}/>
                   </div>
 
                   {!showRoutePreview && (
                     <button type="button" onClick={()=>canPreviewRoute && setShowRoutePreview(true)} disabled={!canPreviewRoute}
                       style={{
-                        width:'100%', padding:'12px', borderRadius:10, fontSize:14.5, fontWeight:700,
+                        width:'100%', padding:'12px', borderRadius:10, fontSize:15.5, fontWeight:700,
                         background:canPreviewRoute?NEON:BORDER, color:canPreviewRoute? ON_NEON :MUTED,
                         border:'none', cursor:canPreviewRoute?'pointer':'not-allowed',
                         display:'flex', alignItems:'center', justifyContent:'center', gap:8,
@@ -1502,7 +1502,7 @@ export default function DriverDashboard() {
                     <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT,
                       border:'1px solid #fca5a5', borderRadius:10, marginBottom:10 }}>
                       <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
-                      <p style={{ fontSize:14, color:'#ef4444' }}>{goLiveError}</p>
+                      <p style={{ fontSize:15, color:'#ef4444' }}>{goLiveError}</p>
                     </div>
                   )}
                 </div>
@@ -1516,7 +1516,7 @@ export default function DriverDashboard() {
                   marginTop:10, boxShadow:'0 2px 8px rgba(36,56,0,0.06)' }}>
                   <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
                     <div style={{ width:4, height:16, borderRadius:2, background:NEON }}/>
-                    <p style={{ fontWeight:800, fontSize:14, color:OLIVE, textTransform:'uppercase', letterSpacing:'0.06em' }}>
+                    <p style={{ fontWeight:800, fontSize:15, color:OLIVE, textTransform:'uppercase', letterSpacing:'0.06em' }}>
                       Your Scheduled Drives
                     </p>
                   </div>
@@ -1526,15 +1526,15 @@ export default function DriverDashboard() {
                       borderRadius:12, padding:'10px 12px', marginBottom:8, background:s.isToday ? NEON_SOFT : CARD }}>
                       <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
                         <CalendarDays size={13} color={OLIVE} style={{ flexShrink:0 }}/>
-                        <p style={{ fontSize:14, fontWeight:800, color:OLIVE }}>
+                        <p style={{ fontSize:15, fontWeight:800, color:OLIVE }}>
                           {formatScheduleDate(s.scheduledDate, { long:true })} · {s.timeSlot}
                         </p>
-                        <span style={{ marginLeft:'auto', fontSize:12.5, fontWeight:700, color:MUTED,
+                        <span style={{ marginLeft:'auto', fontSize:14.5, fontWeight:700, color:MUTED,
                           border:`1.5px solid ${BORDER}`, borderRadius:8, padding:'1px 7px', flexShrink:0, whiteSpace:'nowrap' }}>
                           {s.reservedCount}/{s.seats} seat{s.seats === 1 ? '' : 's'}
                         </span>
                       </div>
-                      <p style={{ fontSize:13, color:MUTED, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                      <p style={{ fontSize:14.5, color:MUTED, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                         {s.pickup} → {s.dropoff}
                       </p>
 
@@ -1544,16 +1544,16 @@ export default function DriverDashboard() {
                             <div key={r.riderId} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
                               <PersonAvatar userId={r.riderId} name={r.riderName} size={28} fontSize={11} radius={8}/>
                               <div style={{ minWidth:0, flex:1 }}>
-                                <p style={{ fontSize:13.5, fontWeight:700, color:TEXT, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                                <p style={{ fontSize:15, fontWeight:700, color:TEXT, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                                   {r.riderName}
                                 </p>
-                                <p style={{ fontSize:12, color:MUTED }}>⭐ {r.riderRating.toFixed(1)} · from {r.pickup}</p>
+                                <p style={{ fontSize:14, color:MUTED }}>⭐ {r.riderRating.toFixed(1)} · from {r.pickup}</p>
                               </div>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <p style={{ fontSize:12.5, color:MUTED, marginTop:6, fontStyle:'italic' }}>
+                        <p style={{ fontSize:14.5, color:MUTED, marginTop:6, fontStyle:'italic' }}>
                           No riders scheduled on this trip yet
                         </p>
                       )}
@@ -1565,7 +1565,7 @@ export default function DriverDashboard() {
                             style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6,
                               padding:'9px', borderRadius:10, border:'none',
                               background:online ? NEON : BORDER, color:online ? ON_NEON : MUTED,
-                              fontWeight:800, fontSize:14, fontFamily:'inherit',
+                              fontWeight:800, fontSize:15, fontFamily:'inherit',
                               cursor:(!online || activatingId === s.availabilityId) ? 'not-allowed' : 'pointer' }}>
                             <Wifi size={13}/>
                             {activatingId === s.availabilityId ? 'Starting…' : online ? 'Start this drive' : 'Go online to start'}
@@ -1575,7 +1575,7 @@ export default function DriverDashboard() {
                           style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6,
                             padding:'9px 12px', borderRadius:10, background:'none', border:`1.5px solid ${BORDER}`,
                             color:cancellingScheduleId === s.availabilityId ? MUTED : '#ef4444',
-                            fontWeight:700, fontSize:13.5, fontFamily:'inherit',
+                            fontWeight:700, fontSize:15, fontFamily:'inherit',
                             cursor:cancellingScheduleId === s.availabilityId ? 'not-allowed' : 'pointer' }}>
                           <Trash2 size={12}/>{cancellingScheduleId === s.availabilityId ? 'Cancelling…' : 'Cancel'}
                         </button>

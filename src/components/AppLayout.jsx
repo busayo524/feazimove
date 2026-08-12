@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import { api } from '../services/api'
 import { useMyAvatar } from '../hooks/useMyAvatar'
 import faviconImg from '../assets/favicon.png'
+import { useHiddenBalance, maskAmount } from './BalanceAmount'
 import {
   MapPin, Clock, Package, Wallet, User, LogOut, Menu, X,
   TrendingUp, LayoutGrid, Instagram, Facebook,
@@ -49,6 +50,7 @@ export default function AppLayout({ children, title }){
   const initials  = `${user?.firstName?.[0]||''}${user?.lastName?.[0]||''}`.toUpperCase() || 'U'
   const [avatarUrl] = useMyAvatar(user?.id)
   const [walletBalance, setWalletBalance] = useState(null)
+  const [hideBalance] = useHiddenBalance()
 
   useEffect(() => {
     if (!user) return
@@ -92,7 +94,7 @@ export default function AppLayout({ children, title }){
             style={({ isActive }) => ({
               display:'flex', alignItems:'center', gap:12,
               padding:'11px 14px', borderRadius:12, marginBottom:4,
-              textDecoration:'none', fontWeight:600, fontSize:14.5,
+              textDecoration:'none', fontWeight:600, fontSize:15.5,
               transition:'all 0.15s',
               background: isActive ? SB_ACTIVE_BG : 'transparent',
               color: isActive ? SB_ACTIVE : SB_TEXT,
@@ -110,7 +112,7 @@ export default function AppLayout({ children, title }){
           style={({ isActive }) => ({
             display:'flex', alignItems:'center', gap:12,
             padding:'11px 14px', borderRadius:12, marginTop:8,
-            textDecoration:'none', fontWeight:600, fontSize:14.5,
+            textDecoration:'none', fontWeight:600, fontSize:15.5,
             transition:'all 0.15s',
             background: isActive ? SB_ACTIVE_BG : 'transparent',
             color: isActive ? SB_ACTIVE : SB_TEXT,
@@ -125,7 +127,7 @@ export default function AppLayout({ children, title }){
         {/* Role switcher — only shown when user has both roles */}
         {user?.canRide && user?.canDrive && (
           <button onClick={handleSwitch} disabled={switching}
-            style={{ width:'100%', marginBottom:8, padding:'9px 14px', borderRadius:12, border:`1.5px solid ${NEON}`, background:'transparent', color:NEON, fontWeight:700, fontSize:14, cursor:switching?'not-allowed':'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8, fontFamily:'inherit', opacity:switching?0.6:1, transition:'all 0.15s' }}>
+            style={{ width:'100%', marginBottom:8, padding:'9px 14px', borderRadius:12, border:`1.5px solid ${NEON}`, background:'transparent', color:NEON, fontWeight:700, fontSize:15, cursor:switching?'not-allowed':'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8, fontFamily:'inherit', opacity:switching?0.6:1, transition:'all 0.15s' }}>
             {switching ? 'Switching…' : user?.role === 'driver' ? 'Switch to Rider' : 'Switch to Driver'}
           </button>
         )}
@@ -133,18 +135,18 @@ export default function AppLayout({ children, title }){
           <div style={{ width:34, height:34, borderRadius:'50%', background:NEON, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, overflow:'hidden' }}>
             {avatarUrl
               ? <img src={avatarUrl} alt="avatar" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
-              : <span style={{ color:NT, fontWeight:800, fontSize:14.5 }}>{initials}</span>
+              : <span style={{ color:NT, fontWeight:800, fontSize:15.5 }}>{initials}</span>
             }
           </div>
           <div style={{ flex:1, minWidth:0 }}>
-            <p style={{ color:SB_TEXT, fontWeight:700, fontSize:14, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+            <p style={{ color:SB_TEXT, fontWeight:700, fontSize:15, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
               {user?.firstName} {user?.lastName}
             </p>
-            <p style={{ color:SB_MUTED, fontSize:12.5, textTransform:'capitalize', marginTop:1 }}>{user?.role}</p>
+            <p style={{ color:SB_MUTED, fontSize:14.5, textTransform:'capitalize', marginTop:1 }}>{user?.role}</p>
           </div>
         </div>
         <button onClick={handleLogout}
-          style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'10px', borderRadius:12, background:SB_CARD, border:`1.5px solid ${SB_BORDER}`, color:SB_TEXT, fontWeight:600, fontSize:14.5, cursor:'pointer', transition:'all 0.15s', fontFamily:'inherit' }}
+          style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'10px', borderRadius:12, background:SB_CARD, border:`1.5px solid ${SB_BORDER}`, color:SB_TEXT, fontWeight:600, fontSize:15.5, cursor:'pointer', transition:'all 0.15s', fontFamily:'inherit' }}
           onMouseEnter={e => { e.currentTarget.style.background='rgba(239,68,68,0.15)'; e.currentTarget.style.color='#f87171'; e.currentTarget.style.borderColor='rgba(239,68,68,0.3)' }}
           onMouseLeave={e => { e.currentTarget.style.background=SB_CARD; e.currentTarget.style.color=SB_TEXT; e.currentTarget.style.borderColor=SB_BORDER }}>
           <LogOut size={16}/> Sign Out
@@ -195,15 +197,15 @@ export default function AppLayout({ children, title }){
             <button onClick={() => setOpen(!open)} style={{ display:'none', background:'none', border:'none', cursor:'pointer', color:TEXT, padding:4, flexShrink:0 }} className="mobile-menu-btn" aria-label="Toggle menu">
               <Menu size={22}/>
             </button>
-            <p style={{ fontSize:14.5, color:TEXT, margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', minWidth:0 }}><span className="fm-date-long">{todayLong}</span><span className="fm-date-short">{todayShort}</span></p>
+            <p style={{ fontSize:15.5, color:TEXT, margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', minWidth:0 }}><span className="fm-date-long">{todayLong}</span><span className="fm-date-short">{todayShort}</span></p>
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
             {/* Wallet balance pill — opens the wallet page for every role */}
             <button onClick={() => navigate('/wallet')}
               style={{ display:'flex', alignItems:'center', gap:7, padding:'6px 13px', borderRadius:50, background:NEON, border:'none', cursor:'pointer', textDecoration:'none', flexShrink:0 }}>
               <Wallet size={14} color={NT} strokeWidth={2.5}/>
-              <span style={{ fontWeight:800, fontSize:14, color:NT, letterSpacing:'-0.01em' }}>
-                {walletBalance === null ? '—' : `₦${walletBalance.toLocaleString()}`}
+              <span style={{ fontWeight:800, fontSize:15, color:NT, letterSpacing:'-0.01em' }}>
+                {walletBalance === null ? '—' : hideBalance ? maskAmount() : `₦${walletBalance.toLocaleString()}`}
               </span>
             </button>
             {/* Avatar */}
@@ -211,14 +213,14 @@ export default function AppLayout({ children, title }){
               <div style={{ width:34, height:34, borderRadius:'50%', background:NEON, display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden' }}>
                 {avatarUrl
                   ? <img src={avatarUrl} alt="avatar" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
-                  : <span style={{ color:NT, fontWeight:800, fontSize:14 }}>{initials}</span>
+                  : <span style={{ color:NT, fontWeight:800, fontSize:15 }}>{initials}</span>
                 }
               </div>
             </NavLink>
           </div>
         </header>
 
-        <main style={{ flex:1, padding:'84px 24px 24px', width:'100%', boxSizing:'border-box' }}>
+        <main style={{ flex:1, minWidth:0, padding:'84px 24px 24px', width:'100%', boxSizing:'border-box' }}>
           <h1 style={{ fontWeight:800, fontSize:26, color:TEXT, letterSpacing:'-0.02em', margin:'4px 0 6px' }}>{title}</h1>
           {children}
         </main>

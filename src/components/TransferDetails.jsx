@@ -26,13 +26,13 @@ export default function TransferDetails({ transfer, secondsLeft, onCancel, waiti
     <div style={{ background:NEON_SOFT, border:`1.5px solid ${NEON}`, borderRadius:14, padding:16 }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10 }}>
         <div>
-          <p style={{ fontWeight:800, fontSize:14, color:OLIVE }}>Transfer to this account</p>
+          <p style={{ fontWeight:800, fontSize:15, color:OLIVE }}>Transfer to this account</p>
           {/* This number is good for ONE payment and dies with the countdown
               below. It carries the rider's own name, so it reads like an
               account they own — save it, transfer to it next week, and the
               money goes nowhere anyone can find. Say so where they are
               reading the number, not in a footnote. */}
-          <p style={{ fontSize:13, color:MUTED, marginTop:2, lineHeight:1.4 }}>
+          <p style={{ fontSize:14.5, color:MUTED, marginTop:2, lineHeight:1.4 }}>
             One-time payment account — it expires below. Don’t save it for later.
           </p>
         </div>
@@ -42,21 +42,21 @@ export default function TransferDetails({ transfer, secondsLeft, onCancel, waiti
       </div>
       {[['Bank', transfer.bankName], ['Account Number', transfer.accountNumber, true], ['Account Name', transfer.accountName]].map(([label, value, copy]) => (
         <div key={label} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:8, padding:'7px 0', borderBottom:'1px solid rgba(36,56,0,0.08)' }}>
-          <span style={{ fontSize:13.5, color:MUTED, flexShrink:0 }}>{label}</span>
-          <span style={{ display:'flex', alignItems:'center', gap:2, fontSize:14.5, fontWeight:700, color:TEXT, minWidth:0, textAlign:'right' }}>
+          <span style={{ fontSize:15, color:MUTED, flexShrink:0 }}>{label}</span>
+          <span style={{ display:'flex', alignItems:'center', gap:2, fontSize:15.5, fontWeight:700, color:TEXT, minWidth:0, textAlign:'right' }}>
             {value || '—'}{copy && value && <CopyBtn text={String(value)}/>}
           </span>
         </div>
       ))}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'7px 0' }}>
-        <span style={{ fontSize:13.5, color:MUTED }}>Amount — transfer exactly</span>
+        <span style={{ fontSize:15, color:MUTED }}>Amount — transfer exactly</span>
         <span style={{ display:'flex', alignItems:'center', gap:2, fontSize:16, fontWeight:900, color:OLIVE }}>
           ₦{Number(transfer.amount).toLocaleString()}<CopyBtn text={String(transfer.amount)}/>
         </span>
       </div>
       <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:10 }}>
         <RefreshCw size={12} color={MOSS} style={{ animation:'spin 1.2s linear infinite' }}/>
-        <p style={{ fontSize:14, color:MOSS, fontWeight:600 }}>
+        <p style={{ fontSize:15, color:MOSS, fontWeight:600 }}>
           {waitingLabel || 'Waiting for your transfer…'} {secondsLeft > 0 ? `· expires in ${mins}:${String(secs).padStart(2, '0')}` : '· expired'}
         </p>
       </div>

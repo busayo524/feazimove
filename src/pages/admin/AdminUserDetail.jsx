@@ -54,7 +54,7 @@ function Section({ title, action, children }) {
       overflow:'hidden', boxShadow:'0 1px 3px rgba(0,0,0,0.04)', marginBottom:20 }}>
       <div style={{ padding:'13px 20px', borderBottom:`1px solid ${BORDER}`, background:BG,
         display:'flex', justifyContent:'space-between', alignItems:'center', gap:12, flexWrap:'wrap' }}>
-        <p style={{ margin:0, fontWeight:700, fontSize:14.5, color:MUTED, textTransform:'uppercase', letterSpacing:'0.06em' }}>{title}</p>
+        <p style={{ margin:0, fontWeight:700, fontSize:15.5, color:MUTED, textTransform:'uppercase', letterSpacing:'0.06em' }}>{title}</p>
         {action}
       </div>
       <div style={{ padding:20 }}>{children}</div>
@@ -92,19 +92,19 @@ function KycRevealModal({ userId, onRevealed, onClose }) {
           <ShieldCheck size={17} color={GREEN}/>
           <p style={{ margin:0, fontWeight:800, fontSize:16, color:TEXT }}>Verify it’s you</p>
         </div>
-        <p style={{ fontSize:15, color:MUTED, marginBottom:16, lineHeight:1.5 }}>
+        <p style={{ fontSize:16, color:MUTED, marginBottom:16, lineHeight:1.5 }}>
           Full KYC data — including the complete BVN — is protected. Enter the current 6-digit
           code from your authenticator app. This access is recorded.
         </p>
         {needsSetup ? (
           <>
-            <p style={{ fontSize:15, color:'#b45309', marginBottom:16, lineHeight:1.5 }}>
+            <p style={{ fontSize:16, color:'#b45309', marginBottom:16, lineHeight:1.5 }}>
               You haven’t set up an authenticator app yet. Go to Settings → Security to enrol,
               then come back.
             </p>
             <button onClick={onClose}
               style={{ width:'100%', padding:'11px', borderRadius:10, background:ACCENT_FILL, color:ON_ACCENT_FILL, border:'none',
-                fontWeight:800, fontSize:15, cursor:'pointer', fontFamily:'inherit' }}>
+                fontWeight:800, fontSize:16, cursor:'pointer', fontFamily:'inherit' }}>
               Close
             </button>
           </>
@@ -115,17 +115,17 @@ function KycRevealModal({ userId, onRevealed, onClose }) {
               style={{ width:'100%', padding:'12px 14px', borderRadius:10, fontSize:22, letterSpacing:'0.32em',
                 textAlign:'center', border:`1.5px solid ${BORDER}`, marginBottom:12, boxSizing:'border-box',
                 background:CARD, color:TEXT, fontFamily:'inherit', fontWeight:700 }}/>
-            {error && <p style={{ fontSize:14.5, color:'#ef4444', marginBottom:12 }}>{error}</p>}
+            {error && <p style={{ fontSize:15.5, color:'#ef4444', marginBottom:12 }}>{error}</p>}
             <div style={{ display:'flex', gap:10 }}>
               <button type="submit" disabled={busy || code.length !== 6}
-                style={{ flex:1, padding:'11px', borderRadius:10, border:'none', fontWeight:800, fontSize:15, fontFamily:'inherit',
+                style={{ flex:1, padding:'11px', borderRadius:10, border:'none', fontWeight:800, fontSize:16, fontFamily:'inherit',
                   background:(busy || code.length !== 6)?BORDER:NEON, color:(busy || code.length !== 6)?MUTED:ON_NEON,
                   cursor:(busy || code.length !== 6)?'not-allowed':'pointer' }}>
                 {busy ? 'Verifying…' : 'Reveal KYC'}
               </button>
               <button type="button" onClick={onClose}
                 style={{ padding:'11px 16px', borderRadius:10, background:'none', border:`1.5px solid ${BORDER}`,
-                  color:MUTED, fontWeight:700, fontSize:15, cursor:'pointer', fontFamily:'inherit' }}>
+                  color:MUTED, fontWeight:700, fontSize:16, cursor:'pointer', fontFamily:'inherit' }}>
                 Cancel
               </button>
             </div>
@@ -159,11 +159,11 @@ function IdPhoto({ path, caption, note }) {
         textAlign:'center', padding:6, boxSizing:'border-box' }}>
         {src
           ? <img src={src} alt={caption} style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
-          : <span style={{ fontSize:14, color:MUTED, lineHeight:1.4 }}>
+          : <span style={{ fontSize:15, color:MUTED, lineHeight:1.4 }}>
               {failed ? 'Could not load' : note || 'Not available'}
             </span>}
       </div>
-      <p style={{ margin:'6px 0 0', fontSize:13.5, fontWeight:700, color:MUTED,
+      <p style={{ margin:'6px 0 0', fontSize:15, fontWeight:700, color:MUTED,
         textTransform:'uppercase', letterSpacing:'0.05em', textAlign:'center' }}>{caption}</p>
     </div>
   )
@@ -199,7 +199,7 @@ function LicenceRecord({ identity, userId }) {
 
   return (
     <div style={{ marginTop:14, paddingTop:14, borderTop:`1px solid ${BORDER}` }}>
-      <p style={{ margin:'0 0 12px', fontSize:14, fontWeight:700, color:MUTED,
+      <p style={{ margin:'0 0 12px', fontSize:15, fontWeight:700, color:MUTED,
         textTransform:'uppercase', letterSpacing:'0.06em' }}>What the licence itself says</p>
 
       <div style={{ display:'flex', gap:16, flexWrap:'wrap', alignItems:'flex-start' }}>
@@ -211,21 +211,21 @@ function LicenceRecord({ identity, userId }) {
         </div>
 
         <div style={{ flex:'1 1 260px', minWidth:0 }}>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))', gap:'10px 18px' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(min(150px,100%),1fr))', gap:'10px 18px' }}>
             {rows.map(([label, value]) => (
               <div key={label}>
-                <p style={{ margin:'0 0 2px', fontSize:13.5, fontWeight:700, color:MUTED,
+                <p style={{ margin:'0 0 2px', fontSize:15, fontWeight:700, color:MUTED,
                   textTransform:'uppercase', letterSpacing:'0.05em' }}>{label}</p>
-                <p style={{ margin:0, fontSize:15, fontWeight:700, color:TEXT }}>{value}</p>
+                <p style={{ margin:0, fontSize:16, fontWeight:700, color:TEXT }}>{value}</p>
               </div>
             ))}
             {rec?.expiryDate && (
               <div>
-                <p style={{ margin:'0 0 2px', fontSize:13.5, fontWeight:700, color:MUTED,
+                <p style={{ margin:'0 0 2px', fontSize:15, fontWeight:700, color:MUTED,
                   textTransform:'uppercase', letterSpacing:'0.05em' }}>
                   {rec.expired ? 'Expired' : 'Expires'}
                 </p>
-                <p style={{ margin:0, fontSize:15, fontWeight:800,
+                <p style={{ margin:0, fontSize:16, fontWeight:800,
                   color:rec.expired ? '#b91c1c' : '#15803d' }}>
                   {fmtDate(rec.expiryDate)}
                 </p>
@@ -233,7 +233,7 @@ function LicenceRecord({ identity, userId }) {
             )}
           </div>
           {rec?.expired && (
-            <p style={{ margin:'12px 0 0', fontSize:14.5, color:'#b91c1c', lineHeight:1.5 }}>
+            <p style={{ margin:'12px 0 0', fontSize:15.5, color:'#b91c1c', lineHeight:1.5 }}>
               FRSC records this licence as expired. They cannot legally drive on it until it is renewed.
             </p>
           )}
@@ -278,16 +278,16 @@ function ReissueFundingAccount({ userId, account, onDone }) {
     <div style={{ marginTop:14, background:'#fff7ed', border:'1px solid #fdba74', borderRadius:12, padding:12 }}>
       <div style={{ display:'flex', alignItems:'center', gap:7, marginBottom:6 }}>
         <AlertCircle size={14} color="#c2410c"/>
-        <p style={{ fontSize:14.5, fontWeight:800, color:'#9a3412' }}>This account is not in the rider’s name</p>
+        <p style={{ fontSize:15.5, fontWeight:800, color:'#9a3412' }}>This account is not in the rider’s name</p>
       </div>
-      <p style={{ fontSize:14.5, color:MUTED, lineHeight:1.5, marginBottom:10 }}>
+      <p style={{ fontSize:15.5, color:MUTED, lineHeight:1.5, marginBottom:10 }}>
         Anchor issued it as “{account.name || '—'}”. Their KYC has since been approved, so a new
         account will carry their own name. Anchor cannot relabel the existing one.
       </p>
-      {error && <p style={{ fontSize:14.5, color:'#ef4444', marginBottom:8 }}>{error}</p>}
+      {error && <p style={{ fontSize:15.5, color:'#ef4444', marginBottom:8 }}>{error}</p>}
       <button onClick={reissue} disabled={busy}
         style={{ padding:'9px 16px', borderRadius:10, background:'none', border:`1.5px solid ${OLIVE}`,
-          color:OLIVE, fontWeight:700, fontSize:14.5, cursor:busy?'wait':'pointer', fontFamily:'inherit' }}>
+          color:OLIVE, fontWeight:700, fontSize:15.5, cursor:busy?'wait':'pointer', fontFamily:'inherit' }}>
         {busy ? 'Issuing…' : 'Issue New Funding Account'}
       </button>
     </div>
@@ -330,17 +330,17 @@ function IdentityVerdict({ identity, userId, onRerun }) {
     <div style={{ background:t.bg, border:`1.5px solid ${t.bd}`, borderRadius:14, padding:'16px 20px', marginBottom:20 }}>
       <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap', marginBottom:10 }}>
         {t.icon}
-        <p style={{ margin:0, fontWeight:900, fontSize:15, color:t.fg, letterSpacing:'0.04em' }}>{t.label}</p>
+        <p style={{ margin:0, fontWeight:900, fontSize:16, color:t.fg, letterSpacing:'0.04em' }}>{t.label}</p>
         <span style={{ flex:1 }}/>
         <button onClick={rerun} disabled={busy}
           style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:8,
-            border:`1px solid ${BORDER}`, background:CARD, color:MUTED, fontWeight:700, fontSize:14,
+            border:`1px solid ${BORDER}`, background:CARD, color:MUTED, fontWeight:700, fontSize:15,
             cursor: busy?'wait':'pointer', fontFamily:'inherit' }}>
           <RefreshCw size={12}/> {busy ? 'Checking…' : 'Re-run'}
         </button>
       </div>
 
-      <p style={{ fontSize:15, color:t.fg, lineHeight:1.55, marginBottom:12 }}>{identity.summary}</p>
+      <p style={{ fontSize:16, color:t.fg, lineHeight:1.55, marginBottom:12 }}>{identity.summary}</p>
 
       {/* Each individual check, so a failure says exactly what disagreed. */}
       {identity.checks?.length > 0 && (
@@ -351,8 +351,8 @@ function IdentityVerdict({ identity, userId, onRerun }) {
                 ? <CheckCircle2 size={14} color="#15803d" style={{ flexShrink:0, marginTop:2 }}/>
                 : <XCircle size={14} color="#b91c1c" style={{ flexShrink:0, marginTop:2 }}/>}
               <div>
-                <p style={{ fontSize:15, fontWeight:600, color:TEXT }}>{c.name}</p>
-                {c.detail && <p style={{ fontSize:14.5, color:MUTED, marginTop:1 }}>{c.detail}</p>}
+                <p style={{ fontSize:16, fontWeight:600, color:TEXT }}>{c.name}</p>
+                {c.detail && <p style={{ fontSize:15.5, color:MUTED, marginTop:1 }}>{c.detail}</p>}
               </div>
             </div>
           ))}
@@ -361,8 +361,8 @@ function IdentityVerdict({ identity, userId, onRerun }) {
 
       {identity.ninName && (
         <div style={{ borderTop:`1px solid ${t.bd}`, paddingTop:10 }}>
-          <p style={{ fontSize:14, color:MUTED, fontWeight:600 }}>NAME ON NIN</p>
-          <p style={{ fontSize:15, color:TEXT, fontWeight:700 }}>{identity.ninName}</p>
+          <p style={{ fontSize:15, color:MUTED, fontWeight:600 }}>NAME ON NIN</p>
+          <p style={{ fontSize:16, color:TEXT, fontWeight:700 }}>{identity.ninName}</p>
         </div>
       )}
 
@@ -371,22 +371,22 @@ function IdentityVerdict({ identity, userId, onRerun }) {
       <LicenceRecord identity={identity} userId={userId}/>
 
       {identity.checkedAt && (
-        <p style={{ fontSize:14, color:MUTED, marginTop:10 }}>
+        <p style={{ fontSize:15, color:MUTED, marginTop:10 }}>
           Checked {new Date(identity.checkedAt).toLocaleString('en-NG', { timeZone:'Africa/Lagos' })}
         </p>
       )}
-      {error && <p style={{ fontSize:14.5, color:'#ef4444', marginTop:8 }}>{error}</p>}
+      {error && <p style={{ fontSize:15.5, color:'#ef4444', marginTop:8 }}>{error}</p>}
     </div>
   )
 }
 
 function InfoGrid({ rows }) {
   return (
-    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:'14px 24px' }}>
+    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(min(220px,100%),1fr))', gap:'14px 24px' }}>
       {rows.filter(([,v]) => v != null && v !== '').map(([label, value]) => (
         <div key={label}>
-          <p style={{ margin:'0 0 3px', fontSize:14, fontWeight:700, color:MUTED, textTransform:'uppercase', letterSpacing:'0.05em' }}>{label}</p>
-          <p style={{ margin:0, fontSize:14.5, fontWeight:600, color:TEXT }}>{value}</p>
+          <p style={{ margin:'0 0 3px', fontSize:15, fontWeight:700, color:MUTED, textTransform:'uppercase', letterSpacing:'0.05em' }}>{label}</p>
+          <p style={{ margin:0, fontSize:15.5, fontWeight:600, color:TEXT }}>{value}</p>
         </div>
       ))}
     </div>
@@ -527,14 +527,14 @@ export default function AdminUserDetail() {
     <AdminLayout title="User Detail">
       <div style={{ display:'flex', gap:8, padding:'12px 16px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10 }}>
         <AlertCircle size={15} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
-        <p style={{ fontSize:14.5, color:'#ef4444' }}>{error}</p>
+        <p style={{ fontSize:15.5, color:'#ef4444' }}>{error}</p>
       </div>
     </AdminLayout>
   )
 
   if (!user) return (
     <AdminLayout title="User Detail">
-      <p style={{ color:MUTED, fontSize:14.5 }}>Loading…</p>
+      <p style={{ color:MUTED, fontSize:15.5 }}>Loading…</p>
     </AdminLayout>
   )
 
@@ -548,7 +548,7 @@ export default function AdminUserDetail() {
       {/* Back */}
       <button onClick={() => navigate('/admin/user-management')}
         style={{ display:'flex', alignItems:'center', gap:6, background:'none', border:'none',
-          cursor:'pointer', color:MUTED, fontWeight:600, fontSize:14.5, fontFamily:'inherit', padding:0, marginBottom:20 }}>
+          cursor:'pointer', color:MUTED, fontWeight:600, fontSize:15.5, fontFamily:'inherit', padding:0, marginBottom:20 }}>
         <ArrowLeft size={16}/> Back to User Management
       </button>
 
@@ -566,7 +566,7 @@ export default function AdminUserDetail() {
                     window.open(URL.createObjectURL(blob), '_blank')
                   } catch { alert('Could not load photo.') }
                 }}
-                style={{ fontSize:14, fontWeight:700, color:GREEN, background:'none', border:`1px solid ${GREEN}`,
+                style={{ fontSize:15, fontWeight:700, color:GREEN, background:'none', border:`1px solid ${GREEN}`,
                   borderRadius:6, padding:'3px 10px', cursor:'pointer', fontFamily:'inherit' }}>
                 View Photo
               </button>
@@ -574,11 +574,11 @@ export default function AdminUserDetail() {
           </div>
           <div style={{ flex:1, minWidth:180 }}>
             <p style={{ margin:'0 0 4px', fontWeight:800, fontSize:20, color:TEXT }}>{user.name}</p>
-            <p style={{ margin:0, fontSize:14.5, color:MUTED }}>{user.email || user.phone}</p>
+            <p style={{ margin:0, fontSize:15.5, color:MUTED }}>{user.email || user.phone}</p>
             <div style={{ display:'flex', alignItems:'center', gap:10, marginTop:8, flexWrap:'wrap' }}>
-              <span style={{ fontSize:14.5, fontWeight:700, padding:'4px 12px', borderRadius:20,
+              <span style={{ fontSize:15.5, fontWeight:700, padding:'4px 12px', borderRadius:20,
                 background:s.bg, color:s.fg, border:`1px solid ${s.fg}33` }}>{s.label}</span>
-              <span style={{ fontSize:14.5, fontWeight:600, color:MUTED, textTransform:'capitalize' }}>{user.role}</span>
+              <span style={{ fontSize:15.5, fontWeight:600, color:MUTED, textTransform:'capitalize' }}>{user.role}</span>
             </div>
           </div>
           <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
@@ -587,13 +587,13 @@ export default function AdminUserDetail() {
               <button onClick={approve} disabled={busy}
                 style={{ display:'flex', alignItems:'center', gap:7, padding:'10px 20px', borderRadius:10,
                   background:'#dcfce7', color:'#15803d', border:'1.5px solid #86efac',
-                  fontWeight:700, fontSize:15, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit', opacity:busy&&action==='approve'?0.6:1 }}>
+                  fontWeight:700, fontSize:16, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit', opacity:busy&&action==='approve'?0.6:1 }}>
                 <CheckCircle2 size={15}/>{busy&&action==='approve'?'Approving…':'Approve'}
               </button>
               <button onClick={reject} disabled={busy}
                 style={{ display:'flex', alignItems:'center', gap:7, padding:'10px 20px', borderRadius:10,
                   background:DANGER_SOFT, color:'#dc2626', border:'1.5px solid #fca5a5',
-                  fontWeight:700, fontSize:15, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit', opacity:busy&&action==='reject'?0.6:1 }}>
+                  fontWeight:700, fontSize:16, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit', opacity:busy&&action==='reject'?0.6:1 }}>
                 <XCircle size={15}/>{busy&&action==='reject'?'Rejecting…':'Reject'}
               </button>
             </>}
@@ -602,7 +602,7 @@ export default function AdminUserDetail() {
               <button onClick={toggleSuspend} disabled={busy}
                 style={{ display:'flex', alignItems:'center', gap:7, padding:'10px 20px', borderRadius:10,
                   background:DANGER_SOFT, color:'#dc2626', border:'1.5px solid #fca5a5',
-                  fontWeight:700, fontSize:15, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit' }}>
+                  fontWeight:700, fontSize:16, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit' }}>
                 <Ban size={15}/>Suspend User
               </button>
             )}
@@ -611,7 +611,7 @@ export default function AdminUserDetail() {
               <button onClick={approve} disabled={busy}
                 style={{ display:'flex', alignItems:'center', gap:7, padding:'10px 20px', borderRadius:10,
                   background:'#dcfce7', color:'#15803d', border:'1.5px solid #86efac',
-                  fontWeight:700, fontSize:15, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit' }}>
+                  fontWeight:700, fontSize:16, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit' }}>
                 <CheckCircle2 size={15}/>Reactivate
               </button>
             )}
@@ -661,13 +661,13 @@ export default function AdminUserDetail() {
                 <>
                   <button onClick={exportKyc}
                     style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:8,
-                      border:`1px solid ${BORDER}`, background:CARD, color:TEXT, fontWeight:700, fontSize:14,
+                      border:`1px solid ${BORDER}`, background:CARD, color:TEXT, fontWeight:700, fontSize:15,
                       cursor:'pointer', fontFamily:'inherit' }}>
                     <Download size={12}/> Export KYC
                   </button>
                   <button onClick={() => setKyc(null)}
                     style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:8,
-                      border:`1px solid ${BORDER}`, background:CARD, color:MUTED, fontWeight:700, fontSize:14,
+                      border:`1px solid ${BORDER}`, background:CARD, color:MUTED, fontWeight:700, fontSize:15,
                       cursor:'pointer', fontFamily:'inherit' }}>
                     <EyeOff size={12}/> Hide
                   </button>
@@ -675,7 +675,7 @@ export default function AdminUserDetail() {
               ) : (
                 <button onClick={() => setShowReveal(true)}
                   style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:8,
-                    border:'none', background:ACCENT_FILL, color:ON_ACCENT_FILL, fontWeight:700, fontSize:14,
+                    border:'none', background:ACCENT_FILL, color:ON_ACCENT_FILL, fontWeight:700, fontSize:15,
                     cursor:'pointer', fontFamily:'inherit' }}>
                   <Eye size={12}/> View full KYC
                 </button>
@@ -719,7 +719,7 @@ export default function AdminUserDetail() {
           )}
 
           {kyc && (
-            <p style={{ fontSize:14, color:'#b45309', marginTop:14, lineHeight:1.5 }}>
+            <p style={{ fontSize:15, color:'#b45309', marginTop:14, lineHeight:1.5 }}>
               Full KYC revealed {new Date(kyc.revealedAt).toLocaleString('en-NG', { timeZone:'Africa/Lagos' })}.
               This access has been recorded in the activity log.
             </p>
@@ -752,7 +752,7 @@ export default function AdminUserDetail() {
       {/* Documents */}
       <Section title={`Uploaded Documents (${user.documents?.length || 0})`}>
         {!user.documents?.length ? (
-          <p style={{ color:MUTED, fontSize:14.5, margin:0 }}>No documents uploaded.</p>
+          <p style={{ color:MUTED, fontSize:15.5, margin:0 }}>No documents uploaded.</p>
         ) : (
           <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
             {user.documents.map(doc => (
@@ -761,17 +761,17 @@ export default function AdminUserDetail() {
                 <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                   <div style={{ width:28, height:28, borderRadius:8, background:'#f3fbd3', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><FileText size={15} color="#3f6212"/></div>
                   <div>
-                    <p style={{ margin:0, fontWeight:600, fontSize:14.5, color:TEXT }}>
+                    <p style={{ margin:0, fontWeight:600, fontSize:15.5, color:TEXT }}>
                       {DOC_LABELS[doc.doc_type] || doc.doc_type}
                     </p>
-                    <p style={{ margin:0, fontSize:14.5, color:MUTED }}>
+                    <p style={{ margin:0, fontSize:15.5, color:MUTED }}>
                       Uploaded {new Date(doc.uploaded_at).toLocaleDateString('en-NG', { day:'numeric', month:'short', year:'numeric' })}
                     </p>
                   </div>
                 </div>
                 <button onClick={() => viewDocument(doc.id)}
                   style={{ padding:'7px 16px', borderRadius:8, background:NEON, color:ON_NEON,
-                    border:'none', fontWeight:600, fontSize:14.5, cursor:'pointer', fontFamily:'inherit' }}>
+                    border:'none', fontWeight:600, fontSize:15.5, cursor:'pointer', fontFamily:'inherit' }}>
                   View
                 </button>
               </div>
@@ -784,15 +784,15 @@ export default function AdminUserDetail() {
       <div style={{ background:DANGER_SOFT, border:'1px solid #fecdca', borderRadius:14, padding:'20px 24px',
         marginTop:20, display:'flex', alignItems:'center', justifyContent:'space-between', gap:16, flexWrap:'wrap' }}>
         <div style={{ flex:'1 1 300px', minWidth:0 }}>
-          <p style={{ margin:'0 0 4px', fontWeight:800, fontSize:14.5, color:'#b42318' }}>Delete this user</p>
-          <p style={{ margin:0, fontSize:15, color:'#912018', lineHeight:1.6 }}>
+          <p style={{ margin:'0 0 4px', fontWeight:800, fontSize:15.5, color:'#b42318' }}>Delete this user</p>
+          <p style={{ margin:0, fontSize:16, color:'#912018', lineHeight:1.6 }}>
             Permanently removes {user.name} and all their data — wallet, documents, messages and bookings are
             erased; ride history is anonymized. This cannot be undone.
           </p>
         </div>
         <button onClick={deleteUser} disabled={busy}
           style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 20px', borderRadius:10,
-            background:'#d92d20', color:'#fff', border:'none', fontWeight:700, fontSize:15,
+            background:'#d92d20', color:'#fff', border:'none', fontWeight:700, fontSize:16,
             cursor:busy?'not-allowed':'pointer', fontFamily:'inherit', opacity:busy?0.7:1, flexShrink:0 }}>
           <Trash2 size={15}/> {action === 'delete' ? 'Deleting…' : 'Delete User'}
         </button>

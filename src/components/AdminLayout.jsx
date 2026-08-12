@@ -58,7 +58,7 @@ export default function AdminLayout({ children, title }) {
           <img src={faviconImg} alt="FeaziMove" style={{ width:34, height:34, objectFit:'contain' }}/>
           <div>
             <p style={{ margin:0, fontSize:16, fontWeight:900, color:SB_TEXT }}>FeaziMove</p>
-            <p style={{ margin:0, fontSize:12.5, color:SB_MUTED }}>Admin Panel</p>
+            <p style={{ margin:0, fontSize:14.5, color:SB_MUTED }}>Admin Panel</p>
           </div>
         </div>
       </div>
@@ -68,7 +68,7 @@ export default function AdminLayout({ children, title }) {
           <NavLink key={item.to} to={item.to} end={item.end} onClick={() => setOpen(false)}
             style={({ isActive }) => ({
               display:'flex', alignItems:'center', gap:12, padding:'11px 14px', borderRadius:10,
-              marginBottom:4, textDecoration:'none', fontWeight:600, fontSize:14.5, transition:'all 0.15s',
+              marginBottom:4, textDecoration:'none', fontWeight:600, fontSize:15.5, transition:'all 0.15s',
               background: isActive ? SB_ACTIVE_BG : 'transparent',
               color: isActive ? SB_ACTIVE : SB_TEXT,
             })}
@@ -80,14 +80,14 @@ export default function AdminLayout({ children, title }) {
       </nav>
 
       <div style={{ padding:'14px 16px', borderTop:`1px solid ${SB_BORDER}` }}>
-        <p style={{ color:SB_TEXT, fontSize:14, fontWeight:600, margin:0, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+        <p style={{ color:SB_TEXT, fontSize:15, fontWeight:600, margin:0, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
           {user?.email || user?.name}
         </p>
-        <p style={{ color:SB_MUTED, fontSize:12.5, margin:'2px 0 12px', textTransform:'uppercase', letterSpacing:'0.05em' }}>Admin</p>
+        <p style={{ color:SB_MUTED, fontSize:14.5, margin:'2px 0 12px', textTransform:'uppercase', letterSpacing:'0.05em' }}>Admin</p>
         <button onClick={handleLogout}
           style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'10px',
             borderRadius:10, background:'rgba(255,255,255,0.06)', border:`1px solid ${SB_BORDER}`,
-            color:SB_TEXT, fontWeight:600, fontSize:14, cursor:'pointer', fontFamily:'inherit' }}>
+            color:SB_TEXT, fontWeight:600, fontSize:15, cursor:'pointer', fontFamily:'inherit' }}>
           <LogOut size={15}/> Sign Out
         </button>
         {/* Social links — same accounts the marketing footer points at */}
@@ -123,7 +123,7 @@ export default function AdminLayout({ children, title }) {
         </div>
       )}
 
-      <div style={{ flex:1, marginLeft:230, display:'flex', flexDirection:'column', minHeight:'100vh' }} className="admin-main-content">
+      <div style={{ flex:1, minWidth:0, marginLeft:230, display:'flex', flexDirection:'column', minHeight:'100vh' }} className="admin-main-content">
         <header style={{ position:'sticky', top:0, zIndex:30, background:HEADER, borderBottom:`1px solid ${SB_BORDER}`,
           padding:'0 24px', height:60, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
           <div style={{ display:'flex', alignItems:'center', gap:12, minWidth:0 }}>
@@ -134,14 +134,14 @@ export default function AdminLayout({ children, title }) {
               className="admin-mobile-menu-btn" aria-label="Toggle menu">
               <Menu size={20}/>
             </button>
-            <p style={{ fontSize:14.5, color:TEXT, margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', minWidth:0 }}><span className="fm-date-long">{todayLong}</span><span className="fm-date-short">{todayShort}</span></p>
+            <p style={{ fontSize:15.5, color:TEXT, margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', minWidth:0 }}><span className="fm-date-long">{todayLong}</span><span className="fm-date-short">{todayShort}</span></p>
           </div>
-          <p style={{ fontSize:14, color:'#6b7280', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+          <p style={{ fontSize:15, color:'#6b7280', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
             {user?.email || user?.name}
           </p>
         </header>
 
-        <main style={{ flex:1, padding:24, width:'100%', boxSizing:'border-box' }}>
+        <main style={{ flex:1, minWidth:0, padding:24, width:'100%', boxSizing:'border-box' }}>
           <h1 style={{ fontWeight:800, fontSize:26, color:TEXT, letterSpacing:'-0.02em', margin:'4px 0 6px' }}>{title}</h1>
           {children}
         </main>

@@ -10,14 +10,14 @@ import { AlertCircle, Download, TrendingUp } from 'lucide-react'
 function StatCard({ label, value }) {
   return (
     <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, padding:18 }}>
-      <p style={{ fontSize:14.5, color:MUTED, fontWeight:600, marginBottom:8 }}>{label}</p>
+      <p style={{ fontSize:15.5, color:MUTED, fontWeight:600, marginBottom:8 }}>{label}</p>
       <p style={{ fontWeight:900, fontSize:24, color:TEXT, letterSpacing:'-0.02em' }}>₦{value.toLocaleString()}</p>
     </div>
   )
 }
 
 function BarChart({ data }) {
-  if (!data.length) return <p style={{ color:MUTED, fontSize:15 }}>No revenue recorded in the last 14 days.</p>
+  if (!data.length) return <p style={{ color:MUTED, fontSize:16 }}>No revenue recorded in the last 14 days.</p>
   const peak = Math.max(...data.map(d => d.amount), 1)
   return (
     <div style={{ display:'flex', alignItems:'flex-end', gap:6, height:120 }}>
@@ -64,14 +64,14 @@ export default function AdminReports() {
   return (
     <AdminLayout title="Reports & Analytics">
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20, flexWrap:'wrap', gap:10 }}>
-        <p style={{ color:MUTED, fontSize:14.5 }}>Revenue trends, demand, and retention.</p>
+        <p style={{ color:MUTED, fontSize:15.5 }}>Revenue trends, demand, and retention.</p>
         <div style={{ display:'flex', gap:8 }}>
           <button onClick={() => handleExport('rides')} disabled={exporting==='rides'}
-            style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 14px', borderRadius:10, border:`1px solid ${BORDER}`, background:CARD, color:TEXT, fontWeight:600, fontSize:14.5, cursor:'pointer', fontFamily:'inherit' }}>
+            style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 14px', borderRadius:10, border:`1px solid ${BORDER}`, background:CARD, color:TEXT, fontWeight:600, fontSize:15.5, cursor:'pointer', fontFamily:'inherit' }}>
             <Download size={13}/> {exporting==='rides' ? 'Exporting…' : 'Export Rides'}
           </button>
           <button onClick={() => handleExport('transactions')} disabled={exporting==='transactions'}
-            style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 14px', borderRadius:10, border:`1px solid ${BORDER}`, background:CARD, color:TEXT, fontWeight:600, fontSize:14.5, cursor:'pointer', fontFamily:'inherit' }}>
+            style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 14px', borderRadius:10, border:`1px solid ${BORDER}`, background:CARD, color:TEXT, fontWeight:600, fontSize:15.5, cursor:'pointer', fontFamily:'inherit' }}>
             <Download size={13}/> {exporting==='transactions' ? 'Exporting…' : 'Export Transactions'}
           </button>
         </div>
@@ -80,7 +80,7 @@ export default function AdminReports() {
       {error && (
         <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10, marginBottom:20 }}>
           <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
-          <p style={{ fontSize:15, color:'#ef4444' }}>{error}</p>
+          <p style={{ fontSize:16, color:'#ef4444' }}>{error}</p>
         </div>
       )}
 
@@ -88,7 +88,7 @@ export default function AdminReports() {
         <p style={{ color:MUTED }}>Loading…</p>
       ) : (
         <>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))', gap:16, marginBottom:20 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(160px,100%),1fr))', gap:16, marginBottom:20 }}>
             <StatCard label="Revenue Today (est.)" value={data.dailyRevenue}/>
             <StatCard label="Revenue This Week (est.)" value={data.weeklyRevenue}/>
             <StatCard label="Revenue This Month (est.)" value={data.monthlyRevenue}/>
@@ -97,31 +97,31 @@ export default function AdminReports() {
           <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, padding:18, marginBottom:20 }}>
             <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
               <TrendingUp size={15} color={MUTED}/>
-              <p style={{ fontWeight:800, fontSize:14.5, color:TEXT }}>Revenue — Last 14 Days</p>
+              <p style={{ fontWeight:800, fontSize:15.5, color:TEXT }}>Revenue — Last 14 Days</p>
             </div>
             <BarChart data={data.dailySeries}/>
           </div>
 
           <div style={{ display:'grid', gridTemplateColumns:'1.4fr 1fr', gap:16 }} className="admin-reports-grid">
             <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, overflow:'hidden' }}>
-              <p style={{ fontWeight:800, fontSize:14.5, color:TEXT, padding:'16px 18px' }}>Top Routes by Demand</p>
+              <p style={{ fontWeight:800, fontSize:15.5, color:TEXT, padding:'16px 18px' }}>Top Routes by Demand</p>
               {data.topRoutes.length === 0 ? (
-                <p style={{ color:MUTED, fontSize:15, padding:'0 18px 18px' }}>No rides yet.</p>
+                <p style={{ color:MUTED, fontSize:16, padding:'0 18px 18px' }}>No rides yet.</p>
               ) : data.topRoutes.map((r, i) => (
                 <div key={i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 18px', borderTop:`1px solid ${BORDER}` }}>
-                  <p style={{ fontSize:15, fontWeight:600, color:TEXT }}>{r.pickup} → {r.destination}</p>
+                  <p style={{ fontSize:16, fontWeight:600, color:TEXT }}>{r.pickup} → {r.destination}</p>
                   <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                    <span style={{ fontSize:14.5, color:MUTED }}>{r.count} trip{r.count!==1?'s':''}</span>
-                    <span style={{ fontSize:14.5, fontWeight:700, color:'#3f6212', background:'#f3fbd3', padding:'2px 8px', borderRadius:20 }}>{r.sharePct}%</span>
+                    <span style={{ fontSize:15.5, color:MUTED }}>{r.count} trip{r.count!==1?'s':''}</span>
+                    <span style={{ fontSize:15.5, fontWeight:700, color:'#3f6212', background:'#f3fbd3', padding:'2px 8px', borderRadius:20 }}>{r.sharePct}%</span>
                   </div>
                 </div>
               ))}
             </div>
 
             <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, padding:18 }}>
-              <p style={{ fontWeight:800, fontSize:14.5, color:TEXT, marginBottom:14 }}>Rider Retention</p>
+              <p style={{ fontWeight:800, fontSize:15.5, color:TEXT, marginBottom:14 }}>Rider Retention</p>
               <p style={{ fontWeight:900, fontSize:32, color:TEXT, letterSpacing:'-0.02em' }}>{data.retention.pct}%</p>
-              <p style={{ fontSize:14.5, color:MUTED, marginTop:4 }}>
+              <p style={{ fontSize:15.5, color:MUTED, marginTop:4 }}>
                 {data.retention.repeatRiders} of {data.retention.totalRiders} riders with a completed trip have ridden more than once.
               </p>
             </div>

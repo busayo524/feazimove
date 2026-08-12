@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
 import { api } from '../../services/api'
 import { Search, Eye, AlertCircle } from 'lucide-react'
+import ScrollX from '../../components/ScrollX'
 
 /* palette: themed tokens — see src/theme/palette.js */
 
@@ -30,12 +31,12 @@ export default function AdminDrivers() {
   return (
     <AdminLayout title="Drivers">
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20, flexWrap:'wrap', gap:10 }}>
-        <p style={{ color:MUTED, fontSize:14.5 }}>{drivers.length} driver{drivers.length !== 1 ? 's' : ''} registered</p>
+        <p style={{ color:MUTED, fontSize:15.5 }}>{drivers.length} driver{drivers.length !== 1 ? 's' : ''} registered</p>
         <form onSubmit={handleSearch} style={{ display:'flex', gap:8 }}>
           <div style={{ position:'relative' }}>
             <Search size={15} color={MUTED} style={{ position:'absolute', left:12, top:'50%', transform:'translateY(-50%)' }}/>
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, email, plate…"
-              style={{ padding:'9px 14px 9px 34px', borderRadius:10, border:`1px solid ${BORDER}`, fontSize:15, width:240, fontFamily:'inherit', outline:'none', background:CARD, color:TEXT }}/>
+              style={{ padding:'9px 14px 9px 34px', borderRadius:10, border:`1px solid ${BORDER}`, fontSize:16, width:240, fontFamily:'inherit', outline:'none', background:CARD, color:TEXT }}/>
           </div>
         </form>
       </div>
@@ -43,17 +44,17 @@ export default function AdminDrivers() {
       {error && (
         <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10, marginBottom:16 }}>
           <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
-          <p style={{ fontSize:15, color:'#ef4444' }}>{error}</p>
+          <p style={{ fontSize:16, color:'#ef4444' }}>{error}</p>
         </div>
       )}
 
       <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, overflow:'hidden', boxShadow:'0 1px 3px rgba(0,0,0,0.04)' }}>
-        <div className="fm-scroll-x">
-        <table style={{ width:'100%', borderCollapse:'collapse', fontSize:14.5 }}>
+        <ScrollX>
+        <table style={{ width:'100%', borderCollapse:'collapse', fontSize:15.5 }}>
           <thead>
             <tr style={{ background:CARD, textAlign:'left' }}>
               {['Driver','Vehicle','Trips Today','Total Trips','Wallet','Rating','Status',''].map(h => (
-                <th key={h} style={{ padding:'12px 16px', fontSize:14.5, color:MUTED, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.04em' }}>{h}</th>
+                <th key={h} style={{ padding:'12px 16px', fontSize:15.5, color:MUTED, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.04em' }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -66,7 +67,7 @@ export default function AdminDrivers() {
               <tr key={d.id} style={{ borderTop:`1px solid ${BORDER}` }}>
                 <td style={{ padding:'12px 16px' }}>
                   <p style={{ fontWeight:700, color:TEXT }}>{d.name}</p>
-                  <p style={{ fontSize:14.5, color:MUTED }}>{d.email || d.phone}</p>
+                  <p style={{ fontSize:15.5, color:MUTED }}>{d.email || d.phone}</p>
                 </td>
                 <td style={{ padding:'12px 16px', color:TEXT }}>
                   {d.vehicle || '—'}{d.plateNumber ? ` · ${d.plateNumber}` : ''}
@@ -76,12 +77,12 @@ export default function AdminDrivers() {
                 <td style={{ padding:'12px 16px', color:TEXT }}>₦{d.walletBalance.toLocaleString()}</td>
                 <td style={{ padding:'12px 16px', color:TEXT }}>{d.rating ? `⭐ ${d.rating}` : '—'}</td>
                 <td style={{ padding:'12px 16px' }}>
-                  <span style={{ display:'inline-flex', alignItems:'center', gap:6, fontSize:14.5, color: d.isOnline ? '#15803d' : MUTED }}>
+                  <span style={{ display:'inline-flex', alignItems:'center', gap:6, fontSize:15.5, color: d.isOnline ? '#15803d' : MUTED }}>
                     <span style={{ width:7, height:7, borderRadius:'50%', background: d.isOnline ? '#22c55e' : '#9ca3af' }}/>
                     {d.isOnline ? 'Online' : 'Offline'}
                   </span>
                   {!d.isActive && (
-                    <span style={{ display:'block', marginTop:4, fontSize:14, fontWeight:700, color:'#ef4444' }}>Suspended</span>
+                    <span style={{ display:'block', marginTop:4, fontSize:15, fontWeight:700, color:'#ef4444' }}>Suspended</span>
                   )}
                 </td>
                 <td style={{ padding:'12px 16px', textAlign:'right' }}>
@@ -91,7 +92,7 @@ export default function AdminDrivers() {
             ))}
           </tbody>
         </table>
-        </div>
+        </ScrollX>
       </div>
     </AdminLayout>
   )

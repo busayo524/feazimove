@@ -65,7 +65,7 @@ function MonthGrid({ monthDate, value, allowed, onPick }) {
   return (
     <div style={{ display:'grid', gridTemplateColumns:'repeat(7, 1fr)', gap:2 }}>
       {WEEKDAYS.map((w, i) => (
-        <div key={`w${i}`} style={{ textAlign:'center', fontSize:11.5, fontWeight:800, color:MUTED,
+        <div key={`w${i}`} style={{ textAlign:'center', fontSize:13.5, fontWeight:800, color:MUTED,
           textTransform:'uppercase', paddingBottom:4 }}>{w}</div>
       ))}
       {cells.map((day, i) => {
@@ -80,7 +80,7 @@ function MonthGrid({ monthDate, value, allowed, onPick }) {
             aria-current={selected ? 'date' : undefined}
             style={{
               aspectRatio:'1', display:'flex', alignItems:'center', justifyContent:'center',
-              borderRadius:9, fontFamily:'inherit', fontSize:14,
+              borderRadius:9, fontFamily:'inherit', fontSize:15,
               fontWeight: selected ? 800 : selectable ? 700 : 400,
               border: selected ? `1.5px solid ${OLIVE}` : selectable ? `1.5px solid ${BORDER}` : '1.5px solid transparent',
               background: selected ? NEON : selectable ? CARD : 'transparent',
@@ -131,12 +131,12 @@ export default function ScheduleDatePicker({ label = 'Ride Date', value, onChang
 
   return (
     <div>
-      <label style={{ display:'block', fontSize:14, fontWeight:600, color:TEXT, marginBottom:6 }}>{label}</label>
+      <label style={{ display:'block', fontSize:15, fontWeight:600, color:TEXT, marginBottom:6 }}>{label}</label>
       <div ref={ref} style={{ position:'relative' }}>
         <button type="button" onClick={() => setOpen(o => !o)}
           style={{
             width:'100%', padding:'13px 16px', paddingLeft:42, paddingRight:40,
-            borderRadius:10, fontSize:15,
+            borderRadius:10, fontSize:16,
             border:`1.5px solid ${open ? MOSS : BORDER}`,
             background:CARD, color:value ? TEXT : MUTED,
             fontFamily:'inherit', boxSizing:'border-box',
@@ -175,7 +175,7 @@ export default function ScheduleDatePicker({ label = 'Ride Date', value, onChang
                   cursor:canGoBack ? 'pointer' : 'not-allowed', opacity:canGoBack ? 1 : 0.35 }}>
                 <ChevronLeft size={14} color={OLIVE}/>
               </button>
-              <p style={{ fontSize:14, fontWeight:800, color:TEXT }}>
+              <p style={{ fontSize:15, fontWeight:800, color:TEXT }}>
                 {MONTHS[viewMonth.getMonth()]} {viewMonth.getFullYear()}
               </p>
               <button type="button" onClick={() => canGoForward && setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1))}
@@ -196,7 +196,7 @@ export default function ScheduleDatePicker({ label = 'Ride Date', value, onChang
               borderTop:`1px solid ${BORDER}` }}>
               {allowed.map(iso => (
                 <button key={iso} type="button" onClick={() => { onChange(iso); setOpen(false) }}
-                  style={{ flexShrink:0, padding:'6px 10px', borderRadius:50, fontSize:13, fontWeight:700,
+                  style={{ flexShrink:0, padding:'6px 10px', borderRadius:50, fontSize:14.5, fontWeight:700,
                     fontFamily:'inherit', cursor:'pointer',
                     border:`1.5px solid ${value === iso ? OLIVE : BORDER}`,
                     background:value === iso ? NEON : BG,
@@ -207,7 +207,7 @@ export default function ScheduleDatePicker({ label = 'Ride Date', value, onChang
                 </button>
               ))}
             </div>
-            <p style={{ fontSize:12.5, color:MUTED, marginTop:8, textAlign:'center' }}>
+            <p style={{ fontSize:14.5, color:MUTED, marginTop:8, textAlign:'center' }}>
               Rides can be scheduled up to a week ahead.
             </p>
           </div>

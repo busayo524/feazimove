@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react'
 import AdminLayout from '../../components/AdminLayout'
 import { api } from '../../services/api'
 import { AlertCircle, Plus, X, Check } from 'lucide-react'
+import ScrollX from '../../components/ScrollX'
 
 /* palette: themed tokens — see src/theme/palette.js */
 /* palette: themed tokens — see src/theme/palette.js */
@@ -27,7 +28,7 @@ function FareCell({ route, field, onSave }) {
   if (!editing) {
     return (
       <button onClick={() => setEditing(true)}
-        style={{ background:unpriced?'#fef3c7':'none', border:unpriced?'1px dashed #d97706':'none', padding:'4px 8px', borderRadius:6, cursor:'pointer', fontWeight:700, fontSize:15, color:unpriced?'#b45309':TEXT, fontFamily:'inherit' }}
+        style={{ background:unpriced?'#fef3c7':'none', border:unpriced?'1px dashed #d97706':'none', padding:'4px 8px', borderRadius:6, cursor:'pointer', fontWeight:700, fontSize:16, color:unpriced?'#b45309':TEXT, fontFamily:'inherit' }}
         onMouseEnter={e => { if(!unpriced) e.currentTarget.style.background = BG }}
         onMouseLeave={e => { if(!unpriced) e.currentTarget.style.background = 'none' }}>
         {unpriced ? 'Set price' : fmt(route[field])}
@@ -36,10 +37,10 @@ function FareCell({ route, field, onSave }) {
   }
   return (
     <div style={{ display:'flex', alignItems:'center', gap:4 }}>
-      <span style={{ fontSize:14.5, color:MUTED }}>₦</span>
+      <span style={{ fontSize:15.5, color:MUTED }}>₦</span>
       <input autoFocus type="number" min="0" value={value} onChange={e => setValue(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false) }}
-        style={{ width:70, padding:'4px 6px', borderRadius:6, border:`1.5px solid ${OLIVE}`, fontSize:15, fontFamily:'inherit', background:CARD, color:TEXT }}/>
+        style={{ width:70, padding:'4px 6px', borderRadius:6, border:`1.5px solid ${OLIVE}`, fontSize:16, fontFamily:'inherit', background:CARD, color:TEXT }}/>
       <button onClick={save} disabled={saving} aria-label="Save" style={{ background:'none', border:'none', cursor:'pointer', color:'#15803d' }}>
         <Check size={14}/>
       </button>
@@ -76,20 +77,20 @@ function PlatformFeeControl() {
 
   return (
     <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
-      <span style={{ fontSize:14.5, fontWeight:700, color:MUTED, textTransform:'uppercase', letterSpacing:'0.04em' }}>Platform Fee</span>
+      <span style={{ fontSize:15.5, fontWeight:700, color:MUTED, textTransform:'uppercase', letterSpacing:'0.04em' }}>Platform Fee</span>
       <div style={{ display:'flex', alignItems:'center', gap:4, background:CARD, border:`1.5px solid ${BORDER}`, borderRadius:10, padding:'6px 10px' }}>
         <input type="number" min="0" max="100" step="0.5" value={value}
           onChange={e => setValue(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') save() }}
-          style={{ width:48, border:'none', outline:'none', fontSize:14.5, fontWeight:700, color:TEXT, fontFamily:'inherit', background:'transparent' }}/>
-        <span style={{ fontSize:15, color:MUTED }}>%</span>
+          style={{ width:48, border:'none', outline:'none', fontSize:15.5, fontWeight:700, color:TEXT, fontFamily:'inherit', background:'transparent' }}/>
+        <span style={{ fontSize:16, color:MUTED }}>%</span>
       </div>
       <button onClick={save} disabled={saving || feePercent === null}
-        style={{ padding:'8px 14px', borderRadius:10, background:NEON, border:'none', color:ON_NEON, fontWeight:700, fontSize:15, cursor:saving?'not-allowed':'pointer', fontFamily:'inherit', opacity:saving?0.7:1 }}>
+        style={{ padding:'8px 14px', borderRadius:10, background:NEON, border:'none', color:ON_NEON, fontWeight:700, fontSize:16, cursor:saving?'not-allowed':'pointer', fontFamily:'inherit', opacity:saving?0.7:1 }}>
         {saving ? 'Saving…' : 'Save'}
       </button>
       {saved && <Check size={16} color="#15803d"/>}
-      {error && <span style={{ fontSize:14.5, color:'#ef4444' }}>{error}</span>}
+      {error && <span style={{ fontSize:15.5, color:'#ef4444' }}>{error}</span>}
     </div>
   )
 }
@@ -132,10 +133,10 @@ export default function AdminPricing() {
       </div>
 
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8, flexWrap:'wrap', gap:10 }}>
-        <p style={{ color:MUTED, fontSize:14.5 }}>Click a fare to edit it. Changes apply to new bookings only — fares already quoted to a rider are locked in.</p>
+        <p style={{ color:MUTED, fontSize:15.5 }}>Click a fare to edit it. Changes apply to new bookings only — fares already quoted to a rider are locked in.</p>
         <button onClick={() => setShowAdd(true)}
           style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 18px', borderRadius:10, background:NEON, border:'none',
-            color:ON_NEON, fontWeight:700, fontSize:15, cursor:'pointer', fontFamily:'inherit', flexShrink:0 }}>
+            color:ON_NEON, fontWeight:700, fontSize:16, cursor:'pointer', fontFamily:'inherit', flexShrink:0 }}>
           <Plus size={15}/> Add Route
         </button>
       </div>
@@ -143,7 +144,7 @@ export default function AdminPricing() {
       <div style={{ display:'flex', gap:6, background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:4, marginBottom:20, width:'fit-content' }}>
         {['morning', 'evening'].map(p => (
           <button key={p} onClick={() => setPeriod(p)}
-            style={{ padding:'7px 18px', borderRadius:8, border:'none', fontSize:15, fontWeight:700, cursor:'pointer', fontFamily:'inherit', textTransform:'capitalize',
+            style={{ padding:'7px 18px', borderRadius:8, border:'none', fontSize:16, fontWeight:700, cursor:'pointer', fontFamily:'inherit', textTransform:'capitalize',
               background: period===p ? NEON : 'transparent', color:period===p ? ON_NEON : MUTED }}>
             {p}
           </button>
@@ -153,17 +154,17 @@ export default function AdminPricing() {
       {error && (
         <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10, marginBottom:16 }}>
           <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
-          <p style={{ fontSize:15, color:'#ef4444' }}>{error}</p>
+          <p style={{ fontSize:16, color:'#ef4444' }}>{error}</p>
         </div>
       )}
 
       <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, overflow:'hidden', boxShadow:'0 1px 3px rgba(0,0,0,0.04)' }}>
-        <div className="fm-scroll-x">
-        <table style={{ width:'100%', borderCollapse:'collapse', fontSize:14.5 }}>
+        <ScrollX>
+        <table style={{ width:'100%', borderCollapse:'collapse', fontSize:15.5 }}>
           <thead>
             <tr style={{ background:CARD, textAlign:'left' }}>
               {['Route','FeaziRide Fare','Last Updated','Status',''].map(h => (
-                <th key={h} style={{ padding:'12px 16px', fontSize:14.5, color:MUTED, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.04em' }}>{h}</th>
+                <th key={h} style={{ padding:'12px 16px', fontSize:15.5, color:MUTED, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.04em' }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -176,18 +177,18 @@ export default function AdminPricing() {
               <tr key={r.id} style={{ borderTop:`1px solid ${BORDER}`, opacity: r.isActive ? 1 : 0.5 }}>
                 <td style={{ padding:'12px 16px', fontWeight:600, color:TEXT }}>{r.pickup} → {r.dropoff}</td>
                 <td style={{ padding:'8px 16px' }}><FareCell route={r} field="poolFareKobo" onSave={handleSave}/></td>
-                <td style={{ padding:'12px 16px', color:MUTED, fontSize:14.5 }}>
+                <td style={{ padding:'12px 16px', color:MUTED, fontSize:15.5 }}>
                   {r.updatedAt ? `${r.updatedByName || 'Admin'} · ${new Date(r.updatedAt).toLocaleDateString()}` : '—'}
                 </td>
                 <td style={{ padding:'12px 16px' }}>
-                  <span style={{ fontSize:14, fontWeight:700, padding:'3px 10px', borderRadius:20,
+                  <span style={{ fontSize:15, fontWeight:700, padding:'3px 10px', borderRadius:20,
                     background: r.isActive ? '#dcfce7' : CHIP, color: r.isActive ? '#15803d' : MUTED }}>
                     {r.isActive ? 'Active' : 'Inactive'}
                   </span>
                 </td>
                 <td style={{ padding:'12px 16px', textAlign:'right' }}>
                   <button onClick={() => toggleActive(r)}
-                    style={{ background:'none', border:'none', cursor:'pointer', color: r.isActive ? '#ef4444' : '#15803d', fontWeight:600, fontSize:14.5, fontFamily:'inherit' }}>
+                    style={{ background:'none', border:'none', cursor:'pointer', color: r.isActive ? '#ef4444' : '#15803d', fontWeight:600, fontSize:15.5, fontFamily:'inherit' }}>
                     {r.isActive ? 'Deactivate' : 'Activate'}
                   </button>
                 </td>
@@ -195,7 +196,7 @@ export default function AdminPricing() {
             ))}
           </tbody>
         </table>
-        </div>
+        </ScrollX>
       </div>
 
       {showAdd && <AddRouteModal period={period} onClose={() => setShowAdd(false)} onCreated={load}/>}
@@ -297,7 +298,7 @@ function AddRouteModal({ period, onClose, onCreated }) {
     } finally { setBusy(false) }
   }
 
-  const fld = { width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14.5, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }
+  const fld = { width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:15.5, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }
 
   return (
     <div style={{ position:'fixed', inset:0, zIndex:1000, background:'rgba(0,0,0,0.4)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
@@ -308,7 +309,7 @@ function AddRouteModal({ period, onClose, onCreated }) {
           <button onClick={onClose} style={{ background:'none', border:'none', cursor:'pointer', color:MUTED }}><X size={18}/></button>
         </div>
         <form onSubmit={handleSubmit}>
-          <label style={{ display:'block', fontSize:15, fontWeight:600, color:TEXT, marginBottom:6 }}>Pickup</label>
+          <label style={{ display:'block', fontSize:16, fontWeight:600, color:TEXT, marginBottom:6 }}>Pickup</label>
           <select value={pickup} onChange={e => { setPickup(e.target.value); setDropoff(''); setSelectedDropoffs([]); setNewDropoffSingle(''); setNewDropoffLat(''); setNewDropoffLng('') }} required
             style={{ ...fld, marginBottom:14 }}>
             <option value="">Select…</option>
@@ -331,17 +332,17 @@ function AddRouteModal({ period, onClose, onCreated }) {
 
               {/* Fan-out: match this new pickup to any/all opposite-side stops */}
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
-                <label style={{ fontSize:15, fontWeight:600, color:TEXT }}>
+                <label style={{ fontSize:16, fontWeight:600, color:TEXT }}>
                   Route to {oppositeGroup} stops
                 </label>
                 <button type="button" onClick={() => setSelectedDropoffs(allSelected ? [] : oppositeStops.map(s => s.name))}
-                  style={{ background:'none', border:'none', color:OLIVE, fontWeight:700, fontSize:14.5, cursor:'pointer', fontFamily:'inherit' }}>
+                  style={{ background:'none', border:'none', color:OLIVE, fontWeight:700, fontSize:15.5, cursor:'pointer', fontFamily:'inherit' }}>
                   {allSelected ? 'Clear all' : 'Select all'}
                 </button>
               </div>
               <div style={{ border:`1.5px solid ${BORDER}`, borderRadius:10, maxHeight:240, overflowY:'auto', marginBottom:8 }}>
                 {oppositeStops.map(s => (
-                  <label key={s.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px', borderBottom:`1px solid ${BG}`, cursor:'pointer', fontSize:14.5, color:TEXT }}>
+                  <label key={s.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px', borderBottom:`1px solid ${BG}`, cursor:'pointer', fontSize:15.5, color:TEXT }}>
                     <input type="checkbox" checked={selectedDropoffs.includes(s.name)} onChange={() => toggleDropoff(s.name)}
                       style={{ width:16, height:16, accentColor:OLIVE }}/>
                     {s.name}
@@ -354,13 +355,13 @@ function AddRouteModal({ period, onClose, onCreated }) {
                   <input value={newDropoffName}
                     onChange={e => { setNewDropoffName(e.target.value); if (e.target.value.trim()) setNewDropoffChecked(true) }}
                     placeholder={`+ New ${oppositeGroup} location`}
-                    style={{ flex:1, padding:'6px 10px', borderRadius:8, border:`1.5px solid ${BORDER}`, fontSize:14.5, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}/>
+                    style={{ flex:1, padding:'6px 10px', borderRadius:8, border:`1.5px solid ${BORDER}`, fontSize:15.5, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}/>
                 </div>
               </div>
               {(() => {
                 const count = selectedDropoffs.length + (newDropoffChecked && newDropoffName.trim() ? 1 : 0)
                 return (
-                  <p style={{ fontSize:14.5, color:MUTED, marginBottom:14, lineHeight:1.5 }}>
+                  <p style={{ fontSize:15.5, color:MUTED, marginBottom:14, lineHeight:1.5 }}>
                     Creates {count || 'the selected'} route{count === 1 ? '' : 's'} unpriced — set each fare afterwards on this page.
                   </p>
                 )
@@ -368,7 +369,7 @@ function AddRouteModal({ period, onClose, onCreated }) {
             </>
           ) : (
             <>
-              <label style={{ display:'block', fontSize:15, fontWeight:600, color:TEXT, marginBottom:6 }}>Dropoff</label>
+              <label style={{ display:'block', fontSize:16, fontWeight:600, color:TEXT, marginBottom:6 }}>Dropoff</label>
               <select value={dropoff} onChange={e => { setDropoff(e.target.value); setNewDropoffSingle(''); setNewDropoffLat(''); setNewDropoffLng('') }} required
                 style={{ ...fld, marginBottom: dropoff === NEW_STOP ? 8 : 14 }}>
                 <option value="">Select…</option>
@@ -381,13 +382,13 @@ function AddRouteModal({ period, onClose, onCreated }) {
                   <input value={newDropoffSingle} onChange={e => setNewDropoffSingle(e.target.value)} autoFocus
                     placeholder={singleDropoffGroup ? `New ${singleDropoffGroup} location` : 'New dropoff location'}
                     style={{ ...fld, marginBottom:6 }}/>
-                  <p style={{ fontSize:14.5, color:MUTED, marginBottom:14, lineHeight:1.5 }}>
+                  <p style={{ fontSize:15.5, color:MUTED, marginBottom:14, lineHeight:1.5 }}>
                     {singleDropoffGroup
                       ? `Saved as a new ${singleDropoffGroup} location (opposite side of ${pickup}), then the route is created.`
                       : 'Choose a pickup first — the new dropoff is placed on the opposite side.'}
                   </p>
 
-                  <label style={{ display:'block', fontSize:15, fontWeight:600, color:TEXT, marginBottom:6 }}>
+                  <label style={{ display:'block', fontSize:16, fontWeight:600, color:TEXT, marginBottom:6 }}>
                     Map Coordinates
                   </label>
                   <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) minmax(0,1fr)', gap:10, marginBottom:6 }}>
@@ -398,7 +399,7 @@ function AddRouteModal({ period, onClose, onCreated }) {
                       onChange={e => setNewDropoffLng(e.target.value)}
                       placeholder="Longitude — e.g. 3.4219" style={fld}/>
                   </div>
-                  <p style={{ fontSize:14.5, color:MUTED, marginBottom:14, lineHeight:1.5 }}>
+                  <p style={{ fontSize:15.5, color:MUTED, marginBottom:14, lineHeight:1.5 }}>
                     Used for the rider and driver map previews. Right-click the spot in Google Maps
                     and copy the pair — latitude first. Leave blank to add them later from Stops;
                     the route still works, but its map preview stays unavailable.
@@ -406,18 +407,18 @@ function AddRouteModal({ period, onClose, onCreated }) {
                 </>
               )}
 
-              <label style={{ display:'block', fontSize:15, fontWeight:600, color:TEXT, marginBottom:6 }}>FeaziRide Fare (₦)</label>
+              <label style={{ display:'block', fontSize:16, fontWeight:600, color:TEXT, marginBottom:6 }}>FeaziRide Fare (₦)</label>
               <input type="number" min="0" value={poolFareKobo} onChange={e => setPoolFareKobo(e.target.value)} placeholder="Optional" style={{ ...fld, marginBottom:6 }}/>
-              <p style={{ fontSize:14.5, color:MUTED, marginBottom:14, lineHeight:1.5 }}>
+              <p style={{ fontSize:15.5, color:MUTED, marginBottom:14, lineHeight:1.5 }}>
                 Leave the fare blank to create the route unpriced — it stays hidden from riders until you set a fare.
               </p>
             </>
           )}
 
-          {error && <p style={{ fontSize:15, color:'#ef4444', marginBottom:12 }}>{error}</p>}
+          {error && <p style={{ fontSize:16, color:'#ef4444', marginBottom:12 }}>{error}</p>}
 
           <button type="submit" disabled={busy}
-            style={{ width:'100%', padding:'11px', borderRadius:10, background:NEON, color:ON_NEON, border:'none', fontWeight:700, fontSize:14.5, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit', opacity:busy?0.7:1 }}>
+            style={{ width:'100%', padding:'11px', borderRadius:10, background:NEON, color:ON_NEON, border:'none', fontWeight:700, fontSize:15.5, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit', opacity:busy?0.7:1 }}>
             {busy ? 'Creating…' : isFanOut ? (() => { const n = selectedDropoffs.length + (newDropoffChecked && newDropoffName.trim() ? 1 : 0); return `Create ${n || ''} Route${n === 1 ? '' : 's'}` })() : 'Create Route'}
           </button>
         </form>

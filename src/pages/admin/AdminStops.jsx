@@ -145,14 +145,14 @@ export default function AdminStops() {
   return (
     <AdminLayout title="Stops">
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8, flexWrap:'wrap', gap:10 }}>
-        <p style={{ color:MUTED, fontSize:14.5 }}>The catalog of named locations riders and drivers can select, organised into categories.</p>
+        <p style={{ color:MUTED, fontSize:15.5 }}>The catalog of named locations riders and drivers can select, organised into categories.</p>
         <button onClick={() => setShowAdd(true)}
           style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 18px', borderRadius:10, background:NEON, border:'none',
-            color:ON_NEON, fontWeight:700, fontSize:15, cursor:'pointer', fontFamily:'inherit' }}>
+            color:ON_NEON, fontWeight:700, fontSize:16, cursor:'pointer', fontFamily:'inherit' }}>
           <Plus size={15}/> Add Stop
         </button>
       </div>
-      <p style={{ color:MUTED, fontSize:14.5, marginBottom:20 }}>
+      <p style={{ color:MUTED, fontSize:15.5, marginBottom:20 }}>
         Drag stops between categories (or use the arrows / move button). Within a category, the order is the geography
         drivers move through when no rider is at the current stop. A stop only becomes bookable once a route using it is priced in "Pricing".
       </p>
@@ -160,7 +160,7 @@ export default function AdminStops() {
       {error && (
         <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10, marginBottom:16 }}>
           <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
-          <p style={{ fontSize:15, color:'#ef4444' }}>{error}</p>
+          <p style={{ fontSize:16, color:'#ef4444' }}>{error}</p>
         </div>
       )}
 
@@ -170,7 +170,7 @@ export default function AdminStops() {
         <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) minmax(0,1fr)', gap:16, alignItems:'start' }} className="admin-stops-grid">
           {sides.map(([side, label]) => (
             <div key={side} style={{ display:'flex', flexDirection:'column', gap:14 }}>
-              <p style={{ fontWeight:800, fontSize:15, color:TEXT }}>
+              <p style={{ fontWeight:800, fontSize:16, color:TEXT }}>
                 {label} ({(stops || []).filter(s => s.group === side).length})
               </p>
 
@@ -183,7 +183,7 @@ export default function AdminStops() {
                     onDrop={e => { e.preventDefault(); handleDrop(zone) }}
                     style={{ background:CARD, border:`1.5px ${isTarget && dropAt?.zoneId === zone.id ? `dashed ${OLIVE}` : `solid ${BORDER}`}`, borderRadius:14, overflow:'hidden' }}>
                     <div style={{ display:'flex', alignItems:'center', gap:8, padding:'12px 14px 12px 18px', borderBottom:`1px solid ${BORDER}`, background:BG }}>
-                      <p style={{ fontWeight:800, fontSize:15, color:TEXT, flex:1, minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                      <p style={{ fontWeight:800, fontSize:16, color:TEXT, flex:1, minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                         {zone.name} <span style={{ fontWeight:600, color:MUTED }}>({list.length})</span>
                       </p>
                       <button onClick={() => renameZone(zone)} title="Rename category"
@@ -199,7 +199,7 @@ export default function AdminStops() {
                     </div>
 
                     {list.length === 0 && (
-                      <p style={{ padding:'14px 18px', fontSize:14.5, color:MUTED }}>No stops yet — drag one here.</p>
+                      <p style={{ padding:'14px 18px', fontSize:15.5, color:MUTED }}>No stops yet — drag one here.</p>
                     )}
 
                     {list.map((s, i) => (
@@ -223,8 +223,8 @@ export default function AdminStops() {
                             </button>
                           </div>
                           <div style={{ minWidth:0 }}>
-                            <p style={{ fontSize:15, fontWeight:600, color:TEXT, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{s.name}</p>
-                            <p style={{ fontSize:14, color:MUTED }}>#{i + 1}{!s.isActive && ' · Inactive'}</p>
+                            <p style={{ fontSize:16, fontWeight:600, color:TEXT, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{s.name}</p>
+                            <p style={{ fontSize:15, color:MUTED }}>#{i + 1}{!s.isActive && ' · Inactive'}</p>
                           </div>
                         </div>
                         <div style={{ display:'flex', alignItems:'center', gap:2, flexShrink:0, position:'relative' }}>
@@ -235,22 +235,22 @@ export default function AdminStops() {
                           {moveMenuFor === s.id && (
                             <div style={{ position:'absolute', right:0, top:'100%', zIndex:20, background:CARD, border:`1px solid ${BORDER}`,
                               borderRadius:10, boxShadow:'0 8px 20px rgba(0,0,0,0.12)', minWidth:150, overflow:'hidden' }}>
-                              <p style={{ fontSize:14, fontWeight:700, color:MUTED, padding:'8px 12px 4px' }}>Move to…</p>
+                              <p style={{ fontSize:15, fontWeight:700, color:MUTED, padding:'8px 12px 4px' }}>Move to…</p>
                               {zones.filter(z => z.side === side && z.id !== zone.id).map(z => (
                                 <button key={z.id} onClick={() => moveToZone(s, z)}
                                   style={{ display:'block', width:'100%', textAlign:'left', padding:'8px 12px', background:'none', border:'none',
-                                    cursor:'pointer', fontSize:15, color:TEXT, fontFamily:'inherit' }}>
+                                    cursor:'pointer', fontSize:16, color:TEXT, fontFamily:'inherit' }}>
                                   {z.name}
                                 </button>
                               ))}
                               {zones.filter(z => z.side === side && z.id !== zone.id).length === 0 && (
-                                <p style={{ fontSize:14.5, color:MUTED, padding:'8px 12px' }}>No other category yet.</p>
+                                <p style={{ fontSize:15.5, color:MUTED, padding:'8px 12px' }}>No other category yet.</p>
                               )}
                             </div>
                           )}
                           <button onClick={() => toggleActive(s)}
                             style={{ display:'flex', alignItems:'center', gap:5, background:'none', border:'none', cursor:'pointer',
-                              color: s.isActive ? '#ef4444' : '#15803d', fontWeight:600, fontSize:14, fontFamily:'inherit' }}>
+                              color: s.isActive ? '#ef4444' : '#15803d', fontWeight:600, fontSize:15, fontFamily:'inherit' }}>
                             {s.isActive ? <><Ban size={12}/> Deactivate</> : <><CheckCircle2 size={12}/> Activate</>}
                           </button>
                         </div>
@@ -262,14 +262,14 @@ export default function AdminStops() {
 
               {orphans(side).length > 0 && (
                 <div style={{ background:CARD, border:`1.5px dashed #f59e0b`, borderRadius:14, overflow:'hidden' }}>
-                  <p style={{ fontWeight:800, fontSize:15, color:'#b45309', padding:'12px 18px', borderBottom:`1px solid ${BORDER}`, background:'#fffbeb' }}>
+                  <p style={{ fontWeight:800, fontSize:16, color:'#b45309', padding:'12px 18px', borderBottom:`1px solid ${BORDER}`, background:'#fffbeb' }}>
                     Unassigned ({orphans(side).length}) — use "Move to…" to file these
                   </p>
                   {orphans(side).map(s => (
                     <div key={s.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:8, padding:'10px 14px 10px 18px', borderBottom:'1px solid #f5f5f5', position:'relative' }}>
-                      <p style={{ fontSize:15, fontWeight:600, color:TEXT }}>{s.name}{!s.isActive && <span style={{ color:MUTED, fontWeight:400 }}> · Inactive</span>}</p>
+                      <p style={{ fontSize:16, fontWeight:600, color:TEXT }}>{s.name}{!s.isActive && <span style={{ color:MUTED, fontWeight:400 }}> · Inactive</span>}</p>
                       <button onClick={() => setMoveMenuFor(moveMenuFor === s.id ? null : s.id)}
-                        style={{ display:'flex', alignItems:'center', gap:5, background:'none', border:'none', cursor:'pointer', color:OLIVE, fontWeight:600, fontSize:14, fontFamily:'inherit' }}>
+                        style={{ display:'flex', alignItems:'center', gap:5, background:'none', border:'none', cursor:'pointer', color:OLIVE, fontWeight:600, fontSize:15, fontFamily:'inherit' }}>
                         <FolderInput size={13}/> Move to…
                       </button>
                       {moveMenuFor === s.id && (
@@ -278,7 +278,7 @@ export default function AdminStops() {
                           {zones.filter(z => z.side === side).map(z => (
                             <button key={z.id} onClick={() => moveToZone(s, z)}
                               style={{ display:'block', width:'100%', textAlign:'left', padding:'8px 12px', background:'none', border:'none',
-                                cursor:'pointer', fontSize:15, color:TEXT, fontFamily:'inherit' }}>
+                                cursor:'pointer', fontSize:16, color:TEXT, fontFamily:'inherit' }}>
                               {z.name}
                             </button>
                           ))}
@@ -291,7 +291,7 @@ export default function AdminStops() {
 
               <button onClick={() => addZone(side)}
                 style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'11px', borderRadius:12,
-                  background:'none', border:`1.5px dashed ${BORDER}`, color:MUTED, fontWeight:700, fontSize:14.5, cursor:'pointer', fontFamily:'inherit' }}>
+                  background:'none', border:`1.5px dashed ${BORDER}`, color:MUTED, fontWeight:700, fontSize:15.5, cursor:'pointer', fontFamily:'inherit' }}>
                 <Plus size={14}/> Add {label} category
               </button>
             </div>
@@ -335,13 +335,13 @@ function AddStopModal({ zones, onClose, onCreated }) {
           <button onClick={onClose} style={{ background:'none', border:'none', cursor:'pointer', color:MUTED }}><X size={18}/></button>
         </div>
         <form onSubmit={handleSubmit}>
-          <label style={{ display:'block', fontSize:15, fontWeight:600, color:TEXT, marginBottom:6 }}>Name</label>
+          <label style={{ display:'block', fontSize:16, fontWeight:600, color:TEXT, marginBottom:6 }}>Name</label>
           <input value={name} onChange={e => setName(e.target.value)} required placeholder="e.g. Yaba"
-            style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14.5, marginBottom:14, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}/>
+            style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:15.5, marginBottom:14, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}/>
 
-          <label style={{ display:'block', fontSize:15, fontWeight:600, color:TEXT, marginBottom:6 }}>Category</label>
+          <label style={{ display:'block', fontSize:16, fontWeight:600, color:TEXT, marginBottom:6 }}>Category</label>
           <select value={zoneId} onChange={e => setZoneId(e.target.value)} required
-            style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14.5, marginBottom:14, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}>
+            style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:15.5, marginBottom:14, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}>
             <optgroup label="Mainland">
               {zones.filter(z => z.side === 'mainland').map(z => <option key={z.id} value={z.id}>{z.name}</option>)}
             </optgroup>
@@ -349,25 +349,25 @@ function AddStopModal({ zones, onClose, onCreated }) {
               {zones.filter(z => z.side === 'island').map(z => <option key={z.id} value={z.id}>{z.name}</option>)}
             </optgroup>
           </select>
-          <p style={{ fontSize:14, color:MUTED, marginTop:-8, marginBottom:14 }}>The stop is added at the end of the category — drag it into position afterwards.</p>
+          <p style={{ fontSize:15, color:MUTED, marginTop:-8, marginBottom:14 }}>The stop is added at the end of the category — drag it into position afterwards.</p>
 
           <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) minmax(0,1fr)', gap:10, marginBottom:14 }}>
             <div>
-              <label style={{ display:'block', fontSize:15, fontWeight:600, color:TEXT, marginBottom:6 }}>Latitude</label>
+              <label style={{ display:'block', fontSize:16, fontWeight:600, color:TEXT, marginBottom:6 }}>Latitude</label>
               <input type="number" step="0.0001" value={lat} onChange={e => setLat(e.target.value)} placeholder="optional"
-                style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14.5, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}/>
+                style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:15.5, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}/>
             </div>
             <div>
-              <label style={{ display:'block', fontSize:15, fontWeight:600, color:TEXT, marginBottom:6 }}>Longitude</label>
+              <label style={{ display:'block', fontSize:16, fontWeight:600, color:TEXT, marginBottom:6 }}>Longitude</label>
               <input type="number" step="0.0001" value={lng} onChange={e => setLng(e.target.value)} placeholder="optional"
-                style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:14.5, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}/>
+                style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`, fontSize:15.5, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}/>
             </div>
           </div>
 
-          {error && <p style={{ fontSize:15, color:'#ef4444', marginBottom:12 }}>{error}</p>}
+          {error && <p style={{ fontSize:16, color:'#ef4444', marginBottom:12 }}>{error}</p>}
 
           <button type="submit" disabled={busy || !zoneId}
-            style={{ width:'100%', padding:'11px', borderRadius:10, background:NEON, color:ON_NEON, border:'none', fontWeight:700, fontSize:14.5, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit', opacity:busy?0.7:1 }}>
+            style={{ width:'100%', padding:'11px', borderRadius:10, background:NEON, color:ON_NEON, border:'none', fontWeight:700, fontSize:15.5, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit', opacity:busy?0.7:1 }}>
             {busy ? 'Creating…' : 'Create Stop'}
           </button>
         </form>

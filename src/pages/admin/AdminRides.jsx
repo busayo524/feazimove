@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react'
 import AdminLayout from '../../components/AdminLayout'
 import { api } from '../../services/api'
 import { AlertCircle, MapPin } from 'lucide-react'
+import ScrollX from '../../components/ScrollX'
 
 /* palette: themed tokens — see src/theme/palette.js */
 /* palette: themed tokens — see src/theme/palette.js */
@@ -39,11 +40,11 @@ export default function AdminRides() {
   return (
     <AdminLayout title="Rides">
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20, flexWrap:'wrap', gap:10 }}>
-        <p style={{ color:MUTED, fontSize:14.5 }}>{rides.length} ride{rides.length !== 1 ? 's' : ''}{liveOnly ? ' in progress' : ' total'}</p>
+        <p style={{ color:MUTED, fontSize:15.5 }}>{rides.length} ride{rides.length !== 1 ? 's' : ''}{liveOnly ? ' in progress' : ' total'}</p>
         <div style={{ display:'flex', gap:6, background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:4 }}>
           {[[true,'Live'],[false,'All Rides']].map(([val,label]) => (
             <button key={label} onClick={() => setLiveOnly(val)}
-              style={{ padding:'7px 16px', borderRadius:8, border:'none', fontSize:15, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
+              style={{ padding:'7px 16px', borderRadius:8, border:'none', fontSize:16, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
                 background: liveOnly===val ? NEON : 'transparent', color:liveOnly===val ? ON_NEON : MUTED }}>
               {label}
             </button>
@@ -54,17 +55,17 @@ export default function AdminRides() {
       {error && (
         <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10, marginBottom:16 }}>
           <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
-          <p style={{ fontSize:15, color:'#ef4444' }}>{error}</p>
+          <p style={{ fontSize:16, color:'#ef4444' }}>{error}</p>
         </div>
       )}
 
       <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, overflow:'hidden', boxShadow:'0 1px 3px rgba(0,0,0,0.04)' }}>
-        <div className="fm-scroll-x">
-        <table style={{ width:'100%', borderCollapse:'collapse', fontSize:14.5 }}>
+        <ScrollX>
+        <table style={{ width:'100%', borderCollapse:'collapse', fontSize:15.5 }}>
           <thead>
             <tr style={{ background:CARD, textAlign:'left' }}>
               {['Route','Rider','Driver','Fare','Status','Started'].map(h => (
-                <th key={h} style={{ padding:'12px 16px', fontSize:14.5, color:MUTED, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.04em' }}>{h}</th>
+                <th key={h} style={{ padding:'12px 16px', fontSize:15.5, color:MUTED, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.04em' }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -86,15 +87,15 @@ export default function AdminRides() {
                   <td style={{ padding:'12px 16px', color:TEXT }}>{r.driverName || '—'}</td>
                   <td style={{ padding:'12px 16px', color:TEXT }}>₦{r.fare.toLocaleString()}</td>
                   <td style={{ padding:'12px 16px' }}>
-                    <span style={{ fontSize:14, fontWeight:700, padding:'3px 10px', borderRadius:20, background:s.bg, color:s.fg }}>{s.label}</span>
+                    <span style={{ fontSize:15, fontWeight:700, padding:'3px 10px', borderRadius:20, background:s.bg, color:s.fg }}>{s.label}</span>
                   </td>
-                  <td style={{ padding:'12px 16px', color:MUTED, fontSize:15 }}>{new Date(r.createdAt).toLocaleString()}</td>
+                  <td style={{ padding:'12px 16px', color:MUTED, fontSize:16 }}>{new Date(r.createdAt).toLocaleString()}</td>
                 </tr>
               )
             })}
           </tbody>
         </table>
-        </div>
+        </ScrollX>
       </div>
     </AdminLayout>
   )

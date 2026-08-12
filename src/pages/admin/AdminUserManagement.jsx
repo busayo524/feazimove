@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
 import { api } from '../../services/api'
 import { Search, Eye, ChevronDown, AlertCircle, UserPlus, CheckCircle2, X, Download } from 'lucide-react'
+import ScrollX from '../../components/ScrollX'
 
 /* palette: themed tokens — see src/theme/palette.js */
 const GREEN = '#2a6048', NEON = '#ccff00', OLIVE = '#243800'
@@ -50,7 +51,7 @@ function Avatar({ name, userId, hasAvatar }) {
   return (
     <div style={{ width:36, height:36, borderRadius:'50%', background:NEON, color:ON_NEON,
       display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden',
-      fontWeight:700, fontSize:15, flexShrink:0 }}>
+      fontWeight:700, fontSize:16, flexShrink:0 }}>
       {src
         ? <img src={src} alt={name} style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
         : initials}
@@ -128,16 +129,16 @@ export default function AdminUserManagement() {
     <AdminLayout title="User Management">
       {/* Header */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:20, flexWrap:'wrap', gap:10 }}>
-        <p style={{ margin:0, color:MUTED, fontSize:14.5 }}>{users.length} user{users.length !== 1 ? 's' : ''} registered</p>
+        <p style={{ margin:0, color:MUTED, fontSize:15.5 }}>{users.length} user{users.length !== 1 ? 's' : ''} registered</p>
         <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
           <button onClick={handleExport} disabled={exporting}
             style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 18px', borderRadius:10, background:CARD,
-              border:`1px solid ${BORDER}`, color:TEXT, fontWeight:700, fontSize:15, cursor: exporting?'wait':'pointer', fontFamily:'inherit' }}>
+              border:`1px solid ${BORDER}`, color:TEXT, fontWeight:700, fontSize:16, cursor: exporting?'wait':'pointer', fontFamily:'inherit' }}>
             <Download size={15}/> {exporting ? 'Exporting…' : 'Export to Excel'}
           </button>
           <button onClick={() => setShowAdd(true)}
             style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 18px', borderRadius:10, background:NEON, border:'none',
-              color:ON_NEON, fontWeight:700, fontSize:15, cursor:'pointer', fontFamily:'inherit' }}>
+              color:ON_NEON, fontWeight:700, fontSize:16, cursor:'pointer', fontFamily:'inherit' }}>
             <UserPlus size={15}/> Add User
           </button>
         </div>
@@ -146,7 +147,7 @@ export default function AdminUserManagement() {
       {error && (
         <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10, marginBottom:16 }}>
           <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
-          <p style={{ fontSize:15, color:'#ef4444' }}>{error}</p>
+          <p style={{ fontSize:16, color:'#ef4444' }}>{error}</p>
         </div>
       )}
 
@@ -160,14 +161,14 @@ export default function AdminUserManagement() {
           <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search users..."
             style={{ width:'100%', padding:'9px 12px 9px 34px', borderRadius:8, border:`1.5px solid ${BORDER}`,
-              fontSize:14.5, fontFamily:'inherit', background:CARD, color:TEXT, boxSizing:'border-box', outline:'none' }}/>
+              fontSize:15.5, fontFamily:'inherit', background:CARD, color:TEXT, boxSizing:'border-box', outline:'none' }}/>
         </div>
 
         {/* Status tabs */}
         <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
           {FILTERS.map(f => (
             <button key={f} onClick={() => setFilter(f)}
-              style={{ padding:'7px 16px', borderRadius:50, fontSize:15, fontWeight:600, cursor:'pointer', border:'none',
+              style={{ padding:'7px 16px', borderRadius:50, fontSize:16, fontWeight:600, cursor:'pointer', border:'none',
                 background: filter === f ? NEON : BG,
                 color: filter === f ? ON_NEON : MUTED,
                 transition:'all 0.15s', fontFamily:'inherit' }}>
@@ -180,7 +181,7 @@ export default function AdminUserManagement() {
         <div style={{ position:'relative' }}>
           <button onClick={() => setRoleOpen(o => !o)}
             style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 14px', borderRadius:8,
-              border:`1.5px solid ${BORDER}`, background:CARD, color:TEXT, fontWeight:600, fontSize:15,
+              border:`1.5px solid ${BORDER}`, background:CARD, color:TEXT, fontWeight:600, fontSize:16,
               cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
             {role} <ChevronDown size={14} color={MUTED}/>
           </button>
@@ -192,7 +193,7 @@ export default function AdminUserManagement() {
                 <button key={r} onClick={() => { setRole(r); setRoleOpen(false) }}
                   style={{ display:'block', width:'100%', padding:'10px 16px', textAlign:'left',
                     background: role === r ? BG : CARD, color: role === r ? GREEN : TEXT,
-                    fontWeight: role === r ? 700 : 400, fontSize:14.5, border:'none',
+                    fontWeight: role === r ? 700 : 400, fontSize:15.5, border:'none',
                     cursor:'pointer', fontFamily:'inherit' }}>
                   {r}
                 </button>
@@ -204,12 +205,12 @@ export default function AdminUserManagement() {
 
       {/* Table */}
       <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, overflow:'hidden', boxShadow:'0 1px 3px rgba(0,0,0,0.04)' }}>
-        <div className="fm-scroll-x">
-          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:14.5 }}>
+        <ScrollX>
+          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:15.5 }}>
             <thead>
               <tr style={{ background:CARD, textAlign:'left' }}>
                 {['User','Role','Joined','Status',''].map(h => (
-                  <th key={h} style={{ padding:'12px 16px', fontSize:14, color:MUTED, fontWeight:700,
+                  <th key={h} style={{ padding:'12px 16px', fontSize:15, color:MUTED, fontWeight:700,
                     textTransform:'uppercase', letterSpacing:'0.05em', whiteSpace:'nowrap' }}>{h}</th>
                 ))}
               </tr>
@@ -231,26 +232,26 @@ export default function AdminUserManagement() {
                         <Avatar name={u.name} userId={u.id} hasAvatar={u.hasAvatar}/>
                         <div>
                           <p style={{ fontWeight:700, color:TEXT, margin:0 }}>{u.name}</p>
-                          <p style={{ fontSize:14.5, color:MUTED, margin:0 }}>{u.email || u.phone}</p>
+                          <p style={{ fontSize:15.5, color:MUTED, margin:0 }}>{u.email || u.phone}</p>
                         </div>
                       </div>
                     </td>
 
                     {/* Role */}
                     <td style={{ padding:'12px 16px' }}>
-                      <span style={{ fontSize:14, fontWeight:700, padding:'3px 10px', borderRadius:20, background:badge.bg, color:badge.fg,
+                      <span style={{ fontSize:15, fontWeight:700, padding:'3px 10px', borderRadius:20, background:badge.bg, color:badge.fg,
                         border:`1px solid ${badge.bd || badge.fg + '22'}`, textTransform:'capitalize' }}>
                         {u.role}
                       </span>
                     </td>
                     {/* Joined */}
-                    <td style={{ padding:'12px 16px', color:MUTED, fontSize:15, whiteSpace:'nowrap' }}>
+                    <td style={{ padding:'12px 16px', color:MUTED, fontSize:16, whiteSpace:'nowrap' }}>
                       {new Date(u.joinedAt).toLocaleDateString()}
                     </td>
 
                     {/* Status */}
                     <td style={{ padding:'12px 16px' }}>
-                      <span style={{ fontSize:14, fontWeight:700, padding:'4px 12px', borderRadius:20,
+                      <span style={{ fontSize:15, fontWeight:700, padding:'4px 12px', borderRadius:20,
                         background:s.bg, color:s.fg, border:`1px solid ${s.bd || s.fg + '33'}`, whiteSpace:'nowrap' }}>
                         {s.label}
                       </span>
@@ -261,7 +262,7 @@ export default function AdminUserManagement() {
                       {u.role !== 'admin' && !u.isPending && !u.isActive && (
                         <button onClick={() => toggleStatus(u)}
                           style={{ display:'inline-flex', alignItems:'center', gap:6, background:'none', border:'none', cursor:'pointer',
-                            color:'#15803d', fontWeight:600, fontSize:14.5, fontFamily:'inherit', marginRight:10 }}>
+                            color:'#15803d', fontWeight:600, fontSize:15.5, fontFamily:'inherit', marginRight:10 }}>
                           <CheckCircle2 size={13}/> Reactivate
                         </button>
                       )}
@@ -278,7 +279,7 @@ export default function AdminUserManagement() {
               })}
             </tbody>
           </table>
-        </div>
+        </ScrollX>
       </div>
 
     </AdminLayout>
@@ -306,9 +307,9 @@ function AddUserPanel({ onClose, onCreated }) {
     } finally { setBusy(false) }
   }
 
-  const label = { display:'block', fontSize:15, fontWeight:700, color:TEXT, marginBottom:8 }
+  const label = { display:'block', fontSize:16, fontWeight:700, color:TEXT, marginBottom:8 }
   const field = { width:'100%', padding:'10px 12px', borderRadius:8, border:`1.5px solid ${BORDER}`,
-    fontSize:14.5, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT, outline:'none' }
+    fontSize:15.5, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT, outline:'none' }
 
   return (
     <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:12, padding:'18px 20px',
@@ -316,18 +317,18 @@ function AddUserPanel({ onClose, onCreated }) {
       {created ? (
         <div style={{ display:'flex', alignItems:'center', gap:20, flexWrap:'wrap' }}>
           <div style={{ flex:'1 1 300px', minWidth:0 }}>
-            <p style={{ fontSize:15, color: created.emailSent ? '#15803d' : '#b54708', margin:'0 0 6px', fontWeight:700 }}>
+            <p style={{ fontSize:16, color: created.emailSent ? '#15803d' : '#b54708', margin:'0 0 6px', fontWeight:700 }}>
               {created.emailSent
                 ? `✓ Welcome email with login details sent to ${created.user.email}`
                 : '⚠ Welcome email could not be sent — share these credentials manually'}
             </p>
-            <p style={{ fontSize:15, color:MUTED, margin:0 }}>
+            <p style={{ fontSize:16, color:MUTED, margin:0 }}>
               Temporary password (shown once): <strong style={{ color:TEXT, fontFamily:'monospace' }}>{created.temporaryPassword}</strong>
             </p>
           </div>
           <button onClick={onClose}
             style={{ padding:'10px 24px', borderRadius:8, background:NEON, color:ON_NEON, border:'none',
-              fontWeight:700, fontSize:14.5, cursor:'pointer', fontFamily:'inherit', flexShrink:0 }}>
+              fontWeight:700, fontSize:15.5, cursor:'pointer', fontFamily:'inherit', flexShrink:0 }}>
             Done
           </button>
         </div>
@@ -352,7 +353,7 @@ function AddUserPanel({ onClose, onCreated }) {
             </div>
             <button type="submit" disabled={busy}
               style={{ padding:'10px 22px', borderRadius:8, background:NEON, color:ON_NEON, border:'none', fontWeight:700,
-                fontSize:14.5, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit', opacity:busy?0.7:1, flexShrink:0, whiteSpace:'nowrap' }}>
+                fontSize:15.5, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit', opacity:busy?0.7:1, flexShrink:0, whiteSpace:'nowrap' }}>
               {busy ? 'Sending…' : 'Send Invite'}
             </button>
             <button type="button" onClick={onClose} aria-label="Close"
@@ -360,10 +361,10 @@ function AddUserPanel({ onClose, onCreated }) {
               <X size={18}/>
             </button>
           </div>
-          <p style={{ fontSize:14.5, color:MUTED, margin:'12px 0 0', lineHeight:1.5 }}>
+          <p style={{ fontSize:15.5, color:MUTED, margin:'12px 0 0', lineHeight:1.5 }}>
             A welcome email with their login details and a temporary password will be sent — they'll set a new password on first sign-in.
           </p>
-          {error && <p style={{ fontSize:15, color:'#ef4444', margin:'10px 0 0' }}>{error}</p>}
+          {error && <p style={{ fontSize:16, color:'#ef4444', margin:'10px 0 0' }}>{error}</p>}
         </form>
       )}
     </div>

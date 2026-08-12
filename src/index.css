@@ -701,6 +701,11 @@ html, body {
    scrollbar is hidden until you already know to swipe. This keeps a visible,
    themed bar and adds momentum scrolling, so the extra columns are reachable
    and, more importantly, discoverable. */
+/* ScrollX draws its own bar as real DOM, so the native one is hidden. It has to
+   be a class: iOS Safari ignores ::-webkit-scrollbar set any other way. */
+.fm-hide-native-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.fm-hide-native-scrollbar::-webkit-scrollbar { display: none; height: 0; width: 0; }
+
 .fm-scroll-x {
   overflow-x: auto;
   overflow-y: hidden;
@@ -723,6 +728,11 @@ html, body {
 
 /* On touch screens the bar is the only affordance, so make it permanent. */
 @media (hover: none) {
-  .fm-scroll-x { scrollbar-width: auto; }
+  /* ScrollX draws its own bar as real DOM, so the native one is hidden. It has to
+   be a class: iOS Safari ignores ::-webkit-scrollbar set any other way. */
+.fm-hide-native-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.fm-hide-native-scrollbar::-webkit-scrollbar { display: none; height: 0; width: 0; }
+
+.fm-scroll-x { scrollbar-width: auto; }
   .fm-scroll-x::-webkit-scrollbar { height: 10px; -webkit-appearance: none; }
 }

@@ -17,7 +17,7 @@ const SIZES=[
   {id:'md',label:'Medium',desc:'Clothes, shoes, groceries'},
   {id:'lg',label:'Large',desc:'Electronics, furniture, full apartment moves'},
 ]
-const INPUT={width:'100%',padding:'13px 16px',borderRadius:10,fontSize:15,border:`1.5px solid ${BORDER}`,outline:'none',background:CARD,color:TEXT,fontFamily:'inherit',boxSizing:'border-box'}
+const INPUT={width:'100%',padding:'13px 16px',borderRadius:10,fontSize:16,border:`1.5px solid ${BORDER}`,outline:'none',background:CARD,color:TEXT,fontFamily:'inherit',boxSizing:'border-box'}
 
 // One general pickup window, 8 AM – 10 PM, instead of the morning/evening
 // split used for rides — packages can be picked up any time of day.
@@ -222,12 +222,12 @@ function DeliveryStatusBanner({ rideId }){
 
   if(error) return (
     <div style={{background:DANGER_SOFT,border:'1px solid #fca5a5',borderRadius:16,padding:16,marginBottom:16}}>
-      <p style={{fontSize:14,color:'#ef4444'}}>{error}</p>
+      <p style={{fontSize:15,color:'#ef4444'}}>{error}</p>
     </div>
   )
   if(!ride) return (
     <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,padding:16,marginBottom:16,boxShadow:'0 2px 8px rgba(36,56,0,0.06)'}}>
-      <p style={{fontSize:14,color:MUTED}}>Loading delivery status…</p>
+      <p style={{fontSize:15,color:MUTED}}>Loading delivery status…</p>
     </div>
   )
 
@@ -236,25 +236,25 @@ function DeliveryStatusBanner({ rideId }){
   return (
     <div style={{background:CARD,border:`1.5px solid ${NEON}`,borderRadius:16,padding:18,marginBottom:20,boxShadow:'0 2px 8px rgba(36,56,0,0.06)'}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10,gap:10}}>
-        <p style={{fontWeight:700,fontSize:14,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em'}}>Delivery in Progress</p>
-        <span style={{fontSize:12.5,fontWeight:700,padding:'4px 10px',borderRadius:20,background:ride.status==='completed'?'#dcfce7':NEON,color:ride.status==='completed'?'#15803d':ON_NEON,whiteSpace:'nowrap',flexShrink:0}}>
+        <p style={{fontWeight:700,fontSize:15,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em'}}>Delivery in Progress</p>
+        <span style={{fontSize:14.5,fontWeight:700,padding:'4px 10px',borderRadius:20,background:ride.status==='completed'?'#dcfce7':NEON,color:ride.status==='completed'?'#15803d':ON_NEON,whiteSpace:'nowrap',flexShrink:0}}>
           {STAGE_LABEL[ride.status]||ride.status}
         </span>
       </div>
-      <p style={{fontSize:14,color:TEXT,fontWeight:600,marginBottom:driver?12:0}}>{ride.pickup} → {ride.destination}</p>
+      <p style={{fontSize:15,color:TEXT,fontWeight:600,marginBottom:driver?12:0}}>{ride.pickup} → {ride.destination}</p>
       {driver && (
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,paddingTop:12,borderTop:`1px solid ${BORDER}`}}>
           <div style={{minWidth:0}}>
-            <p style={{fontWeight:700,fontSize:14.5,color:TEXT,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{driver.name}</p>
+            <p style={{fontWeight:700,fontSize:15.5,color:TEXT,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{driver.name}</p>
             {driver.rating!=null && (
               <div style={{display:'flex',alignItems:'center',gap:4,marginTop:2}}>
                 <Star size={11} color='#f59e0b' fill='#f59e0b'/>
-                <span style={{fontSize:13.5,color:MUTED}}>{driver.rating}</span>
+                <span style={{fontSize:15,color:MUTED}}>{driver.rating}</span>
               </div>
             )}
           </div>
           {driver.phone && (
-            <a href={`tel:${driver.phone}`} style={{display:'flex',alignItems:'center',gap:6,padding:'9px 16px',borderRadius:50,background:NEON,color:ON_NEON,fontWeight:700,fontSize:14,textDecoration:'none',flexShrink:0}}>
+            <a href={`tel:${driver.phone}`} style={{display:'flex',alignItems:'center',gap:6,padding:'9px 16px',borderRadius:50,background:NEON,color:ON_NEON,fontWeight:700,fontSize:15,textDecoration:'none',flexShrink:0}}>
               <Phone size={13}/> Call
             </a>
           )}
@@ -350,7 +350,7 @@ export default function SendPackage(){
       <form onSubmit={handleSubmit}>
           {/* Size */}
           <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,padding:20,marginBottom:16,boxShadow:'0 2px 8px rgba(36,56,0,0.06)'}}>
-            <p style={{fontWeight:700,fontSize:14,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:14}}>Package Size</p>
+            <p style={{fontWeight:700,fontSize:15,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:14}}>Package Size</p>
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
               {SIZES.map(s=>(
                 <label key={s.id} style={{
@@ -362,8 +362,8 @@ export default function SendPackage(){
                 }}>
                   <input type="radio" name="size" value={s.id} checked={size===s.id} onChange={()=>setSize(s.id)} style={{display:'none'}}/>
                   <div style={{flex:1}}>
-                    <p style={{fontWeight:700,fontSize:14.5,color:size===s.id? ON_NEON :TEXT,marginBottom:2}}>{s.label}</p>
-                    <p style={{fontSize:13.5,color:size===s.id?'rgba(36,56,0,0.6)':MUTED}}>{s.desc}</p>
+                    <p style={{fontWeight:700,fontSize:15.5,color:size===s.id? ON_NEON :TEXT,marginBottom:2}}>{s.label}</p>
+                    <p style={{fontSize:15,color:size===s.id?'rgba(36,56,0,0.6)':MUTED}}>{s.desc}</p>
                   </div>
                 </label>
               ))}
@@ -372,7 +372,7 @@ export default function SendPackage(){
 
           {/* Time slot — one general pickup window, 8 AM – 10 PM */}
           <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,padding:20,marginBottom:16,boxShadow:'0 2px 8px rgba(36,56,0,0.06)'}}>
-            <p style={{fontWeight:700,fontSize:14,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:14}}>Pickup Time</p>
+            <p style={{fontWeight:700,fontSize:15,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:14}}>Pickup Time</p>
             <TimeDropdown
               slots={ALL_DAY_SLOTS}
               value={timeSlot}
@@ -382,7 +382,7 @@ export default function SendPackage(){
 
           {/* Route — same structure and data source as Book Ride */}
           <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,padding:20,marginBottom:16,boxShadow:'0 2px 8px rgba(36,56,0,0.06)'}}>
-            <p style={{fontWeight:700,fontSize:14,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:14}}>Route</p>
+            <p style={{fontWeight:700,fontSize:15,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:14}}>Route</p>
             <div style={{display:'flex',flexDirection:'column',gap:14}}>
               <LocationDropdown
                 label="Pickup Location"
@@ -404,20 +404,20 @@ export default function SendPackage(){
 
           {/* Recipient */}
           <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,padding:20,marginBottom:20,boxShadow:'0 2px 8px rgba(36,56,0,0.06)'}}>
-            <p style={{fontWeight:700,fontSize:14,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:14}}>Recipient Details</p>
+            <p style={{fontWeight:700,fontSize:15,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:14}}>Recipient Details</p>
             <div style={{display:'flex',flexDirection:'column',gap:12}}>
               <div>
-                <label style={{display:'block',fontSize:14,fontWeight:600,color:TEXT,marginBottom:6}}>Recipient Name</label>
+                <label style={{display:'block',fontSize:15,fontWeight:600,color:TEXT,marginBottom:6}}>Recipient Name</label>
                 <input value={recipient} onChange={e=>setRecipient(sanitize(e.target.value))} placeholder="Full name" style={INPUT}
                   onFocus={e=>e.target.style.borderColor=MOSS} onBlur={e=>e.target.style.borderColor=BORDER} required/>
               </div>
               <div>
-                <label style={{display:'block',fontSize:14,fontWeight:600,color:TEXT,marginBottom:6}}>Recipient Phone</label>
+                <label style={{display:'block',fontSize:15,fontWeight:600,color:TEXT,marginBottom:6}}>Recipient Phone</label>
                 <input type="tel" value={recipientPhone} onChange={e=>setRecipientPhone(sanitize(e.target.value))} placeholder="+234 800 000 0000" style={INPUT}
                   onFocus={e=>e.target.style.borderColor=MOSS} onBlur={e=>e.target.style.borderColor=BORDER} required/>
               </div>
               <div>
-                <label style={{display:'block',fontSize:14,fontWeight:600,color:TEXT,marginBottom:6}}>Notes (optional)</label>
+                <label style={{display:'block',fontSize:15,fontWeight:600,color:TEXT,marginBottom:6}}>Notes (optional)</label>
                 <textarea value={notes} onChange={e=>setNotes(sanitize(e.target.value))} placeholder="Fragile, handle with care..." rows={3}
                   style={{...INPUT,resize:'vertical'}}
                   onFocus={e=>e.target.style.borderColor=MOSS} onBlur={e=>e.target.style.borderColor=BORDER}/>
@@ -430,7 +430,7 @@ export default function SendPackage(){
               width:'100%',padding:'15px',borderRadius:50,
               background:submitting||!pickup||!dropoff||!timeSlot?BORDER:NEON,
               color:submitting||!pickup||!dropoff||!timeSlot?MUTED:ON_NEON,
-              fontWeight:800,fontSize:15,border:'none',
+              fontWeight:800,fontSize:16,border:'none',
               cursor:submitting||!pickup||!dropoff||!timeSlot?'not-allowed':'pointer',
               display:'flex',alignItems:'center',justifyContent:'center',gap:10,
               marginBottom:16,transition:'all 0.2s',
@@ -444,8 +444,8 @@ export default function SendPackage(){
               background:'#f0fdf4',border:'1.5px solid #86efac',borderRadius:12,marginBottom:16}}>
               <Package size={18} color='#16a34a' style={{flexShrink:0,marginTop:1}}/>
               <div>
-                <p style={{fontWeight:700,fontSize:14.5,color:'#15803d',marginBottom:2}}>You're on the list!</p>
-                <p style={{fontSize:14,color:'#166534'}}>
+                <p style={{fontWeight:700,fontSize:15.5,color:'#15803d',marginBottom:2}}>You're on the list!</p>
+                <p style={{fontSize:15,color:'#166534'}}>
                   We've registered your delivery for <strong>{pickup} → {dropoff}</strong> at <strong>{timeSlot}</strong>
                   {quotedFare != null && <> for <strong>₦{quotedFare.toLocaleString()}</strong></>}.
                   A driver on this route will be matched automatically — a status update will appear at the top of this page once they confirm.
@@ -458,7 +458,7 @@ export default function SendPackage(){
             <div style={{display:'flex',alignItems:'flex-start',gap:10,padding:'12px 14px',
               background:DANGER_SOFT,border:'1px solid #fca5a5',borderRadius:12,marginBottom:16}}>
               <span style={{fontSize:16,flexShrink:0}}>⚠️</span>
-              <p style={{fontSize:14,color:'#ef4444'}}>{bookError}</p>
+              <p style={{fontSize:15,color:'#ef4444'}}>{bookError}</p>
             </div>
           )}
         </form>

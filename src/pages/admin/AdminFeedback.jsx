@@ -58,21 +58,21 @@ export default function AdminFeedback() {
 
   return (
     <AdminLayout title="Feedback">
-      <p style={{ color:MUTED, fontSize:14.5, marginBottom:20 }}>
+      <p style={{ color:MUTED, fontSize:15.5, marginBottom:20 }}>
         Messages sent through the Contact form on the website.
       </p>
 
       {error && (
         <div style={{ display:'flex', gap:8, padding:'10px 14px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10, marginBottom:20 }}>
           <AlertCircle size={14} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
-          <p style={{ fontSize:15, color:'#ef4444' }}>{error}</p>
+          <p style={{ fontSize:16, color:'#ef4444' }}>{error}</p>
         </div>
       )}
 
       <div style={{ display:'flex', gap:8, marginBottom:16, flexWrap:'wrap' }}>
         {FILTERS.map(f => (
           <button key={f.key} onClick={() => setFilter(f.key)}
-            style={{ padding:'7px 15px', borderRadius:50, fontSize:14.5, fontWeight:700, fontFamily:'inherit', cursor:'pointer',
+            style={{ padding:'7px 15px', borderRadius:50, fontSize:15.5, fontWeight:700, fontFamily:'inherit', cursor:'pointer',
               border:`1.5px solid ${filter===f.key ? ACCENT_FILL : BORDER}`, background: filter===f.key ? ACCENT_FILL : CARD,
               color: filter===f.key ? ON_ACCENT_FILL : MUTED }}>
             {f.label}{f.key !== 'all' && counts[f.key] ? ` (${counts[f.key]})` : ''}
@@ -85,7 +85,7 @@ export default function AdminFeedback() {
       ) : messages.length === 0 ? (
         <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, padding:40, textAlign:'center' }}>
           <Inbox size={30} color={MUTED} style={{ marginBottom:10 }}/>
-          <p style={{ color:MUTED, fontSize:15 }}>
+          <p style={{ color:MUTED, fontSize:16 }}>
             No {filter !== 'all' ? filter : ''} messages.
           </p>
         </div>
@@ -101,24 +101,24 @@ export default function AdminFeedback() {
                     background:'none', border:'none', cursor:'pointer', textAlign:'left', fontFamily:'inherit' }}>
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:3 }}>
-                      <span style={{ fontWeight:800, fontSize:14.5, color:TEXT }}>{m.name}</span>
-                      <span style={{ padding:'2px 8px', borderRadius:50, fontSize:13.5, fontWeight:800,
+                      <span style={{ fontWeight:800, fontSize:15.5, color:TEXT }}>{m.name}</span>
+                      <span style={{ padding:'2px 8px', borderRadius:50, fontSize:15, fontWeight:800,
                         textTransform:'uppercase', background:st.bg, color:st.fg }}>{st.label}</span>
-                      <span style={{ padding:'2px 8px', borderRadius:50, fontSize:13.5, fontWeight:700,
+                      <span style={{ padding:'2px 8px', borderRadius:50, fontSize:15, fontWeight:700,
                         background:BG, color:MUTED }}>{m.topic}</span>
                       {/* The message is saved even if the notification email
                           failed — surface that rather than hide it. */}
                       {!m.emailed && (
                         <span title="The notification email to support did not send — the message is still saved here."
                           style={{ display:'inline-flex', alignItems:'center', gap:4, padding:'2px 8px', borderRadius:50,
-                            fontSize:13.5, fontWeight:700, background:DANGER_SOFT, color:'#b91c1c' }}>
+                            fontSize:15, fontWeight:700, background:DANGER_SOFT, color:'#b91c1c' }}>
                           <MailWarning size={11}/> Not emailed
                         </span>
                       )}
                     </div>
-                    <p style={{ fontSize:14.5, color:MUTED }}>{m.email} · {fmtTime(m.receivedAt)}</p>
+                    <p style={{ fontSize:15.5, color:MUTED }}>{m.email} · {fmtTime(m.receivedAt)}</p>
                     {!isOpen && (
-                      <p style={{ fontSize:15, color:TEXT, marginTop:6, overflow:'hidden',
+                      <p style={{ fontSize:16, color:TEXT, marginTop:6, overflow:'hidden',
                         textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{m.message}</p>
                     )}
                   </div>
@@ -126,11 +126,11 @@ export default function AdminFeedback() {
 
                 {isOpen && (
                   <div style={{ padding:'0 16px 16px', borderTop:`1px solid ${BORDER}` }}>
-                    <p style={{ fontSize:14.5, color:TEXT, lineHeight:1.7, whiteSpace:'pre-wrap',
+                    <p style={{ fontSize:15.5, color:TEXT, lineHeight:1.7, whiteSpace:'pre-wrap',
                       background:BG, borderRadius:10, padding:'12px 14px', margin:'14px 0' }}>
                       {m.message}
                     </p>
-                    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:'8px 20px', marginBottom:14 }}>
+                    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(min(200px,100%),1fr))', gap:'8px 20px', marginBottom:14 }}>
                       {[
                         ['Name', m.name], ['Email', m.email], ['Topic', m.topic],
                         ['Received', fmtTime(m.receivedAt)],
@@ -140,21 +140,21 @@ export default function AdminFeedback() {
                         ['Handled by', m.handledBy ? `${m.handledBy} · ${fmtTime(m.handledAt)}` : '—'],
                       ].map(([k, v]) => (
                         <div key={k}>
-                          <p style={{ fontSize:14, color:MUTED, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.04em' }}>{k}</p>
-                          <p style={{ fontSize:15, color:TEXT, fontWeight:600, marginTop:2, wordBreak:'break-word' }}>{v}</p>
+                          <p style={{ fontSize:15, color:MUTED, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.04em' }}>{k}</p>
+                          <p style={{ fontSize:16, color:TEXT, fontWeight:600, marginTop:2, wordBreak:'break-word' }}>{v}</p>
                         </div>
                       ))}
                     </div>
                     <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
                       <a href={`mailto:${m.email}?subject=${encodeURIComponent(`Re: ${m.topic} — FeaziMove`)}`}
                         style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'8px 14px', borderRadius:8,
-                          background:NEON, color:ON_NEON, fontWeight:700, fontSize:14.5, textDecoration:'none' }}>
+                          background:NEON, color:ON_NEON, fontWeight:700, fontSize:15.5, textDecoration:'none' }}>
                         <Mail size={13}/> Reply by email
                       </a>
                       {m.status !== 'handled' && (
                         <button onClick={() => setStatus(m.id, 'handled')} disabled={busyId === m.id}
                           style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'8px 14px', borderRadius:8,
-                            background:ACCENT_FILL, color:ON_ACCENT_FILL, border:'none', fontWeight:700, fontSize:14.5,
+                            background:ACCENT_FILL, color:ON_ACCENT_FILL, border:'none', fontWeight:700, fontSize:15.5,
                             cursor:'pointer', fontFamily:'inherit' }}>
                           <CheckCircle2 size={13}/> Mark handled
                         </button>
@@ -162,7 +162,7 @@ export default function AdminFeedback() {
                       {m.status === 'handled' && (
                         <button onClick={() => setStatus(m.id, 'read')} disabled={busyId === m.id}
                           style={{ padding:'8px 14px', borderRadius:8, background:'none', border:`1px solid ${BORDER}`,
-                            color:MUTED, fontWeight:700, fontSize:14.5, cursor:'pointer', fontFamily:'inherit' }}>
+                            color:MUTED, fontWeight:700, fontSize:15.5, cursor:'pointer', fontFamily:'inherit' }}>
                           Reopen
                         </button>
                       )}

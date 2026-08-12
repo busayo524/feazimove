@@ -434,16 +434,16 @@ export default function RideTracker({ activeRideId, onExit }) {
           <div onClick={e => e.stopPropagation()}
             style={{ background:CARD, borderRadius:16, padding:24, maxWidth:340, width:'100%', boxShadow:'0 12px 32px rgba(0,0,0,0.2)', textAlign:'center' }}>
             <p style={{ fontWeight:800, fontSize:16, color:TEXT, marginBottom:8 }}>Cancel this ride?</p>
-            <p style={{ fontSize:14, color:MUTED, marginBottom:20, lineHeight:1.5 }}>
+            <p style={{ fontSize:15, color:MUTED, marginBottom:20, lineHeight:1.5 }}>
               Your driver will be notified and your seat will be released. This can't be undone.
             </p>
             <div style={{ display:'flex', gap:10 }}>
               <button onClick={() => setShowCancelConfirm(false)}
-                style={{ flex:1, padding:'11px', borderRadius:10, border:`1.5px solid ${BORDER}`, background:CARD, color:TEXT, fontWeight:700, fontSize:14.5, cursor:'pointer', fontFamily:'inherit' }}>
+                style={{ flex:1, padding:'11px', borderRadius:10, border:`1.5px solid ${BORDER}`, background:CARD, color:TEXT, fontWeight:700, fontSize:15.5, cursor:'pointer', fontFamily:'inherit' }}>
                 Keep Ride
               </button>
               <button onClick={cancelRide} disabled={cancelling}
-                style={{ flex:1, padding:'11px', borderRadius:10, border:'none', background:'#ef4444', color:'#fff', fontWeight:700, fontSize:14.5, cursor:cancelling?'not-allowed':'pointer', fontFamily:'inherit', opacity:cancelling?0.7:1 }}>
+                style={{ flex:1, padding:'11px', borderRadius:10, border:'none', background:'#ef4444', color:'#fff', fontWeight:700, fontSize:15.5, cursor:cancelling?'not-allowed':'pointer', fontFamily:'inherit', opacity:cancelling?0.7:1 }}>
                 {cancelling ? 'Cancelling…' : 'Yes, Cancel'}
               </button>
             </div>
@@ -464,8 +464,8 @@ export default function RideTracker({ activeRideId, onExit }) {
               <span style={{ fontSize:18 }}>🗺️</span>
             </div>
             <div style={{ position:'relative', textAlign:'center' }}>
-              <p style={{ color:'rgba(255,255,255,0.85)', fontSize:13.5, fontWeight:600, marginBottom:4 }}>Map requires a Mapbox token</p>
-              <p style={{ color:'rgba(255,255,255,0.5)', fontSize:12.5 }}>
+              <p style={{ color:'rgba(255,255,255,0.85)', fontSize:15, fontWeight:600, marginBottom:4 }}>Map requires a Mapbox token</p>
+              <p style={{ color:'rgba(255,255,255,0.5)', fontSize:14.5 }}>
                 Add <code style={{ color:NEON }}>VITE_MAPBOX_TOKEN</code> to your <code style={{ color:NEON }}>.env</code> file<br/>
                 Get a free token at <span style={{ color:NEON }}>account.mapbox.com</span>
               </p>
@@ -477,7 +477,7 @@ export default function RideTracker({ activeRideId, onExit }) {
             {!ride.driverLocation && ride.status !== 'completed' && (
               <div style={{ position:'absolute', top:8, left:8, right:8, background:'rgba(10,10,10,0.75)', borderRadius:10, padding:'6px 10px', display:'flex', alignItems:'center', gap:6 }}>
                 <div style={{ width:12, height:12, border:`2px solid ${NEON}`, borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.8s linear infinite', flexShrink:0 }}/>
-                <p style={{ fontSize:12.5, color:'#fff' }}>Waiting for your driver's location…</p>
+                <p style={{ fontSize:14.5, color:'#fff' }}>Waiting for your driver's location…</p>
                 <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
               </div>
             )}
@@ -488,7 +488,7 @@ export default function RideTracker({ activeRideId, onExit }) {
           <div style={{ flex:'1 1 0%', display:'flex', alignItems:'center', gap:6, minWidth:0 }}>
             <div style={{ width:8, height:8, borderRadius:'50%', background:NEON, border:`2px solid ${MOSS}`, flexShrink:0 }}/>
             <div style={{ minWidth:0 }}>
-              <p style={{ fontSize:11.5, color:MUTED, whiteSpace:'nowrap' }}>Takeoff</p>
+              <p style={{ fontSize:13.5, color:MUTED, whiteSpace:'nowrap' }}>Takeoff</p>
               <p style={{ fontSize:'clamp(11px, 3vw, 14px)', fontWeight:600, color:TEXT, lineHeight:1.25, wordBreak:'break-word' }}>{trackPickup}</p>
             </div>
           </div>
@@ -496,13 +496,13 @@ export default function RideTracker({ activeRideId, onExit }) {
           <div style={{ flex:'1 1 0%', display:'flex', alignItems:'center', gap:6, minWidth:0 }}>
             <div style={{ width:8, height:8, borderRadius:'50%', background:OLIVE, border:`2px solid ${MOSS}`, flexShrink:0 }}/>
             <div style={{ minWidth:0 }}>
-              <p style={{ fontSize:11.5, color:MUTED, whiteSpace:'nowrap' }}>Dropoff</p>
+              <p style={{ fontSize:13.5, color:MUTED, whiteSpace:'nowrap' }}>Dropoff</p>
               <p style={{ fontSize:'clamp(11px, 3vw, 14px)', fontWeight:600, color:TEXT, lineHeight:1.25, wordBreak:'break-word' }}>{trackDropoff}</p>
             </div>
           </div>
           <div style={{ width:1, height:28, background:BORDER, flexShrink:0 }}/>
           <div style={{ flexShrink:0, textAlign:'right' }}>
-            <p style={{ fontSize:11.5, color:MUTED, whiteSpace:'nowrap' }}>Price</p>
+            <p style={{ fontSize:13.5, color:MUTED, whiteSpace:'nowrap' }}>Price</p>
             <p style={{ fontSize:'clamp(11px, 3vw, 14px)', fontWeight:700, color:OLIVE, whiteSpace:'nowrap' }}>₦{ride.fare.toLocaleString()}</p>
           </div>
         </div>
@@ -511,17 +511,17 @@ export default function RideTracker({ activeRideId, onExit }) {
       {/* Package details (Move an Item bookings only) */}
       {isPackage && (
         <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:16, padding:14, marginBottom:8, boxShadow:'0 2px 8px rgba(36,56,0,0.06)' }}>
-          <p style={{ fontWeight:700, fontSize:13.5, color:MOSS, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:10 }}>Package Details</p>
+          <p style={{ fontWeight:700, fontSize:15, color:MOSS, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:10 }}>Package Details</p>
           <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom: ride.notes ? 8 : 0 }}>
             <div style={{ width:36, height:36, borderRadius:10, background:OLIVE, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
               <Package size={16} color={NEON}/>
             </div>
             <div style={{ flex:1 }}>
-              <p style={{ color:TEXT, fontWeight:700, fontSize:14 }}>{ride.recipientName} {SIZE_LABEL[ride.packageSize] ? `· ${SIZE_LABEL[ride.packageSize]}` : ''}</p>
-              {ride.recipientPhone && <p style={{ fontSize:12.5, color:MUTED, marginTop:1 }}>{ride.recipientPhone}</p>}
+              <p style={{ color:TEXT, fontWeight:700, fontSize:15 }}>{ride.recipientName} {SIZE_LABEL[ride.packageSize] ? `· ${SIZE_LABEL[ride.packageSize]}` : ''}</p>
+              {ride.recipientPhone && <p style={{ fontSize:14.5, color:MUTED, marginTop:1 }}>{ride.recipientPhone}</p>}
             </div>
           </div>
-          {ride.notes && <p style={{ fontSize:13.5, color:MUTED, fontStyle:'italic' }}>"{ride.notes}"</p>}
+          {ride.notes && <p style={{ fontSize:15, color:MUTED, fontStyle:'italic' }}>"{ride.notes}"</p>}
         </div>
       )}
 
@@ -529,7 +529,7 @@ export default function RideTracker({ activeRideId, onExit }) {
       <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:16, padding:'10px 16px', marginBottom:8, boxShadow:'0 2px 8px rgba(36,56,0,0.06)', display:'flex', alignItems:'center', justifyContent:'space-between', gap:10 }}>
         <p style={{ color:TEXT, fontWeight:700, fontSize:'clamp(13px, 3vw, 15px)' }}>{STAGE_PHRASES[step]}</p>
         {etaSeconds != null && (
-          <span style={{ fontSize:13.5, fontWeight:700, color:OLIVE, background:BG, border:`1px solid ${BORDER}`, padding:'2px 10px', borderRadius:20, whiteSpace:'nowrap', flexShrink:0 }}>
+          <span style={{ fontSize:15, fontWeight:700, color:OLIVE, background:BG, border:`1px solid ${BORDER}`, padding:'2px 10px', borderRadius:20, whiteSpace:'nowrap', flexShrink:0 }}>
             {fmtEta(etaSeconds)}
           </span>
         )}
@@ -537,23 +537,23 @@ export default function RideTracker({ activeRideId, onExit }) {
 
       {/* Driver card */}
       <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:16, padding:14, marginBottom:8, boxShadow:'0 2px 8px rgba(36,56,0,0.06)' }}>
-        <p style={{ fontWeight:700, fontSize:13.5, color:MOSS, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:10 }}>Driver</p>
+        <p style={{ fontWeight:700, fontSize:15, color:MOSS, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:10 }}>Driver</p>
 
         <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) minmax(0,1fr)', gap:12, marginBottom:12 }}>
           <div style={{ display:'flex', alignItems:'center', gap:10, minWidth:0 }}>
             <PersonAvatar userId={driver.id} name={driver.name} size={36} fontSize={14} radius={10}/>
             <div style={{ minWidth:0 }}>
-              <p style={{ color:TEXT, fontWeight:700, fontSize:14.5, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{driver.name}</p>
+              <p style={{ color:TEXT, fontWeight:700, fontSize:15.5, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{driver.name}</p>
               {driver.rating != null && (
                 <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:1 }}>
                   <Star size={12} color='#f59e0b' fill='#f59e0b'/>
-                  <span style={{ fontSize:13.5, color:MUTED }}>{driver.rating}</span>
+                  <span style={{ fontSize:15, color:MUTED }}>{driver.rating}</span>
                 </div>
               )}
             </div>
           </div>
 
-          <div style={{ display:'flex', flexDirection:'column', gap:4, fontSize:12.5, color:MUTED, minWidth:0 }}>
+          <div style={{ display:'flex', flexDirection:'column', gap:4, fontSize:14.5, color:MUTED, minWidth:0 }}>
             <p style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
               <span style={{ color:MOSS, fontWeight:600 }}>Model: </span>
               <span style={{ color:TEXT, fontWeight:700 }}>{[driver.vehicleMake, driver.vehicleModel].filter(Boolean).join(' ') || '—'}</span>
@@ -572,7 +572,7 @@ export default function RideTracker({ activeRideId, onExit }) {
         {rideError && (
           <div style={{ display:'flex', gap:8, padding:'8px 12px', background:DANGER_SOFT, border:'1px solid #fca5a5', borderRadius:10, marginBottom:10 }}>
             <AlertCircle size={13} color="#ef4444" style={{ flexShrink:0, marginTop:1 }}/>
-            <p style={{ fontSize:13.5, color:'#ef4444' }}>{rideError}</p>
+            <p style={{ fontSize:15, color:'#ef4444' }}>{rideError}</p>
           </div>
         )}
 
@@ -581,11 +581,11 @@ export default function RideTracker({ activeRideId, onExit }) {
         {step < 3 && (
         <div style={{ display:'flex', gap:8 }}>
           <a href={driver.phone ? `tel:${driver.phone}` : undefined} aria-disabled={!driver.phone}
-            style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'10px', borderRadius:12, background:NEON, color:ON_NEON, fontWeight:800, fontSize:14, textDecoration:'none', boxShadow:'0 4px 12px rgba(204,255,0,0.3)', opacity:driver.phone?1:0.5, pointerEvents:driver.phone?'auto':'none' }}>
+            style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'10px', borderRadius:12, background:NEON, color:ON_NEON, fontWeight:800, fontSize:15, textDecoration:'none', boxShadow:'0 4px 12px rgba(204,255,0,0.3)', opacity:driver.phone?1:0.5, pointerEvents:driver.phone?'auto':'none' }}>
             <Phone size={14}/> Call
           </a>
           <button onClick={() => { setShowChat(true); markChatSeen() }}
-            style={{ position:'relative', flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'10px', borderRadius:12, background:CARD, border:`1.5px solid ${BORDER}`, color:TEXT, fontWeight:700, fontSize:14, cursor:'pointer', fontFamily:'inherit' }}>
+            style={{ position:'relative', flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'10px', borderRadius:12, background:CARD, border:`1.5px solid ${BORDER}`, color:TEXT, fontWeight:700, fontSize:15, cursor:'pointer', fontFamily:'inherit' }}>
             <MessageSquare size={14}/> Chat
             {hasUnreadChat && (
               <span style={{ position:'absolute', top:6, right:'28%', width:9, height:9, borderRadius:'50%', background:'#ef4444', border:'2px solid '+CARD }}/>
@@ -599,7 +599,7 @@ export default function RideTracker({ activeRideId, onExit }) {
           several riders matched at once and can't always tap a button for
           each one right away. */}
       {ride.status !== 'completed' && (
-        <button onClick={advanceRide} disabled={advancing} style={{ width:'100%', padding:'13px', borderRadius:50, marginBottom:8, background:advancing?BORDER:NEON, color:advancing?MUTED:ON_NEON, fontWeight:700, fontSize:14.5, border:'none', cursor:advancing?'not-allowed':'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:10, opacity:advancing?0.7:1, boxShadow:advancing?'none':'0 4px 12px rgba(204,255,0,0.3)', fontFamily:'inherit' }}>
+        <button onClick={advanceRide} disabled={advancing} style={{ width:'100%', padding:'13px', borderRadius:50, marginBottom:8, background:advancing?BORDER:NEON, color:advancing?MUTED:ON_NEON, fontWeight:700, fontSize:15.5, border:'none', cursor:advancing?'not-allowed':'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:10, opacity:advancing?0.7:1, boxShadow:advancing?'none':'0 4px 12px rgba(204,255,0,0.3)', fontFamily:'inherit' }}>
           {advancing ? 'Updating…' : NEXT_STATUS_LABEL[NEXT_STATUS[step <= 1 ? 0 : step - 1]]}
         </button>
       )}
@@ -608,14 +608,14 @@ export default function RideTracker({ activeRideId, onExit }) {
           even after the driver has arrived at the pickup. */}
       {step < STATUS_TO_STEP.in_transit && (
         <button onClick={() => setShowCancelConfirm(true)}
-          style={{ width:'100%', padding:'12px', borderRadius:50, marginBottom:8, background:'transparent', color:'#ef4444', fontWeight:700, fontSize:14.5, border:'1.5px solid #fca5a5', cursor:'pointer', fontFamily:'inherit' }}>
+          style={{ width:'100%', padding:'12px', borderRadius:50, marginBottom:8, background:'transparent', color:'#ef4444', fontWeight:700, fontSize:15.5, border:'1.5px solid #fca5a5', cursor:'pointer', fontFamily:'inherit' }}>
           Cancel Ride
         </button>
       )}
 
       {ride.status === 'completed' && (
         <button onClick={() => navigate(`/rate/${activeRideId}`)}
-          style={{ width:'100%', padding:'13px', borderRadius:50, background:NEON, color:ON_NEON, fontWeight:800, fontSize:14.5, border:'none', cursor:'pointer', fontFamily:'inherit', boxShadow:'0 4px 16px rgba(204,255,0,0.35)' }}>
+          style={{ width:'100%', padding:'13px', borderRadius:50, background:NEON, color:ON_NEON, fontWeight:800, fontSize:15.5, border:'none', cursor:'pointer', fontFamily:'inherit', boxShadow:'0 4px 16px rgba(204,255,0,0.35)' }}>
           Rate This Trip
         </button>
       )}
@@ -640,7 +640,7 @@ function CancelledNotice({ byDriver, onExit }) {
       <p style={{ color:TEXT, fontWeight:800, fontSize:17, marginBottom:6 }}>
         {byDriver ? 'Ride cancelled by driver' : 'This trip was cancelled'}
       </p>
-      <p style={{ color:MUTED, fontSize:14.5, lineHeight:1.6, maxWidth:320, marginBottom:20 }}>
+      <p style={{ color:MUTED, fontSize:15.5, lineHeight:1.6, maxWidth:320, marginBottom:20 }}>
         {byDriver
           ? "No worries — we're finding you another driver on the same route now…"
           : 'Your booking has been cancelled.'}
@@ -649,7 +649,7 @@ function CancelledNotice({ byDriver, onExit }) {
         <div style={{ width:26, height:26, border:`3px solid ${NEON}`, borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.8s linear infinite' }}/>
       ) : (
         <button onClick={onExit}
-          style={{ padding:'12px 28px', borderRadius:50, background:NT, color:NEON, fontWeight:700, fontSize:14.5, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
+          style={{ padding:'12px 28px', borderRadius:50, background:NT, color:NEON, fontWeight:700, fontSize:15.5, border:'none', cursor:'pointer', fontFamily:'inherit' }}>
           OK
         </button>
       )}

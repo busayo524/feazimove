@@ -49,24 +49,24 @@ export default function ChatModal({ rideId, title, onClose }) {
     <div style={{ position:'fixed', inset:0, zIndex:1000, background:'rgba(0,0,0,0.4)', display:'flex', alignItems:'flex-end', justifyContent:'center' }} onClick={onClose}>
       <div onClick={e => e.stopPropagation()} style={{ background:CARD, width:'100%', maxWidth:480, height:'70vh', borderRadius:'20px 20px 0 0', display:'flex', flexDirection:'column', boxShadow:'0 -8px 30px rgba(0,0,0,0.2)' }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px', borderBottom:`1px solid ${BORDER}` }}>
-          <p style={{ fontWeight:700, fontSize:15, color:TEXT }}>{title}</p>
+          <p style={{ fontWeight:700, fontSize:16, color:TEXT }}>{title}</p>
           <button onClick={onClose} aria-label="Close chat" style={{ background:'none', border:'none', cursor:'pointer', color:MUTED, padding:4 }}>
             <X size={20}/>
           </button>
         </div>
         <div style={{ flex:1, overflowY:'auto', padding:'16px 20px', display:'flex', flexDirection:'column', gap:8 }}>
-          {loading && <p style={{ textAlign:'center', color:MUTED, fontSize:14 }}>Loading messages…</p>}
+          {loading && <p style={{ textAlign:'center', color:MUTED, fontSize:15 }}>Loading messages…</p>}
           {!loading && messages.length === 0 && (
-            <p style={{ textAlign:'center', color:MUTED, fontSize:14, marginTop:20 }}>No messages yet — say hello!</p>
+            <p style={{ textAlign:'center', color:MUTED, fontSize:15, marginTop:20 }}>No messages yet — say hello!</p>
           )}
           {messages.map(m => (
             <div key={m.id} style={{ display:'flex', justifyContent: m.mine ? 'flex-end' : 'flex-start' }}>
               <div style={{
-                maxWidth:'75%', padding:'9px 14px', borderRadius:14, fontSize:14.5,
+                maxWidth:'75%', padding:'9px 14px', borderRadius:14, fontSize:15.5,
                 background: m.mine ? INVERT : BG, color: m.mine ? NEON : TEXT,
               }}>
                 <p style={{ margin:0, wordBreak:'break-word' }}>{m.body}</p>
-                <p style={{ margin:'3px 0 0', fontSize:11.5, opacity:0.6 }}>{m.time}</p>
+                <p style={{ margin:'3px 0 0', fontSize:13.5, opacity:0.6 }}>{m.time}</p>
               </div>
             </div>
           ))}
@@ -78,7 +78,7 @@ export default function ChatModal({ rideId, title, onClose }) {
             onChange={e => setText(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') send() }}
             placeholder="Type a message…"
-            style={{ flex:1, padding:'11px 14px', borderRadius:50, border:`1.5px solid ${BORDER}`, fontSize:14.5, outline:'none', fontFamily:'inherit',
+            style={{ flex:1, padding:'11px 14px', borderRadius:50, border:`1.5px solid ${BORDER}`, fontSize:15.5, outline:'none', fontFamily:'inherit',
               background:CARD, color:TEXT, colorScheme:'light' }}
           />
           <button onClick={send} disabled={!text.trim() || sending} aria-label="Send"

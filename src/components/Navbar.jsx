@@ -49,8 +49,8 @@ function Dropdown({ items, onClose, isDark }) {
               {item.icon}
             </div>
             <div>
-              <p style={{ fontWeight: 700, fontSize: 15, color: isDark ? '#ffffff' : '#0a0a0a', marginBottom: 3 }}>{item.label}</p>
-              <p style={{ fontSize: 14, color: isDark ? 'rgba(255,255,255,0.5)' : '#6b7280', lineHeight: 1.5 }}>{item.sub}</p>
+              <p style={{ fontWeight: 700, fontSize: 16, color: isDark ? '#ffffff' : '#0a0a0a', marginBottom: 3 }}>{item.label}</p>
+              <p style={{ fontSize: 15, color: isDark ? 'rgba(255,255,255,0.5)' : '#6b7280', lineHeight: 1.5 }}>{item.sub}</p>
             </div>
           </Link>
         ))}
@@ -114,7 +114,7 @@ export default function Navbar() {
           <li>
             <Link to="/signup?role=rider" style={{
               display:'block', padding:'8px 14px', borderRadius:8,
-              fontWeight: 600, fontSize: 14.5,
+              fontWeight: 600, fontSize: 15.5,
               color: isDark ? '#fff' : NT,
               textDecoration:'none', transition:'color 0.15s',
             }}
@@ -128,7 +128,7 @@ export default function Navbar() {
           <li>
             <Link to="/signup?role=driver" style={{
               display:'block', padding:'8px 14px', borderRadius:8,
-              fontWeight: 600, fontSize: 14.5,
+              fontWeight: 600, fontSize: 15.5,
               color: isDark ? '#fff' : NT,
               textDecoration:'none', transition:'color 0.15s',
             }}
@@ -145,7 +145,7 @@ export default function Navbar() {
             <button style={{
               display:'flex', alignItems:'center', gap:5, padding:'8px 14px',
               background:'none', border:'none', cursor:'pointer', borderRadius:8,
-              fontWeight: 600, fontSize: 14.5,
+              fontWeight: 600, fontSize: 15.5,
               color: dropdown === 'learn' ? FOREST : (isDark ? '#fff' : NT),
               transition:'color 0.15s',
             }}
@@ -167,7 +167,7 @@ export default function Navbar() {
               <Link to={href} style={{
                 display:'block', position:'relative',
                 padding:'8px 14px', borderRadius:8,
-                fontWeight: isActive(href) ? 700 : 500, fontSize: 14.5,
+                fontWeight: isActive(href) ? 700 : 500, fontSize: 15.5,
                 color: linkColor(href),
                 textDecoration:'none', transition:'color 0.15s',
               }}
@@ -196,14 +196,14 @@ export default function Navbar() {
             {isDark ? <Sun size={15}/> : <Moon size={15}/>}
           </button>
 
-          <Link to="/login" style={{ padding:'9px 20px', borderRadius:50, background:'transparent', border:`1.5px solid ${isDark?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.15)'}`, color: isDark?'#fff':NT, fontSize:14, fontWeight:700, textDecoration:'none', transition:'all 0.15s' }}
+          <Link to="/login" style={{ padding:'9px 20px', borderRadius:50, background:'transparent', border:`1.5px solid ${isDark?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.15)'}`, color: isDark?'#fff':NT, fontSize:15, fontWeight:700, textDecoration:'none', transition:'all 0.15s' }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = FOREST; e.currentTarget.style.color = FOREST }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = isDark?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.15)'; e.currentTarget.style.color = isDark?'#fff':NT }}>
             Log in
           </Link>
           <Link to="/register" style={{
             display:'inline-flex', alignItems:'center', gap:6, padding:'9px 20px', borderRadius:50,
-            background: NEON, color: NT, fontSize:14, fontWeight:700,
+            background: NEON, color: NT, fontSize:15, fontWeight:700,
             transition:'background 0.2s, transform 0.15s', textDecoration:'none',
           }}
             onMouseEnter={e => { e.currentTarget.style.background='#d4ff1a'; e.currentTarget.style.transform='translateY(-1px)' }}
@@ -244,15 +244,15 @@ export default function Navbar() {
             ].filter((v, i, arr) => arr.findIndex(x => x.href === v.href && x.label === v.label) === i)
              .map(({ label, href }) => (
               <li key={label}>
-                <Link to={href} style={{ display:'flex', alignItems:'center', padding:'14px 0', fontSize:15, fontWeight: isActive(href)?700:500, color: isActive(href)?FOREST:(isDark?'#fff':'#1a1a1a'), borderBottom: isDark?'1px solid rgba(255,255,255,0.07)':'1px solid rgba(0,0,0,0.06)', textDecoration:'none' }}>
+                <Link to={href} style={{ display:'flex', alignItems:'center', padding:'14px 0', fontSize:16, fontWeight: isActive(href)?700:500, color: isActive(href)?FOREST:(isDark?'#fff':'#1a1a1a'), borderBottom: isDark?'1px solid rgba(255,255,255,0.07)':'1px solid rgba(0,0,0,0.06)', textDecoration:'none' }}>
                   {label}
                 </Link>
               </li>
             ))}
           </ul>
           <div style={{ padding:'16px 24px 28px', display:'flex', flexDirection:'column', gap:10 }}>
-            <Link to="/login" style={{ display:'flex', justifyContent:'center', padding:'13px', borderRadius:50, border: isDark?'1.5px solid rgba(255,255,255,0.2)':'1.5px solid rgba(0,0,0,0.15)', color: isDark?'#fff':'#1a1a1a', fontSize:15, fontWeight:700, textDecoration:'none' }}>Log in</Link>
-            <Link to="/register" style={{ display:'flex', justifyContent:'center', padding:'13px', borderRadius:50, background:NEON, color:NT, fontSize:15, fontWeight:700, textDecoration:'none' }}>Create account</Link>
+            <Link to="/login" style={{ display:'flex', justifyContent:'center', padding:'13px', borderRadius:50, border: isDark?'1.5px solid rgba(255,255,255,0.2)':'1.5px solid rgba(0,0,0,0.15)', color: isDark?'#fff':'#1a1a1a', fontSize:16, fontWeight:700, textDecoration:'none' }}>Log in</Link>
+            <Link to="/register" style={{ display:'flex', justifyContent:'center', padding:'13px', borderRadius:50, background:NEON, color:NT, fontSize:16, fontWeight:700, textDecoration:'none' }}>Create account</Link>
           </div>
         </div>
       )}

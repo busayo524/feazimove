@@ -70,7 +70,7 @@ export default function InstallAppButton() {
         display: 'inline-flex', alignItems: 'center', gap: 8,
         color: '#0a0a0a',
         padding: '15px 32px', borderRadius: 50,
-        fontWeight: 800, fontSize: 15, letterSpacing: '-0.01em',
+        fontWeight: 800, fontSize: 16, letterSpacing: '-0.01em',
         background: NEON,
         border: 'none',
         boxShadow: '0 0 32px rgba(204,255,0,0.3)',
@@ -111,11 +111,11 @@ export default function InstallAppButton() {
                 <h3 style={{ fontSize: 19, fontWeight: 900, color: '#0f0f0f', letterSpacing: '-0.02em', margin: 0 }}>
                   Install FeaziMove
                 </h3>
-                <p style={{ fontSize: 14, color: '#6b7280', margin: '2px 0 0' }}>Free · No app store needed</p>
+                <p style={{ fontSize: 15, color: '#6b7280', margin: '2px 0 0' }}>Free · No app store needed</p>
               </div>
             </div>
 
-            <p style={{ fontSize: 14.5, color: '#4b5563', lineHeight: 1.65, marginBottom: 22 }}>
+            <p style={{ fontSize: 15.5, color: '#4b5563', lineHeight: 1.65, marginBottom: 22 }}>
               Add FeaziMove to your home screen and use it like any other app — full screen, with its own icon.
             </p>
 
@@ -131,7 +131,7 @@ export default function InstallAppButton() {
               ]).map((s, i) => (
                 <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '11px 12px', borderRadius: 12, background: i % 2 ? '#ffffff' : '#f8faf5' }}>
                   <span style={{ width: 32, height: 32, borderRadius: 10, background: NEON, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{s.icon}</span>
-                  <p style={{ fontSize: 14.5, color: '#1f2937', lineHeight: 1.5, margin: 0 }}>{s.text}</p>
+                  <p style={{ fontSize: 15.5, color: '#1f2937', lineHeight: 1.5, margin: 0 }}>{s.text}</p>
                 </li>
               ))}
             </ol>

@@ -29,7 +29,7 @@ export default function AppearanceSetting({ surface = CARD, border = BORDER, tex
     <div style={{ background: surface, border: `1px solid ${border}`, borderRadius: 16,
       overflow: 'hidden', marginBottom: 16, boxShadow: `0 2px 8px ${SHADOW}` }}>
       <div style={{ padding: '14px 20px', borderBottom: `1px solid ${border}` }}>
-        <p style={{ fontWeight: 700, fontSize: 14, color: MOSS, textTransform: 'uppercase',
+        <p style={{ fontWeight: 700, fontSize: 15, color: MOSS, textTransform: 'uppercase',
           letterSpacing: '0.06em' }}>Appearance</p>
       </div>
       {OPTIONS.map((o, i) => {
@@ -46,8 +46,8 @@ export default function AppearanceSetting({ surface = CARD, border = BORDER, tex
               alignItems: 'center', justifyContent: 'center',
               background: on ? NEON : CHIP, color: on ? ON_NEON : MOSS }}>{o.icon}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 15, color: text, fontWeight: on ? 800 : 600 }}>{o.label}</p>
-              <p style={{ fontSize: 14, color: muted, marginTop: 1 }}>{o.sub}</p>
+              <p style={{ fontSize: 16, color: text, fontWeight: on ? 800 : 600 }}>{o.label}</p>
+              <p style={{ fontSize: 15, color: muted, marginTop: 1 }}>{o.sub}</p>
             </div>
             {/* Radio drawn rather than a real input, so it themes with everything else */}
             <span style={{ width: 20, height: 20, borderRadius: '50%', flexShrink: 0,

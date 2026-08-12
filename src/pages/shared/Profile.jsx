@@ -131,17 +131,17 @@ function CameraModal({ onCapture, onClose }){
     return (
       <div style={{padding:'20px 20px 0',textAlign:'center'}}>
         <Camera size={36} color='rgba(255,255,255,0.25)' style={{marginBottom:10}}/>
-        <p style={{color:'rgba(255,255,255,0.75)',fontSize:14,lineHeight:1.6,marginBottom:14}}>{msg}</p>
+        <p style={{color:'rgba(255,255,255,0.75)',fontSize:15,lineHeight:1.6,marginBottom:14}}>{msg}</p>
         {devices.length > 1 && (
           <div style={{marginBottom:12,textAlign:'left'}}>
-            <p style={{color:'rgba(255,255,255,0.5)',fontSize:12.5,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:6}}>
+            <p style={{color:'rgba(255,255,255,0.5)',fontSize:14.5,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:6}}>
               {isVirtual ? 'Try a different camera:' : 'Available cameras:'}
             </p>
             <select
               value={deviceId || ''}
               onChange={e => { setDeviceId(e.target.value); startCamera(e.target.value) }}
               style={{width:'100%',padding:'9px 12px',borderRadius:8,background:'rgba(255,255,255,0.08)',
-                border:'1px solid rgba(255,255,255,0.15)',color:'#fff',fontSize:14,fontFamily:'inherit',cursor:'pointer'}}>
+                border:'1px solid rgba(255,255,255,0.15)',color:'#fff',fontSize:15,fontFamily:'inherit',cursor:'pointer'}}>
               {devices.map(d => (
                 <option key={d.deviceId} value={d.deviceId} style={{background:'#222',color:'#fff'}}>
                   {d.label || `Camera ${d.deviceId.slice(0,8)}`}
@@ -152,7 +152,7 @@ function CameraModal({ onCapture, onClose }){
         )}
         <button onClick={() => startCamera(deviceId || null)}
           style={{padding:'9px 20px',borderRadius:8,background:'rgba(204,255,0,0.15)',border:'1px solid rgba(204,255,0,0.3)',
-            color:NEON,fontWeight:700,fontSize:14,cursor:'pointer',fontFamily:'inherit',marginBottom:4}}>
+            color:NEON,fontWeight:700,fontSize:15,cursor:'pointer',fontFamily:'inherit',marginBottom:4}}>
           ↺ Try again
         </button>
       </div>
@@ -174,7 +174,7 @@ function CameraModal({ onCapture, onClose }){
         <div style={{position:'relative',background:'#000',aspectRatio:'4/3',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
           <video ref={videoRef} autoPlay playsInline muted
             style={{width:'100%',height:'100%',objectFit:'cover',transform:'scaleX(-1)',display:(!error && ready)?'block':'none'}}/>
-          {!error && !ready && <div style={{color:'rgba(255,255,255,0.5)',fontSize:14.5}}>Starting camera…</div>}
+          {!error && !ready && <div style={{color:'rgba(255,255,255,0.5)',fontSize:15.5}}>Starting camera…</div>}
           {flash && <div style={{position:'absolute',inset:0,background:'#fff',opacity:0.6,pointerEvents:'none'}}/>}
         </div>
 
@@ -186,19 +186,19 @@ function CameraModal({ onCapture, onClose }){
         {/* Controls */}
         <div style={{padding:'16px 20px 20px',display:'flex',justifyContent:'center',gap:12}}>
           <button onClick={onClose}
-            style={{padding:'11px 22px',borderRadius:50,background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.2)',color:'#fff',fontWeight:600,fontSize:14.5,cursor:'pointer',fontFamily:'inherit'}}>
+            style={{padding:'11px 22px',borderRadius:50,background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.2)',color:'#fff',fontWeight:600,fontSize:15.5,cursor:'pointer',fontFamily:'inherit'}}>
             Cancel
           </button>
           {!error && (
             <button onClick={capture} disabled={!ready}
-              style={{padding:'11px 28px',borderRadius:50,background:ready?NEON:'rgba(204,255,0,0.25)',border:'none',color:ready? ON_NEON :'rgba(36,56,0,0.4)',fontWeight:800,fontSize:14.5,cursor:ready?'pointer':'not-allowed',fontFamily:'inherit',display:'flex',alignItems:'center',gap:8}}>
+              style={{padding:'11px 28px',borderRadius:50,background:ready?NEON:'rgba(204,255,0,0.25)',border:'none',color:ready? ON_NEON :'rgba(36,56,0,0.4)',fontWeight:800,fontSize:15.5,cursor:ready?'pointer':'not-allowed',fontFamily:'inherit',display:'flex',alignItems:'center',gap:8}}>
               <Camera size={15}/>Capture
             </button>
           )}
           {/* Camera switcher when working (more than one camera) */}
           {!error && ready && devices.length > 1 && (
             <select value={deviceId||''} onChange={e=>{setDeviceId(e.target.value);startCamera(e.target.value)}}
-              style={{padding:'8px 10px',borderRadius:50,background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.2)',color:'#fff',fontSize:13.5,fontFamily:'inherit',cursor:'pointer',maxWidth:130}}>
+              style={{padding:'8px 10px',borderRadius:50,background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.2)',color:'#fff',fontSize:15,fontFamily:'inherit',cursor:'pointer',maxWidth:130}}>
               {devices.map(d=>(
                 <option key={d.deviceId} value={d.deviceId} style={{background:'#222',color:'#fff'}}>
                   {(d.label||`Camera`).slice(0,22)}
@@ -235,8 +235,8 @@ function PhotoPicker({ onDone, onClose }){
               <Camera size={18} color={OLIVE}/>
             </div>
             <div>
-              <p style={{fontWeight:700,fontSize:14.5,color:TEXT}}>Take a selfie</p>
-              <p style={{fontSize:13.5,color:MUTED,marginTop:2}}>Use your webcam or front camera</p>
+              <p style={{fontWeight:700,fontSize:15.5,color:TEXT}}>Take a selfie</p>
+              <p style={{fontSize:15,color:MUTED,marginTop:2}}>Use your webcam or front camera</p>
             </div>
           </button>
           <button onClick={()=>fileInputRef.current?.click()}
@@ -247,8 +247,8 @@ function PhotoPicker({ onDone, onClose }){
               <RefreshCw size={18} color={OLIVE}/>
             </div>
             <div>
-              <p style={{fontWeight:700,fontSize:14.5,color:TEXT}}>Upload from device</p>
-              <p style={{fontSize:13.5,color:MUTED,marginTop:2}}>Choose an image from your files</p>
+              <p style={{fontWeight:700,fontSize:15.5,color:TEXT}}>Upload from device</p>
+              <p style={{fontSize:15,color:MUTED,marginTop:2}}>Choose an image from your files</p>
             </div>
           </button>
         </div>
@@ -305,36 +305,36 @@ function ChangePasswordModal({ onClose }){
           <p style={{fontWeight:800,fontSize:17,color:TEXT}}>Change Password</p>
           <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',color:MUTED,padding:4}}><X size={18}/></button>
         </div>
-        <p style={{fontSize:13.5,color:MUTED,marginBottom:18}}>Use at least 8 characters, one uppercase letter, and one number.</p>
+        <p style={{fontSize:15,color:MUTED,marginBottom:18}}>Use at least 8 characters, one uppercase letter, and one number.</p>
 
         <form onSubmit={handleSubmit}>
-          <label style={{display:'block',fontSize:14,fontWeight:600,color:TEXT,marginBottom:6}}>Current Password</label>
+          <label style={{display:'block',fontSize:15,fontWeight:600,color:TEXT,marginBottom:6}}>Current Password</label>
           <input type="password" value={currentPassword} onChange={e=>setCurrentPassword(e.target.value)} required
-            style={{width:'100%',padding:'10px 12px',borderRadius:10,border:`1.5px solid ${BORDER}`,fontSize:14.5,marginBottom:14,fontFamily:'inherit',boxSizing:'border-box',background:CARD,color:TEXT}}/>
+            style={{width:'100%',padding:'10px 12px',borderRadius:10,border:`1.5px solid ${BORDER}`,fontSize:15.5,marginBottom:14,fontFamily:'inherit',boxSizing:'border-box',background:CARD,color:TEXT}}/>
 
-          <label style={{display:'block',fontSize:14,fontWeight:600,color:TEXT,marginBottom:6}}>New Password</label>
+          <label style={{display:'block',fontSize:15,fontWeight:600,color:TEXT,marginBottom:6}}>New Password</label>
           <input type="password" autoComplete="off" value={newPassword} onChange={e=>setNewPassword(e.target.value)} required
-            style={{width:'100%',padding:'10px 12px',borderRadius:10,border:`1.5px solid ${BORDER}`,fontSize:14.5,marginBottom:14,fontFamily:'inherit',boxSizing:'border-box',background:CARD,color:TEXT}}/>
+            style={{width:'100%',padding:'10px 12px',borderRadius:10,border:`1.5px solid ${BORDER}`,fontSize:15.5,marginBottom:14,fontFamily:'inherit',boxSizing:'border-box',background:CARD,color:TEXT}}/>
 
-          <label style={{display:'block',fontSize:14,fontWeight:600,color:TEXT,marginBottom:6}}>Confirm New Password</label>
+          <label style={{display:'block',fontSize:15,fontWeight:600,color:TEXT,marginBottom:6}}>Confirm New Password</label>
           <input type="password" autoComplete="off" value={confirm} onChange={e=>setConfirm(e.target.value)} required
-            style={{width:'100%',padding:'10px 12px',borderRadius:10,border:`1.5px solid ${BORDER}`,fontSize:14.5,marginBottom:16,fontFamily:'inherit',boxSizing:'border-box',background:CARD,color:TEXT}}/>
+            style={{width:'100%',padding:'10px 12px',borderRadius:10,border:`1.5px solid ${BORDER}`,fontSize:15.5,marginBottom:16,fontFamily:'inherit',boxSizing:'border-box',background:CARD,color:TEXT}}/>
 
           {error&&(
             <div style={{display:'flex',gap:8,padding:'10px 14px',background:DANGER_SOFT,border:'1px solid #fca5a5',borderRadius:10,marginBottom:14}}>
               <AlertCircle size={14} color="#ef4444" style={{flexShrink:0,marginTop:1}}/>
-              <p style={{fontSize:14,color:'#ef4444'}}>{error}</p>
+              <p style={{fontSize:15,color:'#ef4444'}}>{error}</p>
             </div>
           )}
           {success&&(
             <div style={{display:'flex',gap:8,padding:'10px 14px',background:'#dcfce7',border:'1px solid #86efac',borderRadius:10,marginBottom:14}}>
               <CheckCircle size={14} color="#15803d" style={{flexShrink:0,marginTop:1}}/>
-              <p style={{fontSize:14,color:'#15803d'}}>Password updated.</p>
+              <p style={{fontSize:15,color:'#15803d'}}>Password updated.</p>
             </div>
           )}
 
           <button type="submit" disabled={busy}
-            style={{width:'100%',padding:'13px',borderRadius:50,background:busy?BORDER:NEON,color:busy?MUTED:ON_NEON,fontWeight:800,fontSize:15,border:'none',cursor:busy?'not-allowed':'pointer',fontFamily:'inherit'}}>
+            style={{width:'100%',padding:'13px',borderRadius:50,background:busy?BORDER:NEON,color:busy?MUTED:ON_NEON,fontWeight:800,fontSize:16,border:'none',cursor:busy?'not-allowed':'pointer',fontFamily:'inherit'}}>
             {busy?'Updating…':'Update Password'}
           </button>
         </form>
@@ -441,10 +441,10 @@ export default function Profile(){
         </div>
         <div style={{flex:1}}>
           <p style={{fontWeight:800,fontSize:18,color:TEXT,letterSpacing:'-0.02em'}}>{fullName}</p>
-          {saved&&<div style={{display:'flex',alignItems:'center',gap:6,marginTop:6}}><CheckCircle size={14} color={MOSS}/><span style={{fontSize:14,color:MOSS,fontWeight:600}}>Updated!</span></div>}
+          {saved&&<div style={{display:'flex',alignItems:'center',gap:6,marginTop:6}}><CheckCircle size={14} color={MOSS}/><span style={{fontSize:15,color:MOSS,fontWeight:600}}>Updated!</span></div>}
         </div>
         <button onClick={()=>setEditing(!editing)}
-          style={{padding:'9px 16px',borderRadius:10,fontWeight:700,fontSize:14,cursor:'pointer',background:editing?BG:ACCENT_FILL,border:`1px solid ${editing?BORDER:ACCENT_FILL}`,color:editing? ON_NEON :ON_ACCENT_FILL}}>
+          style={{padding:'9px 16px',borderRadius:10,fontWeight:700,fontSize:15,cursor:'pointer',background:editing?BG:ACCENT_FILL,border:`1px solid ${editing?BORDER:ACCENT_FILL}`,color:editing? ON_NEON :ON_ACCENT_FILL}}>
           {editing?'Cancel':'Edit'}
         </button>
       </div>
@@ -452,16 +452,16 @@ export default function Profile(){
       {/* Edit form */}
       {editing&&(
         <form onSubmit={handleSave} style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,padding:20,marginBottom:16,boxShadow:'0 2px 8px rgba(36,56,0,0.06)'}}>
-          <p style={{fontWeight:700,fontSize:14,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:14}}>Edit Profile</p>
+          <p style={{fontWeight:700,fontSize:15,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:14}}>Edit Profile</p>
           <div style={{display:'flex',flexDirection:'column',gap:12}}>
             {[['First Name','firstName'],['Last Name','lastName']].map(([label,key])=>(
               <div key={key}>
-                <label style={{display:'block',fontSize:14,fontWeight:600,color:TEXT,marginBottom:6}}>{label}</label>
+                <label style={{display:'block',fontSize:15,fontWeight:600,color:TEXT,marginBottom:6}}>{label}</label>
                 <input value={form[key]} readOnly disabled
-                  style={{width:'100%',padding:'12px 14px',borderRadius:10,fontSize:15,border:`1.5px solid ${BORDER}`,outline:'none',color:MUTED,background:BG,fontFamily:'inherit',boxSizing:'border-box',cursor:'not-allowed'}}/>
+                  style={{width:'100%',padding:'12px 14px',borderRadius:10,fontSize:16,border:`1.5px solid ${BORDER}`,outline:'none',color:MUTED,background:BG,fontFamily:'inherit',boxSizing:'border-box',cursor:'not-allowed'}}/>
               </div>
             ))}
-            <p style={{fontSize:13.5,color:MUTED,marginTop:-4,lineHeight:1.45}}>
+            <p style={{fontSize:15,color:MUTED,marginTop:-4,lineHeight:1.45}}>
               🔒 Your name is locked to match your identity verification and can't be edited.
               Withdrawals are only paid to a bank account in this name. Contact support if it needs correcting.
             </p>
@@ -469,23 +469,23 @@ export default function Profile(){
                 the name. It is also a login identifier, so the server keeps it
                 unique and rejects a number already on another account. */}
             <div>
-              <label style={{display:'block',fontSize:14,fontWeight:600,color:TEXT,marginBottom:6}}>Phone Number</label>
+              <label style={{display:'block',fontSize:15,fontWeight:600,color:TEXT,marginBottom:6}}>Phone Number</label>
               <input value={form.phone} inputMode="tel" placeholder="e.g. 08012345678 or +2348012345678"
                 onChange={e=>set('phone',e.target.value.replace(/[^\d+]/g,'').slice(0,16))}
-                style={{width:'100%',padding:'12px 14px',borderRadius:10,fontSize:15,border:`1.5px solid ${BORDER}`,outline:'none',color:TEXT,background:CARD,fontFamily:'inherit',boxSizing:'border-box'}}
+                style={{width:'100%',padding:'12px 14px',borderRadius:10,fontSize:16,border:`1.5px solid ${BORDER}`,outline:'none',color:TEXT,background:CARD,fontFamily:'inherit',boxSizing:'border-box'}}
                 onFocus={e=>e.target.style.borderColor=MOSS} onBlur={e=>e.target.style.borderColor=BORDER}/>
-              <p style={{fontSize:13.5,color:MUTED,marginTop:6,lineHeight:1.45}}>
+              <p style={{fontSize:15,color:MUTED,marginTop:6,lineHeight:1.45}}>
                 You sign in with this number, so keep it one you can access.
               </p>
             </div>
             {/* Commute. The work area was added to registration after these
                 members had already signed up, so for them this form is the only
                 place it can ever be filled in. */}
-            <p style={{fontWeight:700,fontSize:14,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em',marginTop:6}}>Your Commute</p>
+            <p style={{fontWeight:700,fontSize:15,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em',marginTop:6}}>Your Commute</p>
             <div>
-              <label style={{display:'block',fontSize:14,fontWeight:600,color:TEXT,marginBottom:6}}>City</label>
+              <label style={{display:'block',fontSize:15,fontWeight:600,color:TEXT,marginBottom:6}}>City</label>
               <select value={form.city} onChange={e=>{set('city',e.target.value);set('area','');set('workArea','')}}
-                style={{width:'100%',padding:'12px 14px',borderRadius:10,fontSize:15,border:`1.5px solid ${BORDER}`,outline:'none',color:TEXT,background:CARD,fontFamily:'inherit',boxSizing:'border-box',cursor:'pointer'}}>
+                style={{width:'100%',padding:'12px 14px',borderRadius:10,fontSize:16,border:`1.5px solid ${BORDER}`,outline:'none',color:TEXT,background:CARD,fontFamily:'inherit',boxSizing:'border-box',cursor:'pointer'}}>
                 <option value="">Select city</option>
                 {CITIES.map(c=><option key={c} value={c}>{c}</option>)}
               </select>
@@ -493,46 +493,46 @@ export default function Profile(){
             {[['Home Area','area','Enter your area / neighbourhood','Select area in Lagos'],
               ['Work / Office Area','workArea','Where do you work / commute to?','Select work area in Lagos']].map(([label,key,ph,selectPh])=>(
               <div key={key}>
-                <label style={{display:'block',fontSize:14,fontWeight:600,color:TEXT,marginBottom:6}}>{label}</label>
+                <label style={{display:'block',fontSize:15,fontWeight:600,color:TEXT,marginBottom:6}}>{label}</label>
                 {form.city==='Lagos' ? (
                   <select value={form[key]} onChange={e=>set(key,e.target.value)}
-                    style={{width:'100%',padding:'12px 14px',borderRadius:10,fontSize:15,border:`1.5px solid ${BORDER}`,outline:'none',color:TEXT,background:CARD,fontFamily:'inherit',boxSizing:'border-box',cursor:'pointer'}}>
+                    style={{width:'100%',padding:'12px 14px',borderRadius:10,fontSize:16,border:`1.5px solid ${BORDER}`,outline:'none',color:TEXT,background:CARD,fontFamily:'inherit',boxSizing:'border-box',cursor:'pointer'}}>
                     <option value="">{selectPh}</option>
                     {LAGOS_AREAS.map(a=><option key={a} value={a}>{a}</option>)}
                   </select>
                 ) : (
                   <input value={form[key]} onChange={e=>set(key,e.target.value)} placeholder={ph}
-                    style={{width:'100%',padding:'12px 14px',borderRadius:10,fontSize:15,border:`1.5px solid ${BORDER}`,outline:'none',color:TEXT,background:CARD,fontFamily:'inherit',boxSizing:'border-box'}}
+                    style={{width:'100%',padding:'12px 14px',borderRadius:10,fontSize:16,border:`1.5px solid ${BORDER}`,outline:'none',color:TEXT,background:CARD,fontFamily:'inherit',boxSizing:'border-box'}}
                     onFocus={e=>e.target.style.borderColor=MOSS} onBlur={e=>e.target.style.borderColor=BORDER}/>
                 )}
               </div>
             ))}
-            <p style={{fontSize:13.5,color:MUTED,marginTop:-4,lineHeight:1.45}}>
+            <p style={{fontSize:15,color:MUTED,marginTop:-4,lineHeight:1.45}}>
               Where you travel between. It helps us match you to the right routes.
             </p>
-            <p style={{fontWeight:700,fontSize:14,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em',marginTop:6}}>Bank Account Details (For Withdrawals)</p>
+            <p style={{fontWeight:700,fontSize:15,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em',marginTop:6}}>Bank Account Details (For Withdrawals)</p>
             <div>
-              <label style={{display:'block',fontSize:14,fontWeight:600,color:TEXT,marginBottom:6}}>Bank Name</label>
+              <label style={{display:'block',fontSize:15,fontWeight:600,color:TEXT,marginBottom:6}}>Bank Name</label>
               <input value={form.bankName} onChange={e=>set('bankName',e.target.value)} placeholder="e.g. GTBank"
-                style={{width:'100%',padding:'12px 14px',borderRadius:10,fontSize:15,border:`1.5px solid ${BORDER}`,outline:'none',color:TEXT,background:CARD,fontFamily:'inherit',boxSizing:'border-box'}}
+                style={{width:'100%',padding:'12px 14px',borderRadius:10,fontSize:16,border:`1.5px solid ${BORDER}`,outline:'none',color:TEXT,background:CARD,fontFamily:'inherit',boxSizing:'border-box'}}
                 onFocus={e=>e.target.style.borderColor=MOSS} onBlur={e=>e.target.style.borderColor=BORDER}/>
             </div>
             <div>
-              <label style={{display:'block',fontSize:14,fontWeight:600,color:TEXT,marginBottom:6}}>Account Number</label>
+              <label style={{display:'block',fontSize:15,fontWeight:600,color:TEXT,marginBottom:6}}>Account Number</label>
               <input value={form.bankAccountNumber} inputMode="numeric" maxLength={10} placeholder="10-digit account number"
                 onChange={e=>set('bankAccountNumber',e.target.value.replace(/\D/g,''))}
-                style={{width:'100%',padding:'12px 14px',borderRadius:10,fontSize:15,border:`1.5px solid ${BORDER}`,outline:'none',color:TEXT,background:CARD,fontFamily:'inherit',boxSizing:'border-box'}}
+                style={{width:'100%',padding:'12px 14px',borderRadius:10,fontSize:16,border:`1.5px solid ${BORDER}`,outline:'none',color:TEXT,background:CARD,fontFamily:'inherit',boxSizing:'border-box'}}
                 onFocus={e=>e.target.style.borderColor=MOSS} onBlur={e=>e.target.style.borderColor=BORDER}/>
             </div>
           </div>
           {saveError&&(
             <div style={{display:'flex',gap:8,padding:'10px 14px',background:DANGER_SOFT,border:'1px solid #fca5a5',borderRadius:10,marginTop:14}}>
               <AlertCircle size={14} color="#ef4444" style={{flexShrink:0,marginTop:1}}/>
-              <p style={{fontSize:14,color:'#ef4444'}}>{saveError}</p>
+              <p style={{fontSize:15,color:'#ef4444'}}>{saveError}</p>
             </div>
           )}
           <button type="submit" disabled={saving}
-            style={{marginTop:16,width:'100%',padding:'13px',borderRadius:50,background:saving?BORDER:NEON,color:saving?MUTED:ON_NEON,fontWeight:800,fontSize:15,border:'none',cursor:saving?'not-allowed':'pointer',fontFamily:'inherit'}}>
+            style={{marginTop:16,width:'100%',padding:'13px',borderRadius:50,background:saving?BORDER:NEON,color:saving?MUTED:ON_NEON,fontWeight:800,fontSize:16,border:'none',cursor:saving?'not-allowed':'pointer',fontFamily:'inherit'}}>
             {saving?'Saving…':'Save Changes'}
           </button>
         </form>
@@ -541,7 +541,7 @@ export default function Profile(){
       {/* Info */}
       <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,overflow:'hidden',marginBottom:16,boxShadow:'0 2px 8px rgba(36,56,0,0.06)'}}>
         <div style={{padding:'14px 20px',borderBottom:`1px solid ${BORDER}`}}>
-          <p style={{fontWeight:700,fontSize:14,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em'}}>Account Info</p>
+          <p style={{fontWeight:700,fontSize:15,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em'}}>Account Info</p>
         </div>
         {[{icon:<Phone size={16} color={ON_NEON}/>,label:'Phone',value:user?.phone||'—'},
           {icon:<Mail size={16} color={ON_NEON}/>,label:'Email',value:user?.email||'—'},
@@ -552,8 +552,8 @@ export default function Profile(){
             onMouseLeave={e=>e.currentTarget.style.background=CARD}>
             <div style={{width:36,height:36,borderRadius:10,background:NEON,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{item.icon}</div>
             <div style={{flex:1}}>
-              <p style={{fontSize:13.5,color:MUTED,fontWeight:500}}>{item.label}</p>
-              <p style={{fontSize:14.5,color:TEXT,fontWeight:600,marginTop:1,textTransform:item.cap?'capitalize':'none'}}>{item.value}</p>
+              <p style={{fontSize:15,color:MUTED,fontWeight:500}}>{item.label}</p>
+              <p style={{fontSize:15.5,color:TEXT,fontWeight:600,marginTop:1,textTransform:item.cap?'capitalize':'none'}}>{item.value}</p>
             </div>
           </div>
         ))}
@@ -570,8 +570,8 @@ export default function Profile(){
             onMouseLeave={e=>e.currentTarget.style.background=CARD}>
             <div style={{width:36,height:36,borderRadius:10,background:NEON,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,color:ON_NEON}}>{item.icon}</div>
             <div style={{flex:1}}>
-              <p style={{fontSize:14.5,fontWeight:600,color:TEXT}}>{item.label}</p>
-              <p style={{fontSize:13.5,color:MUTED,marginTop:1}}>{item.desc}</p>
+              <p style={{fontSize:15.5,fontWeight:600,color:TEXT}}>{item.label}</p>
+              <p style={{fontSize:15,color:MUTED,marginTop:1}}>{item.desc}</p>
             </div>
             <ChevronRight size={16} color={MUTED}/>
           </button>
@@ -581,7 +581,7 @@ export default function Profile(){
       {/* Dual-role card */}
       <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,overflow:'hidden',marginBottom:16,boxShadow:'0 2px 8px rgba(36,56,0,0.06)'}}>
         <div style={{padding:'14px 20px',borderBottom:`1px solid ${BORDER}`}}>
-          <p style={{fontWeight:700,fontSize:14,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em'}}>My Roles</p>
+          <p style={{fontWeight:700,fontSize:15,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em'}}>My Roles</p>
         </div>
         {/* Rider row */}
         <div style={{display:'flex',alignItems:'center',gap:14,padding:'14px 20px',borderBottom:`1px solid ${BORDER}`}}>
@@ -589,13 +589,13 @@ export default function Profile(){
             <MapPin size={16} color={ON_NEON}/>
           </div>
           <div style={{flex:1}}>
-            <p style={{fontSize:14.5,color:TEXT,fontWeight:600}}>Rider</p>
-            <p style={{fontSize:13.5,color:MUTED,marginTop:1}}>{user?.canRide?'Active — you can book rides':'Not registered'}</p>
+            <p style={{fontSize:15.5,color:TEXT,fontWeight:600}}>Rider</p>
+            <p style={{fontSize:15,color:MUTED,marginTop:1}}>{user?.canRide?'Active — you can book rides':'Not registered'}</p>
           </div>
-          {user?.canRide&&user?.role==='rider'&&<span style={{fontSize:12.5,fontWeight:700,color:ON_NEON,background:NEON,padding:'3px 10px',borderRadius:50}}>Active</span>}
+          {user?.canRide&&user?.role==='rider'&&<span style={{fontSize:14.5,fontWeight:700,color:ON_NEON,background:NEON,padding:'3px 10px',borderRadius:50}}>Active</span>}
           {user?.canRide&&user?.role!=='rider'&&(
             <button onClick={async()=>{await switchRole('rider');navigate('/book',{replace:true})}}
-              style={{fontSize:13.5,fontWeight:700,color:ON_NEON,background:NEON,padding:'5px 12px',borderRadius:50,border:'none',cursor:'pointer',fontFamily:'inherit'}}>
+              style={{fontSize:15,fontWeight:700,color:ON_NEON,background:NEON,padding:'5px 12px',borderRadius:50,border:'none',cursor:'pointer',fontFamily:'inherit'}}>
               Switch
             </button>
           )}
@@ -606,19 +606,19 @@ export default function Profile(){
             <Car size={16} color={ON_NEON}/>
           </div>
           <div style={{flex:1}}>
-            <p style={{fontSize:14.5,color:TEXT,fontWeight:600}}>Driver</p>
-            <p style={{fontSize:13.5,color:MUTED,marginTop:1}}>{user?.canDrive?'Active — you can accept rides':'Not registered yet'}</p>
+            <p style={{fontSize:15.5,color:TEXT,fontWeight:600}}>Driver</p>
+            <p style={{fontSize:15,color:MUTED,marginTop:1}}>{user?.canDrive?'Active — you can accept rides':'Not registered yet'}</p>
           </div>
-          {user?.canDrive&&user?.role==='driver'&&<span style={{fontSize:12.5,fontWeight:700,color:ON_NEON,background:NEON,padding:'3px 10px',borderRadius:50}}>Active</span>}
+          {user?.canDrive&&user?.role==='driver'&&<span style={{fontSize:14.5,fontWeight:700,color:ON_NEON,background:NEON,padding:'3px 10px',borderRadius:50}}>Active</span>}
           {user?.canDrive&&user?.role!=='driver'&&(
             <button onClick={async()=>{await switchRole('driver');navigate('/driver',{replace:true})}}
-              style={{fontSize:13.5,fontWeight:700,color:ON_NEON,background:NEON,padding:'5px 12px',borderRadius:50,border:'none',cursor:'pointer',fontFamily:'inherit'}}>
+              style={{fontSize:15,fontWeight:700,color:ON_NEON,background:NEON,padding:'5px 12px',borderRadius:50,border:'none',cursor:'pointer',fontFamily:'inherit'}}>
               Switch
             </button>
           )}
           {!user?.canDrive&&(
             <button onClick={()=>navigate('/register/driver?add=true')}
-              style={{fontSize:13.5,fontWeight:700,color:ON_ACCENT_FILL,background:ACCENT_FILL,padding:'5px 12px',borderRadius:50,border:'none',cursor:'pointer',fontFamily:'inherit'}}>
+              style={{fontSize:15,fontWeight:700,color:ON_ACCENT_FILL,background:ACCENT_FILL,padding:'5px 12px',borderRadius:50,border:'none',cursor:'pointer',fontFamily:'inherit'}}>
               + Add
             </button>
           )}
@@ -627,7 +627,7 @@ export default function Profile(){
 
       {/* Logout */}
       <button onClick={logout}
-        style={{width:'100%',padding:'14px',borderRadius:14,background:DANGER_SOFT,border:'1.5px solid #fca5a5',color:'#ef4444',fontWeight:700,fontSize:15,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:10,fontFamily:'inherit'}}>
+        style={{width:'100%',padding:'14px',borderRadius:14,background:DANGER_SOFT,border:'1.5px solid #fca5a5',color:'#ef4444',fontWeight:700,fontSize:16,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:10,fontFamily:'inherit'}}>
         <LogOut size={18}/>Sign Out
       </button>
     </AppLayout>

@@ -65,7 +65,7 @@ export default function TripHistory(){
         ].map(([l, v]) => (
           <div key={l} style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:14,padding:'18px 8px',textAlign:'center',boxShadow:'0 2px 8px rgba(36,56,0,0.06)',minWidth:0,overflow:'hidden'}}>
             <p style={{fontWeight:900,fontSize:'clamp(0.95rem,4vw,1.6rem)',color:OLIVE,letterSpacing:'-0.03em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{loading ? '—' : v}</p>
-            <p style={{fontSize:12.5,color:MUTED,fontWeight:600,marginTop:2}}>{l}</p>
+            <p style={{fontSize:14.5,color:MUTED,fontWeight:600,marginTop:2}}>{l}</p>
           </div>
         ))}
       </div>
@@ -74,7 +74,7 @@ export default function TripHistory(){
       <div style={{display:'flex',gap:8,marginBottom:16,overflowX:'auto',paddingBottom:4}}>
         {FILTERS.map(f => (
           <button key={f} onClick={() => setFilter(f)}
-            style={{padding:'8px 18px',borderRadius:50,fontSize:14,fontWeight:700,border:`1.5px solid ${filter===f?NEON:BORDER}`,background:filter===f?NEON:CARD,color:filter===f? ON_NEON :MOSS,cursor:'pointer',whiteSpace:'nowrap',flexShrink:0,transition:'all 0.15s'}}>
+            style={{padding:'8px 18px',borderRadius:50,fontSize:15,fontWeight:700,border:`1.5px solid ${filter===f?NEON:BORDER}`,background:filter===f?NEON:CARD,color:filter===f? ON_NEON :MOSS,cursor:'pointer',whiteSpace:'nowrap',flexShrink:0,transition:'all 0.15s'}}>
             {f}
           </button>
         ))}
@@ -83,18 +83,18 @@ export default function TripHistory(){
       {/* List */}
       <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:16,overflow:'hidden',boxShadow:'0 2px 8px rgba(36,56,0,0.06)'}}>
         <div style={{padding:'14px 20px',borderBottom:`1px solid ${BORDER}`,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-          <p style={{fontWeight:700,fontSize:14,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em'}}>Trips</p>
-          {!loading && <span style={{fontSize:13.5,color:MUTED}}>{filtered.length} result{filtered.length!==1?'s':''}</span>}
+          <p style={{fontWeight:700,fontSize:15,color:MOSS,textTransform:'uppercase',letterSpacing:'0.06em'}}>Trips</p>
+          {!loading && <span style={{fontSize:15,color:MUTED}}>{filtered.length} result{filtered.length!==1?'s':''}</span>}
         </div>
 
         {loading && (
-          <div style={{padding:40,textAlign:'center',color:MUTED,fontSize:14.5}}>Loading trip history…</div>
+          <div style={{padding:40,textAlign:'center',color:MUTED,fontSize:15.5}}>Loading trip history…</div>
         )}
         {!loading && error && (
-          <div style={{padding:40,textAlign:'center',color:'#ef4444',fontSize:14.5}}>{error}</div>
+          <div style={{padding:40,textAlign:'center',color:'#ef4444',fontSize:15.5}}>{error}</div>
         )}
         {!loading && !error && filtered.length === 0 && (
-          <div style={{padding:40,textAlign:'center',color:MUTED,fontSize:14.5}}>
+          <div style={{padding:40,textAlign:'center',color:MUTED,fontSize:15.5}}>
             {trips.length === 0 ? 'No trips yet — book your first ride!' : 'No trips match this filter.'}
           </div>
         )}
@@ -115,21 +115,21 @@ export default function TripHistory(){
                     : <MapPin  size={18} color={trip.status==='cancelled'?'#ef4444':OLIVE}/>}
               </div>
               <div style={{flex:1,minWidth:0}}>
-                <p style={{color:TEXT,fontWeight:600,fontSize:14.5,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{trip.pickup} → {trip.destination}</p>
+                <p style={{color:TEXT,fontWeight:600,fontSize:15.5,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{trip.pickup} → {trip.destination}</p>
                 <div style={{display:'flex',alignItems:'center',gap:6,marginTop:2}}>
-                  <span style={{fontSize:13.5,color:MUTED}}>{trip.date}</span>
+                  <span style={{fontSize:15,color:MUTED}}>{trip.date}</span>
                   {trip.rating && <>
-                    <span style={{color:MUTED,fontSize:13.5}}>·</span>
+                    <span style={{color:MUTED,fontSize:15}}>·</span>
                     <Star size={11} color='#f59e0b' fill='#f59e0b'/>
-                    <span style={{fontSize:13.5,color:MUTED}}>{trip.rating}</span>
+                    <span style={{fontSize:15,color:MUTED}}>{trip.rating}</span>
                   </>}
                 </div>
               </div>
               <div style={{textAlign:'right',flexShrink:0}}>
-                <p style={{fontWeight:800,fontSize:14.5,color:trip.status==='cancelled'?'#ef4444':TEXT}}>
+                <p style={{fontWeight:800,fontSize:15.5,color:trip.status==='cancelled'?'#ef4444':TEXT}}>
                   {trip.fare > 0 ? `₦${trip.fare.toLocaleString()}` : '—'}
                 </p>
-                <span style={{fontSize:12.5,fontWeight:700,padding:'2px 8px',borderRadius:20,marginTop:2,display:'inline-block',background:ss.bg,color:ss.color,border:`1px solid ${ss.border}`,textTransform:'uppercase',letterSpacing:'0.04em'}}>
+                <span style={{fontSize:14.5,fontWeight:700,padding:'2px 8px',borderRadius:20,marginTop:2,display:'inline-block',background:ss.bg,color:ss.color,border:`1px solid ${ss.border}`,textTransform:'uppercase',letterSpacing:'0.04em'}}>
                   {STATUS_LABEL[trip.status] || trip.status}
                 </span>
               </div>
