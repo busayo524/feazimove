@@ -1,4 +1,4 @@
-import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, ADMIN_BG as BG, NEON, ACCENT as OLIVE, ON_NEON, CHIP, DANGER_SOFT } from '../../theme/palette'
+import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, ADMIN_BG as BG, NEON, ACCENT as OLIVE, ON_NEON, CHIP, DANGER_SOFT, INFO_SOFT_2, INFO_TEXT, OK_SOFT_2, OK_TEXT } from '../../theme/palette'
 import React, { useEffect, useState } from 'react'
 import AdminLayout from '../../components/AdminLayout'
 import { api } from '../../services/api'
@@ -28,7 +28,7 @@ function FareCell({ route, field, onSave }) {
   if (!editing) {
     return (
       <button onClick={() => setEditing(true)}
-        style={{ background:unpriced?'#fef3c7':'none', border:unpriced?'1px dashed #d97706':'none', padding:'4px 8px', borderRadius:6, cursor:'pointer', fontWeight:700, fontSize:16, color:unpriced?'#b45309':TEXT, fontFamily:'inherit' }}
+        style={{ background:unpriced?INFO_SOFT_2:'none', border:unpriced?'1px dashed #d97706':'none', padding:'4px 8px', borderRadius:6, cursor:'pointer', fontWeight:700, fontSize:16, color:unpriced?INFO_TEXT:TEXT, fontFamily:'inherit' }}
         onMouseEnter={e => { if(!unpriced) e.currentTarget.style.background = BG }}
         onMouseLeave={e => { if(!unpriced) e.currentTarget.style.background = 'none' }}>
         {unpriced ? 'Set price' : fmt(route[field])}
@@ -41,7 +41,7 @@ function FareCell({ route, field, onSave }) {
       <input autoFocus type="number" min="0" value={value} onChange={e => setValue(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false) }}
         style={{ width:70, padding:'4px 6px', borderRadius:6, border:`1.5px solid ${OLIVE}`, fontSize:16, fontFamily:'inherit', background:CARD, color:TEXT }}/>
-      <button onClick={save} disabled={saving} aria-label="Save" style={{ background:'none', border:'none', cursor:'pointer', color:'#15803d' }}>
+      <button onClick={save} disabled={saving} aria-label="Save" style={{ background:'none', border:'none', cursor:'pointer', color:OK_TEXT }}>
         <Check size={14}/>
       </button>
     </div>
@@ -182,13 +182,13 @@ export default function AdminPricing() {
                 </td>
                 <td style={{ padding:'12px 16px' }}>
                   <span style={{ fontSize:15, fontWeight:700, padding:'3px 10px', borderRadius:20,
-                    background: r.isActive ? '#dcfce7' : CHIP, color: r.isActive ? '#15803d' : MUTED }}>
+                    background: r.isActive ? OK_SOFT_2 : CHIP, color: r.isActive ? OK_TEXT : MUTED }}>
                     {r.isActive ? 'Active' : 'Inactive'}
                   </span>
                 </td>
                 <td style={{ padding:'12px 16px', textAlign:'right' }}>
                   <button onClick={() => toggleActive(r)}
-                    style={{ background:'none', border:'none', cursor:'pointer', color: r.isActive ? '#ef4444' : '#15803d', fontWeight:600, fontSize:15.5, fontFamily:'inherit' }}>
+                    style={{ background:'none', border:'none', cursor:'pointer', color: r.isActive ? '#ef4444' : OK_TEXT, fontWeight:600, fontSize:15.5, fontFamily:'inherit' }}>
                     {r.isActive ? 'Deactivate' : 'Activate'}
                   </button>
                 </td>

@@ -1,4 +1,4 @@
-import { CARD, BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, CHIP, DANGER_SOFT } from '../../theme/palette'
+import { CARD, BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, CHIP, DANGER_SOFT, INFO_SOFT } from '../../theme/palette'
 import React, { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
@@ -40,8 +40,8 @@ function rideStatusPill(status) {
   const tints = {
     completed: { bg:'#ecfdf3', fg:'#027a48', bd:'#abefc6' },
     ongoing:   { bg:'#eff8ff', fg:'#175cd3', bd:'#b2ddff' },
-    pending:   { bg:'#fffaeb', fg:'#b54708', bd:'#fedf89' },
-    cancelled: { bg:'#fef3f2', fg:'#b42318', bd:'#fecdca' },
+    pending:   { bg:INFO_SOFT, fg:'#b54708', bd:'#fedf89' },
+    cancelled: { bg:DANGER_SOFT, fg:'#b42318', bd:'#fecdca' },
   }
   return { label: STATUS_LABELS[bucket], ...tints[bucket] }
 }
@@ -314,17 +314,17 @@ function alertRows(alerts) {
     ...alerts.delayedRides.map(r => ({
       key: `d-${r.id}`, title: `${r.pickup} → ${r.destination}`,
       sub: [r.riderName, r.driverName].filter(Boolean).join(' · ') + ` · since ${timeOf(r.since)}`,
-      tag: 'Delayed ride', bg:'#fef3f2', fg:'#b42318', bd:'#fecdca',
+      tag: 'Delayed ride', bg:DANGER_SOFT, fg:'#b42318', bd:'#fecdca',
     })),
     ...alerts.unmatchedRequests.map(r => ({
       key: `u-${r.id}`, title: `${r.pickup} → ${r.destination}`,
       sub: `No driver matched · waiting since ${timeOf(r.since)}`,
-      tag: 'Unmatched', bg:'#fffaeb', fg:'#b54708', bd:'#fedf89',
+      tag: 'Unmatched', bg:INFO_SOFT, fg:'#b54708', bd:'#fedf89',
     })),
     ...alerts.lowBalanceRiders.map(u => ({
       key: `l-${u.id}`, title: u.name,
       sub: `Wallet balance ${naira(u.walletBalance)}`,
-      tag: 'Low balance', bg:'#fffaeb', fg:'#b54708', bd:'#fedf89',
+      tag: 'Low balance', bg:INFO_SOFT, fg:'#b54708', bd:'#fedf89',
     })),
   ]
 }

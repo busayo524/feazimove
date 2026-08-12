@@ -72,6 +72,16 @@
      bright patches on a black page — dark mode uses a translucent tint of the
      same hue instead. */
   --fm-danger-soft:   #fef2f2;
+  --fm-ok-soft:       #f0fdf4;
+  --fm-ok-soft-2:     #dcfce7;
+  --fm-ok-border:     #86efac;
+  --fm-ok-text:       #15803d;
+  --fm-info-soft:     #fffbeb;
+  --fm-info-soft-2:   #fef9c3;
+  --fm-info-border:   #fcd34d;
+  --fm-info-text:     #b45309;
+  --fm-danger-border: #fca5a5;
+  --fm-danger-text:   #b91c1c;
   --fm-warn-soft:     #fff7ed;
   --fm-warn-border:   #fdba74;
   --fm-chip:          #f3f4f6;
@@ -136,6 +146,16 @@
   --fm-on-neon-hard:  #0a0a0a;   /* deliberately unchanged */
 
   --fm-danger-soft:   rgba(239,68,68,0.16);
+  --fm-ok-soft:       rgba(34,197,94,0.15);
+  --fm-ok-soft-2:     rgba(34,197,94,0.22);
+  --fm-ok-border:     rgba(134,239,172,0.40);
+  --fm-ok-text:       #6ee7a0;
+  --fm-info-soft:     rgba(251,191,36,0.14);
+  --fm-info-soft-2:   rgba(251,191,36,0.20);
+  --fm-info-border:   rgba(252,211,77,0.40);
+  --fm-info-text:     #fcd34d;
+  --fm-danger-border: rgba(252,165,165,0.40);
+  --fm-danger-text:   #fca5a5;
   --fm-warn-soft:     rgba(249,115,22,0.16);
   --fm-warn-border:   rgba(253,186,116,0.45);
   --fm-chip:          #2a2a2e;

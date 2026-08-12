@@ -1,4 +1,4 @@
-import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, ADMIN_BG as BG, NEON, ACCENT as OLIVE, DANGER_SOFT, ON_NEON, ACCENT_FILL, ON_ACCENT_FILL } from '../../theme/palette'
+import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, ADMIN_BG as BG, NEON, ACCENT as OLIVE, DANGER_SOFT, ON_NEON, ACCENT_FILL, ON_ACCENT_FILL, DANGER_TEXT, INFO_SOFT_2, INFO_TEXT } from '../../theme/palette'
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
@@ -18,8 +18,8 @@ const ACTIONS = [
 ]
 
 const ICON = {
-  'KYC Revealed':          { icon: <Eye size={14}/>,        bg:'#fef3c7', fg:'#92400e' },
-  'KYC Reveal Denied':     { icon: <EyeOff size={14}/>,     bg:DANGER_SOFT, fg:'#b91c1c' },
+  'KYC Revealed':          { icon: <Eye size={14}/>,        bg:INFO_SOFT_2, fg:INFO_TEXT },
+  'KYC Reveal Denied':     { icon: <EyeOff size={14}/>,     bg:DANGER_SOFT, fg:DANGER_TEXT },
   'Authenticator Enabled': { icon: <ShieldCheck size={14}/>,bg:'#f3fbd3', fg:'#3f6212' },
   'Authenticator Removed': { icon: <KeyRound size={14}/>,   bg:'#f5f7f2', fg:'#6b7280' },
 }
@@ -125,7 +125,7 @@ export default function AdminKycAccessLog() {
                         {/* The snapshot is why this still names someone after
                             the admin account itself has been removed. */}
                         {e.actorDeleted && (
-                          <p style={{ fontSize:15, color:'#b45309', fontWeight:600 }}>account deleted</p>
+                          <p style={{ fontSize:15, color:INFO_TEXT, fontWeight:600 }}>account deleted</p>
                         )}
                       </td>
                       <td style={{ padding:'11px 14px' }}>
@@ -141,7 +141,7 @@ export default function AdminKycAccessLog() {
                           <p style={{ fontSize:15, color:MUTED }}>{e.targetEmail}</p>
                         )}
                         {e.targetDeleted && (
-                          <p style={{ fontSize:15, color:'#b45309', fontWeight:600 }}>account deleted</p>
+                          <p style={{ fontSize:15, color:INFO_TEXT, fontWeight:600 }}>account deleted</p>
                         )}
                       </td>
                       <td style={{ padding:'11px 14px', color:MUTED, fontSize:15.5 }}>

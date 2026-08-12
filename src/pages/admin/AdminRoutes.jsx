@@ -1,4 +1,4 @@
-import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, DANGER_SOFT } from '../../theme/palette'
+import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, DANGER_SOFT, INFO_TEXT, OK_TEXT } from '../../theme/palette'
 import React, { useEffect, useState } from 'react'
 import AdminLayout from '../../components/AdminLayout'
 import { api } from '../../services/api'
@@ -64,10 +64,10 @@ export default function AdminRoutes() {
                 <td style={{ padding:'12px 16px', color:TEXT }}>{r.timeSlot}</td>
                 <td style={{ padding:'12px 16px', color:TEXT, fontWeight:600 }}>{r.pickup} → {r.dropoff}</td>
                 <td style={{ padding:'12px 16px' }}>
-                  <span style={{ fontWeight:700, color: r.waitingRiders > 0 ? '#b45309' : MUTED }}>{r.waitingRiders}</span>
+                  <span style={{ fontWeight:700, color: r.waitingRiders > 0 ? INFO_TEXT : MUTED }}>{r.waitingRiders}</span>
                 </td>
                 <td style={{ padding:'12px 16px' }}>
-                  <span style={{ fontWeight:700, color: r.liveDrivers > 0 ? '#15803d' : MUTED }}>{r.liveDrivers}</span>
+                  <span style={{ fontWeight:700, color: r.liveDrivers > 0 ? OK_TEXT : MUTED }}>{r.liveDrivers}</span>
                 </td>
                 <td style={{ padding:'12px 16px', color:TEXT }}>{r.seatsAvailable}</td>
               </tr>

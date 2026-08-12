@@ -1,4 +1,4 @@
-import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, NEON, ACCENT as OLIVE, DANGER_SOFT, ON_NEON, ACCENT_FILL, ON_ACCENT_FILL } from '../../theme/palette'
+import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, NEON, ACCENT as OLIVE, DANGER_SOFT, ON_NEON, ACCENT_FILL, ON_ACCENT_FILL, INFO_SOFT, INFO_TEXT, OK_SOFT_2, OK_TEXT } from '../../theme/palette'
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
@@ -178,7 +178,7 @@ export default function AdminPayments() {
               </p>
             ) : data.transactions.map(t => (
               <div key={t.id} style={{ display:'flex', alignItems:'center', gap:14, padding:'12px 18px', borderTop:`1px solid ${BORDER}` }}>
-                <div style={{ width:32, height:32, borderRadius:9, background: t.type==='credit' ? '#dcfce7' : DANGER_SOFT, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <div style={{ width:32, height:32, borderRadius:9, background: t.type==='credit' ? OK_SOFT_2 : DANGER_SOFT, display:'flex', alignItems:'center', justifyContent:'center' }}>
                   {t.type === 'credit' ? <ArrowDownLeft size={15} color="#15803d"/> : <ArrowUpRight size={15} color="#ef4444"/>}
                 </div>
                 <div style={{ flex:1 }}>
@@ -187,11 +187,11 @@ export default function AdminPayments() {
                     {t.userName}
                     {/* The account is gone but the money still moved — say so
                         rather than showing a name that leads nowhere. */}
-                    {t.userDeleted && <span style={{ color:'#b45309', fontWeight:600 }}> · account deleted</span>}
+                    {t.userDeleted && <span style={{ color:INFO_TEXT, fontWeight:600 }}> · account deleted</span>}
                     {' · '}{new Date(t.date).toLocaleString('en-NG', { timeZone:'Africa/Lagos' })}
                   </p>
                 </div>
-                <p style={{ fontWeight:700, fontSize:15.5, color: t.type==='credit' ? '#15803d' : '#ef4444' }}>
+                <p style={{ fontWeight:700, fontSize:15.5, color: t.type==='credit' ? OK_TEXT : '#ef4444' }}>
                   {t.type==='credit' ? '+' : '-'}₦{t.amount.toLocaleString()}
                 </p>
               </div>
@@ -234,8 +234,8 @@ function NameMismatchModal({ data, busy, onClose, onConfirm }) {
           The bank reports this account as <strong style={{ color:TEXT }}>{data.bankAccountName}</strong>,
           but the registered holder is <strong style={{ color:TEXT }}>{data.registeredName}</strong>.
         </p>
-        <div style={{ background:'#fffbeb', border:'1px solid #fcd34d', borderRadius:10, padding:'10px 13px', marginBottom:14 }}>
-          <p style={{ fontSize:15.5, color:'#92400e', lineHeight:1.5 }}>
+        <div style={{ background:INFO_SOFT, border:'1px solid #fcd34d', borderRadius:10, padding:'10px 13px', marginBottom:14 }}>
+          <p style={{ fontSize:15.5, color:INFO_TEXT, lineHeight:1.5 }}>
             You’re on Anchor <strong>sandbox</strong>, which invents a new random account name on every
             lookup — so this check can never pass here. Overriding is safe for testing. It will not be
             offered once live keys are in place.
@@ -251,7 +251,7 @@ function NameMismatchModal({ data, busy, onClose, onConfirm }) {
         <div style={{ display:'flex', gap:10 }}>
           <button onClick={() => onConfirm(reason.trim())} disabled={busy || reason.trim().length < 3}
             style={{ flex:1, padding:'11px', borderRadius:10, border:'none', fontWeight:800, fontSize:16, fontFamily:'inherit',
-              background:(busy || reason.trim().length < 3) ? BORDER : '#b45309',
+              background:(busy || reason.trim().length < 3) ? BORDER : INFO_TEXT,
               color:(busy || reason.trim().length < 3) ? MUTED : '#fff',
               cursor:(busy || reason.trim().length < 3) ? 'not-allowed' : 'pointer' }}>
             {busy ? 'Approving…' : 'Override & approve'}

@@ -1,4 +1,4 @@
-import { CARD, BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, DANGER_SOFT } from '../../theme/palette'
+import { CARD, BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, DANGER_SOFT, INFO_TEXT } from '../../theme/palette'
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
@@ -123,7 +123,7 @@ export default function AdminRiderDetail() {
           ) : rider.ratings.map((r, i) => (
             <div key={r.id} style={{ padding:'11px 0', borderTop: i > 0 ? `1px solid ${BORDER}` : 'none' }}>
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12 }}>
-                <span style={{ fontSize:16, color:'#b45309', letterSpacing:1 }}>
+                <span style={{ fontSize:16, color:INFO_TEXT, letterSpacing:1 }}>
                   {'★'.repeat(r.stars)}<span style={{ color:'#e5e7eb' }}>{'★'.repeat(5 - r.stars)}</span>
                 </span>
                 <span style={{ fontSize:15.5, color:MUTED, flexShrink:0 }}>{new Date(r.date).toLocaleDateString()}</span>

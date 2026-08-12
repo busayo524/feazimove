@@ -222,7 +222,7 @@ router.get('/riders', async (req, res, next) => {
   try {
     const search = `%${(req.query.search || '').trim()}%`
     const result = await query(
-      `SELECT u.id, u.name, u.email, u.phone, u.wallet_balance, u.is_active, u.created_at,
+      `SELECT u.id, u.name, u.email, u.phone, u.wallet_balance, u.is_active, u.is_pending, u.created_at,
               (SELECT ROUND(AVG(stars)::numeric, 2) FROM ratings rt WHERE rt.ratee_id = u.id) AS rating,
               (SELECT COUNT(*) FROM rides r WHERE r.rider_id = u.id) AS trip_count,
               (SELECT MAX(created_at) FROM rides r WHERE r.rider_id = u.id) AS last_ride
@@ -236,6 +236,7 @@ router.get('/riders', async (req, res, next) => {
       riders: result.rows.map(r => ({
         id: r.id, name: r.name, email: r.email, phone: r.phone,
         walletBalance: fmt(r.wallet_balance), rating: r.rating, isActive: r.is_active,
+        isPending: r.is_pending,
         tripCount: parseInt(r.trip_count, 10),
         lastRide: r.last_ride,
         joinedAt: r.created_at,
@@ -249,8 +250,8 @@ router.get('/drivers', async (req, res, next) => {
   try {
     const search = `%${(req.query.search || '').trim()}%`
     const result = await query(
-      `SELECT u.id, u.name, u.email, u.phone, u.wallet_balance, u.is_active, u.is_online,
-              u.vehicle_make, u.vehicle_model, u.plate_number, u.created_at,
+      `SELECT u.id, u.name, u.email, u.phone, u.wallet_balance, u.is_active, u.is_pending, u.is_online,
+              u.vehicle_make, u.vehicle_model, u.plate_number, u.role, u.can_ride, u.created_at,
               (SELECT ROUND(AVG(stars)::numeric, 2) FROM ratings rt WHERE rt.ratee_id = u.id) AS rating,
               (SELECT COUNT(*) FROM rides r WHERE r.driver_id = u.id AND r.status = 'completed') AS trip_count,
               (SELECT COUNT(*) FROM rides r WHERE r.driver_id = u.id AND r.status = 'completed' AND r.completed_at >= CURRENT_DATE) AS trips_today
@@ -264,7 +265,10 @@ router.get('/drivers', async (req, res, next) => {
       drivers: result.rows.map(r => ({
         id: r.id, name: r.name, email: r.email, phone: r.phone,
         walletBalance: fmt(r.wallet_balance), rating: r.rating,
-        isActive: r.is_active, isOnline: r.is_online,
+        isActive: r.is_active, isPending: r.is_pending, isOnline: r.is_online,
+        // A rider who also holds driver access shows up here on can_drive.
+        // Saying so beats leaving a driver row with no vehicle unexplained.
+        alsoRider: r.can_ride === true && r.role === 'rider',
         vehicle: [r.vehicle_make, r.vehicle_model].filter(Boolean).join(' ') || null,
         plateNumber: r.plate_number,
         tripCount: parseInt(r.trip_count, 10),

@@ -1,4 +1,4 @@
-import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, NEON, ACCENT as OLIVE, DANGER_SOFT, ON_NEON } from '../../theme/palette'
+import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, NEON, ACCENT as OLIVE, DANGER_SOFT, ON_NEON, INFO_SOFT_2, INFO_TEXT, OK_SOFT, OK_SOFT_2, OK_TEXT } from '../../theme/palette'
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
@@ -49,9 +49,9 @@ export default function AdminSettings() {
   const content = (
     <div style={{ maxWidth: 440 }}>
       {forced && (
-        <div style={{ display:'flex', gap:10, padding:'12px 16px', background:'#fef9c3', border:'1px solid #fde68a', borderRadius:10, marginBottom:20 }}>
+        <div style={{ display:'flex', gap:10, padding:'12px 16px', background:INFO_SOFT_2, border:'1px solid #fde68a', borderRadius:10, marginBottom:20 }}>
           <Lock size={16} color="#854d0e" style={{ flexShrink:0, marginTop:1 }}/>
-          <p style={{ fontSize:16, color:'#854d0e' }}>You're using a temporary password. Set a new one to continue.</p>
+          <p style={{ fontSize:16, color:INFO_TEXT }}>You're using a temporary password. Set a new one to continue.</p>
         </div>
       )}
 
@@ -79,9 +79,9 @@ export default function AdminSettings() {
             </div>
           )}
           {success && (
-            <div style={{ display:'flex', gap:8, padding:'10px 14px', background:'#dcfce7', border:'1px solid #86efac', borderRadius:10, marginBottom:14 }}>
+            <div style={{ display:'flex', gap:8, padding:'10px 14px', background:OK_SOFT_2, border:'1px solid #86efac', borderRadius:10, marginBottom:14 }}>
               <CheckCircle size={14} color="#15803d" style={{ flexShrink:0, marginTop:1 }}/>
-              <p style={{ fontSize:16, color:'#15803d' }}>Password updated.</p>
+              <p style={{ fontSize:16, color:OK_TEXT }}>Password updated.</p>
             </div>
           )}
 
@@ -193,9 +193,9 @@ function AuthenticatorPanel() {
       </p>
 
       {notice && (
-        <div style={{ display:'flex', gap:8, padding:'10px 14px', background:'#f0fdf4', border:'1px solid #86efac', borderRadius:10, marginBottom:14 }}>
+        <div style={{ display:'flex', gap:8, padding:'10px 14px', background:OK_SOFT, border:'1px solid #86efac', borderRadius:10, marginBottom:14 }}>
           <CheckCircle size={14} color="#15803d" style={{ flexShrink:0, marginTop:1 }}/>
-          <p style={{ fontSize:16, color:'#15803d' }}>{notice}</p>
+          <p style={{ fontSize:16, color:OK_TEXT }}>{notice}</p>
         </div>
       )}
       {error && (
@@ -206,7 +206,7 @@ function AuthenticatorPanel() {
       )}
 
       {!state.vaultConfigured && (
-        <p style={{ fontSize:16, color:'#b45309', lineHeight:1.5 }}>
+        <p style={{ fontSize:16, color:INFO_TEXT, lineHeight:1.5 }}>
           The KYC vault is not configured on this server, so the authenticator cannot be set up.
           Set <code>KYC_ENCRYPTION_KEY</code> in the backend environment first.
         </p>
@@ -214,7 +214,7 @@ function AuthenticatorPanel() {
 
       {state.vaultConfigured && state.enabled && (
         <>
-          <p style={{ fontSize:16, color:'#15803d', fontWeight:700, marginBottom:14 }}>
+          <p style={{ fontSize:16, color:OK_TEXT, fontWeight:700, marginBottom:14 }}>
             ✓ Active since {new Date(state.enrolledAt).toLocaleDateString('en-NG', { day:'numeric', month:'long', year:'numeric' })}
           </p>
           <p style={{ fontSize:15.5, color:MUTED, marginBottom:10 }}>

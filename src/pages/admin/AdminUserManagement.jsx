@@ -1,4 +1,4 @@
-import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, ADMIN_BG as BG, DANGER_SOFT, ON_NEON } from '../../theme/palette'
+import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, ADMIN_BG as BG, DANGER_SOFT, ON_NEON, INFO_SOFT_2, INFO_TEXT, OK_TEXT } from '../../theme/palette'
 import React, { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
@@ -13,7 +13,7 @@ const GREEN = '#2a6048', NEON = '#ccff00', OLIVE = '#243800'
 const LIME_PILL = { bg:'#f3fbd3', fg:'#3f6212', bd:'#dff0a8' }
 
 const STATUS_MAP = {
-  pending:   { label: 'Pending',   bg: '#fef9c3', fg: '#854d0e' },
+  pending:   { label: 'Pending',   bg: INFO_SOFT_2, fg: INFO_TEXT },
   approved:  { label: 'Approved',  ...LIME_PILL },
   suspended: { label: 'Suspended', bg: DANGER_SOFT, fg: '#dc2626' },
 }
@@ -262,7 +262,7 @@ export default function AdminUserManagement() {
                       {u.role !== 'admin' && !u.isPending && !u.isActive && (
                         <button onClick={() => toggleStatus(u)}
                           style={{ display:'inline-flex', alignItems:'center', gap:6, background:'none', border:'none', cursor:'pointer',
-                            color:'#15803d', fontWeight:600, fontSize:15.5, fontFamily:'inherit', marginRight:10 }}>
+                            color:OK_TEXT, fontWeight:600, fontSize:15.5, fontFamily:'inherit', marginRight:10 }}>
                           <CheckCircle2 size={13}/> Reactivate
                         </button>
                       )}
@@ -317,7 +317,7 @@ function AddUserPanel({ onClose, onCreated }) {
       {created ? (
         <div style={{ display:'flex', alignItems:'center', gap:20, flexWrap:'wrap' }}>
           <div style={{ flex:'1 1 300px', minWidth:0 }}>
-            <p style={{ fontSize:16, color: created.emailSent ? '#15803d' : '#b54708', margin:'0 0 6px', fontWeight:700 }}>
+            <p style={{ fontSize:16, color: created.emailSent ? OK_TEXT : '#b54708', margin:'0 0 6px', fontWeight:700 }}>
               {created.emailSent
                 ? `✓ Welcome email with login details sent to ${created.user.email}`
                 : '⚠ Welcome email could not be sent — share these credentials manually'}

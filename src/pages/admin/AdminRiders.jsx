@@ -1,4 +1,4 @@
-import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, DANGER_SOFT } from '../../theme/palette'
+import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, DANGER_SOFT, INFO_SOFT_2, INFO_TEXT, INFO_BORDER, DANGER_TEXT, DANGER_BORDER } from '../../theme/palette'
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
@@ -74,10 +74,17 @@ export default function AdminRiders() {
                 <td style={{ padding:'12px 16px', color:TEXT }}>₦{r.walletBalance.toLocaleString()}</td>
                 <td style={{ padding:'12px 16px', color:TEXT }}>{r.rating ? `⭐ ${r.rating}` : '—'}</td>
                 <td style={{ padding:'12px 16px' }}>
-                  <span style={{ fontSize:15, fontWeight:700, padding:'3px 10px', borderRadius:20,
-                    background: r.isActive ? '#f3fbd3' : DANGER_SOFT, color: r.isActive ? '#3f6212' : '#ef4444', border: r.isActive ? '1px solid #dff0a8' : '1px solid #fecdca' }}>
-                    {r.isActive ? 'Active' : 'Suspended'}
-                  </span>
+                  {(() => {
+                    // Pending and suspended both sit at is_active = false, but they
+                    // mean opposite things: one is waiting on you, the other you did.
+                    const s = r.isPending ? { bg:INFO_SOFT_2, fg:INFO_TEXT, bd:INFO_BORDER, label:'Pending' }
+                      : r.isActive        ? { bg:'#f3fbd3',   fg:'#3f6212', bd:'#dff0a8',  label:'Active' }
+                      :                     { bg:DANGER_SOFT, fg:DANGER_TEXT, bd:DANGER_BORDER, label:'Suspended' }
+                    return (
+                      <span style={{ fontSize:15, fontWeight:700, padding:'3px 10px', borderRadius:20,
+                        background:s.bg, color:s.fg, border:`1px solid ${s.bd}` }}>{s.label}</span>
+                    )
+                  })()}
                 </td>
                 <td style={{ padding:'12px 16px', color:MUTED, fontSize:16 }}>
                   {r.lastRide ? new Date(r.lastRide).toLocaleDateString() : '—'}

@@ -1,4 +1,4 @@
-import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, ADMIN_BG as BG, NEON, ACCENT as OLIVE, DANGER_SOFT, ON_NEON, ACCENT_FILL, ON_ACCENT_FILL } from '../../theme/palette'
+import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, ADMIN_BG as BG, NEON, ACCENT as OLIVE, DANGER_SOFT, ON_NEON, ACCENT_FILL, ON_ACCENT_FILL, DANGER_TEXT, INFO_SOFT_2, INFO_TEXT } from '../../theme/palette'
 import React, { useEffect, useState } from 'react'
 import AdminLayout from '../../components/AdminLayout'
 import { api } from '../../services/api'
@@ -15,7 +15,7 @@ const FILTERS = [
 ]
 
 const STATUS_STYLE = {
-  new:     { bg: '#fef9c3', fg: '#854d0e', label: 'New' },
+  new:     { bg: INFO_SOFT_2, fg: INFO_TEXT, label: 'New' },
   read:    { bg: '#e0f2fe', fg: '#075985', label: 'Read' },
   handled: { bg: '#f3fbd3', fg: '#3f6212', label: 'Handled' },
 }
@@ -111,7 +111,7 @@ export default function AdminFeedback() {
                       {!m.emailed && (
                         <span title="The notification email to support did not send — the message is still saved here."
                           style={{ display:'inline-flex', alignItems:'center', gap:4, padding:'2px 8px', borderRadius:50,
-                            fontSize:15, fontWeight:700, background:DANGER_SOFT, color:'#b91c1c' }}>
+                            fontSize:15, fontWeight:700, background:DANGER_SOFT, color:DANGER_TEXT }}>
                           <MailWarning size={11}/> Not emailed
                         </span>
                       )}

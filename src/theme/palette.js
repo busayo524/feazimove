@@ -38,6 +38,19 @@ export const SB_ACTIVE    = 'var(--fm-sb-active)'
 export const SB_ACTIVE_BG = 'var(--fm-sb-active-bg)'
 export const DANGER_SOFT = 'var(--fm-danger-soft)'  // debit / error wash
 export const CHIP        = 'var(--fm-chip)'         // neutral pill background
+
+// Status tints. Always take the ink token with the surface token — a dark-green
+// label on a dark-green panel is exactly how the Identity Verified box went blank.
+export const OK_SOFT      = 'var(--fm-ok-soft)'
+export const OK_SOFT_2    = 'var(--fm-ok-soft-2)'
+export const OK_BORDER    = 'var(--fm-ok-border)'
+export const OK_TEXT      = 'var(--fm-ok-text)'
+export const INFO_SOFT    = 'var(--fm-info-soft)'
+export const INFO_SOFT_2  = 'var(--fm-info-soft-2)'
+export const INFO_BORDER  = 'var(--fm-info-border)'
+export const INFO_TEXT    = 'var(--fm-info-text)'
+export const DANGER_BORDER= 'var(--fm-danger-border)'
+export const DANGER_TEXT  = 'var(--fm-danger-text)'
 export const WARN_SOFT   = 'var(--fm-warn-soft)'    // caution wash
 export const WARN_BORDER = 'var(--fm-warn-border)'
 

@@ -1,4 +1,4 @@
-import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, DANGER_SOFT } from '../../theme/palette'
+import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, DANGER_SOFT, OK_TEXT, INFO_TEXT, DANGER_TEXT } from '../../theme/palette'
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
@@ -77,12 +77,17 @@ export default function AdminDrivers() {
                 <td style={{ padding:'12px 16px', color:TEXT }}>₦{d.walletBalance.toLocaleString()}</td>
                 <td style={{ padding:'12px 16px', color:TEXT }}>{d.rating ? `⭐ ${d.rating}` : '—'}</td>
                 <td style={{ padding:'12px 16px' }}>
-                  <span style={{ display:'inline-flex', alignItems:'center', gap:6, fontSize:15.5, color: d.isOnline ? '#15803d' : MUTED }}>
+                  <span style={{ display:'inline-flex', alignItems:'center', gap:6, fontSize:15.5, color: d.isOnline ? OK_TEXT : MUTED }}>
                     <span style={{ width:7, height:7, borderRadius:'50%', background: d.isOnline ? '#22c55e' : '#9ca3af' }}/>
                     {d.isOnline ? 'Online' : 'Offline'}
                   </span>
-                  {!d.isActive && (
-                    <span style={{ display:'block', marginTop:4, fontSize:15, fontWeight:700, color:'#ef4444' }}>Suspended</span>
+                  {d.isPending ? (
+                    <span style={{ display:'block', marginTop:4, fontSize:15, fontWeight:700, color:INFO_TEXT }}>Pending approval</span>
+                  ) : !d.isActive ? (
+                    <span style={{ display:'block', marginTop:4, fontSize:15, fontWeight:700, color:DANGER_TEXT }}>Suspended</span>
+                  ) : null}
+                  {d.alsoRider && (
+                    <span style={{ display:'block', marginTop:4, fontSize:14, color:MUTED }}>Rider with driver access</span>
                   )}
                 </td>
                 <td style={{ padding:'12px 16px', textAlign:'right' }}>

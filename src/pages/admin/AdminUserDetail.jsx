@@ -1,4 +1,4 @@
-import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, ADMIN_BG as BG, DANGER_SOFT, ON_NEON, ACCENT_FILL, ON_ACCENT_FILL } from '../../theme/palette'
+import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, ADMIN_BG as BG, DANGER_SOFT, ON_NEON, ACCENT_FILL, ON_ACCENT_FILL, DANGER_BORDER, DANGER_TEXT, INFO_BORDER, INFO_SOFT, INFO_SOFT_2, INFO_TEXT, OK_BORDER, OK_SOFT, OK_SOFT_2, OK_TEXT } from '../../theme/palette'
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
@@ -43,8 +43,8 @@ function userStatus(u) {
 }
 
 const STATUS_MAP = {
-  pending:  { label:'Pending', bg:'#fef9c3', fg:'#854d0e' },
-  approved: { label:'Approved',       bg:'#dcfce7', fg:'#15803d' },
+  pending:  { label:'Pending', bg:INFO_SOFT_2, fg:INFO_TEXT },
+  approved: { label:'Approved',       bg:OK_SOFT_2, fg:OK_TEXT },
   rejected: { label:'Rejected',       bg:DANGER_SOFT, fg:'#dc2626' },
 }
 
@@ -98,7 +98,7 @@ function KycRevealModal({ userId, onRevealed, onClose }) {
         </p>
         {needsSetup ? (
           <>
-            <p style={{ fontSize:16, color:'#b45309', marginBottom:16, lineHeight:1.5 }}>
+            <p style={{ fontSize:16, color:INFO_TEXT, marginBottom:16, lineHeight:1.5 }}>
               You haven’t set up an authenticator app yet. Go to Settings → Security to enrol,
               then come back.
             </p>
@@ -226,14 +226,14 @@ function LicenceRecord({ identity, userId }) {
                   {rec.expired ? 'Expired' : 'Expires'}
                 </p>
                 <p style={{ margin:0, fontSize:16, fontWeight:800,
-                  color:rec.expired ? '#b91c1c' : '#15803d' }}>
+                  color:rec.expired ? DANGER_TEXT : OK_TEXT }}>
                   {fmtDate(rec.expiryDate)}
                 </p>
               </div>
             )}
           </div>
           {rec?.expired && (
-            <p style={{ margin:'12px 0 0', fontSize:15.5, color:'#b91c1c', lineHeight:1.5 }}>
+            <p style={{ margin:'12px 0 0', fontSize:15.5, color:DANGER_TEXT, lineHeight:1.5 }}>
               FRSC records this licence as expired. They cannot legally drive on it until it is renewed.
             </p>
           )}
@@ -301,11 +301,11 @@ function IdentityVerdict({ identity, userId, onRerun }) {
   const [error, setError] = useState('')
 
   const TONE = {
-    verified: { bg:'#f0fdf4', bd:'#86efac', fg:'#15803d', label:'IDENTITY VERIFIED',
+    verified: { bg:OK_SOFT, bd:OK_BORDER, fg:OK_TEXT, label:'IDENTITY VERIFIED',
       icon:<ShieldCheck size={17} color="#15803d"/> },
-    failed:   { bg:DANGER_SOFT, bd:'#fca5a5', fg:'#b91c1c', label:'IDENTITY CHECK FAILED',
+    failed:   { bg:DANGER_SOFT, bd:DANGER_BORDER, fg:DANGER_TEXT, label:'IDENTITY CHECK FAILED',
       icon:<ShieldAlert size={17} color="#b91c1c"/> },
-    error:    { bg:'#fffbeb', bd:'#fcd34d', fg:'#b45309', label:'VERIFICATION COULD NOT RUN',
+    error:    { bg:INFO_SOFT, bd:INFO_BORDER, fg:INFO_TEXT, label:'VERIFICATION COULD NOT RUN',
       icon:<AlertCircle size={17} color="#b45309"/> },
     skipped:  { bg:BG, bd:BORDER, fg:MUTED, label:'NOT VERIFIED',
       icon:<AlertCircle size={17} color={MUTED}/> },
@@ -586,7 +586,7 @@ export default function AdminUserDetail() {
             {st === 'pending' && user.role !== 'admin' && <>
               <button onClick={approve} disabled={busy}
                 style={{ display:'flex', alignItems:'center', gap:7, padding:'10px 20px', borderRadius:10,
-                  background:'#dcfce7', color:'#15803d', border:'1.5px solid #86efac',
+                  background:OK_SOFT_2, color:OK_TEXT, border:'1.5px solid #86efac',
                   fontWeight:700, fontSize:16, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit', opacity:busy&&action==='approve'?0.6:1 }}>
                 <CheckCircle2 size={15}/>{busy&&action==='approve'?'Approving…':'Approve'}
               </button>
@@ -610,7 +610,7 @@ export default function AdminUserDetail() {
             {st === 'rejected' && user.role !== 'admin' && (
               <button onClick={approve} disabled={busy}
                 style={{ display:'flex', alignItems:'center', gap:7, padding:'10px 20px', borderRadius:10,
-                  background:'#dcfce7', color:'#15803d', border:'1.5px solid #86efac',
+                  background:OK_SOFT_2, color:OK_TEXT, border:'1.5px solid #86efac',
                   fontWeight:700, fontSize:16, cursor:busy?'not-allowed':'pointer', fontFamily:'inherit' }}>
                 <CheckCircle2 size={15}/>Reactivate
               </button>
@@ -719,7 +719,7 @@ export default function AdminUserDetail() {
           )}
 
           {kyc && (
-            <p style={{ fontSize:15, color:'#b45309', marginTop:14, lineHeight:1.5 }}>
+            <p style={{ fontSize:15, color:INFO_TEXT, marginTop:14, lineHeight:1.5 }}>
               Full KYC revealed {new Date(kyc.revealedAt).toLocaleString('en-NG', { timeZone:'Africa/Lagos' })}.
               This access has been recorded in the activity log.
             </p>

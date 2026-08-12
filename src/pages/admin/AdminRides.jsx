@@ -1,4 +1,4 @@
-import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, NEON, ON_NEON, CHIP, DANGER_SOFT } from '../../theme/palette'
+import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, NEON, ON_NEON, CHIP, DANGER_SOFT, INFO_SOFT_2, INFO_TEXT, OK_SOFT_2, OK_TEXT } from '../../theme/palette'
 import React, { useEffect, useState } from 'react'
 import AdminLayout from '../../components/AdminLayout'
 import { api } from '../../services/api'
@@ -9,11 +9,11 @@ import ScrollX from '../../components/ScrollX'
 /* palette: themed tokens — see src/theme/palette.js */
 
 const STATUS_STYLE = {
-  pending:         { bg:'#fef9c3', fg:'#854d0e', label:'Pending' },
+  pending:         { bg:INFO_SOFT_2, fg:INFO_TEXT, label:'Pending' },
   driver_assigned: { bg:'#dbeafe', fg:'#1e40af', label:'Driver Assigned' },
   arrived_pickup:  { bg:'#e0e7ff', fg:'#3730a3', label:'Arrived Pickup' },
   in_transit:      { bg:'#fae8ff', fg:'#86198f', label:'En Route' },
-  completed:        { bg:'#dcfce7', fg:'#15803d', label:'Completed' },
+  completed:        { bg:OK_SOFT_2, fg:OK_TEXT, label:'Completed' },
   cancelled:        { bg:DANGER_SOFT, fg:'#ef4444', label:'Cancelled' },
 }
 

@@ -1,4 +1,4 @@
-import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, ADMIN_BG as BG, NEON, ACCENT as OLIVE, ON_NEON, DANGER_SOFT, ACCENT_FILL, ON_ACCENT_FILL } from '../../theme/palette'
+import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, ADMIN_BG as BG, NEON, ACCENT as OLIVE, ON_NEON, DANGER_SOFT, ACCENT_FILL, ON_ACCENT_FILL, DANGER_BORDER, DANGER_TEXT, INFO_BORDER, INFO_SOFT, INFO_TEXT, OK_TEXT } from '../../theme/palette'
 import React, { useEffect, useState, useCallback } from 'react'
 import AdminLayout from '../../components/AdminLayout'
 import { api } from '../../services/api'
@@ -55,7 +55,7 @@ export default function AdminBackOffice() {
       <p style={{ color: MUTED, fontSize: 15.5, marginBottom: 6 }}>
         Payment rails monitoring — transactions, customers, and AML compliance.
       </p>
-      <p style={{ fontSize: 15.5, color: overview?.configured ? '#15803d' : '#d97706', fontWeight: 600, marginBottom: 18 }}>
+      <p style={{ fontSize: 15.5, color: overview?.configured ? OK_TEXT : '#d97706', fontWeight: 600, marginBottom: 18 }}>
         {overview == null ? '' : overview.configured
           ? `● Anchor connected · last event ${fmtTime(overview.lastEventAt)}`
           : '● Anchor API key not configured'}
@@ -66,10 +66,10 @@ export default function AdminBackOffice() {
       {overview?.rails && (
         <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap', padding:'10px 14px',
           borderRadius:10, marginBottom:12,
-          background: overview.rails.live ? '#fffbeb' : '#f5f7f2',
-          border: `1px solid ${overview.rails.live ? '#fcd34d' : BORDER}` }}>
+          background: overview.rails.live ? INFO_SOFT : '#f5f7f2',
+          border: `1px solid ${overview.rails.live ? INFO_BORDER : BORDER}` }}>
           <span style={{ padding:'3px 10px', borderRadius:50, fontSize:15, fontWeight:800, letterSpacing:'0.04em',
-            background: overview.rails.live ? '#b45309' : '#6b7280', color:'#fff' }}>
+            background: overview.rails.live ? INFO_TEXT : '#6b7280', color:'#fff' }}>
             {overview.rails.live ? 'LIVE — REAL MONEY' : 'SANDBOX — NO REAL MONEY'}
           </span>
           <span style={{ fontSize:15.5, color: TEXT }}>
@@ -89,7 +89,7 @@ export default function AdminBackOffice() {
           border:'1px solid #fca5a5', borderRadius:10, marginBottom:16 }}>
           <ShieldAlert size={15} color="#b91c1c" style={{ flexShrink:0, marginTop:1 }}/>
           <div>
-            <p style={{ fontSize:16, color:'#b91c1c', fontWeight:700 }}>
+            <p style={{ fontSize:16, color:DANGER_TEXT, fontWeight:700 }}>
               {overview.kyc.onFallbackAccount} user{overview.kyc.onFallbackAccount === 1 ? '' : 's'} on a fallback funding account — no BVN verification
             </p>
             <p style={{ fontSize:15.5, color:'#7f1d1d', lineHeight:1.55, marginTop:3 }}>
@@ -112,7 +112,7 @@ export default function AdminBackOffice() {
       {/* Overview stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px,100%), 1fr))', gap: 12, marginBottom: 20 }}>
         {stats.map(s => (
-          <div key={s.label} style={{ background: CARD, border: `1px solid ${s.alert ? '#fca5a5' : BORDER}`, borderRadius: 14, padding: '14px 16px' }}>
+          <div key={s.label} style={{ background: CARD, border: `1px solid ${s.alert ? DANGER_BORDER : BORDER}`, borderRadius: 14, padding: '14px 16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: s.alert ? '#dc2626' : MUTED, marginBottom: 6 }}>
               {s.icon}<span style={{ fontSize: 15, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{s.label}</span>
             </div>
@@ -167,7 +167,7 @@ export default function AdminBackOffice() {
                       {e.internal
                         ? <span style={{ color: MUTED, display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}><ArrowUpRight size={13}/> FeaziMove</span>
                         : e.signatureValid
-                          ? <span style={{ color: '#15803d', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}><CheckCircle2 size={13}/> Anchor · signed</span>
+                          ? <span style={{ color: OK_TEXT, display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}><CheckCircle2 size={13}/> Anchor · signed</span>
                           : <span style={{ color: '#dc2626', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}><XCircle size={13}/> Anchor · UNSIGNED</span>}
                     </td>
                     <td style={{ padding: '10px 14px' }}>{e.processed ? '✓' : '—'}</td>
@@ -216,7 +216,7 @@ export default function AdminBackOffice() {
                           <span style={{ fontWeight: 700, color: TEXT }}>{c.payoutBeneficiary.accountNumber}</span>
                           {c.payoutBeneficiary.bank && <span style={{ color: MUTED }}> · {c.payoutBeneficiary.bank}</span>}
                           {c.payoutBeneficiary.registered && (
-                            <p style={{ fontSize: 15, color: '#15803d', fontWeight: 600, marginTop: 2 }}>
+                            <p style={{ fontSize: 15, color: OK_TEXT, fontWeight: 600, marginTop: 2 }}>
                               Registered with Anchor
                             </p>
                           )}
@@ -268,7 +268,7 @@ export default function AdminBackOffice() {
                     {f.userEmail && ` · ${f.userEmail}`}
                     {f.userRole && ` · ${f.userRole}`}
                     {f.subjectDeleted && (
-                      <span style={{ color: '#b45309', fontWeight: 600 }}> · account deleted</span>
+                      <span style={{ color: INFO_TEXT, fontWeight: 600 }}> · account deleted</span>
                     )}
                     {' · '}{fmtTime(f.createdAt)}
                     {f.status !== 'open' && ` · ${f.status} by ${f.reviewerName || '—'} ${fmtTime(f.reviewedAt)}`}

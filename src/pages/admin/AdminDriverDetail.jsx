@@ -1,4 +1,4 @@
-import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, DANGER_SOFT } from '../../theme/palette'
+import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, DANGER_SOFT, DANGER_BORDER, DANGER_TEXT, INFO_BORDER, INFO_SOFT, INFO_TEXT, OK_BORDER, OK_SOFT, OK_SOFT_2, OK_TEXT } from '../../theme/palette'
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
@@ -68,10 +68,10 @@ export default function AdminDriverDetail() {
           <p style={{ color:MUTED, fontSize:16 }}>Driver ID: {driver.id}</p>
           <div style={{ display:'flex', gap:8, marginTop:6 }}>
             <span style={{ fontSize:15, fontWeight:700, padding:'3px 10px', borderRadius:20,
-              background: driver.isActive ? '#dcfce7' : DANGER_SOFT, color: driver.isActive ? '#15803d' : '#ef4444' }}>
+              background: driver.isActive ? OK_SOFT_2 : DANGER_SOFT, color: driver.isActive ? OK_TEXT : '#ef4444' }}>
               {driver.isActive ? 'Active' : 'Suspended'}
             </span>
-            <span style={{ display:'inline-flex', alignItems:'center', gap:6, fontSize:15.5, color: driver.isOnline ? '#15803d' : MUTED }}>
+            <span style={{ display:'inline-flex', alignItems:'center', gap:6, fontSize:15.5, color: driver.isOnline ? OK_TEXT : MUTED }}>
               <span style={{ width:7, height:7, borderRadius:'50%', background: driver.isOnline ? '#22c55e' : '#9ca3af' }}/>
               {driver.isOnline ? 'Online' : 'Offline'}
             </span>
@@ -171,9 +171,9 @@ export default function AdminDriverDetail() {
 // this is the at-a-glance version so nobody approves a driver from here without
 // knowing whether the licence held up.
 const ID_TONE = {
-  verified: { fg:'#15803d', bg:'#f0fdf4', bd:'#86efac', label:'Identity verified' },
-  failed:   { fg:'#b91c1c', bg:DANGER_SOFT, bd:'#fca5a5', label:'Identity check failed' },
-  error:    { fg:'#b45309', bg:'#fffbeb', bd:'#fcd34d', label:'Verification could not run' },
+  verified: { fg:OK_TEXT, bg:OK_SOFT, bd:OK_BORDER, label:'Identity verified' },
+  failed:   { fg:DANGER_TEXT, bg:DANGER_SOFT, bd:DANGER_BORDER, label:'Identity check failed' },
+  error:    { fg:INFO_TEXT, bg:INFO_SOFT, bd:INFO_BORDER, label:'Verification could not run' },
   skipped:  { fg:MUTED,     bg:'#f9fafb', bd:BORDER,    label:'Not verified' },
 }
 

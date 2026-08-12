@@ -1,4 +1,4 @@
-import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, ADMIN_BG as BG, NEON, ACCENT as OLIVE, DANGER_SOFT, ON_NEON } from '../../theme/palette'
+import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, ADMIN_BG as BG, NEON, ACCENT as OLIVE, DANGER_SOFT, ON_NEON, INFO_SOFT, INFO_TEXT, OK_TEXT } from '../../theme/palette'
 import React, { useEffect, useState } from 'react'
 import AdminLayout from '../../components/AdminLayout'
 import { api } from '../../services/api'
@@ -250,7 +250,7 @@ export default function AdminStops() {
                           )}
                           <button onClick={() => toggleActive(s)}
                             style={{ display:'flex', alignItems:'center', gap:5, background:'none', border:'none', cursor:'pointer',
-                              color: s.isActive ? '#ef4444' : '#15803d', fontWeight:600, fontSize:15, fontFamily:'inherit' }}>
+                              color: s.isActive ? '#ef4444' : OK_TEXT, fontWeight:600, fontSize:15, fontFamily:'inherit' }}>
                             {s.isActive ? <><Ban size={12}/> Deactivate</> : <><CheckCircle2 size={12}/> Activate</>}
                           </button>
                         </div>
@@ -262,7 +262,7 @@ export default function AdminStops() {
 
               {orphans(side).length > 0 && (
                 <div style={{ background:CARD, border:`1.5px dashed #f59e0b`, borderRadius:14, overflow:'hidden' }}>
-                  <p style={{ fontWeight:800, fontSize:16, color:'#b45309', padding:'12px 18px', borderBottom:`1px solid ${BORDER}`, background:'#fffbeb' }}>
+                  <p style={{ fontWeight:800, fontSize:16, color:INFO_TEXT, padding:'12px 18px', borderBottom:`1px solid ${BORDER}`, background:INFO_SOFT }}>
                     Unassigned ({orphans(side).length}) — use "Move to…" to file these
                   </p>
                   {orphans(side).map(s => (
