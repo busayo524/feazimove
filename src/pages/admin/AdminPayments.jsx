@@ -1,4 +1,4 @@
-import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, NEON, ACCENT as OLIVE, DANGER_SOFT, ON_NEON, ACCENT_FILL, ON_ACCENT_FILL, INFO_SOFT, INFO_TEXT, OK_SOFT_2, OK_TEXT } from '../../theme/palette'
+import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, NEON, ACCENT as OLIVE, DANGER_SOFT, ON_NEON, ACCENT_FILL, ON_ACCENT_FILL, INFO_SOFT, INFO_TEXT, OK_SOFT_2, OK_TEXT, DANGER_TEXT } from '../../theme/palette'
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
@@ -132,7 +132,13 @@ export default function AdminPayments() {
                     <RoleTag role={p.userRole}/>
                   </span>
                   <p style={{ fontSize:15.5, color:MUTED }}>Requested {new Date(p.requestedAt).toLocaleString('en-NG', { timeZone:'Africa/Lagos' })}</p>
-                  {p.bankName && <p style={{ fontSize:15, color:MUTED }}>{p.bankName} · {p.accountNumber}</p>}
+                  {/* Approval refuses anything without a valid 10-digit account, so
+                      say so here rather than let an admin click into that error. */}
+                  {/^\d{10}$/.test(p.accountNumber || '') && p.bankName
+                    ? <p style={{ fontSize:15, color:MUTED }}>{p.bankName} · {p.accountNumber}</p>
+                    : <p style={{ fontSize:15, fontWeight:700, color:DANGER_TEXT }}>
+                        No bank details on file — ask them to add these in Profile → Edit before approving
+                      </p>}
                 </div>
                 <div style={{ display:'flex', alignItems:'center', gap:14 }}>
                   <div style={{ textAlign:'right' }}>
@@ -141,8 +147,15 @@ export default function AdminPayments() {
                       <p style={{ fontSize:15, color:MUTED }}>less ₦{p.fee.toLocaleString()} fees → pays ₦{p.net.toLocaleString()}</p>
                     )}
                   </div>
-                  <button onClick={() => handlePayout(p.id, 'approve')} disabled={busyId===p.id}
-                    style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 12px', borderRadius:8, border:'none', background:NEON, color:ON_NEON, fontWeight:700, fontSize:15.5, cursor:'pointer', fontFamily:'inherit' }}>
+                  <button onClick={() => handlePayout(p.id, 'approve')}
+                    disabled={busyId===p.id || !(p.bankName && /^\d{10}$/.test(p.accountNumber || ''))}
+                    title={p.bankName && /^\d{10}$/.test(p.accountNumber || '') ? 'Approve payout' : 'Bank details required first'}
+                    style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 12px', borderRadius:8, border:'none',
+                      background: p.bankName && /^\d{10}$/.test(p.accountNumber || '') ? NEON : BORDER,
+                      color: p.bankName && /^\d{10}$/.test(p.accountNumber || '') ? ON_NEON : MUTED,
+                      fontWeight:700, fontSize:15.5,
+                      cursor: p.bankName && /^\d{10}$/.test(p.accountNumber || '') ? 'pointer' : 'not-allowed',
+                      fontFamily:'inherit' }}>
                     <CheckCircle2 size={13}/> Approve
                   </button>
                   <button onClick={() => handlePayout(p.id, 'reject')} disabled={busyId===p.id}

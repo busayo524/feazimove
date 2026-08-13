@@ -1,6 +1,7 @@
 import { CARD, BORDER, TEXT, MUTED, BG, NEON, ACCENT as OLIVE, MOSS, ON_NEON, DANGER_SOFT, NEON_SOFT, ACCENT_FILL, ON_ACCENT_FILL, WARN_SOFT, WARN_BORDER } from '../../theme/palette'
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import AppLayout from '../../components/AppLayout'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { api } from '../../services/api'
 import { track } from '../../services/analytics'
@@ -239,7 +240,10 @@ function ReservedAccountCard({ showForm, setShowForm, onStatus }) {
 }
 
 export default function Wallet() {
+  const navigate = useNavigate()
   const { user } = useAuth()
+  // Mirrors the server's rule so the UI never offers a request it will refuse.
+  const hasBankDetails = !!(user?.bankName || '').trim() && /^\d{10}$/.test((user?.bankAccountNumber || '').trim())
 
   const [hideBalance, toggleBalance] = useHiddenBalance()
   const [balance, setBalance]           = useState(null)
@@ -554,6 +558,24 @@ export default function Wallet() {
               only to a bank account in your registered name.
             </p>
             <p style={{ fontSize:15, color:MUTED, marginBottom:14 }}>A 5% processing fee applies to withdrawals.</p>
+            {!hasBankDetails ? (
+              /* Requesting without these debits the wallet for a payout that can
+                 never be sent, so the form is not offered until they exist. */
+              <div style={{ background:WARN_SOFT, border:`1px solid ${WARN_BORDER}`, borderRadius:12, padding:14 }}>
+                <p style={{ fontSize:15.5, fontWeight:800, color:TEXT, marginBottom:6 }}>
+                  Add your bank details first
+                </p>
+                <p style={{ fontSize:15, color:MUTED, marginBottom:12, lineHeight:1.5 }}>
+                  We pay withdrawals to a bank account in your own name. Add your bank
+                  name and 10-digit account number in your profile, then come back.
+                </p>
+                <button type="button" onClick={() => navigate('/profile')}
+                  style={{ padding:'10px 18px', borderRadius:10, border:'none', background:NEON,
+                    color:ON_NEON, fontWeight:800, fontSize:15.5, cursor:'pointer', fontFamily:'inherit' }}>
+                  Add bank details
+                </button>
+              </div>
+            ) : (
             <form onSubmit={startWithdraw}>
               <label style={{ display:'block', fontSize:15, fontWeight:600, color:TEXT, marginBottom:6 }}>Amount (₦)</label>
               <input type="number" min="100" max={balance ?? 0} value={withdrawAmount}
@@ -577,6 +599,7 @@ export default function Wallet() {
                 </button>
               </div>
             </form>
+            )}
           </div>
         </div>
       )}

@@ -1,6 +1,7 @@
-import { CARD, BORDER, TEXT, MUTED, BG, ACCENT as OLIVE, MOSS, NEON, ON_NEON, DANGER_SOFT } from '../../theme/palette'
+import { CARD, BORDER, TEXT, MUTED, BG, ACCENT as OLIVE, MOSS, NEON, ON_NEON, DANGER_SOFT, WARN_SOFT, WARN_BORDER } from '../../theme/palette'
 import React, { useState, useEffect } from 'react'
 import AppLayout from '../../components/AppLayout'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { api } from '../../services/api'
 import { useMyAvatar } from '../../hooks/useMyAvatar'
@@ -109,6 +110,9 @@ function buildMonthly(earnings){
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function Earnings(){
   const { user } = useAuth()
+  const navigate = useNavigate()
+  // Mirrors the server rule so the UI never offers a request it will refuse.
+  const hasBankDetails = !!(user?.bankName || '').trim() && /^\d{10}$/.test((user?.bankAccountNumber || '').trim())
   const [period, setPeriod] = useState('week')
   const [txns, setTxns] = useState([])
   const [walletBalance, setWalletBalance] = useState(0)
@@ -278,6 +282,24 @@ export default function Earnings(){
             <p style={{ fontSize:15, color:MUTED, marginBottom:14 }}>
               ₦50 bank transfer charge applies. Withdrawals above ₦10,000 attract an additional ₦50 stamp duty.
             </p>
+            {!hasBankDetails ? (
+              /* Without these the request debits the wallet into escrow for a
+                 payout admin approval will refuse — so don't offer the form. */
+              <div style={{ background:WARN_SOFT, border:`1px solid ${WARN_BORDER}`, borderRadius:12, padding:14 }}>
+                <p style={{ fontSize:15.5, fontWeight:800, color:TEXT, marginBottom:6 }}>
+                  Add your bank details first
+                </p>
+                <p style={{ fontSize:15, color:MUTED, marginBottom:12, lineHeight:1.5 }}>
+                  Payouts go to a bank account in your own name. Add your bank name and
+                  10-digit account number in your profile, then come back.
+                </p>
+                <button type="button" onClick={() => navigate('/profile')}
+                  style={{ padding:'10px 18px', borderRadius:10, border:'none', background:NEON,
+                    color:ON_NEON, fontWeight:800, fontSize:15.5, cursor:'pointer', fontFamily:'inherit' }}>
+                  Add bank details
+                </button>
+              </div>
+            ) : (
             <form onSubmit={handleWithdraw}>
               <label style={{ display:'block', fontSize:15, fontWeight:600, color:TEXT, marginBottom:6 }}>Amount (₦)</label>
               <input type="number" min="1" max={walletBalance} value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} required
@@ -303,6 +325,7 @@ export default function Earnings(){
                 </button>
               </div>
             </form>
+            )}
           </div>
         </div>
       )}

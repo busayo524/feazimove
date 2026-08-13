@@ -667,10 +667,29 @@ router.post('/withdraw',
     try {
       const amountKobo = req.body.amount * 100
 
-      const u = await query('SELECT can_drive, bvn_submitted FROM users WHERE id = $1', [req.user.id])
+      const u = await query(
+        'SELECT can_drive, bvn_submitted, bank_name, bank_account_number FROM users WHERE id = $1',
+        [req.user.id]
+      )
       const isDriver = !!u.rows[0]?.can_drive
       if (!isDriver && !u.rows[0]?.bvn_submitted) {
         return res.status(403).json({ message: 'Complete your wallet setup with your BVN to enable withdrawals.' })
+      }
+
+      // Bank details are checked HERE, not only at admin approval. Approving
+      // already refuses an account number it cannot pay, so without this the
+      // wallet was debited into escrow for a payout that could never complete —
+      // the user saw "success" and a zero balance, and the admin got a request
+      // with nowhere to send the money.
+      const bankName = (u.rows[0]?.bank_name || '').trim()
+      const bankAcct = (u.rows[0]?.bank_account_number || '').trim()
+      if (!bankName || !/^\d{10}$/.test(bankAcct)) {
+        return res.status(422).json({
+          message: 'Add your bank details before withdrawing. Go to Profile → Edit, '
+            + 'enter your bank name and 10-digit account number, and save.',
+          // Lets the app send them straight to the right screen.
+          needsBankDetails: true,
+        })
       }
       // Drivers bear the bank charges on their payout: ₦50 transfer charge,
       // plus ₦50 stamp duty above ₦10,000. Riders pay the 5% processing fee.
