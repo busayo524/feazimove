@@ -1023,10 +1023,22 @@ router.post('/payouts/:id/approve',
           const norm = s => (s || '').toUpperCase().replace(/[^A-Z]/g, '').replace(/(PLC|LIMITED|LTD)$/g, '')
           const want = norm(payout.bank_name)
           if (!want) return res.status(422).json({ message: `${payout.driver_name} has no bank name on their profile.` })
-          const matches = banks.filter(b => {
-            const n = norm(b.attributes?.name)
-            return n && (n === want || n.includes(want) || want.includes(n))
-          })
+          // Tiered, most-precise-first. A bare substring test is the last
+          // resort because short brand names collide inside longer bank names:
+          // "OPAY" is a substring of normalised "MOMOPAYMENTSERVICEBANK".
+          const named = banks.map(b => ({ b, n: norm(b.attributes?.name) })).filter(x => x.n)
+          let matches = named.filter(x => x.n === want).map(x => x.b)
+          if (matches.length !== 1) {
+            // Guard both directions against runt names: Anchor lists a bank
+            // called "M36", which normalises to "M" and prefixes almost anything.
+            matches = named.filter(x =>
+              (want.length >= 3 && x.n.startsWith(want)) ||
+              (x.n.length >= 4 && want.startsWith(x.n))
+            ).map(x => x.b)
+          }
+          if (matches.length !== 1 && want.length >= 5) {
+            matches = named.filter(x => x.n.includes(want) || want.includes(x.n)).map(x => x.b)
+          }
           if (matches.length !== 1) {
             return res.status(422).json({
               message: `Could not uniquely match bank "${payout.bank_name}" — pick the exact bank.`,

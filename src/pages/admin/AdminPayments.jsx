@@ -1,4 +1,4 @@
-import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, NEON, ACCENT as OLIVE, DANGER_SOFT, ON_NEON, ACCENT_FILL, ON_ACCENT_FILL, INFO_SOFT, INFO_TEXT, OK_SOFT_2, OK_TEXT, DANGER_TEXT } from '../../theme/palette'
+import { ADMIN_CARD as CARD, ADMIN_BORDER as BORDER, ADMIN_TEXT as TEXT, ADMIN_MUTED as MUTED, NEON, ACCENT as OLIVE, DANGER_SOFT, ON_NEON, ACCENT_FILL, ON_ACCENT_FILL, INFO_SOFT, INFO_TEXT, OK_SOFT_2, OK_TEXT, DANGER_TEXT, OVERLAY } from '../../theme/palette'
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
@@ -47,6 +47,7 @@ export default function AdminPayments() {
   const [payouts, setPayouts] = useState([])
   const [error, setError] = useState('')
   const [busyId, setBusyId] = useState(null)
+  const [bankPick, setBankPick] = useState(null)
   const [range, setRange] = useState('all')
   const [exporting, setExporting] = useState(false)
   const [mismatch, setMismatch] = useState(null) // sandbox name-check override prompt
@@ -88,6 +89,10 @@ export default function AdminPayments() {
       // keys the server refuses and there is nothing to offer here.
       if (err.data?.nameMismatch && err.data?.overridable) {
         setMismatch({ id, ...err.data })
+      } else if (Array.isArray(err.data?.candidates) && err.data.candidates.length) {
+        // The bank on file did not resolve to exactly one of Anchor's banks —
+        // let the admin say which one rather than dead-end on an alert.
+        setBankPick({ id, message: err.data.message, candidates: err.data.candidates, query: '' })
       } else {
         alert(err.data?.message || 'Could not process this request.')
       }
@@ -96,6 +101,48 @@ export default function AdminPayments() {
 
   return (
     <AdminLayout title="Payments">
+      {bankPick && (() => {
+        const q = (bankPick.query || '').trim().toUpperCase()
+        const shown = (q ? bankPick.candidates.filter(c => (c.name || '').toUpperCase().includes(q)) : bankPick.candidates).slice(0, 60)
+        return (
+          <div style={{ position:'fixed', inset:0, zIndex:1000, background:OVERLAY, display:'flex',
+            alignItems:'center', justifyContent:'center', padding:16 }}
+            onClick={() => setBankPick(null)}>
+            <div onClick={e => e.stopPropagation()} style={{ background:CARD, border:`1px solid ${BORDER}`,
+              borderRadius:16, width:'100%', maxWidth:460, maxHeight:'80vh', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+              <div style={{ padding:'16px 20px', borderBottom:`1px solid ${BORDER}` }}>
+                <p style={{ fontWeight:800, fontSize:16, color:TEXT, marginBottom:4 }}>Which bank?</p>
+                <p style={{ fontSize:15, color:MUTED }}>{bankPick.message}</p>
+              </div>
+              <div style={{ padding:'12px 20px', borderBottom:`1px solid ${BORDER}` }}>
+                <input autoFocus value={bankPick.query || ''} placeholder="Search banks…"
+                  onChange={e => setBankPick(b => ({ ...b, query: e.target.value }))}
+                  style={{ width:'100%', padding:'10px 12px', borderRadius:10, border:`1.5px solid ${BORDER}`,
+                    fontSize:15.5, fontFamily:'inherit', boxSizing:'border-box', background:CARD, color:TEXT }}/>
+              </div>
+              <div style={{ overflowY:'auto', flex:1 }}>
+                {shown.map(c => (
+                  <button key={c.code} onClick={() => { const id = bankPick.id; setBankPick(null); handlePayout(id, 'approve', { bankCode: c.code }) }}
+                    style={{ width:'100%', textAlign:'left', padding:'12px 20px', background:CARD, border:'none',
+                      borderBottom:`1px solid ${BORDER}`, cursor:'pointer', fontFamily:'inherit',
+                      fontSize:15.5, color:TEXT }}>
+                    {c.name} <span style={{ color:MUTED }}>· {c.code}</span>
+                  </button>
+                ))}
+                {!shown.length && <p style={{ padding:20, color:MUTED, fontSize:15.5 }}>No bank matches that search.</p>}
+              </div>
+              <div style={{ padding:'12px 20px', borderTop:`1px solid ${BORDER}` }}>
+                <button onClick={() => setBankPick(null)}
+                  style={{ width:'100%', padding:'10px', borderRadius:10, border:`1.5px solid ${BORDER}`,
+                    background:CARD, color:TEXT, fontWeight:700, fontSize:15.5, cursor:'pointer', fontFamily:'inherit' }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
       <p style={{ color:MUTED, fontSize:15.5, marginBottom:20 }}>Wallet balances, driver payouts, and platform revenue.</p>
 
       {error && (
