@@ -369,12 +369,6 @@ export default function HomePage() {
                 textTransform: 'uppercase', color: '#0a0a0a',
                 background: '#ccff00', borderRadius: 6, padding: '4px 12px',
               }}>BETA — Lagos</span>
-              <span style={{
-                fontSize: 11, fontWeight: 600, letterSpacing: '0.08em',
-                textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)',
-                border: '1px solid rgba(255,255,255,0.18)',
-                borderRadius: 6, padding: '4px 12px',
-              }}>Coming Soon</span>
             </div>
 
             {/* Headline */}
@@ -401,7 +395,7 @@ export default function HomePage() {
             }}>
               {/* Two lines: the promise in bold, the rhythm of it underneath. */}
               <strong style={{ display: 'block', fontWeight: 800, color: '#ffffff' }}>
-                Get matched with a car owner on your route.
+                Get matched with a verified car owner on your route.
               </strong>
               To work every morning, home every evening.
             </p>
