@@ -374,7 +374,9 @@ export default function HomePage() {
             {/* Headline */}
             <h1 className="mb-6" style={{
               fontFamily: "'Barlow', 'Inter', sans-serif",
-              fontWeight: 900,
+              // 700, not 900: the hero read as a solid slab. The cycling word
+              // inherits this, so both lines lighten together.
+              fontWeight: 700,
               fontSize: 'clamp(2.6rem, 5.5vw, 5.5rem)',
               letterSpacing: '-0.03em',
               lineHeight: 1.0,
@@ -390,7 +392,10 @@ export default function HomePage() {
               color: 'rgba(255,255,255,0.75)',
               fontWeight: 500,
               lineHeight: 1.65,
-              maxWidth: 480,
+              // 480 left the tagline 17px short of fitting on one line, so it
+              // wrapped a single word onto a second row. Phones are still too
+              // narrow for one line at a readable size — they wrap by design.
+              maxWidth: 560,
               marginBottom: 16,
             }}>
               {/* Two lines: the promise in bold, the rhythm of it underneath. */}
